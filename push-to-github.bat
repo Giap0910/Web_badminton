@@ -30,7 +30,23 @@ if %errorlevel% equ 0 (
     echo ================================================================
 ) else (
     echo.
-    echo [!] Co loi xay ra khi push. Vui long kiem tra lai quyen truy cap GitHub.
+    echo ================================================================
+    echo [!] Neu trinh duyet khong tu mo de xac thuc, ban co the su dung
+    echo     GitHub Personal Access Token (PAT):
+    echo     (Tao tai: https://github.com/settings/tokens - quyen 'repo')
+    echo ================================================================
+    echo.
+    set /p "TOKEN=Nhap GitHub Token cua ban (hoac Enter de bo qua): "
+    if defined TOKEN (
+        echo Dang day bang Token...
+        git push https://%TOKEN%@github.com/Giap0910/Web_badminton.git main
+        if %errorlevel% equ 0 (
+            echo.
+            echo ================================================================
+            echo    DA DAY MA NGUON LEN GITHUB THANH CONG!
+            echo ================================================================
+        )
+    )
 )
 
 echo.
