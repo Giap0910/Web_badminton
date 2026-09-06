@@ -1,0 +1,43 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: web-badminton-backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/web_badminton?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
+    username: root
+    password: ""
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+
+app:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    expiration-ms: 86400000 # 24 hours
+
+payos:
+  client-id: ${PAYOS_CLIENT_ID:mock_client_id}
+  api-key: ${PAYOS_API_KEY:mock_api_key}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:d65c40ba7368d18b2c4e673a5a73e3a9c735d487293b6e7090886101c5cb86b7}
+  return-url: http://localhost:5173/orders/success
+  cancel-url: http://localhost:5173/orders/cancel
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-1.5-flash}
