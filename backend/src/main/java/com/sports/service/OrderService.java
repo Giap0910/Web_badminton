@@ -4,6 +4,8 @@ import com.sports.dto.OrderCreateRequest;
 import com.sports.dto.OrderItemRequest;
 import com.sports.dto.OrderItemResponse;
 import com.sports.dto.OrderResponse;
+import com.sports.dto.VoucherValidateRequest;
+import com.sports.dto.VoucherValidateResponse;
 import com.sports.entity.*;
 import com.sports.exception.BadRequestException;
 import com.sports.exception.InsufficientStockException;
@@ -35,6 +37,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final PayOSService payosService;
+    private final VoucherService voucherService;
 
     private static final int MAX_PENDING_ORDERS_PER_USER = 3;
     private static final int ORDER_TIMEOUT_MINUTES = 15;
@@ -61,6 +64,10 @@ public class OrderService {
         // Generate unique 6-8 digit numeric order code for PayOS
         long payosOrderCode = System.currentTimeMillis() % 100000000L;
 
+        String paymentMethod = (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank())
+                ? request.getPaymentMethod().trim()
+                : "PAYOS_VIETQR";
+
         Order order = Order.builder()
                 .user(user)
                 .customerName(request.getCustomerName())
@@ -68,9 +75,10 @@ public class OrderService {
                 .shippingAddress(request.getShippingAddress())
                 .totalAmount(BigDecimal.ZERO)
                 .status(OrderStatus.PENDING)
-                .paymentMethod("PAYOS_VIETQR")
+                .paymentMethod(paymentMethod)
                 .payosOrderCode(payosOrderCode)
                 .expiresAt(expiresAt)
+                .note(request.getNote())
                 .createdAt(now)
                 .build();
 
@@ -110,12 +118,30 @@ public class OrderService {
             orderItems.add(orderItem);
         }
 
+        // Voucher application
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        String appliedVoucherCode = null;
+        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
+            try {
+                VoucherValidateResponse val = voucherService.validateVoucher(
+                        new VoucherValidateRequest(request.getVoucherCode().trim(), totalAmount));
+                discountAmount = val.getDiscountAmount();
+                totalAmount = val.getFinalTotal();
+                appliedVoucherCode = val.getCode();
+                voucherService.incrementUsedCount(appliedVoucherCode);
+            } catch (Exception e) {
+                log.warn("Không thể áp dụng voucher '{}': {}", request.getVoucherCode(), e.getMessage());
+            }
+        }
+
         order.setTotalAmount(totalAmount);
+        order.setDiscountAmount(discountAmount);
+        order.setVoucherCode(appliedVoucherCode);
         order.setItems(orderItems);
 
         Order savedOrder = orderRepository.save(order);
-        log.info("Tạo đơn hàng thành công ID={}, PayOS Code={}, Tổng tiền={}, Khóa tạm {} sản phẩm",
-                savedOrder.getId(), payosOrderCode, totalAmount, orderItems.size());
+        log.info("Tạo đơn hàng thành công ID={}, PayOS Code={}, Tổng tiền={}, Giảm giá={}, Khóa tạm {} sản phẩm",
+                savedOrder.getId(), payosOrderCode, totalAmount, discountAmount, orderItems.size());
 
         return toDto(savedOrder);
     }
@@ -272,6 +298,9 @@ public class OrderService {
                 .shippingPhone(order.getShippingPhone())
                 .shippingAddress(order.getShippingAddress())
                 .totalAmount(order.getTotalAmount())
+                .voucherCode(order.getVoucherCode())
+                .discountAmount(order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO)
+                .note(order.getNote())
                 .status(order.getStatus().name())
                 .paymentMethod(order.getPaymentMethod())
                 .payosOrderCode(order.getPayosOrderCode())

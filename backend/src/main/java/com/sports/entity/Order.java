@@ -53,6 +53,16 @@ public class Order {
     @Column(name = "customer_name", length = 100)
     private String customerName;
 
+    @Column(name = "voucher_code", length = 50)
+    private String voucherCode;
+
+    @Column(name = "discount_amount", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

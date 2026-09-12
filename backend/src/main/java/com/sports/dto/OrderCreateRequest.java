@@ -24,4 +24,10 @@ public class OrderCreateRequest {
 
     @NotBlank(message = "Địa chỉ nhận hàng không được để trống")
     private String shippingAddress;
+
+    private String paymentMethod; // "PAYOS_VIETQR" hoặc "COD"
+
+    private String voucherCode;
+
+    private String note;
 }

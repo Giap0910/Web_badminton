@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCompare } from '../context/CompareContext';
 import { useCart } from '../context/CartContext';
 import { productApi } from '../api/productApi';
+import { formatPrice } from '../utils/formatters';
 import { 
   Layers, 
   Trash2, 
@@ -33,10 +34,6 @@ const ComparePage = () => {
     fetchAll();
   }, []);
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-  };
-
   const getBalanceStyle = (point) => {
     if (!point) return 'bg-slate-100 text-slate-700';
     if (point.toLowerCase().includes('heavy')) return 'bg-rose-50 text-rose-700 font-bold border border-rose-200';
@@ -49,9 +46,9 @@ const ComparePage = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-teal-600 mb-1">
+          <div className="flex items-center gap-2 text-xs font-bold text-royal mb-1">
             <Layers className="w-4 h-4" />
-            <span>TÍNH NĂNG ĐỘT PHÁ 1: CÔNG CỤ SO SÁNH THÔNG SỐ VỢT</span>
+            <span className="uppercase tracking-wider">CHUYÊN MÔN: CÔNG CỤ SO SÁNH THÔNG SỐ VỢT THI ĐẤU</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Bảng So Sánh Chi Tiết Vợt Cầu Lông ({selectedRackets.length}/3)
@@ -65,7 +62,7 @@ const ComparePage = () => {
           {selectedRackets.length < 3 && (
             <button
               onClick={() => setSelectorOpen(!selectorOpen)}
-              className="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow transition-all"
+              className="px-4 py-2.5 rounded-xl bg-royal hover:bg-royal/90 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-royal/20 transition-all"
             >
               <Plus className="w-4 h-4" />
               <span>Thêm Vợt So Sánh</span>
@@ -85,7 +82,7 @@ const ComparePage = () => {
 
       {/* Quick Add Racket Dropdown Panel */}
       {selectorOpen && (
-        <div className="bg-white p-6 rounded-2xl border border-teal-200 shadow-md space-y-4 animate-fade-in-up">
+        <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-md space-y-4 animate-fade-in-up">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900">
               Chọn một cây vợt từ danh mục để thêm vào bảng so sánh:
@@ -109,7 +106,7 @@ const ComparePage = () => {
                     <img src={p.imageUrl} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
                     <div className="min-w-0">
                       <h4 className="text-xs font-bold text-slate-900 truncate">{p.name}</h4>
-                      <p className="text-[11px] text-emerald-700 font-bold">{formatPrice(p.price)}</p>
+                      <p className="text-[11px] text-secondary font-bold">{formatPrice(p.price)}</p>
                     </div>
                   </div>
                   <button
@@ -117,7 +114,7 @@ const ComparePage = () => {
                       addRacket(p);
                       if (selectedRackets.length >= 2) setSelectorOpen(false);
                     }}
-                    className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shrink-0"
+                    className="px-2.5 py-1.5 bg-secondary hover:bg-secondary-hover text-white rounded-lg text-xs font-bold shrink-0"
                   >
                     Chọn
                   </button>
@@ -130,7 +127,7 @@ const ComparePage = () => {
       {/* Comparison Table */}
       {selectedRackets.length === 0 ? (
         <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 shadow-sm space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 text-royal flex items-center justify-center mx-auto">
             <Layers className="w-8 h-8" />
           </div>
           <h2 className="text-lg font-bold text-slate-900">Chưa có cây vợt nào được chọn để so sánh</h2>
@@ -139,7 +136,7 @@ const ComparePage = () => {
           </p>
           <Link
             to="/products"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-secondary hover:bg-secondary-hover text-white font-bold text-xs shadow-md shadow-secondary/20"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Xem Danh Sách Vợt</span>
@@ -176,11 +173,11 @@ const ComparePage = () => {
                           {racket.brand}
                         </span>
                         <Link to={`/products/${racket.id}`}>
-                          <h3 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-2 hover:text-emerald-600 transition-colors">
+                          <h3 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-2 hover:text-secondary transition-colors">
                             {racket.name}
                           </h3>
                         </Link>
-                        <div className="text-sm font-black text-emerald-700 mt-1">
+                        <div className="text-sm font-black text-secondary mt-1">
                           {formatPrice(racket.price)}
                         </div>
                       </div>
@@ -189,7 +186,7 @@ const ComparePage = () => {
                         disabled={racket.stock <= 0}
                         className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all ${
                           racket.stock > 0
-                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95'
+                            ? 'bg-secondary hover:bg-secondary-hover text-white active:scale-95 shadow-secondary/20'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
                       >

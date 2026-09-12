@@ -21,4 +21,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByPayosOrderCode(Long payosOrderCode);
 
     List<Order> findAllByOrderByCreatedAtDesc();
+
+    long countByStatus(OrderStatus status);
+
+    List<Order> findTop5ByOrderByCreatedAtDesc();
+
+    List<Order> findByStatus(OrderStatus status);
 }

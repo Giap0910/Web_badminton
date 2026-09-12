@@ -28,4 +28,5 @@ public class ProductDto {
     private String categoryName;
     private Double averageRating;
     private Integer reviewCount;
+    private java.util.List<String> imageUrls;
 }

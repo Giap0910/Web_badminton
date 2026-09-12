@@ -17,6 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
+import com.sports.dto.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +31,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ReviewService reviewService;
+    private final com.sports.repository.ProductImageRepository productImageRepository;
 
     public List<ProductDto> getProducts(
             String keyword,
@@ -44,6 +50,42 @@ public class ProductService {
         return productRepository.findAll(spec).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
+    }
+
+    public PageResponse<ProductDto> getProductsPaged(
+            String keyword,
+            String brand,
+            String weightGrip,
+            String balancePoint,
+            String stiffness,
+            String playStyle,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Long categoryId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
+        String safeSortBy = (sortBy != null && !sortBy.isBlank()) ? sortBy : "id";
+        Sort sort = "asc".equalsIgnoreCase(sortDir) ? Sort.by(safeSortBy).ascending() : Sort.by(safeSortBy).descending();
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), sort);
+        Specification<Product> spec = ProductSpecification.filterProducts(
+                keyword, brand, weightGrip, balancePoint, stiffness, playStyle, minPrice, maxPrice, categoryId
+        );
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+        List<ProductDto> dtos = productPage.getContent().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+
+        return PageResponse.<ProductDto>builder()
+                .content(dtos)
+                .pageNo(productPage.getNumber())
+                .pageSize(productPage.getSize())
+                .totalElements(productPage.getTotalElements())
+                .totalPages(productPage.getTotalPages())
+                .last(productPage.isLast())
+                .build();
     }
 
     public ProductDto getProductById(Long id) {
@@ -143,7 +185,27 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+    public List<String> getProductImages(Long productId) {
+        List<String> images = productImageRepository.findByProductIdOrderByDisplayOrderAsc(productId).stream()
+                .map(com.sports.entity.ProductImage::getImageUrl)
+                .collect(Collectors.toList());
+        if (images.isEmpty()) {
+            Product p = productRepository.findById(productId).orElse(null);
+            if (p != null && p.getImageUrl() != null) {
+                return List.of(p.getImageUrl());
+            }
+        }
+        return images;
+    }
+
     public ProductDto toDto(Product product) {
+        List<String> imgs = productImageRepository.findByProductIdOrderByDisplayOrderAsc(product.getId()).stream()
+                .map(com.sports.entity.ProductImage::getImageUrl)
+                .collect(Collectors.toList());
+        if (imgs.isEmpty() && product.getImageUrl() != null) {
+            imgs = List.of(product.getImageUrl());
+        }
+
         return ProductDto.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -153,6 +215,7 @@ public class ProductService {
                 .stock(product.getStock())
                 .reservedStock(product.getReservedStock())
                 .imageUrl(product.getImageUrl())
+                .imageUrls(imgs)
                 .description(product.getDescription())
                 .weightGrip(product.getWeightGrip())
                 .stiffness(product.getStiffness())

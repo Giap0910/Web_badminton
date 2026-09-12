@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import UserLayout from '../components/UserLayout';
 import { orderApi } from '../api/orderApi';
-import { 
-  Clock, 
-  QrCode, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  Copy, 
-  Check, 
-  Zap, 
+import {
+  Clock,
+  QrCode,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Copy,
+  Check,
+  Zap,
   ArrowLeft,
   Truck,
-  RotateCcw
+  RotateCcw,
+  MapPin,
+  FileText,
+  Gift,
+  ShieldCheck,
+  Award,
+  Loader2
 } from 'lucide-react';
 
 const OrderDetailPage = () => {
@@ -27,9 +34,12 @@ const OrderDetailPage = () => {
 
   const fetchOrder = async () => {
     try {
-      const data = await orderApi.getOrderById(id);
+      const res = await orderApi.getOrderById(id);
+      const data = res?.data ?? res;
       setOrder(data);
-      setTimeLeft(data.timeRemainingSeconds || 0);
+      if (data) {
+        setTimeLeft(data.timeRemainingSeconds || 0);
+      }
     } catch (err) {
       console.error('Lỗi khi tải đơn hàng:', err);
     } finally {
@@ -39,7 +49,6 @@ const OrderDetailPage = () => {
 
   useEffect(() => {
     fetchOrder();
-    // Poll order status every 5 seconds if still PENDING
     const interval = setInterval(() => {
       if (order?.status === 'PENDING') {
         fetchOrder();
@@ -48,13 +57,12 @@ const OrderDetailPage = () => {
     return () => clearInterval(interval);
   }, [id, order?.status]);
 
-  // Live countdown timer
   useEffect(() => {
     if (timeLeft <= 0) return;
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          fetchOrder(); // Refresh to catch cancelled status from backend
+          fetchOrder();
           return 0;
         }
         return prev - 1;
@@ -70,19 +78,18 @@ const OrderDetailPage = () => {
   };
 
   const handleCancelOrder = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này? Toàn bộ số lượng vợt đã khóa tạm thời sẽ được hoàn trả lại kho.')) {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này? Số lượng tồn kho sẽ được hoàn trả ngay.')) {
       return;
     }
     setActionError('');
     try {
-      const updated = await orderApi.cancelOrder(order.id);
-      setOrder(updated);
+      const res = await orderApi.cancelOrder(order.id);
+      setOrder(res?.data ?? res);
     } catch (err) {
       setActionError(err.response?.data?.message || 'Không thể hủy đơn');
     }
   };
 
-  // Mock Webhook Trigger for 100% Localhost Testing
   const handleMockWebhookTrigger = async () => {
     setMockTriggering(true);
     setActionError('');
@@ -108,256 +115,232 @@ const OrderDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <div className="inline-block w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-xs font-bold text-slate-500">Đang tải thông tin đơn hàng...</p>
-      </div>
+      <UserLayout title="Chi Tiết Đơn Hàng">
+        <div className="py-24 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-secondary mx-auto mb-3" />
+          <p className="text-xs font-bold text-slate-500">Đang tải thông tin đơn hàng...</p>
+        </div>
+      </UserLayout>
     );
   }
 
   if (!order) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center space-y-4">
-        <h2 className="text-xl font-bold text-slate-800">Không tìm thấy đơn hàng!</h2>
-        <Link to="/my-orders" className="text-xs font-bold text-emerald-600 hover:underline">
-          Xem các đơn hàng của bạn
-        </Link>
-      </div>
+      <UserLayout title="Chi Tiết Đơn Hàng">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-4">
+          <h2 className="text-base font-bold text-slate-900">Không tìm thấy đơn hàng!</h2>
+          <Link to="/my-orders" className="text-xs font-bold text-secondary hover:underline">
+            Quay lại danh sách đơn hàng
+          </Link>
+        </div>
+      </UserLayout>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Top Breadcrumb & Status Alert */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <Link to="/my-orders" className="text-xs font-semibold text-slate-500 hover:text-emerald-600 flex items-center gap-1 mb-2">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Quay lại lịch sử đơn hàng</span>
+    <UserLayout
+      title={`Chi Tiết Đơn Hàng #${order.id}`}
+      subtitle={`Ngày đặt: ${new Date(order.createdAt).toLocaleString('vi-VN')} • Mã PayOS: ${order.payosOrderCode || 'N/A'}`}
+    >
+      <div className="space-y-6">
+        {/* Top Action Back Link & Status */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <Link
+            to="/my-orders"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            <span>Quay lại danh sách đơn hàng</span>
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Đơn Hàng #{order.id}
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Mã giao dịch PayOS: <strong className="text-slate-800">{order.payosOrderCode}</strong> • Ngày tạo: {new Date(order.createdAt).toLocaleString('vi-VN')}
-          </p>
-        </div>
 
-        {/* Order Status Badge */}
-        <div>
-          {order.status === 'PENDING' && (
-            <span className="px-4 py-2 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs flex items-center gap-2 animate-pulse">
-              <Clock className="w-4 h-4 text-amber-700" />
-              <span>Chờ Thanh Toán (Hạn 15 phút)</span>
-            </span>
-          )}
-          {order.status === 'PAID' && (
-            <span className="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-              <span>Đã Thanh Toán Thành Công</span>
-            </span>
-          )}
-          {order.status === 'CANCELLED' && (
-            <span className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center gap-2">
-              <XCircle className="w-4 h-4 text-slate-500" />
-              <span>Đã Hủy Đơn (Đã hoàn kho)</span>
-            </span>
-          )}
-        </div>
-      </div>
-
-      {actionError && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold">
-          {actionError}
-        </div>
-      )}
-
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* Left Col: VietQR Payment Box (If PENDING) */}
-        {order.status === 'PENDING' ? (
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/80 shadow-md p-6 sm:p-8 space-y-6">
-            {/* Live Countdown Timer */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white flex items-center justify-between shadow-md">
-              <div className="flex items-center gap-3">
-                <Clock className="w-6 h-6 animate-spin-slow" />
-                <div>
-                  <div className="text-xs font-medium text-amber-100 uppercase tracking-wider">Thời gian giữ kho còn lại</div>
-                  <div className="text-2xl font-black tracking-widest">{formatTimer(timeLeft)}</div>
-                </div>
-              </div>
-              <span className="text-[11px] bg-white/20 px-3 py-1 rounded-full font-bold backdrop-blur">
-                Tự hủy khi hết giờ
+          <div>
+            {order.status === 'PENDING' && (
+              <span className="px-3.5 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold text-xs flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                <span>Chờ thanh toán QR ({formatTimer(timeLeft)})</span>
               </span>
-            </div>
-
-            {/* QR Code & Banking Information */}
-            <div className="flex flex-col sm:flex-row items-center gap-6 pt-2">
-              {/* Dynamic QR Code Image */}
-              <div className="p-3 bg-white border-2 border-emerald-600 rounded-2xl shadow-sm shrink-0">
-                <img
-                  src={order.qrCode}
-                  alt="VietQR PayOS"
-                  className="w-48 h-48 sm:w-52 sm:h-52 object-contain"
-                />
-                <span className="block text-center text-[10px] font-bold text-slate-500 mt-2">
-                  Quét bằng ứng dụng ngân hàng
-                </span>
-              </div>
-
-              {/* Banking Transfer Details */}
-              <div className="flex-1 w-full space-y-3 text-xs">
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Ngân hàng</span>
-                  <strong className="text-slate-900 text-sm">MBBank (Quân Đội)</strong>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Số tài khoản</span>
-                  <div className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border">
-                    <strong className="text-slate-900 text-sm font-mono">{order.accountNo}</strong>
-                    <button
-                      onClick={() => copyToClipboard(order.accountNo, 'acc')}
-                      className="p-1 text-slate-400 hover:text-emerald-600"
-                    >
-                      {copiedField === 'acc' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Chủ tài khoản</span>
-                  <strong className="text-slate-800">{order.accountName}</strong>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Số tiền chuyển</span>
-                  <strong className="text-emerald-700 text-base font-extrabold">{formatPrice(order.totalAmount)}</strong>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Nội dung chuyển khoản (Memo)</span>
-                  <div className="flex items-center justify-between bg-amber-50 p-2 rounded-lg border border-amber-200">
-                    <strong className="text-amber-900 font-mono font-bold">BADMINTON {order.payosOrderCode}</strong>
-                    <button
-                      onClick={() => copyToClipboard(`BADMINTON ${order.payosOrderCode}`, 'memo')}
-                      className="p-1 text-amber-600 hover:text-amber-800"
-                    >
-                      {copiedField === 'memo' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Cancel Order Action */}
-            <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
-              <span className="text-xs text-slate-500">Đổi ý không muốn mua nữa?</span>
-              <button
-                onClick={handleCancelOrder}
-                className="px-4 py-2 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-200 font-bold text-xs transition-colors"
-              >
-                Hủy Đơn & Hoàn Tồn Kho
-              </button>
-            </div>
-
-            {/* 100% LOCALHOST DEV TESTING RUNNER */}
-            <div className="p-5 rounded-2xl bg-slate-900 text-white space-y-3 shadow-inner">
-              <div className="flex items-center gap-2 text-xs font-bold text-teal-400">
-                <Zap className="w-4 h-4 text-amber-400" />
-                <span>CHẾ ĐỘ MÔ PHỎNG THANH TOÁN LOCALHOST (DEV RUNNER)</span>
-              </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                Khi chạy 100% trên localhost không có Ngrok, bấm nút bên dưới để backend tự động sinh payload Webhook có chữ ký HMAC-SHA256 hợp lệ và chuyển trạng thái sang <strong className="text-emerald-400">PAID</strong>.
-              </p>
-              <button
-                onClick={handleMockWebhookTrigger}
-                disabled={mockTriggering}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{mockTriggering ? 'Đang Xử Lý Webhook...' : 'Mô Phỏng Thanh Toán Thành Công Ngay'}</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* When PAID or CANCELLED */
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-8 text-center space-y-5">
+            )}
             {order.status === 'PAID' && (
-              <>
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h2 className="text-xl font-extrabold text-slate-900">
-                  Thanh Toán Thành Công!
-                </h2>
-                <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                  Đơn hàng của bạn đã được xác nhận qua cổng PayOS. Nhân viên sẽ tiến hành kiểm tra thông số kỹ thuật, đóng gói cẩn thận và bàn giao đơn vị vận chuyển.
-                </p>
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs inline-block text-left space-y-1">
-                  <div>Mã đối soát: <strong className="font-mono">PAYOS_{order.payosOrderCode}</strong></div>
-                  <div>Trạng thái kho: <strong className="text-emerald-700">Đã trừ đứt tồn kho khả dụng</strong></div>
-                </div>
-              </>
+              <span className="px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Đã thanh toán thành công</span>
+              </span>
             )}
             {order.status === 'CANCELLED' && (
-              <>
-                <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
-                  <XCircle className="w-8 h-8" />
-                </div>
-                <h2 className="text-xl font-extrabold text-slate-900">
-                  Đơn Hàng Đã Hủy
-                </h2>
-                <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                  Đơn hàng đã được hủy do quá hạn 15 phút hoặc theo yêu cầu của bạn. Toàn bộ số lượng vợt đã được hoàn trả lại kho hàng.
-                </p>
-              </>
+              <span className="px-3.5 py-1.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 font-bold text-xs flex items-center gap-1.5">
+                <XCircle className="w-3.5 h-3.5 text-slate-400" />
+                <span>Đơn hàng đã hủy</span>
+              </span>
             )}
+          </div>
+        </div>
+
+        {actionError && (
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+            {actionError}
           </div>
         )}
 
-        {/* Right Col: Order Items & Delivery Info */}
-        <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6">
-          <h3 className="text-sm font-extrabold text-slate-900 border-b border-slate-100 pb-3">
-            Thông Tin Giao Hàng & Sản Phẩm
-          </h3>
+        {/* If PENDING: Show VietQR Payment Box */}
+        {order.status === 'PENDING' && (
+          <div className="bg-white rounded-2xl border-2 border-secondary/40 shadow-sm p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-1 text-center sm:text-left">
+                <h3 className="font-black text-lg text-slate-900 flex items-center gap-2">
+                  <QrCode className="w-5 h-5 text-secondary" />
+                  <span>Quét mã VietQR để hoàn tất thanh toán</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Thời gian giữ hàng trong kho còn: <strong className="text-secondary font-bold">{formatTimer(timeLeft)}</strong>
+                </p>
+              </div>
 
-          <div className="space-y-2 text-xs text-slate-600">
-            <div><span className="text-slate-400">Người nhận:</span> <strong className="text-slate-800">{order.customerName}</strong></div>
-            <div><span className="text-slate-400">Số điện thoại:</span> <strong className="text-slate-800">{order.shippingPhone}</strong></div>
-            <div><span className="text-slate-400">Địa chỉ nhận hàng:</span> <strong className="text-slate-800">{order.shippingAddress}</strong></div>
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/payment/qr/${order.id}`}
+                  className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/90 text-white font-black text-xs uppercase tracking-wider shadow-sm transition-all"
+                >
+                  Mở toàn màn hình QR
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleCancelOrder}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 font-bold text-xs transition-colors"
+                >
+                  Hủy đơn
+                </button>
+              </div>
+            </div>
+
+            {/* Mock Webhook Helper for dev testing */}
+            <button
+              type="button"
+              onClick={handleMockWebhookTrigger}
+              disabled={mockTriggering}
+              className="w-full py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+            >
+              {mockTriggering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+              <span>Mô phỏng ngân hàng báo có tiền (Test Webhook Dev)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Order Details Card */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden space-y-6">
+          {/* Shipping & Technical Note */}
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-50/50 border-b border-slate-100 text-xs">
+            <div className="p-4 rounded-xl bg-white border border-slate-200/80 space-y-2">
+              <span className="font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                <MapPin className="w-4 h-4 text-royal" /> Thông tin nhận hàng
+              </span>
+              <p className="font-bold text-sm text-slate-900">
+                {order.customerName} <span className="text-slate-500 font-normal">| {order.shippingPhone}</span>
+              </p>
+              <p className="text-slate-600">{order.shippingAddress}</p>
+              <p className="text-[11px] font-bold text-secondary pt-1">
+                Phương thức thanh toán: {order.paymentMethod === 'COD' ? 'Thanh toán tiền mặt (COD)' : 'Chuyển khoản QR (VietQR)'}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white border border-slate-200/80 space-y-2">
+              <span className="font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                <Award className="w-4 h-4 text-secondary" /> Yêu cầu kỹ thuật căng cước
+              </span>
+              <p className="text-slate-600 italic">
+                {order.note ? `“${order.note}”` : 'Không có yêu cầu kỹ thuật đặc biệt.'}
+              </p>
+              <div className="flex items-center justify-between text-[11px] bg-slate-50 p-2 rounded-lg text-slate-600">
+                <span>Kỹ thuật viên đan vợt:</span>
+                <span className="font-bold text-slate-900">Yonex Tour Certified Master</span>
+              </div>
+            </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 space-y-3">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Danh sách vợt đã đặt
-            </span>
-            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-              {order.items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 text-xs py-2 border-b border-slate-100 last:border-0">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <img src={item.productImageUrl} alt={item.productName} className="w-10 h-10 rounded-lg object-cover border shrink-0" />
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-slate-900 truncate">{item.productName}</h4>
-                      <span className="text-[11px] text-slate-500">{item.weightGrip} • SL: x{item.quantity}</span>
+          {/* Product Items Table */}
+          <div className="px-6 space-y-3">
+            <h3 className="font-black text-sm text-slate-900 uppercase tracking-tight">
+              Danh sách sản phẩm ({order.items?.length || 0} mặt hàng)
+            </h3>
+
+            <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
+              {(order.items || []).map((item) => (
+                <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <img
+                      src={item.productImageUrl}
+                      alt={item.productName}
+                      className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-100 p-1 object-contain shrink-0"
+                    />
+                    <div className="min-w-0 space-y-0.5">
+                      <span className="text-[10px] font-black uppercase text-slate-400">{item.productBrand}</span>
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 truncate">{item.productName}</h4>
+                      {item.weightGrip && (
+                        <span className="inline-block text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">
+                          {item.weightGrip}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1 text-[11px] text-secondary font-medium">
+                        <Gift className="w-3.5 h-3.5 shrink-0" />
+                        <span>Tặng kèm bao vợt nhung + quấn cán chính hãng (0₫)</span>
+                      </div>
                     </div>
                   </div>
-                  <span className="font-extrabold text-slate-800 shrink-0">
-                    {formatPrice(item.subtotal)}
-                  </span>
+
+                  <div className="text-left sm:text-right shrink-0">
+                    <span className="text-xs text-slate-500 block">Số lượng: {item.quantity}</span>
+                    <span className="font-black text-sm text-slate-900">
+                      {formatPrice((item.price || 0) * (item.quantity || 1))}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-200 flex justify-between text-sm font-black text-slate-900">
-            <span>Tổng đơn hàng:</span>
-            <span className="text-lg text-emerald-700">{formatPrice(order.totalAmount)}</span>
+          {/* Financial Totals */}
+          <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="text-xs text-slate-500 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Bảo hành chính hãng 1 đổi 1 và bảo hành đứt cước 24h.</span>
+              </div>
+            </div>
+
+            <div className="w-full sm:w-72 space-y-2 text-xs">
+              {order.discountAmount && order.discountAmount > 0 ? (
+                <div className="flex justify-between text-emerald-600 font-bold">
+                  <span>Giảm giá Voucher ({order.voucherCode}):</span>
+                  <span>-{formatPrice(order.discountAmount)}</span>
+                </div>
+              ) : null}
+
+              <div className="flex justify-between text-slate-600">
+                <span>Phí vận chuyển:</span>
+                <span className="font-bold text-emerald-600">Miễn phí toàn quốc</span>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline">
+                <span className="text-sm font-black text-slate-900">Tổng thanh toán:</span>
+                <span className="text-xl font-black text-secondary">{formatPrice(order.totalAmount)}</span>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Action Row */}
+        {order.status === 'PAID' && (
+          <div className="flex justify-end">
+            <Link
+              to={`/returns?orderId=${order.id}`}
+              className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors"
+            >
+              <RotateCcw className="w-4 h-4 text-slate-500" />
+              <span>Gửi yêu cầu Đổi trả / Bảo hành</span>
+            </Link>
+          </div>
+        )}
       </div>
-    </div>
+    </UserLayout>
   );
 };
 

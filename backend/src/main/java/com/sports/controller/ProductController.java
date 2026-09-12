@@ -20,7 +20,7 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public ResponseEntity<List<ProductDto>> getProducts(
+    public ResponseEntity<?> getProducts(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) String weightGrip,
@@ -29,8 +29,18 @@ public class ProductController {
             @RequestParam(required = false) String playStyle,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(required = false) Long categoryId
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
     ) {
+        if (page != null && size != null) {
+            return ResponseEntity.ok(productService.getProductsPaged(
+                    keyword, brand, weightGrip, balancePoint, stiffness, playStyle, minPrice, maxPrice, categoryId,
+                    page, size, sortBy, sortDir
+            ));
+        }
         return ResponseEntity.ok(productService.getProducts(
                 keyword, brand, weightGrip, balancePoint, stiffness, playStyle, minPrice, maxPrice, categoryId
         ));
@@ -39,6 +49,11 @@ public class ProductController {
     @GetMapping("/{id}")
     public ResponseEntity<ProductDto> getProductById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getProductById(id));
+    }
+
+    @GetMapping("/{id}/images")
+    public ResponseEntity<List<String>> getProductImages(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.getProductImages(id));
     }
 
     @PostMapping

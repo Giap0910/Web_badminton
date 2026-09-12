@@ -25,6 +25,13 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.getReviewsByProduct(productId));
     }
 
+    @GetMapping("/my-reviews")
+    public ResponseEntity<List<ReviewResponse>> getMyReviews(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(reviewService.getUserReviews(userDetails.getId()));
+    }
+
     @PostMapping
     public ResponseEntity<ReviewResponse> createReview(
             @AuthenticationPrincipal CustomUserDetails userDetails,

@@ -1,0 +1,526 @@
+<!DOCTYPE html><html lang="vi" style=""><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: 'class', theme: { extend: { 'colors': { 'secondary-fixed': '#ffdad7', 'primary': '#000000', 'on-secondary-container': '#fffbff', 'surface-tint': '#565e74', 'surface-container-low': '#f2f4f6', 'on-error': '#ffffff', 'surface-bright': '#f7f9fb', 'on-background': '#191c1e', 'on-primary-fixed-variant': '#3f465c', 'on-secondary-fixed-variant': '#930013', 'on-secondary-fixed': '#410004', 'tertiary-fixed': '#dbe1ff', 'on-surface': '#191c1e', 'on-primary': '#ffffff', 'error': '#ba1a1a', 'tertiary-fixed-dim': '#b4c5ff', 'on-primary-fixed': '#131b2e', 'on-tertiary-fixed-variant': '#003ea8', 'on-surface-variant': '#45464d', 'on-tertiary-fixed': '#00174b', 'primary-container': '#131b2e', 'inverse-on-surface': '#eff1f3', 'error-container': '#ffdad6', 'surface': '#f7f9fb', 'outline-variant': '#c6c6cd', 'secondary-fixed-dim': '#ffb3ad', 'surface-dim': '#d8dadc', 'tertiary-container': '#00174b', 'surface-container-lowest': '#ffffff', 'on-tertiary-container': '#497cff', 'primary-fixed': '#dae2fd', 'surface-variant': '#e0e3e5', 'surface-container': '#eceef0', 'on-secondary': '#ffffff', 'secondary': '#b61722', 'outline': '#76777d', 'inverse-primary': '#bec6e0', 'surface-container-high': '#e6e8ea', 'on-primary-container': '#7c839b', 'tertiary': '#000000', 'primary-fixed-dim': '#bec6e0', 'secondary-container': '#da3437', 'background': '#f7f9fb', 'on-tertiary': '#ffffff', 'on-error-container': '#93000a', 'surface-container-highest': '#e0e3e5', 'inverse-surface': '#2d3133' }, 'borderRadius': { 'DEFAULT': '0.125rem', 'lg': '0.25rem', 'xl': '0.5rem', 'full': '0.75rem' }, 'spacing': { 'spacing-md': '1rem', 'spacing-3xl': '4.5rem', 'spacing-lg': '1.5rem', 'gutter-mobile': '1rem', 'gutter-desktop': '1.5rem', 'container-max': '80rem', 'spacing-xl': '2rem', 'spacing-4xl': '6rem', 'spacing-2xs': '0.25rem', 'spacing-xs': '0.5rem', 'spacing-2xl': '3rem', 'spacing-sm': '0.75rem' }, 'fontFamily': { 'headline-xl': ['Plus Jakarta Sans'], 'headline-md': ['Plus Jakarta Sans'], 'body-md': ['Inter'], 'body-lg': ['Inter'], 'headline-sm': ['Plus Jakarta Sans'], 'headline-lg': ['Plus Jakarta Sans'], 'label-lg': ['Plus Jakarta Sans'], 'label-sm': ['Plus Jakarta Sans'], 'display-hero-mobile': ['Plus Jakarta Sans'], 'label-md': ['Plus Jakarta Sans'], 'headline-xl-mobile': ['Plus Jakarta Sans'], 'body-sm': ['Inter'], 'display-hero': ['Plus Jakarta Sans'] }, 'fontSize': { 'headline-xl': ['40px', { 'lineHeight': '48px', 'letterSpacing': '-0.02em', 'fontWeight': '700' }], 'headline-md': ['22px', { 'lineHeight': '30px', 'letterSpacing': '-0.01em', 'fontWeight': '600' }], 'body-md': ['15px', { 'lineHeight': '22px', 'letterSpacing': '0em', 'fontWeight': '400' }], 'body-lg': ['18px', { 'lineHeight': '28px', 'letterSpacing': '-0.005em', 'fontWeight': '400' }], 'headline-sm': ['18px', { 'lineHeight': '24px', 'letterSpacing': '-0.005em', 'fontWeight': '600' }], 'headline-lg': ['30px', { 'lineHeight': '38px', 'letterSpacing': '-0.015em', 'fontWeight': '700' }], 'label-lg': ['14px', { 'lineHeight': '20px', 'letterSpacing': '0.02em', 'fontWeight': '700' }], 'label-sm': ['11px', { 'lineHeight': '14px', 'letterSpacing': '0.05em', 'fontWeight': '700' }], 'display-hero-mobile': ['36px', { 'lineHeight': '44px', 'letterSpacing': '-0.02em', 'fontWeight': '800' }], 'label-md': ['12px', { 'lineHeight': '16px', 'letterSpacing': '0.03em', 'fontWeight': '600' }], 'headline-xl-mobile': ['28px', { 'lineHeight': '36px', 'letterSpacing': '-0.02em', 'fontWeight': '700' }], 'body-sm': ['13px', { 'lineHeight': '18px', 'letterSpacing': '0em', 'fontWeight': '400' }], 'display-hero': ['56px', { 'lineHeight': '64px', 'letterSpacing': '-0.03em', 'fontWeight': '800' }] } } } }</script></head><body class="bg-background font-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 z-50 bg-primary-container shadow-[0_4px_20px_rgba(19,27,46,0.25)]"><div class="h-36 max-w-container-max mx-auto px-spacing-lg flex flex-col justify-between"><div class="h-24 flex items-center justify-between gap-spacing-lg"><div class="flex items-center gap-spacing-sm shrink-0"><img alt="Brand logo. - Primary color: #0f172a - Font: plusJakartaSans - Mode: light - Roundness: rounded-sm" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1X2YycLJb0nvmmwhVjn2XzLMHaXiNXMpYcU5-ga7oJHoNQ4BfifHBGUcrG8U25pxgbOPOmJyQowZuUqUNIXe_dEA1te8U-CQyFUKMBR8aPp79RclpTAh5ERcKI-f1oTIVu3-ypZfsnc9Zey6hHJH0zELarfvUz_k5pdoI2ePBcSSoN7OTmjnjNn2gElr95iZZCcDnXohpIZj99qobJB2qd7QXfjqqamCt64uSkJ9X-mkoTgStMJB9UCVg"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm uppercase tracking-wider text-on-primary font-bold">Apex Badminton</span><span class="font-label-sm text-label-sm text-primary-fixed uppercase tracking-widest">Pro Equipment</span></div></div><div class="flex-1 max-w-2xl mx-spacing-md"><div class="flex items-center bg-surface-container-lowest rounded-full p-spacing-2xs shadow-inner"><div class="flex items-center px-spacing-sm border-r border-outline-variant/30 text-on-surface-variant font-label-md text-label-md cursor-pointer select-none"><span class="">Vợt cầu lông</span><span class="material-symbols-outlined text-[16px] ml-spacing-2xs text-outline">expand_more</span></div><input class="w-full bg-transparent px-spacing-sm font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none" placeholder="Tìm kiếm Yonex Astrox, Victor Thruster, Nanoflare..." type="text"><button class="flex items-center justify-center w-10 h-10 rounded-full bg-secondary-container text-on-secondary hover:bg-secondary transition-colors shrink-0 shadow-sm" type="button"><span class="material-symbols-outlined text-[20px]">search</span></button></div></div><div class="flex items-center gap-spacing-lg shrink-0"><div class="flex items-center gap-spacing-xs"><div class="w-9 h-9 rounded-full bg-primary-container/80 border border-outline-variant/30 flex items-center justify-center text-on-primary-container"><span class="material-symbols-outlined text-[20px]">call</span></div><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-primary-container uppercase">Hotline</span><span class="font-label-lg text-label-lg text-on-primary">1900 6886</span></div></div><div class="relative flex items-center cursor-pointer p-spacing-xs"><div class="w-9 h-9 rounded-full bg-primary-container/80 border border-outline-variant/30 flex items-center justify-center text-on-primary-container hover:text-on-primary transition-colors"><span class="material-symbols-outlined text-[22px]">shopping_bag</span></div><span class="absolute 0 top-1 right-1 w-5 h-5 bg-secondary text-on-secondary font-label-sm text-label-sm rounded-full flex items-center justify-center font-bold">3</span></div><div class="flex items-center gap-spacing-xs pl-spacing-sm border-l border-outline-variant/30"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex flex-col text-left"><span class="font-label-md text-label-md text-on-primary font-semibold hover:underline cursor-pointer">Đăng nhập</span><span class="font-label-sm text-label-sm text-on-primary-container hover:underline cursor-pointer">Đăng ký</span></div></div></div></div><div class="h-12 flex items-center justify-between border-t border-outline-variant/20"><nav class="flex items-center gap-spacing-xs" data-active-classes="bg-secondary-container text-on-secondary font-bold rounded-lg shadow-sm"><a class="px-spacing-md py-spacing-2xs font-label-md text-label-md text-primary-fixed hover:bg-primary-container hover:text-on-primary transition-all" data-path="trang-chu" href="#">Trang chủ</a><a aria-current="page" class="px-spacing-md py-spacing-2xs transition-all bg-secondary-container text-on-secondary font-bold rounded-lg shadow-sm" data-path="vot-cau-long" href="#">Vợt cầu lông</a><a class="px-spacing-md py-spacing-2xs font-label-md text-label-md text-primary-fixed hover:bg-primary-container hover:text-on-primary transition-all" data-path="giay-cau-long" href="#">Giày cầu lông</a><a class="px-spacing-md py-spacing-2xs font-label-md text-label-md text-primary-fixed hover:bg-primary-container hover:text-on-primary transition-all" data-path="balo-va-bao-vot" href="#">Balo &amp; Bao vợt</a><a class="px-spacing-md py-spacing-2xs font-label-md text-label-md text-primary-fixed hover:bg-primary-container hover:text-on-primary transition-all" data-path="quan-ao-thi-dau" href="#">Quần áo thi đấu</a><a class="px-spacing-md py-spacing-2xs font-label-md text-label-md text-primary-fixed hover:bg-primary-container hover:text-on-primary transition-all" data-path="phu-kien-pro" href="#">Phụ kiện&nbsp;</a></nav><div class="flex items-center gap-spacing-md text-primary-fixed font-label-sm text-label-sm uppercase tracking-wider"><div class="flex items-center gap-spacing-2xs"></div><div class="flex items-center gap-spacing-2xs"></div></div></div></div></header><main class="w-full pt-36 bg-background"><div class="max-w-container-max mx-auto px-spacing-lg py-spacing-xl"><div class="flex flex-col w-full">
+<!-- BREADCRUMB -->
+<nav class="flex items-center gap-spacing-xs py-spacing-md text-on-surface-variant font-label-md text-label-md">
+<a class="hover:text-primary transition-colors" href="#">Trang chủ</a>
+<span class="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Balo cầu lông</a>
+<span class="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
+<span class="text-on-surface font-semibold truncate">Balo Cầu Lông Apex Pro Tour 35L Tournament Edition</span>
+</nav>
+<!-- MAIN PRODUCT LAYOUT (2 COLUMNS) -->
+<section class="grid grid-cols-12 gap-spacing-xl bg-surface-container-lowest rounded-xl p-spacing-xl shadow-sm mb-spacing-2xl">
+<!-- LEFT COLUMN: THUMBNAIL RAIL + HERO IMAGE -->
+<div class="col-span-6 flex gap-spacing-md items-start">
+<!-- Vertical Thumbnails -->
+<div class="flex flex-col gap-spacing-sm w-20 shrink-0 select-none">
+<button class="relative rounded-lg overflow-hidden bg-surface-container p-spacing-2xs shadow-sm ring-2 ring-on-tertiary-container transition-all" type="button">
+<img alt="Balo Apex Pro Tour Mặt trước" class="w-full h-20 object-cover rounded" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnFyo7c57sV_OhnyiVcYHhuO0J6Gp7wY2WbmqnUCLIp2v2kv85clamArsXM64zfw8nch7IxJrseUjVpM4UwWjz21HfKfIaoBcrjVMQeTXK7R1ImMbOFAohGP-NhmLD2PE9xs_aoDD8F8RVMM8guEg9WZFtHr3f_Lk_gtlYlRW_QPr2a1ime9we0AYdul75dz2cOSHTBqQ6HsOsT6IKVKZlNKwjQxOfMlMN938yb9t_XwVMwGbkmEYm">
+<span class="absolute inset-x-0 bottom-0 bg-primary-container/80 text-on-primary text-[9px] font-label-sm text-center py-0.5">Mặt trước</span>
+</button>
+<button class="relative rounded-lg overflow-hidden bg-surface-container p-spacing-2xs shadow-sm hover:opacity-90 transition-all" type="button">
+<img class="w-full h-20 object-cover rounded" data-alt="Close up photography of the ergonomic 3D breathable airmesh back panel of a professional navy sports backpack with thick padded lumbar support cushion on studio light background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXPTrF84DuCWFPCow7eXifPn49_Ijgt8NriPpWzUYMtbigBPWI5nDYS-41oNZDq3bnrtBzdTGwk6v0fQrifgT_IEsGw6gtX9d1IkjP1ui044e5Ocn6Nk4BBwdPqxM99vWaqT-i8A7px7YyzMAx7_MjRu8fio826Wv1vai2TKikweHZ6OPmAA4S003hTr53JCDo65JjTXjB1Mw5vUnr57BUUEP7RBBnW_GDHg-KSEe5shPqvIHNfbpz">
+<span class="absolute inset-x-0 bottom-0 bg-primary-container/80 text-on-primary text-[9px] font-label-sm text-center py-0.5">Đệm lưng 3D</span>
+</button>
+<button class="relative rounded-lg overflow-hidden bg-surface-container p-spacing-2xs shadow-sm hover:opacity-90 transition-all" type="button">
+<img class="w-full h-20 object-cover rounded" data-alt="Technical product shot showing open bottom ventilated shoe compartment with silver ions mesh and separate dual racket compartment with metallic thermo guard interior foil lining" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBN0D5kUoNfdbsOTVwyp7kC5jGvpqvEX7xiHLt6xWqPD3TI76NXJs955uEs-7M-5M_YWJo8IHfIda12EYpQ3MqU4GlB6eeOpBHPfJamJcgjYIVC7RFH5wGd-q4mRA9BhYkmE_HVu--puIkG-LLh_IU-51ELcq8h_W-DiL1n7ORf1-gav8aPH7yChlIVWPgDgFNdhVwqfHfJoxG18SC08AQ9n7K-JZ_0v7WtHIcYGWlJgX-h2ptrwnRo">
+<span class="absolute inset-x-0 bottom-0 bg-primary-container/80 text-on-primary text-[9px] font-label-sm text-center py-0.5">Ngăn giày &amp; vợt</span>
+</button>
+<button class="relative rounded-lg overflow-hidden bg-surface-container p-spacing-2xs shadow-sm hover:opacity-90 transition-all" type="button">
+<img class="w-full h-20 object-cover rounded" data-alt="Athletic professional badminton player wearing this tournament navy backpack walking onto an indoor tournament court, high contrast cinematic sports lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-rFgwLoN6lAYmdXfZb5ssETw5roMpP4wtV_6T1dzwgA9we9zFTCI1FdEy1xP8KIZonpBcWQ77MtU1ct2SJ1VQfSnZw5AtsvBmMukfiCIpsxrSIHS58sqKAWh1Dtj1nmhLwIkK0_ye3WcZ-Zf4Z1YKbuBXrC434oRZpRQl2-FRumUUr6_xHdBdbU8OL0C14DBdQEXkeU3iTnPbdjUHmDbWwzIMrrLRFYEkivmN2yt1MR9tbkGoFQgF">
+<span class="absolute inset-x-0 bottom-0 bg-primary-container/80 text-on-primary text-[9px] font-label-sm text-center py-0.5">Trên sân đấu</span>
+</button>
+</div>
+<!-- Hero Gallery Viewer -->
+<div class="relative flex-1 rounded-xl bg-surface-container-low overflow-hidden group flex items-center justify-center min-h-[560px]">
+<!-- Badges Upper Left -->
+<div class="absolute top-4 left-4 z-10 flex flex-col gap-spacing-2xs">
+<span class="px-spacing-xs py-1 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm uppercase tracking-wider flex items-center gap-1 shadow-md">
+<span class="material-symbols-outlined text-[13px] text-tertiary-fixed">water_drop</span>
+            100% Waterproof Fabric
+          </span>
+<span class="px-spacing-xs py-1 rounded-full bg-secondary-container text-on-secondary font-label-sm text-label-sm uppercase tracking-wider flex items-center gap-1 shadow-md">
+<span class="material-symbols-outlined text-[13px]">local_fire_department</span>
+            Top Seller Tour 2024
+          </span>
+</div>
+<!-- Floating Quick Tools -->
+<div class="absolute top-4 right-4 z-10 flex flex-col gap-spacing-2xs">
+<button class="w-10 h-10 rounded-full bg-surface-container-lowest/90 hover:bg-surface-container-lowest text-on-surface shadow-md flex items-center justify-center transition-transform active:scale-95" title="Thêm vào yêu thích" type="button">
+<span class="material-symbols-outlined text-[20px] text-secondary">favorite</span>
+</button>
+<button class="w-10 h-10 rounded-full bg-surface-container-lowest/90 hover:bg-surface-container-lowest text-on-surface shadow-md flex items-center justify-center transition-transform active:scale-95" title="Phóng to ảnh" type="button">
+<span class="material-symbols-outlined text-[20px]">zoom_in</span>
+</button>
+</div>
+<!-- Main Focal Image -->
+<div class="w-full h-full p-spacing-lg flex items-center justify-center">
+<img alt="Balo Cầu Lông Apex Pro Tour 35L" class="max-h-[500px] w-auto object-contain transition-transform duration-300 group-hover:scale-105 select-none drop-shadow-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnFyo7c57sV_OhnyiVcYHhuO0J6Gp7wY2WbmqnUCLIp2v2kv85clamArsXM64zfw8nch7IxJrseUjVpM4UwWjz21HfKfIaoBcrjVMQeTXK7R1ImMbOFAohGP-NhmLD2PE9xs_aoDD8F8RVMM8guEg9WZFtHr3f_Lk_gtlYlRW_QPr2a1ime9we0AYdul75dz2cOSHTBqQ6HsOsT6IKVKZlNKwjQxOfMlMN938yb9t_XwVMwGbkmEYm">
+</div>
+<!-- Tech Overlay Micro Bar -->
+<div class="absolute bottom-4 inset-x-4 bg-surface-container-lowest/95 backdrop-blur-md rounded-lg p-spacing-xs flex items-center justify-around text-on-surface-variant font-label-sm text-label-sm shadow-sm">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary-container">shield</span>
+<span class="">Khoang cách nhiệt Thermo</span>
+</div>
+<div class="h-4 w-px bg-surface-container-high"></div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary-container">air</span>
+<span class="">Thoát khí Ion-Silver</span>
+</div>
+<div class="h-4 w-px bg-surface-container-high"></div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary-container">lock</span>
+<span class="">Khóa kéo YKK chống kẹt</span>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT COLUMN: PRODUCT SPECIFICATIONS & ACTIONS -->
+<div class="col-span-6 flex flex-col justify-between">
+<div>
+<!-- Tag & Brand Line -->
+<div class="flex items-center justify-between gap-spacing-sm pb-spacing-xs">
+<div class="flex items-center gap-spacing-xs">
+<span class="px-2 py-0.5 rounded bg-primary-container text-primary-fixed font-label-sm text-label-sm tracking-widest uppercase">Apex Pro Gear</span>
+<span class="text-outline text-label-sm">•</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Tournament Series</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline font-mono">SKU: AP-BG35L-BL</span>
+</div>
+<!-- Product Title -->
+<h1 class="font-headline-lg text-headline-lg text-primary-container font-extrabold tracking-tight mt-spacing-xs leading-snug">
+          Balo Cầu Lông Apex Pro Tour 35L Tournament Edition (Ngăn Giày &amp; Khoang Chứa Vợt Riêng)
+        </h1>
+<!-- Rating & Sales Bar -->
+<div class="flex items-center gap-spacing-md mt-spacing-xs pb-spacing-sm">
+<div class="flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded">
+<span class="text-on-secondary-container font-bold text-label-md">4.9</span>
+<div class="flex text-amber-500">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+</div>
+</div>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors underline decoration-outline-variant" href="#reviews">
+            158 Đánh giá
+          </a>
+<span class="text-outline">•</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Đã bán 520+</span>
+<span class="text-outline">•</span>
+<span class="inline-flex items-center gap-1 text-label-md font-label-md text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+            Sẵn hàng tại HN &amp; TP.HCM
+          </span>
+</div>
+<!-- Price Block -->
+<div class="flex items-baseline gap-spacing-md p-spacing-md rounded-xl bg-surface-container-low mt-spacing-xs mb-spacing-md">
+<span class="font-headline-xl text-headline-xl font-extrabold text-secondary tracking-tight">
+            980.000₫
+          </span>
+<span class="font-body-lg text-body-lg text-outline line-through">
+            1.350.000₫
+          </span>
+<span class="px-spacing-xs py-0.5 rounded-full bg-secondary text-on-secondary font-label-sm text-label-sm font-bold tracking-wider">
+            -27% TIẾT KIỆM
+          </span>
+</div>
+<!-- Color Swatches -->
+<div class="flex flex-col gap-spacing-xs mb-spacing-md">
+<span class="font-label-md text-label-md text-on-surface font-bold uppercase tracking-wider">
+            Màu sắc: <span class="font-normal text-on-surface-variant normal-case">Navy Phối Xanh Royal (Bản Tuyển Thủ)</span>
+</span>
+<div class="flex items-center gap-spacing-sm">
+<!-- Selected Swatch -->
+<button class="flex items-center gap-2 px-spacing-sm py-1.5 rounded-lg bg-surface-container-lowest shadow-sm ring-2 ring-on-tertiary-container" type="button">
+<span class="w-5 h-5 rounded-full bg-[#0F172A] border-2 border-[#2563EB] shadow-inner"></span>
+<span class="font-label-md text-label-md text-on-surface font-bold">Navy / Royal</span>
+</button>
+<!-- Inactive Swatch 1 -->
+<button class="flex items-center gap-2 px-spacing-sm py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container-lowest transition-colors shadow-sm" type="button">
+<span class="w-5 h-5 rounded-full bg-[#1E293B] border border-secondary shadow-inner"></span>
+<span class="font-label-md text-label-md text-on-surface-variant">Đen Nhám / Đỏ</span>
+</button>
+<!-- Inactive Swatch 2 -->
+<button class="flex items-center gap-2 px-spacing-sm py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container-lowest transition-colors shadow-sm" type="button">
+<span class="w-5 h-5 rounded-full bg-[#CBD5E1] border border-white shadow-inner"></span>
+<span class="font-label-md text-label-md text-on-surface-variant">Xám Tro / Trắng BWF</span>
+</button>
+</div>
+</div>
+<!-- Capacity Tabs -->
+<div class="flex flex-col gap-spacing-xs mb-spacing-md">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md text-on-surface font-bold uppercase tracking-wider">Dung tích / Kích cỡ:</span>
+<span class="font-label-sm text-label-sm text-on-tertiary-container hover:underline cursor-pointer">Hướng dẫn chọn dung tích</span>
+</div>
+<div class="grid grid-cols-3 gap-spacing-xs">
+<button class="p-spacing-xs rounded-lg bg-surface-container-low text-left hover:bg-surface-container transition-colors" type="button">
+<div class="font-label-md text-label-md text-on-surface font-semibold">20L Gọn Nhẹ</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">1-2 Cây vợt</div>
+</button>
+<button class="p-spacing-xs rounded-lg bg-primary-container text-on-primary text-left shadow-sm" type="button">
+<div class="font-label-md text-label-md text-primary-fixed font-bold flex items-center justify-between">
+                30L - 35L Tour
+                <span class="material-symbols-outlined text-[16px] text-primary-fixed">check_circle</span>
+</div>
+<div class="font-body-sm text-body-sm text-on-primary-container">2-3 Vợt + Giày &amp; Đồ</div>
+</button>
+<button class="p-spacing-xs rounded-lg bg-surface-container-low text-left hover:bg-surface-container transition-colors" type="button">
+<div class="font-label-md text-label-md text-on-surface font-semibold">45L Du Đấu</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">4-6 Vợt + Full Set</div>
+</button>
+</div>
+</div>
+<!-- Spec Highlights Mini -->
+<div class="bg-surface-container-low rounded-xl p-spacing-sm mb-spacing-md">
+<div class="grid grid-cols-3 gap-spacing-xs text-left">
+<div>
+<span class="block font-label-sm text-label-sm text-outline uppercase">Sức chứa tối ưu</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">2-3 Vợt + 1 Đôi giày</span>
+</div>
+<div>
+<span class="block font-label-sm text-label-sm text-outline uppercase">Chất liệu vỏ</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">900D PU IPX4 Repellent</span>
+</div>
+<div>
+<span class="block font-label-sm text-label-sm text-outline uppercase">Hệ thống kéo</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">Khóa kép YKK Pro</span>
+</div>
+</div>
+</div>
+<!-- Quantity and Action Buttons -->
+<div class="flex items-center gap-spacing-md mb-spacing-sm">
+<!-- Stepper -->
+<div class="flex items-center rounded-lg bg-surface-container-low p-1 shrink-0">
+<button class="w-9 h-9 flex items-center justify-center rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container font-bold shadow-sm active:scale-95 transition-all" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<input class="w-12 text-center bg-transparent font-headline-sm text-headline-sm font-bold text-on-surface select-none focus:outline-none" readonly="" type="text" value="1">
+<button class="w-9 h-9 flex items-center justify-center rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container font-bold shadow-sm active:scale-95 transition-all" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+<!-- Add to Bag -->
+<button class="flex-1 flex items-center justify-center gap-2 h-12 rounded-lg bg-surface-container-lowest hover:bg-surface-container-low text-primary-container font-label-lg text-label-lg font-bold shadow-sm transition-all active:scale-[0.99] ring-2 ring-primary-container" type="button">
+<span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>
+            THÊM VÀO GIỎ HÀNG
+          </button>
+<!-- Buy Now CTA -->
+<button class="flex-1 flex items-center justify-center gap-2 h-12 rounded-lg bg-secondary hover:bg-secondary-container text-on-secondary font-label-lg text-label-lg font-bold shadow-lg shadow-secondary/25 transition-all active:scale-[0.99]" type="button">
+<span class="material-symbols-outlined text-[20px]">flash_on</span>
+            MUA NGAY (GIAO 2H)
+          </button>
+</div>
+<!-- Utility Links -->
+<div class="flex items-center justify-center gap-spacing-lg text-on-surface-variant font-label-sm text-label-sm pt-spacing-xs">
+<button class="flex items-center gap-1 hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">compare_arrows</span>
+            So sánh với Balo Victor Supreme
+          </button>
+<span class="text-outline">•</span>
+<button class="flex items-center gap-1 hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">share</span>
+            Chia sẻ thông số kỹ thuật
+          </button>
+</div>
+</div>
+<!-- Assurances Card -->
+<div class="grid grid-cols-3 gap-spacing-xs bg-surface-container-low rounded-xl p-spacing-sm mt-spacing-md">
+<div class="flex items-center gap-spacing-xs">
+<div class="w-9 h-9 rounded-full bg-surface-container-lowest flex items-center justify-center text-secondary shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">local_shipping</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface font-bold">Giao Hỏa Tốc 2H</span>
+<span class="font-body-sm text-[11px] text-on-surface-variant">Miễn phí toàn quốc từ 1.000k</span>
+</div>
+</div>
+<div class="flex items-center gap-spacing-xs">
+<div class="w-9 h-9 rounded-full bg-surface-container-lowest flex items-center justify-center text-secondary shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface font-bold">Bảo Hành 12 Tháng</span>
+<span class="font-body-sm text-[11px] text-on-surface-variant">Khóa kéo, vải &amp; đường may</span>
+</div>
+</div>
+<div class="flex items-center gap-spacing-xs">
+<div class="w-9 h-9 rounded-full bg-surface-container-lowest flex items-center justify-center text-secondary shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">sync_alt</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface font-bold">Đổi Mới 7 Ngày</span>
+<span class="font-body-sm text-[11px] text-on-surface-variant">Lỗi từ nhà sản xuất Apex</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- PRODUCT SPECIFICATION & DETAILS TABS -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm p-spacing-xl mb-spacing-2xl">
+<!-- Tabs Header -->
+<div class="flex items-center gap-spacing-xl bg-surface-container-low rounded-lg p-1.5 mb-spacing-xl">
+<button class="flex-1 py-spacing-xs rounded font-label-lg text-label-lg font-bold bg-surface-container-lowest text-primary-container shadow-sm flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined text-[20px] text-secondary">description</span>
+        Mô tả chi tiết &amp; Công nghệ
+      </button>
+<button class="flex-1 py-spacing-xs rounded font-label-lg text-label-lg font-semibold text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-2 transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+        Thông số kỹ thuật chuẩn
+      </button>
+<button class="flex-1 py-spacing-xs rounded font-label-lg text-label-lg font-semibold text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-2 transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">reviews</span>
+        Đánh giá &amp; Bình luận (158)
+      </button>
+<button class="flex-1 py-spacing-xs rounded font-label-lg text-label-lg font-semibold text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-2 transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">help_center</span>
+        Hỏi đáp chuyên gia (18)
+      </button>
+</div>
+<!-- Active Tab Content: Detailed Description -->
+<div class="flex flex-col gap-spacing-xl">
+<!-- Section Intro Text -->
+<div class="max-w-4xl">
+<span class="font-label-sm text-label-sm text-secondary uppercase font-bold tracking-wider">Tournament Engineering</span>
+<h2 class="font-headline-md text-headline-md text-primary-container font-bold mt-1 mb-spacing-xs">
+          Thiết kế công thái học Ergonomic Dynamic Fit – Sẵn sàng cho những chuỗi trận đỉnh cao
+        </h2>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+          Balo Cầu Lông Apex Pro Tour 35L được thiết kế dựa trên phản hồi của các tay vợt thi đấu chuyên nghiệp giải Grand Prix. Với kết cấu trọng tâm đối xứng và hệ thống quai đai phân bổ trọng lực đa điểm, balo loại bỏ hoàn toàn áp lực đè nặng lên các đốt sống lưng khi phải mang vác toàn bộ đồ nghề, từ 3 khung vợt căng cước áp suất cao đến giày đấu và bình giữ nhiệt dung tích lớn.
+        </p>
+</div>
+<!-- 3 Key Technology Cards -->
+<div class="grid grid-cols-3 gap-spacing-lg">
+<!-- Tech Card 1 -->
+<div class="flex flex-col bg-surface-container-low rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+<div class="h-48 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Technical macro photography of badminton shoe placed inside isolated vented bottom backpack compartment with metallic anti odor air holes and silver fabric" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvwDwoqAmk_qd2COuEUGIVj7IwE5C06kqU73Z9RaVRXddU-XTSOg_oLzysaF2hEJioMf-KOMclPWntgHZFPloR2X9iuE7eBlSr2uzV511t9IbgGyv9t1nkpH9gkmWSmPYaCub00qBHXLhuF6Ze-DLvgWbtn5cMqy6GVPlqgGqN6iW2ofTC75CnqHPhRR39jNRRsvadkOF32YE0QL0QTJiAr6741mZb3_VaB9daBna32Eo5xbZkNtZ6">
+</div>
+<div class="p-spacing-md flex flex-col gap-spacing-xs">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-bold">01</div>
+<h3 class="font-headline-sm text-headline-sm text-primary-container font-bold">Ngăn Giày Độc Lập Ion-Silver</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+              Tách biệt hoàn toàn phần đáy với khoang chứa vợt. Tích hợp 4 cửa thoát khí bằng lưới kim loại và lớp lót kháng khuẩn, triệt tiêu ẩm mốc và mùi mồ hôi sau các buổi tập cường độ cao.
+            </p>
+</div>
+</div>
+<!-- Tech Card 2 -->
+<div class="flex flex-col bg-surface-container-low rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+<div class="h-48 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Close up photography of professional badminton rackets stored inside thermal insulation padded backpack sleeve with velcro security straps" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBn7cz-LAatDLIoAhr2O_2313h0NsN47B2HvkY8amqL5UJ-SW0wqeLlFQKv47YrJWCLOFoEpUActqydXOcecKYl4P6NIrfQtmSebURk8XF-YL2Bc9FHWflJDNXQUd8YIisRMSWMfy6D3chAVK3xB56RRF5FwNW0yT9FUvhCN7nOp1FPmrPoZOqfOOHiDCkI2a9iBd0oBffu7lzxqXjIjrun155dxZobGSmH9do-jkA0bS86zgt02PRV">
+</div>
+<div class="p-spacing-md flex flex-col gap-spacing-xs">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-bold">02</div>
+<h3 class="font-headline-sm text-headline-sm text-primary-container font-bold">Khoang Vợt Thermo Guard</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+              Khoang chuyên dụng bọc mút xốp EVA đàn hồi cao kết hợp lớp phản xạ nhiệt, bảo vệ dây cước không bị mất cân bằng độ căng (tension loss) khi thời tiết nắng nóng ngoài sân đấu.
+            </p>
+</div>
+</div>
+<!-- Tech Card 3 -->
+<div class="flex flex-col bg-surface-container-low rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+<div class="h-48 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Detail shot of the breathable honeycomb 3D airmesh foam shoulder harness and sternum buckle on a high performance badminton backpack" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTOONTQjGVmwW1u23EllR1T_zpv7hVwiq7rwY5IRxbYUNmPDmPibVvsCM0u68vOsfPXaKqNm28ozXd9myGQwaRnrVppHKngGu3ajUnGEoWExGFuxU4MWR34wk8W3XtIYweg-N4UobdvZCUGOzD8tGi3zeTCaCt-Fp9xgiOV5TCjit5Asc6lJ8DBFYqmOnS_NOwbRePuOFNwTdQbxzpCdKSgBAner34jioBHyk0AY3YB3zHdMY_Se0c">
+</div>
+<div class="p-spacing-md flex flex-col gap-spacing-xs">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-bold">03</div>
+<h3 class="font-headline-sm text-headline-sm text-primary-container font-bold">Đệm Lưng 3D AirMesh Tản Nhiệt</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+              Cấu trúc rãnh lưu thông không khí chữ V độc quyền. Lớp bọt biển mật độ kép ép định hình giúp thấm hút mồ hôi lưng tức thì và giảm tải 35% trọng lượng cảm nhận khi di chuyển đường dài.
+            </p>
+</div>
+</div>
+</div>
+<!-- Technical Specifications Table Box -->
+<div class="bg-surface-container-low rounded-xl p-spacing-lg">
+<h3 class="font-headline-sm text-headline-sm text-primary-container font-bold mb-spacing-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-secondary">tune</span>
+          Bảng Thông Số Kỹ Thuật Chi Tiết (Apex Pro Tour 35L)
+        </h3>
+<div class="grid grid-cols-2 gap-x-spacing-xl gap-y-spacing-xs font-body-sm text-body-sm">
+<div class="flex justify-between py-spacing-xs bg-surface-container-lowest px-spacing-sm rounded">
+<span class="text-on-surface-variant">Thương hiệu</span>
+<span class="font-bold text-on-surface">Apex Pro Gear (Hàn Quốc)</span>
+</div>
+<div class="flex justify-between py-spacing-xs bg-surface-container-lowest px-spacing-sm rounded">
+<span class="text-on-surface-variant">Dung tích chứa</span>
+<span class="font-bold text-on-surface">35 Lít (Chuyên đấu Tour)</span>
+</div>
+<div class="flex justify-between py-spacing-xs bg-surface-container-lowest px-spacing-sm rounded">
+<span class="text-on-surface-variant">Chất liệu thân vỏ</span>
+<span class="font-bold text-on-surface">900D Oxford Polyester tráng PU 3 lớp</span>
+</div>
+<div class="flex justify-between py-spacing-xs bg-surface-container-lowest px-spacing-sm rounded">
+<span class="text-on-surface-variant">Khả năng kháng nước</span>
+<span class="font-bold text-on-surface">IPX4 Hydro-Repellent (Mưa vừa &amp; Văng nước)</span>
+</div>
+<div class="flex justify-between py-spacing-xs bg-surface-container-lowest px-spacing-sm rounded">
+<span class="text-on-surface-variant">Cơ cấu ngăn chứa</span>
+<span class="font-bold text-on-surface">5 Khoang chức năng riêng biệt</span>
+</div>
+<div class="flex justify-between py-spacing-xs bg-surface-container-lowest px-spacing-sm rounded">
+<span class="text-on-surface-variant">Kích thước chuẩn (D x R x C)</span>
+<span class="font-bold text-on-surface">33cm x 22cm x 50cm</span>
+</div>
+<div class="flex justify-between py-spacing-xs bg-surface-container-lowest px-spacing-sm rounded">
+<span class="text-on-surface-variant">Trọng lượng rỗng</span>
+<span class="font-bold text-on-surface">880g (Tối ưu cơ động siêu nhẹ)</span>
+</div>
+<div class="flex justify-between py-spacing-xs bg-surface-container-lowest px-spacing-sm rounded">
+<span class="text-on-surface-variant">Phụ kiện tặng kèm</span>
+<span class="font-bold text-secondary">Túi áo mưa trùm phản quang Apex Shield</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- RELATED PRODUCTS CAROUSEL / GRID -->
+<section class="flex flex-col gap-spacing-lg mb-spacing-xl">
+<div class="flex items-end justify-between">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase font-bold tracking-wider">Tournament Collection</span>
+<h2 class="font-headline-lg text-headline-lg text-primary-container font-bold">
+          Sản Phẩm Cùng Bộ Sưu Tập Balo &amp; Túi Vợt
+        </h2>
+</div>
+<a class="flex items-center gap-1 font-label-md text-label-md text-primary hover:text-secondary font-bold transition-colors" href="#">
+        Xem tất cả balo thi đấu
+        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+</div>
+<!-- 4 Pro Cards Grid -->
+<div class="grid grid-cols-4 gap-spacing-lg">
+<!-- Related Product 1 -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+<div class="relative bg-surface-container-low h-64 p-spacing-md flex items-center justify-center overflow-hidden">
+<span class="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-secondary text-on-secondary font-label-sm text-label-sm font-bold">
+            -20%
+          </span>
+<img class="max-h-48 w-auto object-contain transition-transform group-hover:scale-105" data-alt="Apex Pro Thermo Guard 9 Rackets high end tournament bag in navy blue and athletic red, laying on clean studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnr8Q1Sgjn5Wy24wXzM6Dc4mOo3SIP9MeTH1qq5vGlDK4nAAoun1uH-TWGTXmEAjr36QcqvInmxa2YxExxRV7FluTfEXUMDq0a7yFVEl3A8xhb02X_1lQarJnnKCyXZD1qmEs_BXsGPvHxxWdpjpKRiU10RoYfhWka8CFpWj8NyMSf_mtv5lt5rq_lLGNMyalWvy-e_luu8AB6sMtP8a8VNZ4wBoWQGOYg96O1oKTeIWVARUFXGqVz">
+</div>
+<div class="p-spacing-md flex flex-col flex-1 justify-between">
+<div>
+<div class="flex items-center gap-1 text-amber-500 mb-1">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="font-label-sm text-label-sm text-on-surface font-bold">5.0</span>
+<span class="text-outline text-label-sm">(94)</span>
+</div>
+<h4 class="font-label-lg text-label-lg text-primary-container font-bold line-clamp-2 leading-snug">
+              Bao Vợt Cầu Lông Cách Nhiệt Apex Pro Thermo Guard 9 Rackets
+            </h4>
+</div>
+<div class="mt-spacing-md pt-spacing-sm flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-outline line-through">1.560.000₫</span>
+<span class="font-headline-sm text-headline-sm text-secondary font-bold">1.250.000₫</span>
+</div>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-on-primary hover:bg-secondary transition-colors flex items-center justify-center shadow-sm" title="Thêm vào giỏ" type="button">
+<span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Related Product 2 -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+<div class="relative bg-surface-container-low h-64 p-spacing-md flex items-center justify-center overflow-hidden">
+<span class="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-secondary text-on-secondary font-label-sm text-label-sm font-bold">
+            -15%
+          </span>
+<img class="max-h-48 w-auto object-contain transition-transform group-hover:scale-105" data-alt="Yonex Pro Tournament Backpack 30L in black and vibrant blue sports design on clean minimalist light background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRMmvau_8J7TYrl9tl2-T8b438IAL7aQSOr7S5Mwxwyd-xmkOgP7O2Q2kcv9X0pFYKxSaS82EYo_cDjPo7pZIEQncIkalzRVXIqr_0db7Y02_qL64NlYWXtmFs3lu89G5MvhKoARJQFHSB2ZKHCJaH-V6j_MKrCXQmJS-vHRKx3T0uZqWTA-Ka7JygS_5Hh_DYSqrekaYBxOCmfrM3GXhp9muCuMyx2Rkq8CRnOZEXGtlspao9sKYw">
+</div>
+<div class="p-spacing-md flex flex-col flex-1 justify-between">
+<div>
+<div class="flex items-center gap-1 text-amber-500 mb-1">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="font-label-sm text-label-sm text-on-surface font-bold">4.8</span>
+<span class="text-outline text-label-sm">(120)</span>
+</div>
+<h4 class="font-label-lg text-label-lg text-primary-container font-bold line-clamp-2 leading-snug">
+              Balo Cầu Lông Yonex Pro Tournament Backpack 30L Edition
+            </h4>
+</div>
+<div class="mt-spacing-md pt-spacing-sm flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-outline line-through">1.350.000₫</span>
+<span class="font-headline-sm text-headline-sm text-secondary font-bold">1.150.000₫</span>
+</div>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-on-primary hover:bg-secondary transition-colors flex items-center justify-center shadow-sm" title="Thêm vào giỏ" type="button">
+<span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Related Product 3 -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+<div class="relative bg-surface-container-low h-64 p-spacing-md flex items-center justify-center overflow-hidden">
+<span class="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm font-bold">
+            MỚI VỀ
+          </span>
+<img class="max-h-48 w-auto object-contain transition-transform group-hover:scale-105" data-alt="Apex Holdall Duffel Bag 45L waterproof tournament travel bag in dark graphite and electric blue accents on neutral stage" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvUzRQmGamyFzHWDHzIJwBQ0cfaw6dfS8azHYxF20M1TmpwaTBJJau0SfvgrZ5qikBXkun4hH8x81zj-2f40tUDay6ueZsrTu0mSBwjbFI9Pig0eirSYGEfM_X0N1lJOvIjRw-rPOfzXARX27k2bzbPTuSlOE3bHQdCvFgCNWCc4FsPn4pUxxftfYZ33Eme0Ku8SsDX1yRb65BR8OABq_kXGVuwDAqkobBVJbL-UWuSSthECmau1xv">
+</div>
+<div class="p-spacing-md flex flex-col flex-1 justify-between">
+<div>
+<div class="flex items-center gap-1 text-amber-500 mb-1">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="font-label-sm text-label-sm text-on-surface font-bold">4.9</span>
+<span class="text-outline text-label-sm">(38)</span>
+</div>
+<h4 class="font-label-lg text-label-lg text-primary-container font-bold line-clamp-2 leading-snug">
+              Túi Du Đấu Apex Holdall Duffel Bag 45L Kháng Nước Đa Năng
+            </h4>
+</div>
+<div class="mt-spacing-md pt-spacing-sm flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-outline line-through">1.050.000₫</span>
+<span class="font-headline-sm text-headline-sm text-secondary font-bold">890.000₫</span>
+</div>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-on-primary hover:bg-secondary transition-colors flex items-center justify-center shadow-sm" title="Thêm vào giỏ" type="button">
+<span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Related Product 4 -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+<div class="relative bg-surface-container-low h-64 p-spacing-md flex items-center justify-center overflow-hidden">
+<span class="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-secondary text-on-secondary font-label-sm text-label-sm font-bold">
+            -25%
+          </span>
+<img class="max-h-48 w-auto object-contain transition-transform group-hover:scale-105" data-alt="Victor Supreme Compact 25L badminton backpack in white and red accents, lightweight athletic form on clean light floor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDp5oss-zuvVyd8onXtnzeVyl_kax3fhJS8QAjVGLeQMGSoz_3lEbwFdaCpL9oBQXj5lcPJImz-T-CGYhgMKCTTaW5p1fgdkzO41T0EmRbQbHoky5xdZX_6Df_4PPwscdZmGgZBRl6neh0UFSI95ByHGa7QvBL8eioXicdVhvveRdr7a1QeJ3EY0o_sNnT3HH0D5IEGrBaNojT1Qie3T8mjrI9IRQTBM-FLOkzUXAOOSYxxgWXmY8Fz">
+</div>
+<div class="p-spacing-md flex flex-col flex-1 justify-between">
+<div>
+<div class="flex items-center gap-1 text-amber-500 mb-1">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="font-label-sm text-label-sm text-on-surface font-bold">4.7</span>
+<span class="text-outline text-label-sm">(83)</span>
+</div>
+<h4 class="font-label-lg text-label-lg text-primary-container font-bold line-clamp-2 leading-snug">
+              Balo Cầu Lông Victor Supreme Compact 25L (Gọn Nhẹ Tập Luyện)
+            </h4>
+</div>
+<div class="mt-spacing-md pt-spacing-sm flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-outline line-through">1.000.000₫</span>
+<span class="font-headline-sm text-headline-sm text-secondary font-bold">750.000₫</span>
+</div>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-on-primary hover:bg-secondary transition-colors flex items-center justify-center shadow-sm" title="Thêm vào giỏ" type="button">
+<span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div></div></main><footer class="w-full bg-primary-container text-on-primary pt-spacing-2xl pb-spacing-xl"><div class="max-w-container-max mx-auto px-spacing-lg"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-spacing-xl pb-spacing-xl"><div class="flex flex-col gap-spacing-md"><div class="flex items-center gap-spacing-xs"><span class="font-headline-sm text-headline-sm uppercase tracking-wider text-on-primary font-bold">Apex Badminton</span></div><p class="font-body-sm text-body-sm text-on-primary-container leading-relaxed">Hệ thống phân phối dụng cụ cầu lông chuyên nghiệp hàng đầu Việt Nam. Đối tác chiến lược cung cấp các dòng thiết bị thi đấu đạt chuẩn Quốc tế BWF cho vận động viên và người chơi phong trào.</p><div class="flex items-center gap-spacing-xs"><span class="px-spacing-xs py-spacing-2xs bg-surface-container-highest/20 rounded-lg text-primary-fixed font-label-sm text-label-sm">BWF Standard</span><span class="px-spacing-xs py-spacing-2xs bg-surface-container-highest/20 rounded-lg text-primary-fixed font-label-sm text-label-sm">100% Chính Hãng</span></div></div><div class="flex flex-col gap-spacing-md"><h4 class="font-label-lg text-label-lg uppercase tracking-wider text-on-primary font-bold border-b border-outline-variant/20 pb-spacing-2xs">Chính sách &amp; Bảo hành</h4><ul class="flex flex-col gap-spacing-xs font-body-sm text-body-sm text-on-primary-container"><li class="hover:text-on-primary transition-colors cursor-pointer flex items-center gap-spacing-xs"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span>Bảo hành chính hãng lên đến 12 tháng</li><li class="hover:text-on-primary transition-colors cursor-pointer flex items-center gap-spacing-xs"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span>Chính sách đổi trả linh hoạt trong 7 ngày</li><li class="hover:text-on-primary transition-colors cursor-pointer flex items-center gap-spacing-xs"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span>Dịch vụ căng cước điện tử chuẩn BWF</li><li class="hover:text-on-primary transition-colors cursor-pointer flex items-center gap-spacing-xs"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span>Chính sách giao hàng &amp; vận chuyển toàn quốc</li><li class="hover:text-on-primary transition-colors cursor-pointer flex items-center gap-spacing-xs"><span class="material-symbols-outlined text-[16px] text-secondary">check_circle</span>Kiểm định nguồn gốc chính hãng QR Code</li></ul></div><div class="flex flex-col gap-spacing-md"><h4 class="font-label-lg text-label-lg uppercase tracking-wider text-on-primary font-bold border-b border-outline-variant/20 pb-spacing-2xs">Liên hệ &amp; Showroom</h4><div class="flex flex-col gap-spacing-sm font-body-sm text-body-sm text-on-primary-container"><div class="flex flex-col"><span class="text-on-primary font-semibold">Flagship Showroom TP.HCM:</span><span class="">123 Điện Biên Phủ, Phường 15, Quận Bình Thạnh, TP.HCM</span></div><div class="flex flex-col"><span class="text-on-primary font-semibold">Flagship Showroom Hà Nội:</span><span class="">45 Phố Võ Thị Sáu, Hai Bà Trưng, Hà Nội</span></div><div class="flex items-center gap-spacing-xs text-on-primary"><span class="material-symbols-outlined text-[18px] text-secondary">support_agent</span><span class="">Hotline tư vấn: 1900 6886 (8:00 - 21:30)</span></div></div></div><div class="flex flex-col gap-spacing-md"><h4 class="font-label-lg text-label-lg uppercase tracking-wider text-on-primary font-bold border-b border-outline-variant/20 pb-spacing-2xs">Đăng ký nhận tin</h4><p class="font-body-sm text-body-sm text-on-primary-container">Nhận tin tức giải đấu mới nhất và mã khuyến mãi độc quyền lên đến 30% dành cho hội viên Apex.</p><div class="flex items-center rounded-xl bg-surface-container-highest/20 p-spacing-2xs"><input class="w-full bg-transparent px-spacing-sm font-body-sm text-body-sm text-on-primary placeholder:text-on-primary-container focus:outline-none" placeholder="Nhập email của bạn..." type="email"><button class="px-spacing-md py-spacing-xs bg-secondary text-on-secondary rounded-lg font-label-md text-label-md hover:bg-secondary-container transition-colors shrink-0" type="button">Gửi</button></div><div class="flex flex-col gap-spacing-2xs pt-spacing-2xs"><span class="font-label-sm text-label-sm text-on-primary-container uppercase tracking-wider">Cổng thanh toán an toàn</span><div class="flex items-center gap-spacing-xs flex-wrap"><span class="px-spacing-xs py-spacing-2xs bg-surface-container-lowest text-primary font-label-sm text-label-sm font-bold rounded-lg">VISA</span><span class="px-spacing-xs py-spacing-2xs bg-surface-container-lowest text-primary font-label-sm text-label-sm font-bold rounded-lg">Mastercard</span><span class="px-spacing-xs py-spacing-2xs bg-surface-container-lowest text-secondary font-label-sm text-label-sm font-bold rounded-lg">VietQR</span><span class="px-spacing-xs py-spacing-2xs bg-surface-container-lowest text-secondary-container font-label-sm text-label-sm font-bold rounded-lg">MoMo</span></div></div></div></div><div class="border-t border-outline-variant/20 pt-spacing-lg flex flex-col md:flex-row items-center justify-between gap-spacing-md text-on-primary-container font-body-sm text-body-sm"><p class="">© 2025 Apex Badminton Pro Equipment. Tất cả quyền được bảo lưu.</p><div class="flex items-center gap-spacing-md"><span class="flex items-center gap-spacing-2xs text-primary-fixed"><span class="material-symbols-outlined text-[16px] text-secondary">shield</span>Đã thông báo Bộ Công Thương</span><a class="hover:text-on-primary transition-colors" href="#">Điều khoản dịch vụ</a><a class="hover:text-on-primary transition-colors" href="#">Chính sách bảo mật</a></div></div></div></footer>
+
+</body></html>

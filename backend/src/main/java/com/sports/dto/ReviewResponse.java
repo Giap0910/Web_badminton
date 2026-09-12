@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 public class ReviewResponse {
     private Long id;
     private Long productId;
+    private String productName;
+    private String productImageUrl;
+    private String productBrand;
     private Long userId;
     private String username;
     private String userFullName;

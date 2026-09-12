@@ -18,6 +18,9 @@ public class OrderResponse {
     private String shippingPhone;
     private String shippingAddress;
     private BigDecimal totalAmount;
+    private String voucherCode;
+    private BigDecimal discountAmount;
+    private String note;
     private String status;
     private String paymentMethod;
     private Long payosOrderCode;

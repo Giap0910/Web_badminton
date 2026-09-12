@@ -1,0 +1,656 @@
+<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: 'class', theme: { extend: { 'colors': { 'surface-container': '#eceef0', 'surface-container-high': '#e6e8ea', 'primary-fixed': '#dae2fd', 'on-tertiary-fixed': '#00174b', 'inverse-surface': '#2d3133', 'error': '#ba1a1a', 'outline': '#76777d', 'on-background': '#191c1e', 'primary': '#000000', 'surface-container-highest': '#e0e3e5', 'on-surface-variant': '#45464d', 'on-surface': '#191c1e', 'on-tertiary-fixed-variant': '#003ea8', 'primary-container': '#131b2e', 'on-primary-fixed-variant': '#3f465c', 'on-primary-container': '#7c839b', 'surface-tint': '#565e74', 'error-container': '#ffdad6', 'on-secondary': '#ffffff', 'on-secondary-container': '#fffbff', 'tertiary-container': '#00174b', 'inverse-primary': '#bec6e0', 'inverse-on-surface': '#eff1f3', 'on-primary-fixed': '#131b2e', 'surface-container-lowest': '#ffffff', 'surface-bright': '#f7f9fb', 'tertiary-fixed': '#dbe1ff', 'secondary-fixed-dim': '#ffb3ad', 'primary-fixed-dim': '#bec6e0', 'secondary-container': '#da3437', 'tertiary-fixed-dim': '#b4c5ff', 'outline-variant': '#c6c6cd', 'background': '#f7f9fb', 'surface-container-low': '#f2f4f6', 'on-secondary-fixed-variant': '#930013', 'surface-variant': '#e0e3e5', 'on-error-container': '#93000a', 'tertiary': '#000000', 'secondary-fixed': '#ffdad7', 'on-secondary-fixed': '#410004', 'surface-dim': '#d8dadc', 'on-primary': '#ffffff', 'on-error': '#ffffff', 'surface': '#f7f9fb', 'on-tertiary-container': '#497cff', 'on-tertiary': '#ffffff', 'secondary': '#b61722' }, 'borderRadius': { 'DEFAULT': '0.125rem', 'lg': '0.25rem', 'xl': '0.5rem', 'full': '0.75rem' }, 'spacing': { 'spacing-2xs': '0.25rem', 'spacing-3xl': '4.5rem', 'spacing-4xl': '6rem', 'gutter-mobile': '1rem', 'gutter-desktop': '1.5rem', 'spacing-sm': '0.75rem', 'spacing-xs': '0.5rem', 'container-max': '80rem', 'spacing-xl': '2rem', 'spacing-md': '1rem', 'spacing-lg': '1.5rem', 'spacing-2xl': '3rem' }, 'fontFamily': { 'headline-sm': ['Plus Jakarta Sans'], 'headline-xl': ['Plus Jakarta Sans'], 'body-md': ['Inter'], 'label-sm': ['Plus Jakarta Sans'], 'label-lg': ['Plus Jakarta Sans'], 'headline-lg': ['Plus Jakarta Sans'], 'body-lg': ['Inter'], 'headline-xl-mobile': ['Plus Jakarta Sans'], 'label-md': ['Plus Jakarta Sans'], 'body-sm': ['Inter'], 'headline-md': ['Plus Jakarta Sans'], 'display-hero-mobile': ['Plus Jakarta Sans'], 'display-hero': ['Plus Jakarta Sans'] }, 'fontSize': { 'headline-sm': ['18px', { 'lineHeight': '24px', 'letterSpacing': '-0.005em', 'fontWeight': '600' }], 'headline-xl': ['40px', { 'lineHeight': '48px', 'letterSpacing': '-0.02em', 'fontWeight': '700' }], 'body-md': ['15px', { 'lineHeight': '22px', 'letterSpacing': '0em', 'fontWeight': '400' }], 'label-sm': ['11px', { 'lineHeight': '14px', 'letterSpacing': '0.05em', 'fontWeight': '700' }], 'label-lg': ['14px', { 'lineHeight': '20px', 'letterSpacing': '0.02em', 'fontWeight': '700' }], 'headline-lg': ['30px', { 'lineHeight': '38px', 'letterSpacing': '-0.015em', 'fontWeight': '700' }], 'body-lg': ['18px', { 'lineHeight': '28px', 'letterSpacing': '-0.005em', 'fontWeight': '400' }], 'headline-xl-mobile': ['28px', { 'lineHeight': '36px', 'letterSpacing': '-0.02em', 'fontWeight': '700' }], 'label-md': ['12px', { 'lineHeight': '16px', 'letterSpacing': '0.03em', 'fontWeight': '600' }], 'body-sm': ['13px', { 'lineHeight': '18px', 'letterSpacing': '0em', 'fontWeight': '400' }], 'headline-md': ['22px', { 'lineHeight': '30px', 'letterSpacing': '-0.01em', 'fontWeight': '600' }], 'display-hero-mobile': ['36px', { 'lineHeight': '44px', 'letterSpacing': '-0.02em', 'fontWeight': '800' }], 'display-hero': ['56px', { 'lineHeight': '64px', 'letterSpacing': '-0.03em', 'fontWeight': '800' }] } } } };</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-screen w-64 bg-primary-container z-50 flex flex-col justify-between shadow-[0_4px_24px_rgba(15,23,42,0.25)]"><div class="flex flex-col flex-1 overflow-y-auto"><div class="h-16 px-spacing-md flex items-center gap-spacing-xs bg-primary"><img alt="Apex Admin logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1V09dX7luf7Tn0zw44_0kTjb4wuVeMw6D_vt9sCCkCHRfMZUYi-Dj8NmvrxgJhVNNA7mYsFiTUWDFQb2jmT1wkqXITiOb8GLzIU8005NERQnZRVzkNc8ryfa2_BxoRpZ6HzwkkEBP1AXVx6YTbwqQVRE0EAUfqBOFHAV7C83Z5se3QgIZ_KCo6GA3N48vYyaOd7Gjho0kKZ9817akWIz9qwAEkUEu03YDkkbkwc5eiZDvDnEMpUENOwlA"><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-on-primary tracking-tight leading-none uppercase">APEX ADMIN</span><span class="font-label-sm text-label-sm text-on-tertiary-container tracking-wider uppercase">Pro Badminton Portal</span></div></div><div class="px-spacing-sm py-spacing-md"><div class="px-spacing-xs pb-spacing-2xs pt-spacing-xs font-label-sm text-label-sm text-on-primary-container tracking-wider uppercase">TỔNG QUAN</div><nav class="flex flex-col gap-spacing-2xs" data-active-classes="bg-on-tertiary-fixed-variant text-on-primary font-bold shadow-sm"><a class="flex items-center justify-between px-spacing-sm py-spacing-xs rounded-lg text-on-primary-container hover:bg-surface-tint/20 hover:text-on-primary transition-colors" data-path="dashboard" href="#"><span class="font-label-lg text-label-lg">Dashboard</span></a></nav><div class="px-spacing-xs pb-spacing-2xs pt-spacing-md font-label-sm text-label-sm text-on-primary-container tracking-wider uppercase">QUẢN LÝ BÁN HÀNG</div><nav class="flex flex-col gap-spacing-2xs" data-active-classes="bg-on-tertiary-fixed-variant text-on-primary font-bold shadow-sm"><a class="flex items-center justify-between px-spacing-sm py-spacing-xs rounded-lg text-on-primary-container hover:bg-surface-tint/20 hover:text-on-primary transition-colors" data-path="san-pham" href="#"><span class="font-label-lg text-label-lg">Sản phẩm</span></a><a class="flex items-center justify-between px-spacing-sm py-spacing-xs rounded-lg text-on-primary-container hover:bg-surface-tint/20 hover:text-on-primary transition-colors" data-path="don-hang" href="#"><span class="font-label-lg text-label-lg">Đơn hàng</span></a><a class="flex items-center justify-between px-spacing-sm py-spacing-xs rounded-lg text-on-primary-container hover:bg-surface-tint/20 hover:text-on-primary transition-colors" data-path="khach-hang" href="#"><span class="font-label-lg text-label-lg">Khách hàng</span></a><a class="flex items-center justify-between px-spacing-sm py-spacing-xs rounded-lg text-on-primary-container hover:bg-surface-tint/20 hover:text-on-primary transition-colors" data-path="khuyen-mai" href="#"><span class="font-label-lg text-label-lg">Khuyến mãi</span></a><a aria-current="page" class="flex items-center justify-between px-spacing-sm py-spacing-xs rounded-lg transition-colors bg-on-tertiary-fixed-variant text-on-primary font-bold shadow-sm" data-path="danh-gia" href="#"><span class="font-label-lg text-label-lg">Đánh giá</span></a><a class="flex items-center justify-between px-spacing-sm py-spacing-xs rounded-lg text-on-primary-container hover:bg-surface-tint/20 hover:text-on-primary transition-colors" data-path="giao-dich" href="#"><span class="font-label-lg text-label-lg">Giao dịch</span></a></nav><div class="px-spacing-xs pb-spacing-2xs pt-spacing-md font-label-sm text-label-sm text-on-primary-container tracking-wider uppercase">HỆ THỐNG</div><nav class="flex flex-col gap-spacing-2xs" data-active-classes="bg-on-tertiary-fixed-variant text-on-primary font-bold shadow-sm"><a class="flex items-center justify-between px-spacing-sm py-spacing-xs rounded-lg text-on-primary-container hover:bg-surface-tint/20 hover:text-on-primary transition-colors" data-path="cai-dat" href="#"><span class="font-label-lg text-label-lg">Cài đặt</span></a></nav></div></div><div class="p-spacing-sm bg-primary/60 flex flex-col gap-spacing-xs"><div class="flex items-center gap-spacing-xs"><div class="w-9 h-9 rounded-full bg-surface-tint flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[20px]">shield_person</span></div><div class="flex flex-col min-w-0 flex-1"><span class="font-label-md text-label-md text-on-primary truncate">Admin Hoàng Nam</span><span class="font-label-sm text-label-sm text-on-primary-container">Super Admin</span></div></div><div class="flex items-center gap-spacing-2xs pt-spacing-2xs"><a class="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-surface-tint/20 hover:bg-surface-tint/40 font-label-sm text-label-sm text-on-primary transition-colors" href="#"><span class="material-symbols-outlined text-[16px]">storefront</span><span>Cửa hàng</span></a><a class="flex items-center justify-center p-1.5 rounded-lg bg-surface-tint/20 hover:bg-secondary hover:text-on-secondary font-label-sm text-label-sm text-on-primary transition-colors" href="#"><span class="material-symbols-outlined text-[16px]">logout</span></a></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 px-spacing-lg flex items-center justify-between"><div class="flex items-center gap-spacing-md"><div class="flex items-center w-80 lg:w-96 px-spacing-sm py-2 rounded-lg bg-surface-container-low"><span class="material-symbols-outlined text-on-surface-variant text-[20px] mr-spacing-xs">search</span><input class="w-full bg-transparent border-none outline-none font-body-sm text-body-sm text-on-surface placeholder:text-outline" placeholder="Tìm kiếm đơn hàng, sản phẩm, khách hàng (Ctrl+K)..." type="text"></div><div class="hidden xl:flex items-center gap-2 px-spacing-sm py-1.5 rounded-full bg-surface-container-low"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span><span class="font-label-sm text-label-sm text-on-surface-variant">Hệ thống hoạt động bình thường</span></div></div><div class="flex items-center gap-spacing-sm"><button class="relative p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[22px]">chat_bubble</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-on-tertiary-container"></span></button><button class="relative p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary"></span></button><div class="h-6 w-px bg-outline-variant/40 mx-1"></div><div class="flex items-center gap-spacing-xs pl-1 cursor-pointer"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><span class="hidden md:inline-block font-label-md text-label-md text-on-surface">Hoàng Nam</span><span class="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span></div></div></header><main class="relative pt-16 min-h-screen bg-background p-spacing-lg lg:p-spacing-xl"><div class="flex flex-col w-full">
+<!-- PAGE HEADER & ACTIONS -->
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-spacing-md mb-spacing-xl">
+<div>
+<div class="flex items-center gap-spacing-xs mb-spacing-2xs">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Quản lý đánh giá sản phẩm</h1>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface font-label-md text-label-md shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-amber-500 fill-current" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-bold">4.9</span>
+<span class="text-on-surface-variant font-normal">(864 đánh giá)</span>
+</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Kiểm duyệt nhận xét của khách hàng, phản hồi trải nghiệm mua sắm và quản lý hiển thị trên website bán hàng Apex Badminton.</p>
+</div>
+<!-- Quick action buttons -->
+<div class="flex items-center gap-spacing-xs shrink-0">
+<button class="inline-flex items-center gap-2 px-spacing-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container-low font-label-md text-label-md transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">download</span>
+<span>Xuất báo cáo đánh giá</span>
+</button>
+<button class="inline-flex items-center gap-2.5 px-spacing-md py-2.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container font-label-md text-label-md shadow-sm transition-all" id="autoApproveToggle">
+<span class="material-symbols-outlined text-[18px] text-on-tertiary-container">tune</span>
+<span>Cài đặt tự động duyệt</span>
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+</button>
+</div>
+</div>
+<!-- 4 SUMMARY METRIC TILES -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-spacing-md mb-spacing-xl">
+<!-- Metric 1: Avg Rating -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-spacing-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Điểm trung bình</span>
+<span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</span>
+</div>
+<div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-xl text-headline-xl text-on-surface leading-none tracking-tight">4.9</span>
+<span class="font-label-md text-label-md text-on-surface-variant">/ 5.0</span>
+</div>
+<div class="flex items-center gap-1.5 mt-2">
+<div class="flex text-amber-500">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="font-label-sm text-label-sm text-emerald-600 font-medium">98.2% hài lòng</span>
+</div>
+</div>
+</div>
+<!-- Metric 2: Pending Approval -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-spacing-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Chờ kiểm duyệt</span>
+<span class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">pending_actions</span>
+</span>
+</div>
+<div>
+<div class="flex items-baseline justify-between">
+<span class="font-headline-xl text-headline-xl text-amber-600 leading-none tracking-tight">14</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-label-sm text-label-sm font-semibold">Cần xử lý gấp</span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-2">Thời gian phản hồi trung bình 18 phút</div>
+</div>
+</div>
+<!-- Metric 3: Approved -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-spacing-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Đã công khai</span>
+<span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</span>
+</div>
+<div>
+<div class="flex items-baseline justify-between">
+<span class="font-headline-xl text-headline-xl text-on-surface leading-none tracking-tight">832</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-label-sm text-label-sm font-semibold">96.3%</span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-2">+28 nhận xét mới trong 24h qua</div>
+</div>
+</div>
+<!-- Metric 4: Hidden/Flagged -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-spacing-sm">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Vi phạm / Đã ẩn</span>
+<span class="w-8 h-8 rounded-lg bg-error-container text-error flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">flag</span>
+</span>
+</div>
+<div>
+<div class="flex items-baseline justify-between">
+<span class="font-headline-xl text-headline-xl text-on-surface-variant leading-none tracking-tight">18</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm font-semibold">Tự động chặn</span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant mt-2">Chứa từ khóa spam &amp; vi phạm tiêu chuẩn</div>
+</div>
+</div>
+</div>
+<!-- FILTER CONTROLS & SEARCH BAR -->
+<div class="p-spacing-md lg:p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm mb-spacing-lg flex flex-col gap-spacing-md">
+<!-- Top Filter Pill Row -->
+<div class="flex flex-wrap items-center justify-between gap-spacing-sm">
+<div class="flex flex-wrap items-center gap-2">
+<!-- Pill: All -->
+<button class="review-tab-btn active px-4 py-1.5 rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-sm transition-all">
+          Tất cả (864)
+        </button>
+<!-- Pill: Pending -->
+<button class="review-tab-btn px-4 py-1.5 rounded-full bg-amber-50 text-amber-800 hover:bg-amber-100 font-label-md text-label-md transition-all flex items-center gap-1.5">
+<span>Chờ duyệt</span>
+<span class="px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-label-sm text-label-sm">14</span>
+</button>
+<!-- Pill: Approved -->
+<button class="review-tab-btn px-4 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-md text-label-md transition-all">
+          Đã duyệt (832)
+        </button>
+<!-- Pill: Hidden -->
+<button class="review-tab-btn px-4 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-md text-label-md transition-all">
+          Đã ẩn (18)
+        </button>
+</div>
+<!-- Quick Star Filter Sub-group -->
+<div class="flex items-center gap-1.5 bg-surface-container-low p-1 rounded-lg">
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest text-on-surface font-label-sm text-label-sm shadow-xs flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+<span>5 sao (780)</span>
+</button>
+<button class="px-2.5 py-1 rounded text-on-surface-variant hover:bg-surface-container-lowest font-label-sm text-label-sm transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+<span>4 sao (52)</span>
+</button>
+<button class="px-2.5 py-1 rounded text-on-surface-variant hover:bg-surface-container-lowest font-label-sm text-label-sm transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+<span>1-3 sao (32)</span>
+</button>
+</div>
+</div>
+<!-- Search & Dropdown row -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-spacing-sm">
+<div class="md:col-span-6 relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface-container-low text-on-surface placeholder:text-outline font-body-sm text-body-sm focus:outline-none focus:bg-surface-container-lowest shadow-xs" placeholder="Tìm theo tên khách, nội dung nhận xét, vợt cầu lông, giày..." type="text">
+</div>
+<div class="md:col-span-3">
+<div class="relative">
+<select class="w-full appearance-none px-3.5 py-2.5 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none cursor-pointer pr-10">
+<option>Tất cả danh mục sản phẩm</option>
+<option>Vợt thi đấu (Yonex / Victor / Li-Ning)</option>
+<option>Giày cầu lông chuyên dụng</option>
+<option>Cước đan &amp; Dịch vụ căng vợt</option>
+<option>Bao vợt &amp; Balo giải đấu</option>
+<option>Quấn cán &amp; Phụ kiện kỹ thuật</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-2.5 pointer-events-none text-on-surface-variant text-[20px]">expand_more</span>
+</div>
+</div>
+<div class="md:col-span-3">
+<div class="relative">
+<select class="w-full appearance-none px-3.5 py-2.5 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none cursor-pointer pr-10">
+<option>Sắp xếp: Mới nhất</option>
+<option>Sắp xếp: Cũ nhất</option>
+<option>Số sao: Cao nhất (5 sao)</option>
+<option>Số sao: Thấp nhất (1 sao)</option>
+<option>Có đính kèm hình ảnh / video</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-2.5 pointer-events-none text-on-surface-variant text-[20px]">sort</span>
+</div>
+</div>
+</div>
+</div>
+<!-- VERTICAL REVIEWS CARDS LIST -->
+<div class="flex flex-col gap-spacing-md">
+<!-- Card 1: Pending Approval (Yonex Astrox 100ZZ) -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow flex flex-col gap-spacing-md">
+<!-- Top Row: Customer Info + Rating Stars + Status + Actions -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-spacing-sm">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-11 h-11 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-headline-sm text-headline-sm font-bold shrink-0">
+            TN
+          </div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface">Trần Minh Nghĩa</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm font-medium">
+<span class="material-symbols-outlined text-[14px]">verified_user</span>
+<span>Đã mua tại Apex</span>
+</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex text-amber-500">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="text-on-surface-variant font-body-sm text-body-sm">• 10 phút trước</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-spacing-xs self-end sm:self-center">
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+            Chờ duyệt
+          </span>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>Duyệt</span>
+</button>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-low text-error hover:bg-error-container font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">visibility_off</span>
+<span>Ẩn</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors" title="Phản hồi khách">
+<span class="material-symbols-outlined text-[20px]">reply</span>
+</button>
+</div>
+</div>
+<!-- Product Box -->
+<div class="p-spacing-sm rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-14 h-14 rounded-lg bg-surface-container-lowest p-1 shrink-0 overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-contain" data-alt="High performance Yonex Astrox 100ZZ Kurenai badminton racket in studio lighting with graphite matte finish" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCx6_SscdYP2wNJXD6Q-3v5ZIWiWOAi_AoSNY0htInxOvOsJ3EmYHZHDJ4imooD-CkJENQyZsvdx_g4Q-G1ACaoSBcrX7QrVeFmIJl1uQcvNwjv9CzfYqvDbEaXva9FWsfnXYng381nZMCjsBpQxpskb0886iUI7KNC_52YLkleI_DIv6hJAYld85BpTWSo3Zv7xqFeCvAuKdZuhofcxOw7bRQoYbInhlKI1suQnHlPjICyBFPxyZiA">
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-primary block leading-tight">Vợt cầu lông Yonex Astrox 100ZZ Kurenai (Chính Hãng Sunrise)</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Phân loại: <strong class="text-on-surface">Bản 4U/G5 - Căng cước Yonex BG80 11.5kg</strong></span>
+</div>
+</div>
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Mã đơn hàng</span>
+<span class="font-label-md text-label-md text-on-tertiary-container font-semibold">#APX-89241</span>
+</div>
+</div>
+<!-- Review Body Content -->
+<div class="text-on-surface font-body-md text-body-md leading-relaxed">
+        Vợt đánh cực kỳ đầm tay, shop căng cước 4 nút chuẩn kỹ thuật Yonex 11.5kg tiếng nổ cầu rất đã tai! Khung vợt chắc nịch, thoát cầu nhanh và trợ lực smash siêu cắm. Đóng gói hộp xốp cẩn thận kèm túi nhung không một vết trầy xước. Đặt hỏa tốc nhận hàng sau 2 tiếng, quá uy tín!
+      </div>
+<!-- Real customer review photos -->
+<div class="flex items-center gap-spacing-xs">
+<div class="w-20 h-20 rounded-lg overflow-hidden bg-surface-container-high cursor-pointer group relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="Customer photo of Yonex badminton racket unboxed on green court floor with string tension stamp" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3M-ZijsrjlIv8ds_yzlzqkOISU6Yl7esSy6c-77G5VdvtrxA3QYE9QUIOByoMn3WQEN9rKcUrBej3PXQPoefTiyclyPI1bNGNP8Ssd4QGDzfN_zZcq1RBu-gzmQ3psqIz6VOnL5j20zKhVa2z7XE6vKfmnuWWqJZw2NC1hSVBkyFBH1ngO-fWqyA0qoJ2cbiimBIqFdfdbrOhXAcg0KqQCk5pfpkkqMMFjvRiMXIggXOrLc7fLmY3">
+<span class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]">zoom_in</span>
+</span>
+</div>
+<div class="w-20 h-20 rounded-lg overflow-hidden bg-surface-container-high cursor-pointer group relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="Close-up photo of tightly strung badminton racket head with Yonex stencil logo on court" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD73XIFF4vqEC1PDHOfa14oDoqJpsR0wuGXck0cOPWDFumETGsl2uiOjydpUSvkjM3xFlCuEW-XksQPDFnoqKi-SHhSpWhULC0zHOJyREN8G1eJjAvKSUDAzQ9-32wC3PX2vEZ5NTwHqoiCYNMoapx3RG0qcPj_mtxtPD0VuAIA1kHHacjMG0tTzg-077ibqecA8y6R-ij8cZNC4zhbbc8ROKMKqk0VNGbJyJduQTDan7lzoZORK23t">
+<span class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]">zoom_in</span>
+</span>
+</div>
+<div class="w-20 h-20 rounded-lg overflow-hidden bg-surface-container-high cursor-pointer group relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="Badminton racket grip wrapped with athletic tape inside carrying bag on tournament bench" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-ZB7_GAFzMjiAV9xE3PD-yrgb6dyUFF-StajFnbAflo9sZmnb1KhEgT5qu-nPkOn6asXZw73JNEZE90hx418CRHHj_D0H_z9uAksuwk1kyyQm1EeewKuVIEjn505-5BYYxzasS_QZgXpI989-1_LKbVCVY-yhuPM1rlPlLf8OtBtvxabNH6VCvb8emd4FBkj8ycDcI_SEvxDpXXxq-CEOwDsK90VvqH5I3ardDqAtvhTAi5sWKlRo">
+<span class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]">zoom_in</span>
+</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Approved with Shop Reply (Yonex SHB65Z3 Shoes) -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow flex flex-col gap-spacing-md">
+<!-- Top Row -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-spacing-sm">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-11 h-11 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-headline-sm text-headline-sm font-bold shrink-0">
+            LH
+          </div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface">Lê Hoàng Long</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm font-medium">
+<span class="material-symbols-outlined text-[14px]">verified_user</span>
+<span>Đã mua tại Apex</span>
+</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex text-amber-500">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="text-on-surface-variant font-body-sm text-body-sm">• Hôm nay, 14:20</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-spacing-xs self-end sm:self-center">
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Đã duyệt
+          </span>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-error-container font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">visibility_off</span>
+<span>Ẩn đánh giá</span>
+</button>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface-variant hover:bg-surface-container font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">edit_note</span>
+<span>Sửa phản hồi</span>
+</button>
+</div>
+</div>
+<!-- Product Box -->
+<div class="p-spacing-sm rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-14 h-14 rounded-lg bg-surface-container-lowest p-1 shrink-0 overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-contain" data-alt="Pro badminton shoe Yonex Power Cushion 65Z3 white and ocean blue side profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSQ6NBdt86UXvM68E_5vMWgvL3Lu5P2LkWfggfsnowV_TE6DeTHE7aYDeGoUxTRNpOtDcMwETiCPDcAepUCQwrhrrsKb9LPn9xNYEppfOEsdnqo57PgrPXd4vbpVMN1qIXYU9C-AqRUKvYya-eJLjc_EZ9ItGmzGgG47MWDn1FAvbcbSnLi-o-JuL8JkGo13fP7qa95q3bVLprZ1GsfQRbBeUWtp62idoqI4oEhbIr81cL4MtZtjpy">
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-primary block leading-tight">Giày cầu lông Yonex Power Cushion 65Z3 Wide</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Phân loại: <strong class="text-on-surface">Size 42 EU - Màu Trắng / Xanh Biển</strong></span>
+</div>
+</div>
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Mã đơn hàng</span>
+<span class="font-label-md text-label-md text-on-tertiary-container font-semibold">#APX-88915</span>
+</div>
+</div>
+<!-- Review Body Content -->
+<div class="text-on-surface font-body-md text-body-md leading-relaxed">
+        Giày Yonex 65Z3 form ôm chân vừa khít, đệm Power Cushion+ êm ái cực kỳ. Bật nhảy đập cầu rồi tiếp đất gót chân không hề bị thốn, đế Radial Blade bám sàn cao su rất mượt không lo trượt ngã. Tem cào chống giả Sunrise nguyên vẹn. Sẽ tiếp tục ủng hộ Apex!
+      </div>
+<!-- Review Photos -->
+<div class="flex items-center gap-spacing-xs">
+<div class="w-20 h-20 rounded-lg overflow-hidden bg-surface-container-high cursor-pointer group relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="Customer holding pair of brand new badminton shoes showing bottom grip and Sunrise verification tag" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrR08tcIylAVdYS29c8kmCNMI90BP4GcPgSfVlLJE5HOO_z0WB7sO81QkIPLS88KjXVL8trFBn9900GSyj-_JDDRcQnDxXyjU0Fgg4Le_oh3KB35NMPNX9bJUKtSQ4K4uQlm3BWj8hr_lgykYlQRPgra6TQHXdbmOTRcXQzfzjRdXO_absxN7G41eP0jOtwaESEz5PVKdIN0yMpD-xtThpc03UldmnvJUwQWVV31gf8tqe7ZdhdBFj">
+<span class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]">zoom_in</span>
+</span>
+</div>
+</div>
+<!-- Shop Reply Box -->
+<div class="p-spacing-md rounded-lg bg-surface-container-low border-l-4 border-l-on-tertiary-container flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-primary font-bold">Phản hồi từ Apex Badminton Store</span>
+<span class="px-2 py-0.2 rounded bg-primary text-on-primary font-label-sm text-label-sm">Admin</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Hôm nay, 15:00</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+          Chào anh Hoàng Long, cảm ơn anh đã luôn tin tưởng và lựa chọn dòng giày đỉnh cao Yonex 65Z3 tại Apex Badminton! Dòng đế Radial Blade kết hợp Power Cushion+ sẽ hỗ trợ các bước di chuyển chéo góc tối đa. Chúc anh có những buổi thi đấu thăng hoa và nhiều chiến thắng rực rỡ!
+        </p>
+</div>
+</div>
+<!-- Card 3: Victor Thruster Ryuga II (Approved - 5 Stars) -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow flex flex-col gap-spacing-md">
+<!-- Top Row -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-spacing-sm">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-11 h-11 rounded-full bg-surface-tint text-on-primary flex items-center justify-center font-headline-sm text-headline-sm font-bold shrink-0">
+            ĐP
+          </div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface">Đặng Phương Nam</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm font-medium">
+<span class="material-symbols-outlined text-[14px]">verified_user</span>
+<span>Đã mua tại Apex</span>
+</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex text-amber-500">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="text-on-surface-variant font-body-sm text-body-sm">• Hôm qua, 18:45</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-spacing-xs self-end sm:self-center">
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Đã duyệt
+          </span>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-error-container font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">visibility_off</span>
+<span>Ẩn</span>
+</button>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-low text-on-tertiary-container hover:bg-surface-container font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">reply</span>
+<span>Trả lời</span>
+</button>
+</div>
+</div>
+<!-- Product Box -->
+<div class="p-spacing-sm rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-14 h-14 rounded-lg bg-surface-container-lowest p-1 shrink-0 overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-contain" data-alt="Victor Thruster Ryuga II badminton racket with aggressive dragon graphic accents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvmIj4DN_YkxzKFLb2wJtPM-PMkLoYQBtpJ809g6-7VtyOsI78CPHNCj26Y_Hpjv_tATkWdOsV6_R0GcKiEIastVH3YJ5esb-iCLusaV8cXITFJOiarNw4PL4VJEU4QYOK9QbSeERd8KwHBN7Vh4QufYvfBsQg5EfbttSXXps3w6zG9RUieLSt4N9Yx4Mbn2oNavTo7155nDueR1pxZ9qHH8q9wimqM4Cceb53KbGj-x_Jt6c1Vwq8">
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-primary block leading-tight">Vợt cầu lông Victor Thruster Ryuga II Pro J</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Phân loại: <strong class="text-on-surface">Bản 3U/G5 - Căng cước Victor VBS-66 Nano 11.8kg</strong></span>
+</div>
+</div>
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Mã đơn hàng</span>
+<span class="font-label-md text-label-md text-on-tertiary-container font-semibold">#APX-87620</span>
+</div>
+</div>
+<!-- Review Body Content -->
+<div class="text-on-surface font-body-md text-body-md leading-relaxed">
+        Ryuga 2 công thủ toàn diện nhưng thiên công nặng đầu, smash điểm rơi cực kỳ khó chịu. Kỹ thuật viên của shop đan 4 nút không bị méo vành, bảo lưu được độ nảy tuyệt vời. Tặng kèm quấn cán vải và bao đơn xịn xò.
+      </div>
+</div>
+<!-- Card 4: String & Grip review (Pending Approval - 4 Stars) -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow flex flex-col gap-spacing-md">
+<!-- Top Row -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-spacing-sm">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-11 h-11 rounded-full bg-surface-variant text-on-surface flex items-center justify-center font-headline-sm text-headline-sm font-bold shrink-0">
+            VT
+          </div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface">Vũ Thanh Thảo</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm font-medium">
+<span class="material-symbols-outlined text-[14px]">verified_user</span>
+<span>Đã mua tại Apex</span>
+</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex text-amber-500">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px] text-surface-container-highest" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="text-on-surface-variant font-body-sm text-body-sm">• Hôm qua, 11:15</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-spacing-xs self-end sm:self-center">
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+            Chờ duyệt
+          </span>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>Duyệt</span>
+</button>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-low text-error hover:bg-error-container font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">visibility_off</span>
+<span>Ẩn</span>
+</button>
+<button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors" title="Phản hồi">
+<span class="material-symbols-outlined text-[20px]">reply</span>
+</button>
+</div>
+</div>
+<!-- Product Box -->
+<div class="p-spacing-sm rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-14 h-14 rounded-lg bg-surface-container-lowest p-1 shrink-0 overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-contain" data-alt="Yonex BG80 Power high repulsion badminton string coil in original blister pack" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8gsrx9Lo1PsPTA6GeBx2ZAyAF3pQ4o-zsL-AiStNXwBVBeBkzDhD1fI7yoWdUE6CqFg_j00ZGMwDWQcRdIm2ds-oCPnoK_iwsR5g0y6yM4qDCMoQxLpmZO9K1L8amgH9mczS0P4IHtbwEbhJE-QqJvNdx17w0OzCOJVmiv6OafXK3eLt2zYquQS-7ephRKIdtNuPcYRuSW8zL32CzC4eu9P886Jm8fb3-TydJpZE9gy9K8ciCW5XM">
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-primary block leading-tight">Cước đan vợt Yonex BG80 Power &amp; Cuộn quấn cán AC102EX</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Phân loại: <strong class="text-on-surface">Màu Trắng (Cước) + Vàng Chanh (Grip 3 chiếc)</strong></span>
+</div>
+</div>
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Mã đơn hàng</span>
+<span class="font-label-md text-label-md text-on-tertiary-container font-semibold">#APX-87433</span>
+</div>
+</div>
+<!-- Review Body Content -->
+<div class="text-on-surface font-body-md text-body-md leading-relaxed">
+        Cước nảy tốt và trợ lực rất ổn định cho tay nữ lực cổ tay trung bình. Quấn cán AC102EX bám dính thấm hút mồ hôi tốt. Điểm trừ nhẹ là shipper giao trễ hơn dự kiến 1 tiếng nhưng nhân viên tổng đài Apex hỗ trợ gọi giục rất nhiệt tình. Cho shop 4 sao!
+      </div>
+</div>
+<!-- Card 5: Flagged/Hidden Spam (Vi phạm tiêu chuẩn) -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-low/60 shadow-sm opacity-80 hover:opacity-100 transition-opacity flex flex-col gap-spacing-md">
+<!-- Top Row -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-spacing-sm">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-11 h-11 rounded-full bg-error-container text-error flex items-center justify-center font-headline-sm text-headline-sm font-bold shrink-0">
+<span class="material-symbols-outlined text-[20px]">block</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface-variant line-through">User_Unknown_89</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-medium">
+                Tài khoản bị gắn cờ
+              </span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex text-on-surface-variant/40">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="text-on-surface-variant font-body-sm text-body-sm">• 2 ngày trước</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-spacing-xs self-end sm:self-center">
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm font-semibold">
+<span class="material-symbols-outlined text-[14px]">lock</span>
+            Đã ẩn tự động
+          </span>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">restore</span>
+<span>Khôi phục</span>
+</button>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-error-container text-on-error-container hover:bg-error hover:text-on-error font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">delete_forever</span>
+<span>Xóa vĩnh viễn</span>
+</button>
+</div>
+</div>
+<!-- Product Box -->
+<div class="p-spacing-sm rounded-lg bg-surface-container flex items-center justify-between">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-14 h-14 rounded-lg bg-surface-container-lowest p-1 shrink-0 overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-contain" data-alt="Yonex Nanoflare 800 Pro speed series badminton racket on studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxIM6N96N6yUqSj3wgXFFBt_prfV_uEYX0b2-h4vhrL4r3sTk-S3QJSE8pWM9CR7LTIYf1f16F9Z2oFTHUFU6PL1vg5mBffEKLPToJ0cpMsC8aKcidmd0vcGTEvCW_RR284xA_kYryC5LE_eFQv55IN0BOzkDSg1m6D2LGz7SVoBL958QxnG4N0cIlCcffBkayz1I2eCmDWYYLC_NZRaypJaKrwh8n9D5n7zXm2oghryyWyDJ3DpWK">
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-on-surface-variant block leading-tight">Vợt cầu lông Yonex Nanoflare 800 Pro</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Lý do ẩn: <strong class="text-error">Spam quảng cáo dịch vụ vay &amp; số điện thoại ngoài</strong></span>
+</div>
+</div>
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Trạng thái</span>
+<span class="font-label-md text-label-md text-error font-semibold">Vi phạm điều khoản</span>
+</div>
+</div>
+<!-- Review Body Content -->
+<div class="text-on-surface-variant/70 font-body-md text-body-md italic bg-surface-container p-3 rounded-lg">
+        "Bình luận bị hệ thống AI kiểm duyệt tự động lọc bỏ do chứa link liên kết và số điện thoại spam quảng cáo không liên quan đến trải nghiệm mua vợt."
+      </div>
+</div>
+<!-- Card 6: Li-Ning Axforce 90 Max (Approved) -->
+<div class="p-spacing-lg rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-shadow flex flex-col gap-spacing-md">
+<!-- Top Row -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-spacing-sm">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-11 h-11 rounded-full bg-primary text-on-primary flex items-center justify-center font-headline-sm text-headline-sm font-bold shrink-0">
+            QT
+          </div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface">Nguyễn Quốc Tuấn</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm font-medium">
+<span class="material-symbols-outlined text-[14px]">verified_user</span>
+<span>Đã mua tại Apex</span>
+</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<div class="flex text-amber-500">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="text-on-surface-variant font-body-sm text-body-sm">• 3 ngày trước</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-spacing-xs self-end sm:self-center">
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Đã duyệt
+          </span>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-error-container font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">visibility_off</span>
+<span>Ẩn</span>
+</button>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-low text-on-tertiary-container hover:bg-surface-container font-label-md text-label-md transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[18px]">reply</span>
+<span>Trả lời</span>
+</button>
+</div>
+</div>
+<!-- Product Box -->
+<div class="p-spacing-sm rounded-lg bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-spacing-sm">
+<div class="w-14 h-14 rounded-lg bg-surface-container-lowest p-1 shrink-0 overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-contain" data-alt="Li-Ning Axforce 90 Max Dragon badminton racket premium black and metallic red details" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlUHetJFVF3G9Gyy4hz74zmn0_QEIqg4WX2Gpow4a2h1iz5vpF67h17OUymmLjRdcjcUjYSqp4-0PejFhOoAXSVPNhoyvJ1Zn2Bjz6kzol8BNCOGTRhC7I7UlRQMKUxkCjQ4dgyJd_M2D77dc_HE-z1N9JxFyMm8AdMRVZ-PFOIGRd-_UPWvvjTF6kwy17c1NXQ5h2Tgy0_iG0aueo905fZ2ELlsFxnZ57qKvVNwWev_8vwZK2gF10">
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-primary block leading-tight">Vợt Li-Ning Axforce 90 Max Dragon (Bản Giới Hạn)</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Phân loại: <strong class="text-on-surface">Bản 4U/G5 - Cước Li-Ning No.1 Boost 11kg</strong></span>
+</div>
+</div>
+<div class="hidden sm:flex flex-col items-end">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Mã đơn hàng</span>
+<span class="font-label-md text-label-md text-on-tertiary-container font-semibold">#APX-86991</span>
+</div>
+</div>
+<!-- Review Body Content -->
+<div class="text-on-surface font-body-md text-body-md leading-relaxed">
+        Cây vợt tuyệt vời nhất từng trải nghiệm! Cảm giác đập uy lực như búa bổ, đầm đầu nhưng xử lý cầu trên lưới vẫn rất linh hoạt. Nhân viên tư vấn cước No.1 rất hợp tay. Cảm ơn đội ngũ Apex phục vụ rất chuyên nghiệp!
+      </div>
+</div>
+</div>
+<!-- PAGINATION FOOTER -->
+<div class="flex flex-col sm:flex-row items-center justify-between gap-spacing-md mt-spacing-xl pt-spacing-md border-t border-surface-container-high/60">
+<div class="font-body-sm text-body-sm text-on-surface-variant">
+      Hiển thị <span class="font-semibold text-on-surface">1 - 6</span> trong tổng số <span class="font-semibold text-on-surface">864</span> đánh giá
+    </div>
+<div class="flex items-center gap-1.5">
+<button class="p-2 rounded-lg bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low transition-colors disabled:opacity-40" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-9 h-9 rounded-lg bg-primary text-on-primary font-label-md text-label-md font-bold shadow-xs">1</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container-low font-label-md text-label-md transition-colors">2</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container-low font-label-md text-label-md transition-colors">3</button>
+<span class="px-1 text-on-surface-variant font-label-md text-label-md">...</span>
+<button class="w-9 h-9 rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container-low font-label-md text-label-md transition-colors">45</button>
+<button class="p-2 rounded-lg bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- INTERACTION LOGIC -->
+<script>
+    document.querySelectorAll('.review-tab-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.review-tab-btn').forEach(b => {
+          b.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm');
+          if(!b.classList.contains('bg-amber-50')) {
+            b.classList.add('bg-surface-container-low', 'text-on-surface-variant');
+          }
+        });
+        this.classList.remove('bg-surface-container-low', 'text-on-surface-variant');
+        this.classList.add('bg-primary', 'text-on-primary', 'shadow-sm');
+      });
+    });
+
+    const toggleBtn = document.getElementById('autoApproveToggle');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const dot = toggleBtn.querySelector('span:last-child');
+        if (dot.classList.contains('bg-emerald-400')) {
+          dot.classList.remove('bg-emerald-400');
+          dot.classList.add('bg-amber-400');
+        } else {
+          dot.classList.remove('bg-amber-400');
+          dot.classList.add('bg-emerald-400');
+        }
+      });
+    }
+  </script>
+</div></main></div></body></html>

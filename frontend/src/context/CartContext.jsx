@@ -16,32 +16,49 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('badminton_cart', JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (product, quantity = 1) => {
+  const addToCart = (product, quantity = 1, options = {}) => {
+    const specKey = options.selectedWeightGrip || options.size || '';
+    const stringKey = options.selectedStringService || '';
+    const cartItemId = `${product.id}_${specKey}_${stringKey}`;
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
+      const existing = prev.find((item) => (item.cartItemId || item.product.id) === cartItemId);
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: Math.min(item.quantity + quantity, product.stock || 100) }
+          (item.cartItemId || item.product.id) === cartItemId
+            ? { ...item, quantity: Math.min(item.quantity + quantity, product.stock || 100), options: { ...item.options, ...options } }
             : item
         );
       }
-      return [...prev, { product, quantity: Math.min(quantity, product.stock || 100) }];
+      return [
+        ...prev,
+        {
+          cartItemId,
+          product,
+          quantity: Math.min(quantity, product.stock || 100),
+          options: {
+            selectedWeightGrip: options.selectedWeightGrip || '',
+            size: options.size || '',
+            selectedStringService: options.selectedStringService || '',
+            ...options
+          }
+        }
+      ];
     });
   };
 
-  const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  const removeFromCart = (cartItemId) => {
+    setCart((prev) => prev.filter((item) => (item.cartItemId || item.product.id) !== cartItemId));
   };
 
-  const updateQuantity = (productId, quantity) => {
+  const updateQuantity = (cartItemId, quantity) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(cartItemId);
       return;
     }
     setCart((prev) =>
       prev.map((item) =>
-        item.product.id === productId
+        (item.cartItemId || item.product.id) === cartItemId
           ? { ...item, quantity: Math.min(quantity, item.product.stock || 100) }
           : item
       )
@@ -56,7 +73,7 @@ export const CartProvider = ({ children }) => {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const cartTotal = cart.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + (item.product.price || 0) * item.quantity,
     0
   );
 

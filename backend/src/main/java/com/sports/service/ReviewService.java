@@ -64,10 +64,34 @@ public class ReviewService {
         return reviewRepository.findByProductIdOrderByCreatedAtDesc(productId).size();
     }
 
+    public List<ReviewResponse> getUserReviews(Long userId) {
+        return reviewRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<ReviewResponse> getAllReviews() {
+        return reviewRepository.findAll().stream()
+                .sorted((r1, r2) -> r2.getCreatedAt().compareTo(r1.getCreatedAt()))
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void deleteReview(Long id) {
+        if (!reviewRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Không tìm thấy đánh giá với ID: " + id);
+        }
+        reviewRepository.deleteById(id);
+    }
+
     private ReviewResponse toDto(Review review) {
         return ReviewResponse.builder()
                 .id(review.getId())
                 .productId(review.getProduct().getId())
+                .productName(review.getProduct().getName())
+                .productImageUrl(review.getProduct().getImageUrl())
+                .productBrand(review.getProduct().getBrand())
                 .userId(review.getUser().getId())
                 .username(review.getUser().getUsername())
                 .userFullName(review.getUser().getFullName())

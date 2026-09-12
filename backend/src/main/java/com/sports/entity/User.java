@@ -42,6 +42,10 @@ public class User {
     @Builder.Default
     private Role role = Role.ROLE_USER;
 
+    @Column(name = "is_active")
+    @Builder.Default
+    private Boolean isActive = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

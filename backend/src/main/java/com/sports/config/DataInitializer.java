@@ -40,8 +40,8 @@ public class DataInitializer implements CommandLineRunner {
                     .username("admin")
                     .email("admin@badminton.com")
                     .password(passwordEncoder.encode("admin123"))
-                    .fullName("Quản Trị Viên Hệ Thống")
-                    .phone("0901234567")
+                    .fullName("Quản Trị Viên")
+                    .phone("0378188888")
                     .address("Hà Nội, Việt Nam")
                     .role(Role.ROLE_ADMIN)
                     .build();
@@ -50,9 +50,9 @@ public class DataInitializer implements CommandLineRunner {
                     .username("user")
                     .email("user@gmail.com")
                     .password(passwordEncoder.encode("user123"))
-                    .fullName("Nguyễn Văn Vận Động Viên")
-                    .phone("0987654321")
-                    .address("TP. Hồ Chí Minh, Việt Nam")
+                    .fullName("Vương Xuân Giáp")
+                    .phone("0378183960")
+                    .address("Hà Nội, Việt Nam")
                     .role(Role.ROLE_USER)
                     .build();
 
