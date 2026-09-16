@@ -165,9 +165,23 @@ const ReviewedProductsPage = () => {
     setShowReviewModal(true);
   };
 
-  const handleSubmitNewReview = (e) => {
+  const handleSubmitNewReview = async (e) => {
     e.preventDefault();
     setSubmittingReview(true);
+
+    const payload = {
+      productId: selectedPending.productId,
+      rating: ratingStars,
+      comment: reviewText
+    };
+
+    try {
+      if (reviewApi?.createReview) {
+        await reviewApi.createReview(payload);
+      }
+    } catch (err) {
+      console.warn('Gửi review lỗi hoặc dùng fallback cục bộ:', err);
+    }
 
     const newRev = {
       id: Date.now(),

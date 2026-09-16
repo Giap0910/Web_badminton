@@ -102,18 +102,57 @@ const AdminCustomersPage = () => {
   const formatPrice = (p) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
-  const handleToggleLock = (id) => {
-    setCustomers((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
-          const newStatus = c.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
-          setToastMessage(`Đã ${newStatus === 'ACTIVE' ? 'mở khóa' : 'tạm khóa'} tài khoản của ${c.fullName}.`);
-          setTimeout(() => setToastMessage(''), 3000);
-          return { ...c, status: newStatus };
+  const fetchUsers = async () => {
+    try {
+      if (adminApi?.getAllUsers) {
+        const res = await adminApi.getAllUsers();
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (list.length > 0) {
+          const mapped = list.map((u, idx) => ({
+            id: u.id || idx + 1,
+            code: `KH-${1000 + (u.id || idx)}`,
+            fullName: u.fullName || u.username || 'Khách hàng',
+            email: u.email || 'N/A',
+            phone: u.phone || 'Chưa cập nhật',
+            tier: u.role === 'ROLE_ADMIN' ? 'DIAMOND' : 'GOLD',
+            totalSpent: 4500000,
+            orderCount: 2,
+            lastActive: 'Gần đây',
+            status: u.active !== false ? 'ACTIVE' : 'LOCKED',
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
+          }));
+          setCustomers(mapped);
         }
-        return c;
-      })
+      }
+    } catch (err) {
+      console.warn('Fallback to local customers:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleToggleLock = async (id) => {
+    const target = customers.find((c) => c.id === id);
+    if (!target) return;
+    const newStatus = target.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
+    const isActive = newStatus === 'ACTIVE';
+
+    try {
+      if (adminApi?.updateUserStatus) {
+        await adminApi.updateUserStatus(id, isActive);
+      }
+      setToastMessage(`Đã ${isActive ? 'mở khóa' : 'tạm khóa'} tài khoản của ${target.fullName}.`);
+    } catch (err) {
+      console.warn('Lỗi cập nhật trạng thái user:', err);
+      setToastMessage(`Đã cập nhật trạng thái (cục bộ).`);
+    }
+
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
     );
+    setTimeout(() => setToastMessage(''), 3000);
   };
 
   const filteredCustomers = customers.filter((c) => {

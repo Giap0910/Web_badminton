@@ -113,9 +113,22 @@ public class OrderService {
                     .product(product)
                     .quantity(itemReq.getQuantity())
                     .price(product.getPrice())
+                    .selectedSize(itemReq.getSelectedSize())
+                    .selectedColor(itemReq.getSelectedColor())
+                    .selectedWeight(itemReq.getSelectedWeight())
+                    .stringingService(itemReq.getStringingService())
+                    .stringTension(itemReq.getStringTension())
                     .build();
 
             orderItems.add(orderItem);
+        }
+
+        // Calculate Shipping Fee (Free for orders >= 1,000,000đ, otherwise 30,000đ)
+        BigDecimal shippingFee = BigDecimal.ZERO;
+        if (request.getShippingFee() != null) {
+            shippingFee = request.getShippingFee();
+        } else if (totalAmount.compareTo(new BigDecimal("1000000")) < 0 && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
+            shippingFee = new BigDecimal("30000");
         }
 
         // Voucher application
@@ -134,14 +147,18 @@ public class OrderService {
             }
         }
 
+        // Final total amount incorporates shipping fee
+        totalAmount = totalAmount.add(shippingFee);
+
         order.setTotalAmount(totalAmount);
+        order.setShippingFee(shippingFee);
         order.setDiscountAmount(discountAmount);
         order.setVoucherCode(appliedVoucherCode);
         order.setItems(orderItems);
 
         Order savedOrder = orderRepository.save(order);
-        log.info("Tạo đơn hàng thành công ID={}, PayOS Code={}, Tổng tiền={}, Giảm giá={}, Khóa tạm {} sản phẩm",
-                savedOrder.getId(), payosOrderCode, totalAmount, discountAmount, orderItems.size());
+        log.info("Tạo đơn hàng thành công ID={}, PayOS Code={}, Tổng tiền={}, Phí ship={}, Giảm giá={}, Khóa tạm {} sản phẩm",
+                savedOrder.getId(), payosOrderCode, totalAmount, shippingFee, discountAmount, orderItems.size());
 
         return toDto(savedOrder);
     }
@@ -272,6 +289,11 @@ public class OrderService {
                             .productBrand(item.getProduct() != null ? item.getProduct().getBrand() : "")
                             .productImageUrl(item.getProduct() != null ? item.getProduct().getImageUrl() : "")
                             .weightGrip(item.getProduct() != null ? item.getProduct().getWeightGrip() : "")
+                            .selectedSize(item.getSelectedSize())
+                            .selectedColor(item.getSelectedColor())
+                            .selectedWeight(item.getSelectedWeight())
+                            .stringingService(item.getStringingService())
+                            .stringTension(item.getStringTension())
                             .quantity(qty)
                             .price(price)
                             .subtotal(price.multiply(BigDecimal.valueOf(qty)))
@@ -298,6 +320,7 @@ public class OrderService {
                 .shippingPhone(order.getShippingPhone())
                 .shippingAddress(order.getShippingAddress())
                 .totalAmount(order.getTotalAmount())
+                .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO)
                 .voucherCode(order.getVoucherCode())
                 .discountAmount(order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO)
                 .note(order.getNote())
@@ -312,6 +335,7 @@ public class OrderService {
                 .accountName(accountName)
                 .bin(bankBin)
                 .qrCode(vietQrUrl)
+                .qrCodeUrl(vietQrUrl)
                 .checkoutUrl(vietQrUrl)
                 .build();
     }

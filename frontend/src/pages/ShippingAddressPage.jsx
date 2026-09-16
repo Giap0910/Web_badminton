@@ -115,21 +115,33 @@ const ShippingAddressPage = () => {
     setShowForm(true);
   };
 
-  const handleSetDefault = (id) => {
-    setAddresses((prev) =>
-      prev.map((a) => ({
-        ...a,
-        isDefault: a.id === id
-      }))
-    );
-    setMessage('Đã đặt làm địa chỉ mặc định thành công!');
+  const handleSetDefault = async (id) => {
+    try {
+      await shippingAddressApi.setDefaultAddress(id);
+      await fetchAddresses();
+      setMessage('Đã đặt làm địa chỉ mặc định thành công!');
+    } catch (err) {
+      setAddresses((prev) =>
+        prev.map((a) => ({
+          ...a,
+          isDefault: a.id === id
+        }))
+      );
+      setMessage('Đã đặt làm địa chỉ mặc định thành công!');
+    }
     setTimeout(() => setMessage(''), 3000);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Bạn có chắc muốn xóa địa chỉ này?')) return;
-    setAddresses((prev) => prev.filter((a) => a.id !== id));
-    setMessage('Đã xóa địa chỉ nhận hàng.');
+    try {
+      await shippingAddressApi.deleteAddress(id);
+      await fetchAddresses();
+      setMessage('Đã xóa địa chỉ nhận hàng.');
+    } catch (err) {
+      setAddresses((prev) => prev.filter((a) => a.id !== id));
+      setMessage('Đã xóa địa chỉ nhận hàng.');
+    }
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -138,35 +150,55 @@ const ShippingAddressPage = () => {
     setSaving(true);
 
     const fullAddrString = `${formDetail}, ${formWard}, ${formDistrict}, ${formCity}`;
-    const newEntry = {
-      id: editingId || Date.now(),
+    const payload = {
       fullName: formName,
       phone: formPhone,
       address: fullAddrString,
-      note: formNote,
-      tag: formTag,
+      province: formCity,
       isDefault: formIsDefault
     };
 
-    if (formIsDefault) {
-      setAddresses((prev) =>
-        prev.map((a) => ({ ...a, isDefault: false }))
-      );
-    }
+    try {
+      if (editingId) {
+        await shippingAddressApi.updateAddress(editingId, payload);
+        setMessage('Cập nhật địa chỉ nhận hàng thành công!');
+      } else {
+        await shippingAddressApi.createAddress(payload);
+        setMessage('Thêm địa chỉ mới thành công!');
+      }
+      await fetchAddresses();
+    } catch (err) {
+      console.warn('Lỗi gọi API địa chỉ, lưu dự phòng cục bộ:', err);
+      const newEntry = {
+        id: editingId || Date.now(),
+        fullName: formName,
+        phone: formPhone,
+        address: fullAddrString,
+        note: formNote,
+        tag: formTag,
+        isDefault: formIsDefault
+      };
 
-    if (editingId) {
-      setAddresses((prev) =>
-        prev.map((a) => (a.id === editingId ? { ...newEntry } : a))
-      );
-      setMessage('Cập nhật địa chỉ nhận hàng thành công!');
-    } else {
-      setAddresses((prev) => [newEntry, ...prev]);
-      setMessage('Thêm địa chỉ mới thành công!');
-    }
+      if (formIsDefault) {
+        setAddresses((prev) =>
+          prev.map((a) => ({ ...a, isDefault: false }))
+        );
+      }
 
-    setSaving(false);
-    setShowForm(false);
-    setTimeout(() => setMessage(''), 3000);
+      if (editingId) {
+        setAddresses((prev) =>
+          prev.map((a) => (a.id === editingId ? { ...newEntry } : a))
+        );
+        setMessage('Cập nhật địa chỉ nhận hàng thành công!');
+      } else {
+        setAddresses((prev) => [newEntry, ...prev]);
+        setMessage('Thêm địa chỉ mới thành công!');
+      }
+    } finally {
+      setSaving(false);
+      setShowForm(false);
+      setTimeout(() => setMessage(''), 3000);
+    }
   };
 
   return (

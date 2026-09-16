@@ -18,6 +18,7 @@ public class OrderResponse {
     private String shippingPhone;
     private String shippingAddress;
     private BigDecimal totalAmount;
+    private BigDecimal shippingFee;
     private String voucherCode;
     private BigDecimal discountAmount;
     private String note;
@@ -32,6 +33,7 @@ public class OrderResponse {
     // VietQR / PayOS Payment Link details
     private String checkoutUrl;
     private String qrCode;
+    private String qrCodeUrl;
     private String accountNo;
     private String accountName;
     private String bin;

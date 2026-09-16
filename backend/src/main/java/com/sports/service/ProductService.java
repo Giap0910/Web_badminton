@@ -131,6 +131,7 @@ public class ProductService {
         Product product = Product.builder()
                 .name(dto.getName())
                 .brand(dto.getBrand())
+                .sku(dto.getSku())
                 .price(dto.getPrice())
                 .originalPrice(dto.getOriginalPrice() != null ? dto.getOriginalPrice() : dto.getPrice())
                 .stock(dto.getStock() != null ? dto.getStock() : 0)
@@ -159,6 +160,9 @@ public class ProductService {
             product.setCategory(category);
         }
 
+        if (dto.getSku() != null) {
+            product.setSku(dto.getSku());
+        }
         product.setName(dto.getName());
         product.setBrand(dto.getBrand());
         product.setPrice(dto.getPrice());
@@ -217,11 +221,28 @@ public class ProductService {
                 .imageUrl(product.getImageUrl())
                 .imageUrls(imgs)
                 .description(product.getDescription())
+                .sku(product.getSku())
                 .weightGrip(product.getWeightGrip())
+                .weightClass(product.getWeightClass())
                 .stiffness(product.getStiffness())
                 .balancePoint(product.getBalancePoint())
                 .maxTension(product.getMaxTension())
                 .playStyle(product.getPlayStyle())
+                .frameMaterial(product.getFrameMaterial())
+                .shaftMaterial(product.getShaftMaterial())
+                .availableSizes(product.getAvailableSizes())
+                .soleType(product.getSoleType())
+                .cushionTechnology(product.getCushionTechnology())
+                .upperMaterial(product.getUpperMaterial())
+                .gender(product.getGender())
+                .fabricType(product.getFabricType())
+                .bagType(product.getBagType())
+                .capacity(product.getCapacity())
+                .racketCapacity(product.getRacketCapacity())
+                .waterproof(product.getWaterproof())
+                .accessoryType(product.getAccessoryType())
+                .quantityPerPack(product.getQuantityPerPack())
+                .origin(product.getOrigin())
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
                 .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
                 .averageRating(reviewService.getAverageRating(product.getId()))

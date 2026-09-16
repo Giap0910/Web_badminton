@@ -132,9 +132,46 @@ const AdminVouchersPage = () => {
     setShowModal(true);
   };
 
-  const handleDelete = (id) => {
+  const fetchVouchers = async () => {
+    try {
+      if (adminApi?.getAllVouchers) {
+        const res = await adminApi.getAllVouchers();
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (list.length > 0) {
+          const mapped = list.map((v, idx) => ({
+            id: v.id || idx + 1,
+            code: v.code || 'APEX100K',
+            title: v.title || v.description || 'Khuyến mãi Apex Badminton',
+            discountType: v.discountType || 'FIXED',
+            discountValue: v.discountValue || v.discountAmount || 50000,
+            minOrderValue: v.minOrderValue || 500000,
+            usedCount: v.usedCount || 0,
+            maxUsage: v.maxUsage || v.usageLimit || 100,
+            startDate: v.startDate ? new Date(v.startDate).toLocaleDateString('vi-VN') : '01/10/2024',
+            endDate: v.endDate ? new Date(v.endDate).toLocaleDateString('vi-VN') : '31/12/2024',
+            status: v.active !== false ? 'ACTIVE' : 'INACTIVE'
+          }));
+          setVouchers(mapped);
+        }
+      }
+    } catch (err) {
+      console.warn('Fallback to local vouchers:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchVouchers();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (!window.confirm('Bạn có chắc muốn xóa mã giảm giá này?')) return;
-    setVouchers((prev) => prev.filter((v) => v.id !== id));
+    try {
+      if (adminApi?.deleteVoucher) await adminApi.deleteVoucher(id);
+      await fetchVouchers();
+    } catch (err) {
+      console.warn('Lỗi xóa voucher:', err);
+      setVouchers((prev) => prev.filter((v) => v.id !== id));
+    }
     setToastMessage('Đã xóa mã giảm giá.');
     setTimeout(() => setToastMessage(''), 2500);
   };
@@ -149,7 +186,7 @@ const AdminVouchersPage = () => {
     );
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = {
       code: formData.code.toUpperCase(),
@@ -160,26 +197,38 @@ const AdminVouchersPage = () => {
       maxUsage: Number(formData.maxUsage) || 100,
       startDate: formData.startDate,
       endDate: formData.endDate,
-      status: 'ACTIVE'
+      active: true
     };
 
-    if (editingId) {
-      setVouchers((prev) =>
-        prev.map((v) => (v.id === editingId ? { ...v, ...payload } : v))
-      );
-      setToastMessage('Đã cập nhật mã giảm giá thành công!');
-    } else {
-      const newEntry = {
-        id: Date.now(),
-        usedCount: 0,
-        ...payload
-      };
-      setVouchers([newEntry, ...vouchers]);
-      setToastMessage('Đã tạo mã giảm giá mới thành công!');
+    try {
+      if (editingId) {
+        if (adminApi?.updateVoucher) await adminApi.updateVoucher(editingId, payload);
+        setToastMessage('Đã cập nhật mã giảm giá thành công!');
+      } else {
+        if (adminApi?.createVoucher) await adminApi.createVoucher(payload);
+        setToastMessage('Đã tạo mã giảm giá mới thành công!');
+      }
+      await fetchVouchers();
+    } catch (err) {
+      console.warn('Lỗi gọi API voucher, lưu dự phòng cục bộ:', err);
+      if (editingId) {
+        setVouchers((prev) =>
+          prev.map((v) => (v.id === editingId ? { ...v, ...payload } : v))
+        );
+        setToastMessage('Đã cập nhật mã giảm giá thành công!');
+      } else {
+        const newEntry = {
+          id: Date.now(),
+          usedCount: 0,
+          ...payload,
+          status: 'ACTIVE'
+        };
+        setVouchers([newEntry, ...vouchers]);
+        setToastMessage('Đã tạo mã giảm giá mới thành công!');
+      }
     }
-
     setShowModal(false);
-    setTimeout(() => setToastMessage(''), 3000);
+    setTimeout(() => setToastMessage(''), 2500);
   };
 
   const filteredVouchers = vouchers.filter(

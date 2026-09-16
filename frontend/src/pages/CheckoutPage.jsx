@@ -176,6 +176,7 @@ const CheckoutPage = () => {
         shippingPhone,
         paymentMethod: paymentMethod === 'COD' ? 'COD' : 'PAYOS_VIETQR',
         voucherCode: effectiveDiscount > 0 ? voucherCode : null,
+        shippingFee: shippingFee || 0,
         note: note || '',
         items: checkoutItems.map((item) => ({
           productId: item.product.id,

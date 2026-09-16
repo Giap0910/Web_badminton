@@ -112,6 +112,63 @@ const AdminReviewsPage = () => {
   const [replyModalReview, setReplyModalReview] = useState(null);
   const [replyContent, setReplyContent] = useState('');
 
+  const fetchReviewsAndRmas = async () => {
+    try {
+      if (adminApi?.getAllReviews) {
+        const res = await adminApi.getAllReviews();
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (list.length > 0) {
+          const mappedReviews = list.map((r, idx) => ({
+            id: r.id || idx + 1,
+            productName: r.productName || 'Vợt Cầu Lông Apex',
+            productBrand: 'Apex Series',
+            productImage: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
+            customerName: r.userName || 'Khách hàng ẩn danh',
+            customerPhone: '0988 *** ***',
+            customerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+            purchasedSpec: 'Bản 4U/G5 • Cước BWF',
+            rating: r.rating || 5,
+            content: r.comment || '',
+            date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : 'Gần đây',
+            isVisible: true,
+            likes: 1,
+            officialReply: null
+          }));
+          setReviews(mappedReviews);
+        }
+      }
+
+      if (adminApi?.getAllReturns) {
+        const res = await adminApi.getAllReturns();
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (list.length > 0) {
+          const mappedRmas = list.map((rma, idx) => ({
+            id: rma.id || idx + 1,
+            rmaCode: `RMA-${1000 + (rma.id || idx)}`,
+            orderCode: `#APX-${rma.orderId || 89000}`,
+            createdAt: rma.createdAt ? new Date(rma.createdAt).toLocaleDateString('vi-VN') : 'Gần đây',
+            customerName: rma.customerName || 'Khách hàng Apex',
+            customerPhone: rma.customerPhone || '0988 123 456',
+            productName: rma.productName || 'Sản phẩm bảo hành',
+            serial: `SN-${rma.id || 100}`,
+            reasonCategory: rma.reason || 'Bảo hành khung vợt',
+            reasonDetail: rma.reason || 'Yêu cầu kiểm tra kỹ thuật',
+            timelineStep: rma.status === 'COMPLETED' ? 4 : rma.status === 'APPROVED' ? 2 : 1,
+            status: rma.status || 'PENDING',
+            statusLabel: rma.status === 'COMPLETED' ? 'Đã hoàn tất' : rma.status === 'APPROVED' ? 'Đã tiếp nhận xưởng' : 'Chờ duyệt'
+          }));
+          setRmas(mappedRmas);
+        }
+      }
+    } catch (err) {
+      console.warn('Fallback to local reviews/rmas:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviewsAndRmas();
+  }, []);
+
   const handleToggleVisibility = (id) => {
     setReviews((prev) =>
       prev.map((r) =>
@@ -139,7 +196,15 @@ const AdminReviewsPage = () => {
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  const handleUpdateRMAStatus = (id, newStep, newStatus, newLabel) => {
+  const handleUpdateRMAStatus = async (id, newStep, newStatus, newLabel) => {
+    try {
+      if (adminApi?.updateReturnStatus) {
+        await adminApi.updateReturnStatus(id, newStatus);
+      }
+    } catch (err) {
+      console.warn('Lỗi gọi API cập nhật RMA:', err);
+    }
+
     setRmas((prev) =>
       prev.map((item) =>
         item.id === id

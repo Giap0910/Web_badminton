@@ -19,4 +19,9 @@ public class OrderItemResponse {
     private Integer quantity;
     private BigDecimal price;
     private BigDecimal subtotal;
+    private String selectedSize;
+    private String selectedColor;
+    private String selectedWeight;
+    private String stringingService;
+    private String stringTension;
 }

@@ -299,9 +299,9 @@ const QRPaymentPage = () => {
             <div className="relative w-56 h-56 sm:w-64 sm:h-64 bg-slate-50 rounded-xl flex items-center justify-center p-2 overflow-hidden border border-slate-100">
               <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent scanner-line z-10 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
 
-              {order?.qrCodeUrl ? (
+              {(order?.qrCode || order?.qrCodeUrl) ? (
                 <img
-                  src={order.qrCodeUrl}
+                  src={order.qrCode || order.qrCodeUrl}
                   alt="VietQR Code"
                   className="w-full h-full object-contain"
                 />

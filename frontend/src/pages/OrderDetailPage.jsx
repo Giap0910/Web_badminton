@@ -274,11 +274,23 @@ const OrderDetailPage = () => {
                     <div className="min-w-0 space-y-0.5">
                       <span className="text-[10px] font-black uppercase text-slate-400">{item.productBrand}</span>
                       <h4 className="font-bold text-xs sm:text-sm text-slate-900 truncate">{item.productName}</h4>
-                      {item.weightGrip && (
-                        <span className="inline-block text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">
-                          {item.weightGrip}
-                        </span>
-                      )}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {(item.selectedWeight || item.weightGrip) && (
+                          <span className="inline-block text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">
+                            {item.selectedWeight || item.weightGrip}
+                          </span>
+                        )}
+                        {item.selectedSize && (
+                          <span className="inline-block text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">
+                            Size: {item.selectedSize}
+                          </span>
+                        )}
+                        {item.stringingService && (
+                          <span className="inline-block text-[11px] bg-red-50 text-secondary border border-red-100 px-2 py-0.5 rounded font-semibold">
+                            {item.stringingService}{item.stringTension ? ` (${item.stringTension})` : ''}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 text-[11px] text-secondary font-medium">
                         <Gift className="w-3.5 h-3.5 shrink-0" />
                         <span>Tặng kèm bao vợt nhung + quấn cán chính hãng (0₫)</span>
@@ -316,7 +328,9 @@ const OrderDetailPage = () => {
 
               <div className="flex justify-between text-slate-600">
                 <span>Phí vận chuyển:</span>
-                <span className="font-bold text-emerald-600">Miễn phí toàn quốc</span>
+                <span className={`font-bold ${order.shippingFee && order.shippingFee > 0 ? 'text-slate-900' : 'text-emerald-600'}`}>
+                  {order.shippingFee && order.shippingFee > 0 ? formatPrice(order.shippingFee) : 'Miễn phí toàn quốc'}
+                </span>
               </div>
 
               <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline">

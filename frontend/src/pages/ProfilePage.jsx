@@ -81,12 +81,13 @@ const ProfilePage = () => {
       await userApi.updateProfile({ fullName, phone });
       setProfileSuccess('Cập nhật thông tin cá nhân thành công!');
     } catch (err) {
-      setProfileError(err.response?.data?.message || 'Cập nhật thành công trên phiên hiện tại.');
-      // Giả lập thành công cho trải nghiệm mượt mà nếu offline API
-      setProfileSuccess('Cập nhật thông tin cá nhân thành công!');
+      setProfileError(err.response?.data?.message || 'Không thể cập nhật thông tin cá nhân. Vui lòng thử lại.');
     } finally {
       setUpdatingProfile(false);
-      setTimeout(() => setProfileSuccess(''), 4000);
+      setTimeout(() => {
+        setProfileSuccess('');
+        setProfileError('');
+      }, 4000);
     }
   };
 

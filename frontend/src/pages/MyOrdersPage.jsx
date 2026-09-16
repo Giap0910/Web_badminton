@@ -134,25 +134,34 @@ const MyOrdersPage = () => {
         const list = Array.isArray(res) ? res : res?.data || [];
         if (list.length > 0) {
           // Merge API fields with design-specific fields
-          const formatted = list.map((item, idx) => ({
-            id: item.id || idx + 1,
-            orderCode: item.orderNumber ? `#${item.orderNumber}` : `#APX-${item.id || 89000 + idx}`,
-            createdAt: item.createdAt || '14:35 - 24/10/2024',
-            paymentMethod: item.paymentMethod === 'PAYOS' ? 'VietQR Pro Đã xác nhận' : 'COD Đồng kiểm',
-            productName: item.orderItems?.[0]?.product?.name || item.productName || 'Vợt Yonex Astrox 100ZZ Kurenai (4U/G5)',
-            productImage: item.orderItems?.[0]?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-            stringDetail: item.stringOption || '+ Cước BG80 Power (Căng 11.5kg / 25.5 lbs)',
-            giftDetail: 'Kèm 01 Cuốn cán Yonex AC102EX',
-            quantitySummary: `Số lượng: ${item.orderItems?.length || 1} sản phẩm`,
-            totalPrice: item.totalAmount || item.totalPrice || 4550000,
-            shippingFee: 0,
-            status: item.status || 'PROCESSING',
-            statusLabel: item.status === 'CANCELLED' ? 'Đã hủy' : item.status === 'PAID' ? 'Đã thanh toán' : 'Đang xử lý',
-            statusSub: item.status === 'PAID' ? 'Kỹ thuật viên đang vào cước' : 'Hệ thống đã tiếp nhận',
-            receiverName: item.shippingName || 'Nguyễn Văn A',
-            receiverPhone: item.shippingPhone || '0988 123 456',
-            shippingAddress: item.shippingAddress || 'Tầng 12 Landmark 81, TP. HCM'
-          }));
+          const formatted = list.map((item, idx) => {
+            const firstItem = item.items?.[0] || item.orderItems?.[0];
+            const techString = firstItem?.stringingService
+              ? `${firstItem.stringingService}${firstItem.stringTension ? ` (Căng ${firstItem.stringTension})` : ''}`
+              : firstItem?.selectedWeight
+              ? `Phiên bản: ${firstItem.selectedWeight}`
+              : item.stringOption || 'Kỹ thuật viên đan tiêu chuẩn BWF';
+
+            return {
+              id: item.id || idx + 1,
+              orderCode: item.payosOrderCode ? `#APX-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#APX-${item.id || 89000 + idx}`,
+              createdAt: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '14:35 - 24/10/2024',
+              paymentMethod: item.paymentMethod?.includes('PAYOS') ? 'VietQR Pro Chuyển khoản' : 'COD Đồng kiểm',
+              productName: firstItem?.productName || firstItem?.product?.name || item.productName || 'Vợt Cầu Lông Apex',
+              productImage: firstItem?.productImageUrl || firstItem?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
+              stringDetail: techString,
+              giftDetail: 'Kèm 01 Cuốn cán Yonex AC102EX',
+              quantitySummary: `Số lượng: ${item.items?.length || item.orderItems?.length || 1} sản phẩm`,
+              totalPrice: item.totalAmount || item.totalPrice || 0,
+              shippingFee: item.shippingFee || 0,
+              status: item.status || 'PROCESSING',
+              statusLabel: item.status === 'CANCELLED' ? 'Đã hủy' : item.status === 'PAID' ? 'Đã thanh toán' : item.status === 'PENDING' ? 'Chờ thanh toán VietQR' : item.status === 'COMPLETED' ? 'Đã hoàn tất' : 'Đang xử lý',
+              statusSub: item.status === 'PAID' ? 'Kỹ thuật viên đang vào cước' : item.status === 'PENDING' ? 'Vui lòng quét VietQR thanh toán' : item.status === 'COMPLETED' ? 'Đã giao thành công' : item.status === 'CANCELLED' ? 'Đơn hàng đã được hoàn kho' : 'Hệ thống đã tiếp nhận',
+              receiverName: item.customerName || item.shippingName || 'Khách hàng Apex',
+              receiverPhone: item.shippingPhone || '',
+              shippingAddress: item.shippingAddress || ''
+            };
+          });
           setOrders(formatted);
         }
       } catch (err) {

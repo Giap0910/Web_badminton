@@ -130,24 +130,41 @@ const AdminOrdersPage = () => {
         const res = await adminApi.getOrders();
         const list = Array.isArray(res) ? res : res?.data || [];
         if (list.length > 0) {
-          const mapped = list.map((item, idx) => ({
-            id: item.id || idx + 1,
-            code: item.orderNumber ? `#${item.orderNumber}` : `#APX-${item.id || 89000 + idx}`,
-            createdAt: item.createdAt || '24/10/2024',
-            customerName: item.shippingName || item.customerName || 'Khách hàng Apex',
-            customerPhone: item.shippingPhone || '0988 123 456',
-            customerAddress: item.shippingAddress || 'TP. Hồ Chí Minh',
-            productName: item.orderItems?.[0]?.product?.name || 'Vợt Cầu Lông Yonex Astrox 100ZZ',
-            productImage: item.orderItems?.[0]?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-            stringReq: item.stringOption || '+ Cước BG80 Power 11.5kg (4 nút BWF)',
-            gift: 'Cuốn cán Yonex chính hãng',
-            totalAmount: item.totalAmount || 4550000,
-            paymentMethod: item.paymentMethod === 'PAYOS' ? 'VietQR Pro' : 'COD',
-            paymentRef: item.payosTransactionId || `REF-${item.id || 999}`,
-            isPaid: item.status === 'PAID' || item.paymentStatus === 'PAID',
-            status: item.status || 'STRINGING',
-            statusLabel: item.status === 'PAID' ? 'Đang vào cước' : item.status === 'CANCELLED' ? 'Đã hủy' : 'Đang xử lý'
-          }));
+          const mapped = list.map((item, idx) => {
+            const firstItem = item.items?.[0] || item.orderItems?.[0];
+            const techStr = firstItem?.stringingService
+              ? `${firstItem.stringingService}${firstItem.stringTension ? ` (${firstItem.stringTension})` : ''}`
+              : firstItem?.selectedWeight
+              ? `Phiên bản: ${firstItem.selectedWeight}`
+              : item.stringOption || 'Kỹ thuật viên vào cước BWF';
+
+            let statusLabel = 'Đang xử lý';
+            if (item.status === 'PAID') statusLabel = 'Đã thanh toán';
+            else if (item.status === 'STRINGING') statusLabel = 'Đang vào cước';
+            else if (item.status === 'SHIPPING') statusLabel = 'Đang giao hỏa tốc';
+            else if (item.status === 'COMPLETED') statusLabel = 'Đã hoàn tất';
+            else if (item.status === 'CANCELLED') statusLabel = 'Đã hủy';
+            else if (item.status === 'PENDING') statusLabel = 'Chờ thanh toán QR';
+
+            return {
+              id: item.id || idx + 1,
+              code: item.payosOrderCode ? `#APX-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#APX-${item.id || 89000 + idx}`,
+              createdAt: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '24/10/2024',
+              customerName: item.customerName || item.shippingName || 'Khách hàng Apex',
+              customerPhone: item.shippingPhone || '0988 123 456',
+              customerAddress: item.shippingAddress || 'TP. Hồ Chí Minh',
+              productName: firstItem?.productName || firstItem?.product?.name || 'Vợt Cầu Lông Apex',
+              productImage: firstItem?.productImageUrl || firstItem?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
+              stringReq: techStr,
+              gift: 'Cuốn cán Yonex chính hãng',
+              totalAmount: item.totalAmount || 0,
+              paymentMethod: item.paymentMethod?.includes('PAYOS') ? 'VietQR Pro' : 'COD',
+              paymentRef: item.payosOrderCode ? `PAYOS-${item.payosOrderCode}` : `REF-${item.id || 999}`,
+              isPaid: item.status === 'PAID' || item.status === 'COMPLETED',
+              status: item.status || 'PENDING',
+              statusLabel: statusLabel
+            };
+          });
           setOrders(mapped);
         }
       }
@@ -171,25 +188,45 @@ const AdminOrdersPage = () => {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const handleUpdateStatus = (orderId, newStatus) => {
+  const handleUpdateStatus = async (orderId, newStatus) => {
     let label = 'Đang xử lý';
     if (newStatus === 'STRINGING') label = 'Đang vào cước';
     if (newStatus === 'SHIPPING') label = 'Đang giao hỏa tốc';
     if (newStatus === 'COMPLETED') label = 'Đã hoàn tất';
     if (newStatus === 'CANCELLED') label = 'Đã hủy';
+    if (newStatus === 'PAID') label = 'Đã thanh toán';
 
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: newStatus,
-              statusLabel: label
-            }
-          : o
-      )
-    );
-    setToastMessage(`Đã cập nhật trạng thái đơn sang: "${label}"`);
+    try {
+      if (adminApi?.updateOrderStatus) {
+        await adminApi.updateOrderStatus(orderId, newStatus);
+      }
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? {
+                ...o,
+                status: newStatus,
+                statusLabel: label
+              }
+            : o
+        )
+      );
+      setToastMessage(`Đã cập nhật trạng thái đơn sang: "${label}"`);
+    } catch (err) {
+      console.warn('Lỗi cập nhật trạng thái đơn hàng:', err);
+      setToastMessage(`Không thể cập nhật trên máy chủ, đã lưu cục bộ.`);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? {
+                ...o,
+                status: newStatus,
+                statusLabel: label
+              }
+            : o
+        )
+      );
+    }
     setTimeout(() => setToastMessage(''), 3000);
   };
 

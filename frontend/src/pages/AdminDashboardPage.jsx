@@ -120,6 +120,7 @@ const TOP_PRODUCTS = [
 const AdminDashboardPage = () => {
   const [timeRange, setTimeRange] = useState('today');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [recentOrders, setRecentOrders] = useState(RECENT_ORDERS);
   const [stats, setStats] = useState({
     todayRevenue: '42.850.000₫',
     newOrders: 28,
@@ -135,8 +136,31 @@ const AdminDashboardPage = () => {
     try {
       if (adminApi?.getDashboardStats) {
         const res = await adminApi.getDashboardStats();
-        if (res?.data) {
-          // Update stats if backend provides
+        const data = res?.data ?? res;
+        if (data) {
+          setStats({
+            todayRevenue: formatPrice(data.totalRevenue || 0),
+            newOrders: data.totalOrders ?? 0,
+            newCustomers: data.totalCustomers ?? 0,
+            inventoryAlerts: data.pendingOrders ?? 0
+          });
+          if (Array.isArray(data.recentOrders) && data.recentOrders.length > 0) {
+            const mappedOrders = data.recentOrders.map((o, idx) => ({
+              id: o.id || idx + 1,
+              code: o.payosOrderCode ? `#APX-${o.payosOrderCode}` : `#APX-${o.id || 89000 + idx}`,
+              customer: o.customerName || 'Khách hàng Apex',
+              phone: o.shippingPhone || '0988 123 456',
+              product: o.items?.[0]?.productName || 'Vợt Cầu Lông Apex',
+              stringReq: o.items?.[0]?.stringingService
+                ? `${o.items[0].stringingService}${o.items[0].stringTension ? ` (${o.items[0].stringTension})` : ''}`
+                : 'Đan vợt tiêu chuẩn BWF',
+              amount: o.totalAmount || 0,
+              time: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('vi-VN') : 'Vừa xong',
+              status: o.status || 'PENDING',
+              statusLabel: o.status === 'PAID' ? 'Đã thanh toán' : o.status === 'STRINGING' ? 'Đang vào cước' : o.status === 'COMPLETED' ? 'Đã hoàn tất' : 'Chờ xử lý'
+            }));
+            setRecentOrders(mappedOrders);
+          }
         }
       }
     } catch (err) {
@@ -145,6 +169,10 @@ const AdminDashboardPage = () => {
       setTimeout(() => setIsRefreshing(false), 600);
     }
   };
+
+  useEffect(() => {
+    handleRefresh();
+  }, []);
 
   return (
     <AdminLayout title="Dashboard" subtitle="Báo cáo tổng quan hoạt động">
@@ -418,7 +446,7 @@ const AdminDashboardPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                {RECENT_ORDERS.map((order) => (
+                {recentOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-4 px-6 align-top">
                       <span className="font-bold text-slate-900 block">{order.code}</span>

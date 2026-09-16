@@ -6,8 +6,18 @@ export const adminApi = {
 
   // User Management
   getAllUsers: () => axiosClient.get('/admin/users'),
-  updateUserStatus: (userId, isActive) => 
-    axiosClient.put(`/admin/users/${userId}/status`, null, { params: { isActive } }),
+  updateUserStatus: (userId, active) => 
+    axiosClient.put(`/admin/users/${userId}/status`, null, { params: { active } }),
+
+  // Order Management
+  getOrders: () => axiosClient.get('/orders/all'),
+  updateOrderStatus: (id, status) =>
+    axiosClient.put(`/orders/${id}/status`, null, { params: { status } }),
+
+  // Product Management
+  createProduct: (data) => axiosClient.post('/products', data),
+  updateProduct: (id, data) => axiosClient.put(`/products/${id}`, data),
+  deleteProduct: (id) => axiosClient.delete(`/products/${id}`),
 
   // Voucher Management
   getAllVouchers: () => axiosClient.get('/admin/vouchers'),

@@ -98,6 +98,37 @@ const AdminPaymentsPage = () => {
   const formatPrice = (p) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
+  const fetchPayments = async () => {
+    try {
+      if (adminApi?.getAllPayments) {
+        const res = await adminApi.getAllPayments();
+        const list = Array.isArray(res) ? res : res?.data || [];
+        if (list.length > 0) {
+          const mapped = list.map((p, idx) => ({
+            id: p.orderId || idx + 1,
+            transId: p.payosOrderCode ? `PAYOS-${p.payosOrderCode}` : `TX-${10000 + (p.orderId || idx)}`,
+            orderCode: p.payosOrderCode ? `#APX-${p.payosOrderCode}` : `#APX-${p.orderId || 89000 + idx}`,
+            createdAt: p.createdAt ? new Date(p.createdAt).toLocaleString('vi-VN') : 'Gần đây',
+            customer: p.customerName || 'Khách hàng Apex',
+            bank: 'MBBank (0987654321)',
+            bankRef: p.payosOrderCode ? `QR-${p.payosOrderCode}` : 'COD-DIRECT',
+            amount: p.amount || 0,
+            status: p.status === 'PAID' || p.status === 'COMPLETED' ? 'SUCCESS' : p.status === 'CANCELLED' ? 'FAILED' : 'PENDING_COD',
+            statusLabel: p.status === 'PAID' || p.status === 'COMPLETED' ? 'Khớp lệnh tự động 100%' : p.status === 'CANCELLED' ? 'Đã hủy / Hết hạn' : 'Chờ xác nhận',
+            method: p.paymentMethod?.includes('PAYOS') ? 'VietQR Pro' : 'COD Đồng kiểm'
+          }));
+          setTransactions(mapped);
+        }
+      }
+    } catch (err) {
+      console.warn('Fallback to local payment transactions:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     setCopiedId(text);

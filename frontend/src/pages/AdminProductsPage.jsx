@@ -209,12 +209,18 @@ const AdminProductsPage = () => {
   const handleDeleteProduct = async (id) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này khỏi hệ thống?')) return;
     try {
-      if (adminApi?.deleteProduct) await adminApi.deleteProduct(id);
+      if (adminApi?.deleteProduct) {
+        await adminApi.deleteProduct(id);
+      } else if (productApi?.deleteProduct) {
+        await productApi.deleteProduct(id);
+      }
+      await fetchProducts();
+      setNotification('Đã xóa sản phẩm khỏi cơ sở dữ liệu thành công.');
     } catch (e) {
-      console.warn('Delete product local fallback:', e);
+      console.warn('Lỗi gọi API xóa sản phẩm:', e);
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+      setNotification('Đã xóa sản phẩm (cục bộ).');
     }
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-    setNotification('Đã xóa sản phẩm thành công.');
     setTimeout(() => setNotification(''), 3000);
   };
 
@@ -239,37 +245,64 @@ const AdminProductsPage = () => {
     const origPriceNum = Number(formData.originalPrice) || priceNum;
     const stockNum = Number(formData.stock) || 0;
 
+    let categoryId = 1;
+    if (formData.categorySlug === 'giay-cau-long') categoryId = 2;
+    else if (formData.categorySlug === 'quan-ao-cau-long') categoryId = 3;
+    else if (formData.categorySlug === 'balo-tui-cau-long') categoryId = 4;
+    else if (formData.categorySlug === 'phu-kien-cau-long') categoryId = 5;
+
     const payload = {
-      sku: formData.sku,
+      sku: formData.sku || `SKU-APX-${Date.now().toString().slice(-6)}`,
       name: formData.name,
       brand: formData.brand,
-      category: formData.category,
-      categorySlug: formData.categorySlug,
+      categoryId: categoryId,
       price: priceNum,
       originalPrice: origPriceNum,
       stock: stockNum,
       maxTension: formData.maxTension,
-      status: stockNum > 0 ? 'ACTIVE' : 'OUT_OF_STOCK',
-      imageUrl: formData.imageUrl
+      imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80'
     };
 
-    if (editingId) {
-      setProducts((prev) =>
-        prev.map((p) => (p.id === editingId ? { ...p, ...payload } : p))
-      );
-      setNotification('Cập nhật thông tin sản phẩm thành công!');
-    } else {
-      const newEntry = {
-        id: Date.now(),
-        ...payload
-      };
-      setProducts([newEntry, ...products]);
-      setNotification('Thêm sản phẩm mới vào kho thành công!');
+    try {
+      if (editingId) {
+        if (adminApi?.updateProduct) {
+          await adminApi.updateProduct(editingId, payload);
+        } else {
+          await productApi.updateProduct(editingId, payload);
+        }
+        setNotification('Cập nhật thông tin sản phẩm trên máy chủ thành công!');
+      } else {
+        if (adminApi?.createProduct) {
+          await adminApi.createProduct(payload);
+        } else {
+          await productApi.createProduct(payload);
+        }
+        setNotification('Thêm sản phẩm mới vào kho dữ liệu thành công!');
+      }
+      await fetchProducts();
+    } catch (err) {
+      console.warn('Lỗi gọi API sản phẩm, lưu dự phòng cục bộ:', err);
+      if (editingId) {
+        setProducts((prev) =>
+          prev.map((p) => (p.id === editingId ? { ...p, ...payload, category: formData.category, categorySlug: formData.categorySlug } : p))
+        );
+        setNotification('Cập nhật thông tin sản phẩm thành công!');
+      } else {
+        const newEntry = {
+          id: Date.now(),
+          ...payload,
+          category: formData.category,
+          categorySlug: formData.categorySlug,
+          status: stockNum > 0 ? 'ACTIVE' : 'OUT_OF_STOCK'
+        };
+        setProducts([newEntry, ...products]);
+        setNotification('Thêm sản phẩm mới vào kho thành công!');
+      }
+    } finally {
+      setSaving(false);
+      setShowModal(false);
+      setTimeout(() => setNotification(''), 3000);
     }
-
-    setSaving(false);
-    setShowModal(false);
-    setTimeout(() => setNotification(''), 3000);
   };
 
   const filteredProducts = products.filter((p) => {

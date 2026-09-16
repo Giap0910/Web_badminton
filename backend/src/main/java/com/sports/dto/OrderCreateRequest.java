@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
@@ -28,6 +29,8 @@ public class OrderCreateRequest {
     private String paymentMethod; // "PAYOS_VIETQR" hoặc "COD"
 
     private String voucherCode;
+
+    private BigDecimal shippingFee;
 
     private String note;
 }
