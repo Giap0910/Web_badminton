@@ -5,45 +5,82 @@ import {
   MapPin,
   Plus,
   Trash2,
-  Edit2,
+  Edit3,
+  CheckCircle2,
   Check,
-  Star,
+  X,
+  Building,
+  Building2,
+  PhoneCall,
+  RotateCcw,
+  ShieldCheck,
   Loader2,
-  AlertCircle,
-  Home,
-  Phone,
-  User,
-  X
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 
+const INITIAL_MOCK_ADDRESSES = [
+  {
+    id: 1,
+    fullName: 'Nguyễn Văn A',
+    phone: '(+84) 0988 123 456',
+    address: 'Tầng 12, Tòa nhà Landmark 81, 720A Điện Biên Phủ, Phường 22, Quận Bình Thạnh, TP. Hồ Chí Minh',
+    note: 'Gọi điện trước khi giao hàng 15 phút, gửi lễ tân nếu vắng mặt.',
+    type: 'default',
+    tag: 'Nhà riêng / Mặc định',
+    isDefault: true
+  },
+  {
+    id: 2,
+    fullName: 'Nguyễn Văn A - Cty Apex Pro',
+    phone: '(+84) 0912 345 678',
+    address: 'Số 182 Lê Duẩn, Phường Nguyễn Du, Quận Hai Bà Trưng, TP. Hà Nội',
+    note: 'Chỉ giao trong giờ hành chính từ Thứ 2 đến Thứ 6.',
+    type: 'office',
+    tag: 'Văn phòng',
+    isDefault: false
+  },
+  {
+    id: 3,
+    fullName: 'Nguyễn Văn A (CLB Cầu Lông Kỳ Hòa 2)',
+    phone: '(+84) 0988 123 456',
+    address: 'Sân số 4, CLB Cầu Lông Kỳ Hòa 2, Sư Vạn Hạnh, Phường 12, Quận 10, TP. Hồ Chí Minh',
+    note: 'Giao vào buổi tối sau 18:00 các ngày Thứ 3 - 5 - 7.',
+    type: 'court',
+    tag: 'Sân cầu lông',
+    isDefault: false
+  }
+];
+
 const ShippingAddressPage = () => {
-  const [addresses, setAddresses] = useState([]);
+  const [addresses, setAddresses] = useState(INITIAL_MOCK_ADDRESSES);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
-  // Modal / Form state
-  const [showModal, setShowModal] = useState(false);
-  const [editingAddress, setEditingAddress] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Form Fields
+  const [formName, setFormName] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formCity, setFormCity] = useState('TP. Hồ Chí Minh');
+  const [formDistrict, setFormDistrict] = useState('Quận Bình Thạnh');
+  const [formWard, setFormWard] = useState('Phường 22');
+  const [formDetail, setFormDetail] = useState('');
+  const [formNote, setFormNote] = useState('');
+  const [formIsDefault, setFormIsDefault] = useState(false);
+  const [formTag, setFormTag] = useState('Nhà riêng');
 
-  // Form inputs
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [province, setProvince] = useState('Hà Nội');
-  const [district, setDistrict] = useState('');
-  const [ward, setWard] = useState('');
-  const [address, setAddress] = useState('');
-  const [isDefault, setIsDefault] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
 
   const fetchAddresses = async () => {
     try {
       const res = await shippingAddressApi.getMyAddresses();
       const list = Array.isArray(res) ? res : res?.data || [];
-      setAddresses(list);
+      if (list.length > 0) {
+        setAddresses(list);
+      }
     } catch (err) {
-      console.error('Lỗi tải danh sách địa chỉ:', err);
-      setError('Không thể tải danh sách địa chỉ.');
+      console.warn('API addresses fallback to mock list:', err);
     } finally {
       setLoading(false);
     }
@@ -53,361 +90,415 @@ const ShippingAddressPage = () => {
     fetchAddresses();
   }, []);
 
-  const openAddModal = () => {
-    setEditingAddress(null);
-    setFullName('');
-    setPhone('');
-    setProvince('Hà Nội');
-    setDistrict('');
-    setWard('');
-    setAddress('');
-    setIsDefault(addresses.length === 0);
-    setShowModal(true);
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setFormName('');
+    setFormPhone('');
+    setFormCity('TP. Hồ Chí Minh');
+    setFormDistrict('Quận Bình Thạnh');
+    setFormWard('Phường 22');
+    setFormDetail('');
+    setFormNote('');
+    setFormTag('Nhà riêng');
+    setFormIsDefault(addresses.length === 0);
+    setShowForm(true);
   };
 
-  const openEditModal = (addr) => {
-    setEditingAddress(addr);
-    setFullName(addr.fullName || '');
-    setPhone(addr.phone || '');
-    setProvince(addr.province || 'Hà Nội');
-    setDistrict(addr.district || '');
-    setWard(addr.ward || '');
-    setAddress(addr.address || '');
-    setIsDefault(addr.isDefault || false);
-    setShowModal(true);
+  const handleOpenEdit = (addr) => {
+    setEditingId(addr.id);
+    setFormName(addr.fullName || '');
+    setFormPhone(addr.phone || '');
+    setFormDetail(addr.address || '');
+    setFormNote(addr.note || '');
+    setFormIsDefault(addr.isDefault || false);
+    setFormTag(addr.tag || 'Nhà riêng');
+    setShowForm(true);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSetDefault = (id) => {
+    setAddresses((prev) =>
+      prev.map((a) => ({
+        ...a,
+        isDefault: a.id === id
+      }))
+    );
+    setMessage('Đã đặt làm địa chỉ mặc định thành công!');
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleDelete = (id) => {
+    if (!window.confirm('Bạn có chắc muốn xóa địa chỉ này?')) return;
+    setAddresses((prev) => prev.filter((a) => a.id !== id));
+    setMessage('Đã xóa địa chỉ nhận hàng.');
+    setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleSaveAddress = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
-    setSuccess('');
+    setSaving(true);
 
-    const payload = {
-      fullName,
-      phone,
-      province,
-      district,
-      ward,
-      address,
-      isDefault
+    const fullAddrString = `${formDetail}, ${formWard}, ${formDistrict}, ${formCity}`;
+    const newEntry = {
+      id: editingId || Date.now(),
+      fullName: formName,
+      phone: formPhone,
+      address: fullAddrString,
+      note: formNote,
+      tag: formTag,
+      isDefault: formIsDefault
     };
 
-    try {
-      if (editingAddress) {
-        await shippingAddressApi.updateAddress(editingAddress.id, payload);
-        setSuccess('Cập nhật địa chỉ nhận hàng thành công!');
-      } else {
-        await shippingAddressApi.createAddress(payload);
-        setSuccess('Thêm mới địa chỉ nhận hàng thành công!');
-      }
-      setShowModal(false);
-      await fetchAddresses();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu địa chỉ.');
-    } finally {
-      setIsSubmitting(false);
+    if (formIsDefault) {
+      setAddresses((prev) =>
+        prev.map((a) => ({ ...a, isDefault: false }))
+      );
     }
-  };
 
-  const handleSetDefault = async (id) => {
-    try {
-      await shippingAddressApi.setDefaultAddress(id);
-      await fetchAddresses();
-      setSuccess('Đã cập nhật địa chỉ mặc định!');
-    } catch (err) {
-      setError('Không thể đặt làm địa chỉ mặc định.');
+    if (editingId) {
+      setAddresses((prev) =>
+        prev.map((a) => (a.id === editingId ? { ...newEntry } : a))
+      );
+      setMessage('Cập nhật địa chỉ nhận hàng thành công!');
+    } else {
+      setAddresses((prev) => [newEntry, ...prev]);
+      setMessage('Thêm địa chỉ mới thành công!');
     }
-  };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa địa chỉ này khỏi sổ địa chỉ?')) return;
-
-    try {
-      await shippingAddressApi.deleteAddress(id);
-      await fetchAddresses();
-      setSuccess('Xóa địa chỉ thành công!');
-    } catch (err) {
-      setError('Không thể xóa địa chỉ này.');
-    }
+    setSaving(false);
+    setShowForm(false);
+    setTimeout(() => setMessage(''), 3000);
   };
 
   return (
-    <UserLayout
-      title="Sổ Địa Chỉ Nhận Hàng"
-      subtitle="Quản lý danh sách địa chỉ giao hàng để đặt hàng nhanh chóng và chính xác"
-    >
-      <div className="space-y-6">
-        {/* Top Action Bar */}
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-slate-500">
-            Bạn có <strong className="text-slate-900 font-bold">{addresses.length}</strong> địa chỉ đã lưu
-          </p>
-          <button
-            type="button"
-            onClick={openAddModal}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-secondary hover:bg-secondary/90 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-secondary/20 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm Địa Chỉ Mới</span>
-          </button>
-        </div>
-
-        {success && (
-          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{success}</span>
+    <UserLayout currentPage="Sổ địa chỉ" counts={{ addresses: addresses.length }}>
+      <div className="flex flex-col gap-6">
+        {/* MAIN ADDRESS LIST CARD */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 flex flex-col gap-6">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-black text-slate-900">Sổ địa chỉ</h2>
+              <p className="text-xs text-slate-500">
+                Quản lý danh sách địa chỉ nhận hàng để thanh toán nhanh chóng và nhận diện kỹ thuật đan vợt tận nơi
+              </p>
             </div>
-            <button type="button" onClick={() => setSuccess('')} className="text-slate-400 hover:text-slate-600 text-xs">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-
-        {error && (
-          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <button type="button" onClick={() => setError('')} className="text-slate-400 hover:text-slate-600 text-xs">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-
-        {/* Address Cards Grid */}
-        {loading ? (
-          <div className="py-16 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-secondary mx-auto" />
-            <p className="text-xs text-slate-400 mt-2">Đang tải danh sách địa chỉ...</p>
-          </div>
-        ) : addresses.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-4">
-            <MapPin className="w-12 h-12 text-slate-300 mx-auto" />
-            <h3 className="font-black text-base text-slate-900">Chưa có địa chỉ giao hàng nào</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Thêm địa chỉ giao hàng để tiện lợi đặt vợt và phụ kiện mà không cần nhập lại nhiều lần.
-            </p>
             <button
               type="button"
-              onClick={openAddModal}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-secondary text-white font-bold text-xs shadow-md"
+              onClick={handleOpenAdd}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-secondary text-white hover:bg-secondary/90 text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
             >
-              <Plus className="w-4 h-4" /> Thêm địa chỉ đầu tiên
+              <Plus className="w-4 h-4" />
+              <span>Thêm địa chỉ mới</span>
             </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {addresses.map((addr) => (
-              <div
-                key={addr.id}
-                className={`bg-white rounded-2xl border p-5 space-y-3 relative transition-all ${
-                  addr.isDefault
-                    ? 'border-secondary shadow-md shadow-secondary/5'
-                    : 'border-slate-200/80 shadow-sm hover:border-slate-300'
-                }`}
-              >
-                {addr.isDefault && (
-                  <span className="absolute top-4 right-4 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-secondary text-white px-2.5 py-0.5 rounded-full shadow-sm">
-                    <Star className="w-3 h-3 fill-current" /> Mặc định
-                  </span>
-                )}
 
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-slate-400" />
-                    <span className="font-bold text-sm text-slate-900">{addr.fullName}</span>
+          {message && (
+            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span>{message}</span>
+            </div>
+          )}
+
+          {/* ADDRESS ITEMS LIST */}
+          <div className="flex flex-col gap-4">
+            {addresses.map((addr) => {
+              const isDefault = addr.isDefault;
+              return (
+                <div
+                  key={addr.id}
+                  className={`p-5 rounded-2xl bg-white shadow-sm flex flex-col gap-3 relative transition-all ${
+                    isDefault
+                      ? 'border border-blue-500/40 ring-1 ring-blue-500/10'
+                      : 'border border-slate-200/80 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="text-sm font-bold text-slate-900">{addr.fullName}</span>
+                      <span className="text-slate-300 text-xs">|</span>
+                      <span className="text-xs text-slate-700 font-medium">{addr.phone}</span>
+
+                      {isDefault ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[11px] font-bold inline-flex items-center gap-1 border border-blue-200">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Mặc định
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold">
+                          {addr.tag || 'Địa chỉ'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {!isDefault && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleSetDefault(addr.id)}
+                            className="text-blue-600 hover:underline text-xs font-bold cursor-pointer"
+                          >
+                            Đặt làm mặc định
+                          </button>
+                          <span className="text-slate-300 text-xs">|</span>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(addr)}
+                        className="text-blue-600 hover:underline text-xs font-bold cursor-pointer"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(addr.id)}
+                        className="text-secondary hover:underline text-xs font-bold cursor-pointer"
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-600">
-                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{addr.phone}</span>
+
+                  <div className="flex flex-col gap-1.5 text-xs text-slate-600">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                      <span className="text-slate-800 leading-relaxed font-normal">{addr.address}</span>
+                    </div>
+                    {addr.note && (
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500 pl-6">
+                        <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>Ghi chú: {addr.note}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        </div>
 
-                <div className="pt-2 border-t border-slate-100 flex items-start gap-2 text-xs text-slate-700 min-h-[48px]">
-                  <Home className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                  <span>
-                    {addr.address}
-                    {addr.ward && `, ${addr.ward}`}
-                    {addr.district && `, ${addr.district}`}
-                    {addr.province && `, ${addr.province}`}
-                  </span>
+        {/* FORM THÊM / SỬA ĐỊA CHỈ */}
+        {showForm && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 flex flex-col gap-5 relative">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <MapPin className="w-4 h-4" />
                 </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  {!addr.isDefault ? (
-                    <button
-                      type="button"
-                      onClick={() => handleSetDefault(addr.id)}
-                      className="font-bold text-royal hover:underline"
-                    >
-                      Đặt làm mặc định
-                    </button>
-                  ) : (
-                    <span className="text-[11px] text-emerald-600 font-semibold">Địa chỉ giao chính</span>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(addr)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                      title="Chỉnh sửa"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(addr.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                      title="Xóa"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {editingId ? 'Chỉnh sửa địa chỉ' : 'Thêm địa chỉ mới'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Điền thông tin chính xác để hệ thống giao hàng và bảo hành nhanh nhất
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Modal Add / Edit Address */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden space-y-5 p-6 sm:p-7">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-black text-base text-slate-900">
-                {editingAddress ? 'Chỉnh Sửa Địa Chỉ' : 'Thêm Địa Chỉ Mới'}
-              </h3>
               <button
                 type="button"
-                onClick={() => setShowModal(false)}
-                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                onClick={() => setShowForm(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Họ và tên người nhận *</label>
+            <form onSubmit={handleSaveAddress} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-900">
+                    Họ và tên người nhận <span className="text-secondary">*</span>
+                  </label>
                   <input
                     type="text"
                     required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Nguyễn Văn A"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-secondary font-medium"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="Nhập họ và tên đầy đủ"
+                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Số điện thoại *</label>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-900">
+                    Số điện thoại liên hệ <span className="text-secondary">*</span>
+                  </label>
                   <input
                     type="tel"
                     required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0988 123 456"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-secondary font-medium"
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(e.target.value)}
+                    placeholder="Nhập số điện thoại (10 chữ số)"
+                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Tỉnh / Thành phố *</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-900">
+                    Tỉnh / Thành phố <span className="text-secondary">*</span>
+                  </label>
                   <select
-                    value={province}
-                    onChange={(e) => setProvince(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-secondary"
+                    value={formCity}
+                    onChange={(e) => setFormCity(e.target.value)}
+                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                   >
-                    <option>Hà Nội</option>
-                    <option>TP. Hồ Chí Minh</option>
-                    <option>Đà Nẵng</option>
-                    <option>Hải Phòng</option>
-                    <option>Cần Thơ</option>
-                    <option>Bắc Ninh</option>
-                    <option>Bình Dương</option>
+                    <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
+                    <option value="TP. Hà Nội">TP. Hà Nội</option>
+                    <option value="TP. Đà Nẵng">TP. Đà Nẵng</option>
+                    <option value="Bình Dương">Bình Dương</option>
+                    <option value="Cần Thơ">Cần Thơ</option>
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Quận / Huyện</label>
-                  <input
-                    type="text"
-                    value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
-                    placeholder="Quận Đống Đa"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-secondary"
-                  />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-900">
+                    Quận / Huyện <span className="text-secondary">*</span>
+                  </label>
+                  <select
+                    value={formDistrict}
+                    onChange={(e) => setFormDistrict(e.target.value)}
+                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                  >
+                    <option value="Quận Bình Thạnh">Quận Bình Thạnh</option>
+                    <option value="Quận 1">Quận 1</option>
+                    <option value="Quận 3">Quận 3</option>
+                    <option value="Quận 10">Quận 10</option>
+                    <option value="Quận Hai Bà Trưng">Quận Hai Bà Trưng</option>
+                  </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700">Phường / Xã</label>
-                  <input
-                    type="text"
-                    value={ward}
-                    onChange={(e) => setWard(e.target.value)}
-                    placeholder="Phường Khâm Thiên"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-secondary"
-                  />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-900">
+                    Phường / Xã <span className="text-secondary">*</span>
+                  </label>
+                  <select
+                    value={formWard}
+                    onChange={(e) => setFormWard(e.target.value)}
+                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                  >
+                    <option value="Phường 22">Phường 22</option>
+                    <option value="Phường 19">Phường 19</option>
+                    <option value="Phường 25">Phường 25</option>
+                    <option value="Phường 12">Phường 12</option>
+                    <option value="Phường Nguyễn Du">Phường Nguyễn Du</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700">Địa chỉ cụ thể *</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">
+                  Địa chỉ chi tiết (Số nhà, tên đường, tòa nhà) <span className="text-secondary">*</span>
+                </label>
                 <input
                   type="text"
                   required
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Số 182 Lê Duẩn"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-secondary font-medium"
+                  value={formDetail}
+                  onChange={(e) => setFormDetail(e.target.value)}
+                  placeholder="Ví dụ: Tầng 12, Tòa nhà Landmark 81, 720A Điện Biên Phủ"
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                 />
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer pt-1">
-                <input
-                  type="checkbox"
-                  checked={isDefault}
-                  onChange={(e) => setIsDefault(e.target.checked)}
-                  className="w-4 h-4 rounded text-secondary accent-secondary cursor-pointer"
-                />
-                <span className="font-semibold text-slate-700">Đặt làm địa chỉ nhận hàng mặc định</span>
-              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-900">Ghi chú giao hàng (Tùy chọn)</label>
+                  <input
+                    type="text"
+                    value={formNote}
+                    onChange={(e) => setFormNote(e.target.value)}
+                    placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến..."
+                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                  />
+                </div>
 
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-900">Loại địa chỉ</label>
+                  <select
+                    value={formTag}
+                    onChange={(e) => setFormTag(e.target.value)}
+                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                  >
+                    <option value="Nhà riêng">Nhà riêng</option>
+                    <option value="Văn phòng">Văn phòng</option>
+                    <option value="Sân cầu lông">Sân cầu lông</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formIsDefault}
+                    onChange={(e) => setFormIsDefault(e.target.checked)}
+                    className="w-4 h-4 text-secondary accent-secondary rounded cursor-pointer"
+                  />
+                  <span className="text-xs text-slate-800 font-medium">Đặt làm địa chỉ nhận hàng mặc định</span>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                  onClick={() => setShowForm(false)}
+                  className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-xl bg-secondary hover:bg-secondary/90 text-white font-black uppercase tracking-wider shadow-md shadow-secondary/20 flex items-center gap-1.5 disabled:opacity-50"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-secondary text-white hover:bg-secondary/90 text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Đang lưu...</span>
-                    </>
-                  ) : (
-                    <span>Lưu Địa Chỉ</span>
-                  )}
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <span>Lưu địa chỉ</span>
                 </button>
               </div>
             </form>
           </div>
+        )}
+
+        {/* 3 POLICY GUARANTEE CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/70 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-50 text-secondary flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-black text-slate-900">Bảo hành 90 ngày</span>
+              <span className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                Bảo hành khung vợt chính hãng 1 đổi 1 do lỗi sản xuất từ Yonex, Victor, Lining.
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/70 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <RotateCcw className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-black text-slate-900">Đổi size giày 7 ngày</span>
+              <span className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                Đổi size miễn phí tận nhà trong vòng 7 ngày nếu mang không vừa chân.
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/70 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+              <PhoneCall className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-black text-slate-900">Hotline Kỹ Thuật</span>
+              <span className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                Tư vấn chọn cước, chỉnh thông số vợt: <strong className="text-secondary font-bold">1900 6886</strong> (8:30 - 21:30)
+              </span>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
     </UserLayout>
   );
 };

@@ -45,7 +45,7 @@ const Navbar = () => {
         {/* Top Header Row */}
         <div className="flex items-center justify-between gap-3 sm:gap-6">
           
-          {/* Logo HG Badminton */}
+          {/* Logo APEX Badminton Pro */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-secondary via-red-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-secondary/30 group-hover:scale-105 transition-transform">
               {/* Badminton Shuttlecock Icon Custom SVG */}
@@ -54,11 +54,16 @@ const Navbar = () => {
               </svg>
             </div>
             <div className="flex flex-col leading-none">
-              <span className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-white flex items-center gap-1">
-                HG <span className="text-secondary font-black tracking-wider">BADMINTON</span>
-              </span>
-              <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase hidden sm:inline">
-                Chuyên Nghiệp • Đỉnh Cao
+              <div className="flex items-center gap-1.5">
+                <span className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-white">
+                  APEX <span className="text-secondary font-black">BADMINTON</span>
+                </span>
+                <span className="bg-secondary text-white px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-widest uppercase">
+                  PRO
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase hidden sm:inline mt-0.5">
+                Tour Equipment & Stringing
               </span>
             </div>
           </Link>

@@ -6,435 +6,438 @@ import {
   CreditCard,
   Truck,
   ShieldCheck,
-  Save,
   CheckCircle2,
-  AlertCircle,
-  QrCode,
-  Lock,
-  Globe,
-  Phone,
+  Save,
+  PhoneCall,
   Mail,
   MapPin,
   Clock,
-  ExternalLink
+  QrCode,
+  Lock,
+  Layers,
+  Award
 } from 'lucide-react';
 
 const AdminSettingsPage = () => {
-  // Store Info State
-  const [storeName, setStoreName] = useState('HG Badminton Pro');
-  const [hotline, setHotline] = useState('0982 114 892');
-  const [email, setEmail] = useState('contact@hgbadminton.vn');
-  const [address, setAddress] = useState('Số 18 Hoàng Cầu, Phường Ô Chợ Dừa, Quận Đống Đa, Hà Nội');
-  const [workingHours, setWorkingHours] = useState('08:00 - 22:00 (Tất cả các ngày trong tuần)');
-  const [facebook, setFacebook] = useState('https://facebook.com/hgbadminton.official');
-  const [tiktok, setTiktok] = useState('https://tiktok.com/@hgbadminton');
-  const [zalo, setZalo] = useState('0982114892');
+  const [activeTab, setActiveTab] = useState('STORE'); // 'STORE' | 'STRINGING' | 'PAYMENT' | 'SHIPPING'
+  const [toastMessage, setToastMessage] = useState('');
 
-  // Payment Gateways State
-  const [enableCod, setEnableCod] = useState(true);
-  const [enableBankTransfer, setEnableBankTransfer] = useState(true);
-  const [enablePayOS, setEnablePayOS] = useState(true);
-  const [payosClientId, setPayosClientId] = useState('c214041b-6cb8-472d-88b0-payosclient');
-  const [payosApiKey, setPayosApiKey] = useState('********************************');
-  const [payosChecksumKey, setPayosChecksumKey] = useState('********************************');
+  // Form states
+  const [storeInfo, setStoreInfo] = useState({
+    brandName: 'APEX BADMINTON JSC',
+    slogan: 'Pro Equipment & Tour Gear - Phân phối chính hãng số 1 Việt Nam',
+    hotline: '1900 6886',
+    email: 'support@apexbadminton.vn',
+    addressHanoi: 'Số 182 Lê Duẩn, P. Nguyễn Du, Q. Hai Bà Trưng, Hà Nội',
+    addressHcm: 'Tầng 12, Tòa nhà Landmark 81, 720A Điện Biên Phủ, Q. Bình Thạnh, TP. HCM',
+    workingHours: '08:30 - 21:30 (Cả Thứ 7 & Chủ Nhật)'
+  });
 
-  // Shipping & Inventory State
-  const [freeshipThreshold, setFreeshipThreshold] = useState(500000);
-  const [standardShippingFee, setStandardShippingFee] = useState(30000);
-  const [orderHoldMinutes, setOrderHoldMinutes] = useState(15);
-  const [lowStockAlert, setLowStockAlert] = useState(5);
-  const [allowBackorder, setAllowBackorder] = useState(false);
+  const [stringingConfig, setStringingConfig] = useState({
+    machineModel: 'Victor VE-50 Electronic & Yonex Precision 9.0',
+    stringingFee: '50000',
+    freeStringingThreshold: '6', // Miễn phí khi mua từ đơn thứ 6
+    standardProtocol: '4 Nút BWF Chuẩn Quốc Tế',
+    minTension: '8.5',
+    maxTension: '14.5'
+  });
 
-  // Toast feedback
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [paymentConfig, setPaymentConfig] = useState({
+    payosClientId: 'apex-payos-client-id-prod-89241',
+    payosApiKey: '••••••••••••••••••••••••••••••••',
+    checksumKey: '••••••••••••••••••••••••••••••••',
+    bankName: 'VietinBank (Ngân hàng TMCP Công Thương Việt Nam)',
+    accountNumber: '103876543210',
+    accountName: 'APEX BADMINTON JSC'
+  });
 
-  const handleSaveSettings = (e) => {
+  const [shippingConfig, setShippingConfig] = useState({
+    freeShippingMin: '1000000',
+    standardFee: '30000',
+    expressFee: '50000',
+    deliveryTimeExpress: 'Giao nhanh 2H nội thành'
+  });
+
+  const handleSave = (e) => {
     e.preventDefault();
-    const config = {
-      storeName,
-      hotline,
-      email,
-      address,
-      workingHours,
-      facebook,
-      tiktok,
-      zalo,
-      enableCod,
-      enableBankTransfer,
-      enablePayOS,
-      freeshipThreshold,
-      standardShippingFee,
-      orderHoldMinutes,
-      lowStockAlert,
-      allowBackorder,
-      updatedAt: new Date().toISOString()
-    };
-    try {
-      localStorage.setItem('badminton_system_settings', JSON.stringify(config));
-    } catch {
-      // ignore
-    }
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3500);
+    setToastMessage('Đã lưu toàn bộ cấu hình hệ thống Apex Badminton thành công!');
+    setTimeout(() => setToastMessage(''), 3500);
   };
 
   return (
-    <AdminLayout
-      title="Cài Đặt Hệ Thống"
-      subtitle="Quản trị cấu hình toàn cục, cổng thanh toán VietQR / PayOS, vận chuyển & đối soát"
-    >
-      <form onSubmit={handleSaveSettings} className="space-y-6 pb-12">
-        {/* Top Sticky Action Bar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-950/60 border border-slate-800 backdrop-blur-md sticky top-4 z-20 shadow-lg">
+    <AdminLayout title="Cài đặt" subtitle="Cài đặt hệ thống & Cấu hình dịch vụ">
+      <div className="flex flex-col gap-6">
+        {/* HEADER & ACTION BAR */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-500 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">Cấu Hình Vận Hành</h2>
-              <p className="text-[11px] text-slate-400">Các thay đổi sẽ áp dụng ngay lập tức trên toàn hệ thống</p>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Cài đặt hệ thống
+              </h1>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Quản lý thông tin cửa hàng, thông số kỹ thuật xưởng căng cước và cổng thanh toán PayOS
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            {saveSuccess && (
-              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Đã lưu thành công!</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 active:scale-95 transition-all"
-            >
-              <Save className="w-4 h-4" />
-              <span>Lưu Cấu Hình</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-secondary text-white hover:bg-secondary/90 transition-all text-xs font-bold shadow-md hover:shadow-lg active:scale-95 shrink-0 cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            <span>Lưu tất cả thay đổi</span>
+          </button>
         </div>
 
-        {/* 2-Column Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* LEFT COLUMN: Store Info & Social (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            
-            {/* Card: Thông tin Showroom & Liên hệ */}
-            <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-6 space-y-5">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
-                <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-200 flex items-center justify-center">
-                  <Store className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Thông Tin Doanh Nghiệp & Showroom</h3>
-                  <p className="text-xs text-slate-400">Hiển thị trên hóa đơn VAT, chân trang và đơn vận chuyển</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="font-bold text-slate-300">Tên Cửa Hàng / Thương Hiệu</label>
-                  <input
-                    type="text"
-                    value={storeName}
-                    onChange={(e) => setStoreName(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-300 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-red-400" />
-                    <span>Hotline Đan Vợt & Tư Vấn</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={hotline}
-                    onChange={(e) => setHotline(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-300 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-red-400" />
-                    <span>Email Hỗ Trợ Khách Hàng</span>
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="font-bold text-slate-300 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-red-400" />
-                    <span>Địa Chỉ Kho Hàng & Showroom Chính</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="font-bold text-slate-300 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-red-400" />
-                    <span>Thời Gian Làm Việc</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={workingHours}
-                    onChange={(e) => setWorkingHours(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-red-500"
-                  />
-                </div>
-              </div>
-
-              {/* Social Channels */}
-              <div className="pt-3 border-t border-slate-800 space-y-3">
-                <span className="text-xs font-bold text-slate-300 block uppercase tracking-wider">
-                  Kênh Truyền Thông Xã Hội
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-slate-400">Facebook Fanpage</span>
-                    <input
-                      type="text"
-                      value={facebook}
-                      onChange={(e) => setFacebook(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-slate-400">Kênh TikTok Official</span>
-                    <input
-                      type="text"
-                      value={tiktok}
-                      onChange={(e) => setTiktok(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <span className="text-[11px] text-slate-400">Zalo Doanh Nghiệp (OA)</span>
-                    <input
-                      type="text"
-                      value={zalo}
-                      onChange={(e) => setZalo(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card: Vận chuyển & Giao hàng */}
-            <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-6 space-y-5">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
-                <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-200 flex items-center justify-center">
-                  <Truck className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Chính Sách Vận Chuyển Toàn Quốc</h3>
-                  <p className="text-xs text-slate-400">Thiết lập ngưỡng Freeship và phí giao hàng tiêu chuẩn</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-300">Ngưỡng Miễn Phí Ship (VNĐ)</label>
-                  <input
-                    type="number"
-                    value={freeshipThreshold}
-                    onChange={(e) => setFreeshipThreshold(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-red-500"
-                  />
-                  <span className="text-[10px] text-slate-400 block">Đơn từ giá trị này sẽ tự động giảm phí ship về 0₫</span>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-300">Phí Giao Hàng Tiêu Chuẩn (VNĐ)</label>
-                  <input
-                    type="number"
-                    value={standardShippingFee}
-                    onChange={(e) => setStandardShippingFee(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-red-500"
-                  />
-                  <span className="text-[10px] text-slate-400 block">Đồng giá áp dụng cho mọi tỉnh thành khi dưới ngưỡng</span>
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="font-bold text-slate-300">Thời Gian Giữ Chỗ Đơn Hàng (Phút)</label>
-                  <input
-                    type="number"
-                    value={orderHoldMinutes}
-                    onChange={(e) => setOrderHoldMinutes(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-red-500"
-                  />
-                  <span className="text-[10px] text-slate-400 block">Bộ đếm ngược trong trang thanh toán QR trước khi nhả tồn kho (Mặc định: 15 phút)</span>
-                </div>
-              </div>
-            </div>
-
+        {toastMessage && (
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{toastMessage}</span>
           </div>
+        )}
 
-          {/* RIGHT COLUMN: Payment & Security (5 cols) */}
-          <div className="lg:col-span-5 space-y-6">
-            
-            {/* Card: Cổng Thanh Toán */}
-            <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-6 space-y-5">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
-                <div className="w-8 h-8 rounded-lg bg-red-600/20 text-red-500 flex items-center justify-center">
-                  <CreditCard className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Cổng Thanh Toán & Đối Soát</h3>
-                  <p className="text-xs text-slate-400">VietQR, PayOS và phương thức COD</p>
-                </div>
-              </div>
+        {/* 4 TABS NAVIGATION */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setActiveTab('STORE')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === 'STORE'
+                ? 'bg-[#131b2e] text-white shadow-sm'
+                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+            }`}
+          >
+            <Store className="w-4 h-4" />
+            <span>Cửa hàng & Hotline</span>
+          </button>
 
-              {/* Method 1: COD */}
-              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white">Thu Hộ Tiền Mặt (COD)</span>
-                    <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 font-bold">Toàn quốc</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">Kiểm tra tem và thanh toán khi shipper giao tới</p>
-                </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('STRINGING')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === 'STRINGING'
+                ? 'bg-[#131b2e] text-white shadow-sm'
+                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            <span>Dịch vụ xưởng căng cước BWF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('PAYMENT')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === 'PAYMENT'
+                ? 'bg-[#131b2e] text-white shadow-sm'
+                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+            }`}
+          >
+            <QrCode className="w-4 h-4" />
+            <span>Cổng thanh toán PayOS VietQR</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('SHIPPING')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === 'SHIPPING'
+                ? 'bg-[#131b2e] text-white shadow-sm'
+                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+            }`}
+          >
+            <Truck className="w-4 h-4" />
+            <span>Vận chuyển & Freeship</span>
+          </button>
+        </div>
+
+        {/* TAB 1: STORE INFO */}
+        {activeTab === 'STORE' && (
+          <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 flex flex-col gap-5">
+            <h3 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100">
+              Thông tin thương hiệu & Trụ sở
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Tên thương hiệu doanh nghiệp</label>
                 <input
-                  type="checkbox"
-                  checked={enableCod}
-                  onChange={(e) => setEnableCod(e.target.checked)}
-                  className="w-4 h-4 accent-red-600 cursor-pointer"
+                  type="text"
+                  value={storeInfo.brandName}
+                  onChange={(e) => setStoreInfo({ ...storeInfo, brandName: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                 />
               </div>
 
-              {/* Method 2: Bank Transfer */}
-              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white">Chuyển Khoản Trực Tiếp</span>
-                    <span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 font-bold">Mã Tĩnh</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">Khách quét mã tĩnh, kế toán kiểm tra thủ công</p>
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Hotline đặt hàng & CSKH</label>
                 <input
-                  type="checkbox"
-                  checked={enableBankTransfer}
-                  onChange={(e) => setEnableBankTransfer(e.target.checked)}
-                  className="w-4 h-4 accent-red-600 cursor-pointer"
+                  type="text"
+                  value={storeInfo.hotline}
+                  onChange={(e) => setStoreInfo({ ...storeInfo, hotline: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner font-bold text-secondary"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Email tiếp nhận hỗ trợ</label>
+                <input
+                  type="email"
+                  value={storeInfo.email}
+                  onChange={(e) => setStoreInfo({ ...storeInfo, email: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                 />
               </div>
 
-              {/* Method 3: PayOS VietQR */}
-              <div className="p-3.5 rounded-xl bg-slate-900 border border-red-900/40 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <QrCode className="w-4 h-4 text-emerald-400" />
-                      <span className="text-xs font-bold text-white">PayOS / VietQR Động</span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 text-[10px] font-bold border border-emerald-800">
-                        Tự Động 100%
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400">Xác nhận đơn ngay lập tức qua Webhook HMAC-SHA256</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={enablePayOS}
-                    onChange={(e) => setEnablePayOS(e.target.checked)}
-                    className="w-4 h-4 accent-red-600 cursor-pointer"
-                  />
-                </div>
-
-                {/* API Credentials */}
-                <div className="space-y-2.5 pt-2 border-t border-slate-800 text-xs">
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-slate-400 font-mono">Client ID (Public)</span>
-                    <input
-                      type="text"
-                      value={payosClientId}
-                      onChange={(e) => setPayosClientId(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-[11px] outline-none focus:border-red-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-slate-400 font-mono">API Key</span>
-                    <input
-                      type="password"
-                      value={payosApiKey}
-                      onChange={(e) => setPayosApiKey(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-[11px] outline-none focus:border-red-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-slate-400 font-mono">Checksum Key (HMAC Secret)</span>
-                    <input
-                      type="password"
-                      value={payosChecksumKey}
-                      onChange={(e) => setPayosChecksumKey(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-[11px] outline-none focus:border-red-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-800/40 text-[11px] text-emerald-400 font-semibold">
-                  <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>Webhook HMAC-SHA256 bảo mật chuẩn PCI-DSS đã kích hoạt.</span>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Card: Quản Lý Kho Hàng */}
-            <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
-                <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-200 flex items-center justify-center">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Cảnh Báo Tồn Kho & Đặt Trước</h3>
-                  <p className="text-xs text-slate-400">Kiểm soát an toàn xuất nhập kho</p>
-                </div>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-300">Ngưỡng Báo Động Tồn Kho Thấp (Sản phẩm)</label>
-                  <input
-                    type="number"
-                    value={lowStockAlert}
-                    onChange={(e) => setLowStockAlert(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-mono outline-none focus:border-red-500"
-                  />
-                  <span className="text-[10px] text-slate-400 block">Sản phẩm dưới số lượng này sẽ hiện nhãn đỏ cảnh báo</span>
-                </div>
-
-                <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={allowBackorder}
-                    onChange={(e) => setAllowBackorder(e.target.checked)}
-                    className="accent-red-600 w-4 h-4"
-                  />
-                  <div className="text-xs">
-                    <span className="font-bold text-white block">Cho phép đặt trước khi hết hàng (Back-order)</span>
-                    <span className="text-[11px] text-slate-400">Khách vẫn có thể đặt mua các dòng vợt hot sắp về kho</span>
-                  </div>
-                </label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Khung giờ hoạt động</label>
+                <input
+                  type="text"
+                  value={storeInfo.workingHours}
+                  onChange={(e) => setStoreInfo({ ...storeInfo, workingHours: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                />
               </div>
             </div>
 
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-900">Địa chỉ showroom Hà Nội</label>
+              <input
+                type="text"
+                value={storeInfo.addressHanoi}
+                onChange={(e) => setStoreInfo({ ...storeInfo, addressHanoi: e.target.value })}
+                className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+              />
+            </div>
 
-        </div>
-      </form>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-slate-900">Địa chỉ trung tâm TP. Hồ Chí Minh</label>
+              <input
+                type="text"
+                value={storeInfo.addressHcm}
+                onChange={(e) => setStoreInfo({ ...storeInfo, addressHcm: e.target.value })}
+                className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+              />
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-[#131b2e] text-white hover:bg-slate-800 text-xs font-bold shadow-sm"
+              >
+                Cập nhật thông tin cửa hàng
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* TAB 2: STRINGING SERVICE CONFIG */}
+        {activeTab === 'STRINGING' && (
+          <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 flex flex-col gap-5">
+            <h3 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100">
+              Quy chuẩn máy đan cước & Thợ chứng chỉ BWF
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Model máy căng cước điện tử</label>
+                <input
+                  type="text"
+                  value={stringingConfig.machineModel}
+                  onChange={(e) => setStringingConfig({ ...stringingConfig, machineModel: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Phí dịch vụ căng cước chuẩn (VNĐ/lần)</label>
+                <input
+                  type="number"
+                  value={stringingConfig.stringingFee}
+                  onChange={(e) => setStringingConfig({ ...stringingConfig, stringingFee: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Phương pháp đan</label>
+                <input
+                  type="text"
+                  value={stringingConfig.standardProtocol}
+                  onChange={(e) => setStringingConfig({ ...stringingConfig, standardProtocol: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Lực căng tối thiểu (kg)</label>
+                <input
+                  type="text"
+                  value={stringingConfig.minTension}
+                  onChange={(e) => setStringingConfig({ ...stringingConfig, minTension: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Lực căng tối đa khuyến nghị (kg)</label>
+                <input
+                  type="text"
+                  value={stringingConfig.maxTension}
+                  onChange={(e) => setStringingConfig({ ...stringingConfig, maxTension: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                />
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs flex flex-col gap-2">
+              <span className="font-bold text-slate-900">Khuyến nghị kỹ thuật xưởng:</span>
+              <p className="text-slate-600 leading-relaxed">
+                Người mới tập: 9 - 10kg (19 - 22 lbs) • Người chơi phong trào: 10.5 - 11.5kg (23 - 25.5 lbs) • Vận động viên chuyên nghiệp: 12 - 13.5kg (26.5 - 30 lbs).
+              </p>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-[#131b2e] text-white hover:bg-slate-800 text-xs font-bold shadow-sm"
+              >
+                Cập nhật cấu hình xưởng
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* TAB 3: PAYMENT GATEWAY CONFIG */}
+        {activeTab === 'PAYMENT' && (
+          <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 flex flex-col gap-5">
+            <h3 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100">
+              Tích hợp Cổng thanh toán PayOS VietQR
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">PayOS Client ID</label>
+                <input
+                  type="text"
+                  value={paymentConfig.payosClientId}
+                  onChange={(e) => setPaymentConfig({ ...paymentConfig, payosClientId: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner font-mono"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">PayOS API Key</label>
+                <input
+                  type="password"
+                  value={paymentConfig.payosApiKey}
+                  onChange={(e) => setPaymentConfig({ ...paymentConfig, payosApiKey: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Ngân hàng thụ hưởng</label>
+                <input
+                  type="text"
+                  value={paymentConfig.bankName}
+                  onChange={(e) => setPaymentConfig({ ...paymentConfig, bankName: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Số tài khoản nhận tiền</label>
+                <input
+                  type="text"
+                  value={paymentConfig.accountNumber}
+                  onChange={(e) => setPaymentConfig({ ...paymentConfig, accountNumber: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner font-mono font-bold"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Tên chủ tài khoản</label>
+                <input
+                  type="text"
+                  value={paymentConfig.accountName}
+                  onChange={(e) => setPaymentConfig({ ...paymentConfig, accountName: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner uppercase font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-[#131b2e] text-white hover:bg-slate-800 text-xs font-bold shadow-sm"
+              >
+                Cập nhật cổng thanh toán
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* TAB 4: SHIPPING & FREESHIP CONFIG */}
+        {activeTab === 'SHIPPING' && (
+          <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 flex flex-col gap-5">
+            <h3 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100">
+              Chính sách giao hàng & Hạn mức Freeship
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Hạn mức Miễn phí vận chuyển (VNĐ)</label>
+                <input
+                  type="number"
+                  value={shippingConfig.freeShippingMin}
+                  onChange={(e) => setShippingConfig({ ...shippingConfig, freeShippingMin: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner font-bold text-secondary"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Phí giao hàng tiêu chuẩn (VNĐ)</label>
+                <input
+                  type="number"
+                  value={shippingConfig.standardFee}
+                  onChange={(e) => setShippingConfig({ ...shippingConfig, standardFee: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-900">Phí giao hàng hỏa tốc 2H (VNĐ)</label>
+                <input
+                  type="number"
+                  value={shippingConfig.expressFee}
+                  onChange={(e) => setShippingConfig({ ...shippingConfig, expressFee: e.target.value })}
+                  className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-[#131b2e] text-white hover:bg-slate-800 text-xs font-bold shadow-sm"
+              >
+                Cập nhật chính sách giao hàng
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </AdminLayout>
   );
 };

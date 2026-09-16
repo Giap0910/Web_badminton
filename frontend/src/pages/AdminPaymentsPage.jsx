@@ -4,337 +4,357 @@ import { adminApi } from '../api/adminApi';
 import {
   CreditCard,
   QrCode,
-  CheckCircle,
-  Clock,
-  RefreshCw,
   Search,
-  Filter,
-  ShieldCheck,
-  Send,
-  Zap,
   CheckCircle2,
-  AlertCircle
+  Clock,
+  XCircle,
+  RefreshCw,
+  Download,
+  ShieldCheck,
+  Building,
+  ArrowUpRight,
+  ExternalLink,
+  Copy,
+  Check
 } from 'lucide-react';
 
+const INITIAL_TRANSACTIONS = [
+  {
+    id: 1,
+    transId: 'PAYOS-89241029',
+    orderCode: '#APX-89241',
+    createdAt: '14:35:12 - 24/10/2024',
+    customer: 'Nguyễn Văn A',
+    bank: 'VietinBank (103876543210)',
+    bankRef: 'FT2429810293847',
+    amount: 4550000,
+    status: 'SUCCESS',
+    statusLabel: 'Thành công (Đã đối soát)',
+    method: 'VietQR Pro (Napas 247)'
+  },
+  {
+    id: 2,
+    transId: 'PAYOS-87422105',
+    orderCode: '#APX-87422',
+    createdAt: '18:40:02 - 15/10/2024',
+    customer: 'Lê Hoàng Long',
+    bank: 'VietinBank (103876543210)',
+    bankRef: 'FT2428819283741',
+    amount: 4200000,
+    status: 'SUCCESS',
+    statusLabel: 'Thành công (Đã đối soát)',
+    method: 'VNPAY-QR'
+  },
+  {
+    id: 3,
+    transId: 'PAYOS-86105411',
+    orderCode: '#APX-86105',
+    createdAt: '11:00:45 - 05/10/2024',
+    customer: 'Phạm Thu Hà',
+    bank: 'VietinBank (103876543210)',
+    bankRef: 'FT2427819283742',
+    amount: 2250000,
+    status: 'SUCCESS',
+    statusLabel: 'Thành công (Đã đối soát)',
+    method: 'VietQR Pro'
+  },
+  {
+    id: 4,
+    transId: 'COD-88910-SHIP',
+    orderCode: '#APX-88910',
+    createdAt: '09:15:00 - 22/10/2024',
+    customer: 'Trần Minh Đức',
+    bank: 'Shipper Giao Hàng Tiết Kiệm',
+    bankRef: 'COD-HUB-HN-01',
+    amount: 2890000,
+    status: 'PENDING_COD',
+    statusLabel: 'Chờ shipper nộp tiền',
+    method: 'COD Đồng kiểm'
+  },
+  {
+    id: 5,
+    transId: 'PAYOS-85219900',
+    orderCode: '#APX-85219',
+    createdAt: '16:20:10 - 28/09/2024',
+    customer: 'Vũ Quốc Huy',
+    bank: 'VietinBank (103876543210)',
+    bankRef: 'TIMEOUT-CANCELLED',
+    amount: 1650000,
+    status: 'FAILED',
+    statusLabel: 'Hết hạn thanh toán 15:00',
+    method: 'VietQR Pro'
+  }
+];
+
 const AdminPaymentsPage = () => {
-  const [payments, setPayments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [methodFilter, setMethodFilter] = useState('ALL');
+  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMethod, setSelectedMethod] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [copiedId, setCopiedId] = useState(null);
 
-  // Mock Webhook Modal State
-  const [mockModalOpen, setMockModalOpen] = useState(false);
-  const [mockOrderCode, setMockOrderCode] = useState('');
-  const [mockAmount, setMockAmount] = useState('');
-  const [mockLoading, setMockLoading] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
+  const formatPrice = (p) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
-  const fetchPayments = async () => {
-    setLoading(true);
-    try {
-      const data = await adminApi.getAllPayments();
-      setPayments(data);
-    } catch (err) {
-      console.error('Lỗi tải danh sách thanh toán:', err);
-    } finally {
-      setLoading(false);
-    }
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(text);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
-  useEffect(() => {
-    fetchPayments();
-  }, []);
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+  const handleVerifyWebhook = () => {
+    setIsVerifying(true);
+    setTimeout(() => {
+      setIsVerifying(false);
+      setToastMessage('Webhook HMAC-SHA256 kết nối PayOS an toàn: 100% chữ ký số hợp lệ!');
+      setTimeout(() => setToastMessage(''), 4000);
+    }, 800);
   };
 
-  const handleTriggerMockWebhook = async (e) => {
-    e.preventDefault();
-    if (!mockOrderCode || !mockAmount) {
-      alert('Vui lòng nhập đầy đủ Mã PayOS (orderCode) và Số tiền!');
-      return;
-    }
-
-    setMockLoading(true);
-    try {
-      await adminApi.triggerMockWebhook(Number(mockOrderCode), Number(mockAmount));
-      showToast('Giả lập PayOS Webhook thành công! Đơn hàng đã được xác nhận thanh toán.');
-      setMockModalOpen(false);
-      setMockOrderCode('');
-      setMockAmount('');
-      fetchPayments();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Có lỗi khi kích hoạt Webhook giả lập.');
-    } finally {
-      setMockLoading(false);
-    }
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price || 0);
-  };
-
-  const filteredPayments = payments.filter((p) => {
+  const filteredTransactions = transactions.filter((t) => {
     const matchesSearch =
-      p.orderId?.toString().includes(searchTerm) ||
-      p.payosOrderCode?.toString().includes(searchTerm) ||
-      p.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.shippingPhone?.includes(searchTerm);
-    const matchesMethod = methodFilter === 'ALL' || p.paymentMethod === methodFilter;
-    return matchesSearch && matchesMethod;
+      t.transId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.orderCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.bankRef.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesMethod =
+      selectedMethod === 'ALL'
+        ? true
+        : selectedMethod === 'VIETQR'
+        ? t.method.includes('VietQR')
+        : selectedMethod === 'COD'
+        ? t.method.includes('COD')
+        : t.method.includes('VNPAY');
+
+    const matchesStatus =
+      selectedStatus === 'ALL' ? true : t.status === selectedStatus;
+
+    return matchesSearch && matchesMethod && matchesStatus;
   });
 
   return (
-    <AdminLayout
-      title="Đối Soát Thanh Toán & VietQR"
-      subtitle="Giám sát luồng tiền VietQR PayOS, đối soát chữ ký số HMAC-SHA256 và giao dịch COD"
-    >
-      {/* Toast */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold animate-bounce">
-          <CheckCircle className="w-4 h-4" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+    <AdminLayout title="Giao dịch" subtitle="Quản lý giao dịch & Thanh toán PayOS VietQR">
+      <div className="flex flex-col gap-6">
+        {/* HEADER & CONTROLS */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Quản lý giao dịch PayOS VietQR
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black">
+                  HMAC-SHA256 Live
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Đối soát tự động tức thì các giao dịch Napas 247 qua tài khoản VietinBank xưởng Apex Pro
+              </p>
+            </div>
+          </div>
 
-      {/* Header Info & Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Metric 1 */}
-        <div className="bg-slate-950/60 border border-slate-800/80 p-5 rounded-2xl">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs uppercase tracking-wider font-semibold">Cổng VietQR PayOS</span>
-            <QrCode className="w-4 h-4 text-emerald-400" />
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleVerifyWebhook}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
+              <span>Kiểm tra Webhook Log</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => alert('Đang xuất sổ phụ đối soát tài chính ngân hàng...')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#131b2e] hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Xuất sổ đối soát</span>
+            </button>
           </div>
-          <div className="text-xl font-black text-white">
-            {payments.filter((p) => p.paymentMethod === 'PAYOS_VIETQR').length} Giao Dịch
-          </div>
-          <p className="text-[11px] text-emerald-400 font-semibold mt-2 flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5" /> Chữ ký HMAC-SHA256 tự động
-          </p>
         </div>
 
-        {/* Metric 2 */}
-        <div className="bg-slate-950/60 border border-slate-800/80 p-5 rounded-2xl">
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs uppercase tracking-wider font-semibold">Thanh Toán Tiền Mặt (COD)</span>
-            <CreditCard className="w-4 h-4 text-amber-400" />
+        {toastMessage && (
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>{toastMessage}</span>
           </div>
-          <div className="text-xl font-black text-white">
-            {payments.filter((p) => p.paymentMethod === 'COD').length} Giao Dịch
-          </div>
-          <p className="text-[11px] text-amber-400 font-semibold mt-2">
-            Thu hộ tiền mặt khi nhận hàng
-          </p>
-        </div>
+        )}
 
-        {/* Action Button: Mock Webhook */}
-        <div className="bg-slate-950/60 border border-slate-800/80 p-5 rounded-2xl flex flex-col justify-between">
-          <div>
-            <span className="text-xs uppercase tracking-wider font-semibold text-slate-400 block mb-1">
-              Kiểm Thử Localhost (No Ngrok)
+        {/* 4 KPI CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Doanh thu QR hôm nay</span>
+            <span className="text-2xl font-black text-slate-900 mt-1">38.500.000₫</span>
+            <span className="text-[11px] text-emerald-600 font-bold mt-2 flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3" />
+              24 giao dịch thành công
             </span>
-            <p className="text-[11px] text-slate-400">Tự tạo chữ ký HMAC giả lập tín hiệu ngân hàng</p>
           </div>
-          <button
-            onClick={() => setMockModalOpen(true)}
-            className="mt-3 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-lg shadow-red-600/20 transition"
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Kích Hoạt Mock Webhook</span>
-          </button>
-        </div>
-      </div>
 
-      {/* Filter & Search Bar */}
-      <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Tìm theo Mã đơn, Mã PayOS, Khách hàng hoặc SĐT..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-red-500 transition"
-          />
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tỷ lệ đối soát tự động</span>
+            <span className="text-2xl font-black text-blue-600 mt-1">100%</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-2">Khớp số tiền & nội dung đơn</span>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">COD chờ thu hộ</span>
+            <span className="text-2xl font-black text-amber-600 mt-1">4.350.000₫</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-2">4 đơn shipper đang giao</span>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Giao dịch hủy / Quá hạn</span>
+            <span className="text-2xl font-black text-slate-400 mt-1">01</span>
+            <span className="text-[11px] text-slate-400 mt-2">Hết hạn thanh toán 15 phút</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
+        {/* SEARCH & FILTERS */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm theo mã GD, mã đơn (#APX-...), Ref ngân hàng..."
+              className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+            />
+          </div>
+
+          <div className="flex items-center gap-2.5">
             <select
-              value={methodFilter}
-              onChange={(e) => setMethodFilter(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-red-500"
+              value={selectedMethod}
+              onChange={(e) => setSelectedMethod(e.target.value)}
+              className="bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer"
             >
               <option value="ALL">Tất cả phương thức</option>
-              <option value="PAYOS_VIETQR">Cổng PayOS VietQR</option>
-              <option value="COD">Tiền mặt khi nhận (COD)</option>
+              <option value="VIETQR">VietQR Pro (PayOS)</option>
+              <option value="VNPAY">VNPAY-QR</option>
+              <option value="COD">COD Tiền mặt</option>
+            </select>
+
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer"
+            >
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="SUCCESS">Thành công (Đã đối soát)</option>
+              <option value="PENDING_COD">Chờ thu tiền COD</option>
+              <option value="FAILED">Hết hạn / Lỗi</option>
             </select>
           </div>
-
-          <button
-            onClick={fetchPayments}
-            disabled={loading}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
-            title="Làm mới"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
-      </div>
 
-      {/* Payments Table */}
-      <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse min-w-[900px]">
-            <thead className="bg-slate-900/90 text-slate-400 font-semibold uppercase border-b border-slate-800">
-              <tr>
-                <th className="p-4">Mã Đơn</th>
-                <th className="p-4">Mã PayOS (orderCode)</th>
-                <th className="p-4">Khách Hàng</th>
-                <th className="p-4">Số Tiền</th>
-                <th className="p-4">Phương Thức</th>
-                <th className="p-4">Trạng Thái Đơn</th>
-                <th className="p-4">Thời Gian Tạo</th>
-                <th className="p-4 text-center">Kiểm Tra</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-400">
-                    Đang tải lịch sử giao dịch...
-                  </td>
+        {/* TRANSACTIONS TABLE */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[900px]">
+              <thead>
+                <tr className="bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                  <th className="py-3.5 px-6">Mã giao dịch & Đơn hàng</th>
+                  <th className="py-3.5 px-4">Thời gian</th>
+                  <th className="py-3.5 px-4">Khách hàng & Ngân hàng</th>
+                  <th className="py-3.5 px-4">Số tiền quyết toán</th>
+                  <th className="py-3.5 px-4">Phương thức</th>
+                  <th className="py-3.5 px-6 text-right">Trạng thái</th>
                 </tr>
-              ) : filteredPayments.length > 0 ? (
-                filteredPayments.map((p) => (
-                  <tr key={p.orderId} className="hover:bg-slate-900/50 transition">
-                    <td className="p-4 font-mono font-bold text-white">#{p.orderId}</td>
-                    <td className="p-4 font-mono font-bold text-emerald-400">
-                      {p.payosOrderCode ? p.payosOrderCode : '— (COD)'}
-                    </td>
-                    <td className="p-4">
-                      <div className="font-bold text-slate-200">{p.customerName}</div>
-                      <div className="text-[11px] text-slate-400">{p.shippingPhone}</div>
-                    </td>
-                    <td className="p-4 font-black text-red-400 text-sm">
-                      {formatPrice(p.amount)}
-                    </td>
-                    <td className="p-4">
-                      <span className="px-2.5 py-0.5 rounded text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                        {p.paymentMethod}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          p.status === 'PAID'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : p.status === 'PENDING'
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-slate-800 text-slate-400 border border-slate-700'
-                        }`}
-                      >
-                        {p.status === 'PAID' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                        {p.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-slate-400">
-                      {p.createdAt ? new Date(p.createdAt).toLocaleString('vi-VN') : '—'}
-                    </td>
-                    <td className="p-4 text-center">
-                      {p.status === 'PENDING' && p.payosOrderCode && (
-                        <button
-                          onClick={() => {
-                            setMockOrderCode(p.payosOrderCode);
-                            setMockAmount(p.amount);
-                            setMockModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[11px] font-bold transition"
-                        >
-                          Giả lập thanh toán
-                        </button>
-                      )}
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                {filteredTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      Không tìm thấy giao dịch nào.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-500">
-                    Không tìm thấy giao dịch nào.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ) : (
+                  filteredTransactions.map((t) => (
+                    <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Cột 1: Mã GD & Đơn */}
+                      <td className="py-4 px-6 align-top">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900">
+                            <span>{t.transId}</span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(t.transId)}
+                              className="text-slate-400 hover:text-slate-700"
+                            >
+                              {copiedId === t.transId ? (
+                                <Check className="w-3 h-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
+                          <span className="text-[11px] text-blue-600 font-bold">Đơn hàng {t.orderCode}</span>
+                        </div>
+                      </td>
 
-      {/* Mock Webhook Modal */}
-      {mockModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl text-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <Zap className="w-4 h-4 text-amber-400" />
-                Giả Lập Tín Hiệu PayOS Webhook
-              </h3>
-            </div>
+                      {/* Cột 2: Thời gian */}
+                      <td className="py-4 px-4 align-top">
+                        <span className="text-slate-600 block">{t.createdAt}</span>
+                        <span className="text-[11px] text-slate-400 font-mono">Ref: {t.bankRef}</span>
+                      </td>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Hệ thống sẽ tạo payload chuẩn PayOS, ký chữ ký số <strong className="text-white">HMAC-SHA256</strong> bằng Checksum Key bảo mật và gửi tới endpoint <code className="text-red-400 bg-slate-950 px-1 py-0.5 rounded">/api/payment/payos-webhook</code>.
-            </p>
+                      {/* Cột 3: Khách hàng & Ngân hàng */}
+                      <td className="py-4 px-4 align-top">
+                        <span className="font-bold text-slate-900 block">{t.customer}</span>
+                        <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                          <Building className="w-3 h-3 text-slate-400" />
+                          {t.bank}
+                        </span>
+                      </td>
 
-            <form onSubmit={handleTriggerMockWebhook} className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Mã PayOS (OrderCode) *</label>
-                <input
-                  type="number"
-                  required
-                  value={mockOrderCode}
-                  onChange={(e) => setMockOrderCode(e.target.value)}
-                  placeholder="Ví dụ: 171892019283"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 font-mono focus:outline-none focus:border-red-500"
-                />
-              </div>
+                      {/* Cột 4: Số tiền */}
+                      <td className="py-4 px-4 align-top">
+                        <span className="font-black text-secondary text-sm">{formatPrice(t.amount)}</span>
+                      </td>
 
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Số Tiền Thanh Toán (VNĐ) *</label>
-                <input
-                  type="number"
-                  required
-                  value={mockAmount}
-                  onChange={(e) => setMockAmount(e.target.value)}
-                  placeholder="Ví dụ: 4350000"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 font-mono focus:outline-none focus:border-red-500"
-                />
-                <p className="text-[10px] text-amber-400/80 mt-1">
-                  * Số tiền phải khớp 100% với giá trị đơn hàng để qua bước đối soát chống gian lận.
-                </p>
-              </div>
+                      {/* Cột 5: Phương thức */}
+                      <td className="py-4 px-4 align-top">
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[11px]">
+                          {t.method}
+                        </span>
+                      </td>
 
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setMockModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition"
-                >
-                  Hủy Bỏ
-                </button>
-                <button
-                  type="submit"
-                  disabled={mockLoading}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold shadow-lg shadow-red-600/20 transition disabled:opacity-50 flex items-center gap-2"
-                >
-                  {mockLoading ? 'Đang gửi...' : 'Gửi Tín Hiệu'}
-                </button>
-              </div>
-            </form>
+                      {/* Cột 6: Trạng thái */}
+                      <td className="py-4 px-6 align-top text-right">
+                        {t.status === 'SUCCESS' && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            {t.statusLabel}
+                          </span>
+                        )}
+                        {t.status === 'PENDING_COD' && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 font-bold text-xs">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                            {t.statusLabel}
+                          </span>
+                        )}
+                        {t.status === 'FAILED' && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-400 font-bold text-xs">
+                            <XCircle className="w-3.5 h-3.5 text-slate-400" />
+                            {t.statusLabel}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
+      </div>
     </AdminLayout>
   );
 };

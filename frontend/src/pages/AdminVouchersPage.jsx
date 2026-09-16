@@ -1,436 +1,509 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { adminApi } from '../api/adminApi';
+import { voucherApi } from '../api/voucherApi';
 import {
-  Ticket,
+  Tag,
   Plus,
-  Edit2,
-  Trash2,
   Search,
-  CheckCircle,
-  XCircle,
-  X,
-  Calendar,
-  DollarSign,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Check,
+  Edit3,
+  Trash2,
   Percent,
-  Clock
+  TrendingUp,
+  X,
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 
+const INITIAL_VOUCHERS = [
+  {
+    id: 1,
+    code: 'APEX100K',
+    title: 'Giảm 100K cho đơn vợt từ 1.000.000₫',
+    discountType: 'FIXED',
+    discountValue: 100000,
+    minOrderValue: 1000000,
+    usedCount: 85,
+    maxUsage: 100,
+    startDate: '01/10/2024',
+    endDate: '31/12/2024',
+    status: 'ACTIVE'
+  },
+  {
+    id: 2,
+    code: 'FREESHIP',
+    title: 'Miễn phí vận chuyển toàn quốc cho đơn từ 1.000.000₫',
+    discountType: 'SHIPPING',
+    discountValue: 30000,
+    minOrderValue: 1000000,
+    usedCount: 240,
+    maxUsage: 500,
+    startDate: '01/09/2024',
+    endDate: '31/12/2024',
+    status: 'ACTIVE'
+  },
+  {
+    id: 3,
+    code: 'VIPGOLD200K',
+    title: 'Đặc quyền thành viên VIP Hạng Vàng',
+    discountType: 'FIXED',
+    discountValue: 200000,
+    minOrderValue: 2500000,
+    usedCount: 42,
+    maxUsage: 150,
+    startDate: '15/10/2024',
+    endDate: '30/11/2024',
+    status: 'ACTIVE'
+  },
+  {
+    id: 4,
+    code: 'WELCOME50K',
+    title: 'Tặng khách hàng mới đăng ký tài khoản',
+    discountType: 'FIXED',
+    discountValue: 50000,
+    minOrderValue: 500000,
+    usedCount: 110,
+    maxUsage: 110,
+    startDate: '01/08/2024',
+    endDate: '30/09/2024',
+    status: 'EXPIRED'
+  }
+];
+
 const AdminVouchersPage = () => {
-  const [vouchers, setVouchers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [vouchers, setVouchers] = useState(INITIAL_VOUCHERS);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [copiedCode, setCopiedCode] = useState(null);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Modal State
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingVoucher, setEditingVoucher] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
-
-  const initialForm = {
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
     code: '',
-    description: '',
+    title: '',
     discountType: 'FIXED',
     discountValue: '',
     minOrderValue: '',
-    maxDiscountAmount: '',
-    maxUses: 100,
-    expiresAt: '',
-    isActive: true
-  };
+    maxUsage: '100',
+    startDate: '2024-10-24',
+    endDate: '2024-12-31'
+  });
 
-  const [formData, setFormData] = useState(initialForm);
+  const formatPrice = (p) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
-  const fetchVouchers = async () => {
-    setLoading(true);
-    try {
-      const data = await adminApi.getAllVouchers();
-      setVouchers(data);
-    } catch (err) {
-      console.error('Lỗi tải danh sách voucher:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchVouchers();
-  }, []);
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCode(text);
+    setTimeout(() => setCopiedCode(null), 2000);
   };
 
   const handleOpenAdd = () => {
-    setEditingVoucher(null);
-    setFormData(initialForm);
-    setModalOpen(true);
+    setEditingId(null);
+    setFormData({
+      code: `APEX${Math.floor(Math.random() * 90) + 10}K`,
+      title: '',
+      discountType: 'FIXED',
+      discountValue: '100000',
+      minOrderValue: '1000000',
+      maxUsage: '100',
+      startDate: '2024-10-24',
+      endDate: '2024-12-31'
+    });
+    setShowModal(true);
   };
 
   const handleOpenEdit = (v) => {
-    setEditingVoucher(v);
+    setEditingId(v.id);
     setFormData({
-      code: v.code || '',
-      description: v.description || '',
-      discountType: v.discountType || 'FIXED',
-      discountValue: v.discountValue || '',
-      minOrderValue: v.minOrderValue || '',
-      maxDiscountAmount: v.maxDiscountAmount || '',
-      maxUses: v.maxUses || 100,
-      expiresAt: v.expiresAt ? v.expiresAt.substring(0, 16) : '',
-      isActive: v.isActive !== false
+      code: v.code,
+      title: v.title,
+      discountType: v.discountType,
+      discountValue: v.discountValue.toString(),
+      minOrderValue: v.minOrderValue.toString(),
+      maxUsage: v.maxUsage.toString(),
+      startDate: '2024-10-24',
+      endDate: '2024-12-31'
     });
-    setModalOpen(true);
+    setShowModal(true);
   };
 
-  const handleDelete = async (id, code) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa mã giảm giá "${code}"?`)) return;
-    try {
-      await adminApi.deleteVoucher(id);
-      showToast(`Đã xóa voucher ${code} thành công!`);
-      fetchVouchers();
-    } catch (err) {
-      alert('Không thể xóa voucher.');
-    }
+  const handleDelete = (id) => {
+    if (!window.confirm('Bạn có chắc muốn xóa mã giảm giá này?')) return;
+    setVouchers((prev) => prev.filter((v) => v.id !== id));
+    setToastMessage('Đã xóa mã giảm giá.');
+    setTimeout(() => setToastMessage(''), 2500);
   };
 
-  const handleSubmit = async (e) => {
+  const handleToggleStatus = (id) => {
+    setVouchers((prev) =>
+      prev.map((v) =>
+        v.id === id
+          ? { ...v, status: v.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
+          : v
+      )
+    );
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    try {
-      const payload = {
-        ...formData,
-        code: formData.code.trim().toUpperCase(),
-        discountValue: Number(formData.discountValue),
-        minOrderValue: formData.minOrderValue ? Number(formData.minOrderValue) : 0,
-        maxDiscountAmount: formData.maxDiscountAmount ? Number(formData.maxDiscountAmount) : null,
-        maxUses: Number(formData.maxUses),
-        expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null
+    const payload = {
+      code: formData.code.toUpperCase(),
+      title: formData.title,
+      discountType: formData.discountType,
+      discountValue: Number(formData.discountValue) || 0,
+      minOrderValue: Number(formData.minOrderValue) || 0,
+      maxUsage: Number(formData.maxUsage) || 100,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      status: 'ACTIVE'
+    };
+
+    if (editingId) {
+      setVouchers((prev) =>
+        prev.map((v) => (v.id === editingId ? { ...v, ...payload } : v))
+      );
+      setToastMessage('Đã cập nhật mã giảm giá thành công!');
+    } else {
+      const newEntry = {
+        id: Date.now(),
+        usedCount: 0,
+        ...payload
       };
-
-      if (editingVoucher) {
-        await adminApi.updateVoucher(editingVoucher.id, payload);
-        showToast('Cập nhật mã giảm giá thành công!');
-      } else {
-        await adminApi.createVoucher(payload);
-        showToast('Tạo mã giảm giá mới thành công!');
-      }
-      setModalOpen(false);
-      fetchVouchers();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Lỗi khi lưu mã giảm giá.');
-    } finally {
-      setSubmitting(false);
+      setVouchers([newEntry, ...vouchers]);
+      setToastMessage('Đã tạo mã giảm giá mới thành công!');
     }
+
+    setShowModal(false);
+    setTimeout(() => setToastMessage(''), 3000);
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price || 0);
-  };
-
-  const filteredVouchers = vouchers.filter((v) => {
-    const term = searchTerm.toLowerCase();
-    return v.code?.toLowerCase().includes(term) || v.description?.toLowerCase().includes(term);
-  });
+  const filteredVouchers = vouchers.filter(
+    (v) =>
+      v.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <AdminLayout
-      title="Quản Lý Mã Giảm Giá (Vouchers)"
-      subtitle="Thiết lập các chương trình khuyến mãi, chiết khấu và giới hạn sử dụng"
-    >
-      {/* Toast */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold animate-bounce">
-          <CheckCircle className="w-4 h-4" />
-          <span>{toastMessage}</span>
+    <AdminLayout title="Khuyến mãi" subtitle="Quản lý khuyến mãi & Mã Voucher">
+      <div className="flex flex-col gap-6">
+        {/* HEADER & ACTION BAR */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-50 text-secondary flex items-center justify-center">
+              <Tag className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Quản lý mã Voucher & Khuyến mãi
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full bg-secondary text-white text-xs font-black">
+                  {vouchers.filter((v) => v.status === 'ACTIVE').length} mã đang chạy
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Thiết lập chương trình giảm giá, mã coupon VIP và chính sách Freeship toàn quốc
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-secondary text-white hover:bg-secondary/90 transition-all text-xs font-bold shadow-md hover:shadow-lg active:scale-95 shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tạo mã Voucher mới</span>
+          </button>
         </div>
-      )}
 
-      {/* Header Bar */}
-      <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Tìm theo Mã code hoặc Mô tả..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-red-500 transition"
-          />
+        {toastMessage && (
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
+        {/* 3 STATS CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Doanh số qua Voucher</span>
+              <span className="text-2xl font-black text-slate-900 mt-1">124.500.000₫</span>
+              <span className="text-[11px] text-emerald-600 font-bold mt-1">+18.5% so với tháng trước</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lượt dùng thành công</span>
+              <span className="text-2xl font-black text-secondary mt-1">477 lượt</span>
+              <span className="text-[11px] text-slate-500 font-medium mt-1">Chiếm 38.2% tổng đơn hàng</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-red-50 text-secondary flex items-center justify-center">
+              <Tag className="w-6 h-6" />
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tiết kiệm cho khách</span>
+              <span className="text-2xl font-black text-emerald-600 mt-1">18.240.000₫</span>
+              <span className="text-[11px] text-emerald-700 font-bold mt-1">Tăng độ gắn kết khách quen</span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Percent className="w-6 h-6" />
+            </div>
+          </div>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-lg shadow-red-600/20 transition shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tạo Mã Mới</span>
-        </button>
-      </div>
+        {/* SEARCH ROW */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+          <div className="relative max-w-md">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm theo mã coupon (APEX...), mô tả..."
+              className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+            />
+          </div>
+        </div>
 
-      {/* Vouchers Table */}
-      <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse min-w-[900px]">
-            <thead className="bg-slate-900/90 text-slate-400 font-semibold uppercase border-b border-slate-800">
-              <tr>
-                <th className="p-4">Mã Code</th>
-                <th className="p-4">Mô Tả Khuyến Mãi</th>
-                <th className="p-4">Loại Giảm</th>
-                <th className="p-4">Giá Trị Giảm</th>
-                <th className="p-4">Đơn Tối Thiểu</th>
-                <th className="p-4">Lượt Dùng</th>
-                <th className="p-4">Hạn Dùng</th>
-                <th className="p-4">Trạng Thái</th>
-                <th className="p-4 text-center">Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {loading ? (
-                <tr>
-                  <td colSpan="9" className="p-8 text-center text-slate-400">
-                    Đang tải danh sách voucher...
-                  </td>
+        {/* VOUCHERS TABLE */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[850px]">
+              <thead>
+                <tr className="bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                  <th className="py-3.5 px-6">Mã Coupon & Ưu đãi</th>
+                  <th className="py-3.5 px-4">Đơn tối thiểu</th>
+                  <th className="py-3.5 px-4">Lượt đã dùng</th>
+                  <th className="py-3.5 px-4">Thời hạn</th>
+                  <th className="py-3.5 px-4">Trạng thái</th>
+                  <th className="py-3.5 px-6 text-right">Thao tác</th>
                 </tr>
-              ) : filteredVouchers.length > 0 ? (
-                filteredVouchers.map((v) => (
-                  <tr key={v.id} className="hover:bg-slate-900/50 transition">
-                    <td className="p-4">
-                      <span className="font-mono font-black text-sm px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 inline-block">
-                        {v.code}
-                      </span>
-                    </td>
-                    <td className="p-4 font-medium text-slate-200 max-w-[220px]">
-                      {v.description}
-                    </td>
-                    <td className="p-4">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                        {v.discountType === 'PERCENT' ? 'Phần trăm (%)' : 'Số tiền cố định'}
-                      </span>
-                    </td>
-                    <td className="p-4 font-black text-emerald-400">
-                      {v.discountType === 'PERCENT' ? `${v.discountValue}%` : formatPrice(v.discountValue)}
-                      {v.maxDiscountAmount && (
-                        <div className="text-[10px] text-slate-400 font-normal">
-                          Tối đa: {formatPrice(v.maxDiscountAmount)}
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                {filteredVouchers.map((v) => (
+                  <tr key={v.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-4 px-6 align-top">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-1 rounded-lg bg-red-50 text-secondary font-mono font-black text-xs border border-red-200">
+                            {v.code}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(v.code)}
+                            className="text-slate-400 hover:text-slate-700"
+                          >
+                            {copiedCode === v.code ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
                         </div>
-                      )}
+                        <span className="text-slate-900 font-bold leading-tight">{v.title}</span>
+                      </div>
                     </td>
-                    <td className="p-4 text-slate-300">
-                      {v.minOrderValue ? formatPrice(v.minOrderValue) : '0₫'}
+
+                    <td className="py-4 px-4 align-top">
+                      <span className="font-bold text-slate-900">{formatPrice(v.minOrderValue)}</span>
                     </td>
-                    <td className="p-4">
-                      <span className="text-slate-300 font-bold">
-                        {v.usedCount || 0}
-                      </span>
-                      <span className="text-slate-500"> / {v.maxUses || '∞'}</span>
+
+                    <td className="py-4 px-4 align-top">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-slate-900">{v.usedCount} / {v.maxUsage}</span>
+                        <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-600 rounded-full"
+                            style={{ width: `${Math.min(100, (v.usedCount / v.maxUsage) * 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="p-4 text-slate-400">
-                      {v.expiresAt ? new Date(v.expiresAt).toLocaleDateString('vi-VN') : 'Vô thời hạn'}
+
+                    <td className="py-4 px-4 align-top">
+                      <span className="text-slate-600 block">{v.endDate}</span>
+                      <span className="text-[11px] text-slate-400">Bắt đầu: {v.startDate}</span>
                     </td>
-                    <td className="p-4">
-                      {v.isActive ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <CheckCircle className="w-3 h-3" /> Đang bật
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
-                          <XCircle className="w-3 h-3" /> Đã tắt
-                        </span>
-                      )}
+
+                    <td className="py-4 px-4 align-top">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStatus(v.id)}
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-colors ${
+                          v.status === 'ACTIVE'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-slate-100 text-slate-400'
+                        }`}
+                      >
+                        {v.status === 'ACTIVE' ? 'Đang kích hoạt' : 'Tạm tắt'}
+                      </button>
                     </td>
-                    <td className="p-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
+
+                    <td className="py-4 px-6 align-top text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <button
+                          type="button"
                           onClick={() => handleOpenEdit(v)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
-                          title="Chỉnh sửa"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(v.id, v.code)}
-                          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition"
-                          title="Xóa"
+                          type="button"
+                          onClick={() => handleDelete(v.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-secondary hover:bg-red-50"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="9" className="p-8 text-center text-slate-500">
-                    Không tìm thấy mã giảm giá nào.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Modal Add / Edit Voucher */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-5 shadow-2xl text-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <Ticket className="w-4 h-4 text-red-500" />
-                {editingVoucher ? 'Cập Nhật Voucher' : 'Tạo Mã Giảm Giá Mới'}
-              </h3>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800 transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Code */}
+        {/* MODAL TẠO / SỬA VOUCHER */}
+        {showModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
-                  <label className="font-bold text-slate-300 block mb-1">Mã Giảm Giá (Code) *</label>
+                  <h3 className="text-base font-black text-slate-900">
+                    {editingId ? 'Chỉnh sửa Voucher' : 'Tạo mã Voucher mới'}
+                  </h3>
+                  <p className="text-xs text-slate-400">Áp dụng cho giỏ hàng và thanh toán trực tuyến</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-900">Mã Code <span className="text-secondary">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.code}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                      placeholder="Ví dụ: APEX100K"
+                      className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner font-mono font-bold"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-900">Loại giảm giá</label>
+                    <select
+                      value={formData.discountType}
+                      onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
+                      className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                    >
+                      <option value="FIXED">Số tiền cố định (VNĐ)</option>
+                      <option value="SHIPPING">Freeship (Miễn phí vận chuyển)</option>
+                      <option value="PERCENT">Phần trăm (%)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-900">Mô tả hiển thị</label>
                   <input
                     type="text"
                     required
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    placeholder="Ví dụ: SMASH50K"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 font-mono font-bold focus:outline-none focus:border-red-500 uppercase"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Ví dụ: Giảm 100K cho đơn vợt từ 1 triệu"
+                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                   />
                 </div>
 
-                {/* Loại giảm */}
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Loại Chiết Khấu *</label>
-                  <select
-                    value={formData.discountType}
-                    onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:border-red-500"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-900">Giá trị giảm (VNĐ)</label>
+                    <input
+                      type="number"
+                      required
+                      value={formData.discountValue}
+                      onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                      placeholder="100000"
+                      className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-900">Đơn hàng tối thiểu (VNĐ)</label>
+                    <input
+                      type="number"
+                      required
+                      value={formData.minOrderValue}
+                      onChange={(e) => setFormData({ ...formData, minOrderValue: e.target.value })}
+                      placeholder="1000000"
+                      className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-900">Lượt phát hành tối đa</label>
+                    <input
+                      type="number"
+                      required
+                      value={formData.maxUsage}
+                      onChange={(e) => setFormData({ ...formData, maxUsage: e.target.value })}
+                      placeholder="100"
+                      className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-900">Ngày hết hạn</label>
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
                   >
-                    <option value="FIXED">Số tiền cố định (VNĐ)</option>
-                    <option value="PERCENT">Phần trăm (%)</option>
-                  </select>
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl bg-secondary text-white hover:bg-secondary/90 text-xs font-bold shadow-sm"
+                  >
+                    Lưu mã Voucher
+                  </button>
                 </div>
-
-                {/* Giá trị giảm */}
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">
-                    {formData.discountType === 'PERCENT' ? 'Tỷ lệ giảm (%) *' : 'Số tiền giảm (VNĐ) *'}
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.discountValue}
-                    onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
-                    placeholder={formData.discountType === 'PERCENT' ? 'Ví dụ: 10' : 'Ví dụ: 50000'}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                {/* Giảm tối đa nếu là percent */}
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Giảm Tối Đa (VNĐ)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.maxDiscountAmount}
-                    onChange={(e) => setFormData({ ...formData, maxDiscountAmount: e.target.value })}
-                    placeholder="Ví dụ: 100000 (nếu dùng %)"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                {/* Đơn tối thiểu */}
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Đơn Tối Thiểu (VNĐ)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.minOrderValue}
-                    onChange={(e) => setFormData({ ...formData, minOrderValue: e.target.value })}
-                    placeholder="Ví dụ: 500000"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                {/* Lượt dùng */}
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Số Lượt Tối Đa</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.maxUses}
-                    onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
-                    placeholder="100"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                {/* Hạn dùng */}
-                <div className="sm:col-span-2">
-                  <label className="font-bold text-slate-300 block mb-1">Ngày Hết Hạn</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.expiresAt}
-                    onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                {/* Mô tả */}
-                <div className="sm:col-span-2">
-                  <label className="font-bold text-slate-300 block mb-1">Mô Tả Hiển Thị *</label>
-                  <textarea
-                    rows="2"
-                    required
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Ví dụ: Giảm ngay 50.000₫ cho đơn hàng từ 1.000.000₫"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                {/* Kích hoạt */}
-                <div className="sm:col-span-2 flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
-                  />
-                  <label htmlFor="isActive" className="font-bold text-slate-300 cursor-pointer">
-                    Kích hoạt áp dụng mã giảm giá này ngay lập tức
-                  </label>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition"
-                >
-                  Hủy Bỏ
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold shadow-lg shadow-red-600/20 transition disabled:opacity-50"
-                >
-                  {submitting ? 'Đang lưu...' : editingVoucher ? 'Cập Nhật' : 'Tạo Voucher'}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </AdminLayout>
   );
 };

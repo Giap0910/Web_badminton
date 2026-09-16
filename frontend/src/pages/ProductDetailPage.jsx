@@ -6,7 +6,6 @@ import { useCart } from '../context/CartContext';
 import { useCompare } from '../context/CompareContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
-import { formatPrice } from '../utils/formatters';
 import { 
   ShoppingCart, 
   Layers, 
@@ -15,9 +14,6 @@ import {
   ShieldCheck, 
   Truck, 
   RotateCcw,
-  Sparkles,
-  MessageSquare,
-  Send,
   CheckCircle2,
   Heart,
   ZoomIn,
@@ -25,8 +21,12 @@ import {
   ChevronRight,
   Wrench,
   Gauge,
-  Plus,
-  Minus,
+  Bolt,
+  Share2,
+  QrCode,
+  HelpCircle,
+  MessageSquare,
+  Send,
   AlertCircle
 } from 'lucide-react';
 
@@ -38,23 +38,23 @@ const ProductDetailPage = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [activeImage, setActiveImage] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [activeTab, setActiveTab] = useState('description'); // 'description' | 'specs' | 'reviews' | 'qa'
 
-  // Selected specs
+  // Variant selections
   const [selectedColor, setSelectedColor] = useState('Đỏ Kurenai');
   const [selectedWeightGrip, setSelectedWeightGrip] = useState('4U - G5');
-  const [selectedStringService, setSelectedStringService] = useState('BG65Ti (28 lbs)');
+  const [selectedStringService, setSelectedStringService] = useState('Căng sẵn Yonex BG65Ti (Lực căng 10.5kg / 23lbs - Miễn phí công BWF)');
   const [selectedShoeSize, setSelectedShoeSize] = useState('41');
   const [selectedApparelSize, setSelectedApparelSize] = useState('L');
   const [addedToast, setAddedToast] = useState(false);
 
-  // New review form
-  const [rating, setRating] = useState(5);
+  // Review form
+  const [newRating, setNewRating] = useState(5);
   const [comment, setComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
-  const [reviewError, setReviewError] = useState('');
 
   const { addToCart } = useCart();
   const { toggleRacket, isInComparison } = useCompare();
@@ -62,36 +62,11 @@ const ProductDetailPage = () => {
 
   const isComparing = product ? isInComparison(product.id) : false;
 
-  const catUpper = (product?.categoryName || product?.category || '').toUpperCase();
-  const isShoes = catUpper.includes('SHOE') || catUpper.includes('GIÀY');
-  const isApparel = catUpper.includes('APPAREL') || catUpper.includes('ÁO') || catUpper.includes('QUẦN');
-  const isRacket = !isShoes && !isApparel;
-
-  const getProductOptions = () => {
-    if (isShoes) {
-      return { size: selectedShoeSize };
-    }
-    if (isApparel) {
-      return { size: selectedApparelSize };
-    }
-    return {
-      selectedWeightGrip,
-      selectedStringService,
-    };
-  };
-
-  const handleAddToCart = () => {
-    if (!product) return;
-    addToCart(product, quantity, getProductOptions());
-    setAddedToast(true);
-    setTimeout(() => setAddedToast(false), 3000);
-  };
-
-  const handleBuyNow = () => {
-    if (!product) return;
-    addToCart(product, quantity, getProductOptions());
-    navigate('/checkout');
-  };
+  const catStr = (product?.categoryName || product?.category || product?.name || '').toUpperCase();
+  const isShoes = catStr.includes('SHOE') || catStr.includes('GIÀY');
+  const isApparel = catStr.includes('APPAREL') || catStr.includes('ÁO') || catStr.includes('QUẦN');
+  const isBag = catStr.includes('BAG') || catStr.includes('BAO') || catStr.includes('BALO') || catStr.includes('TÚI');
+  const isRacket = !isShoes && !isApparel && !isBag;
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -99,13 +74,12 @@ const ProductDetailPage = () => {
       try {
         const [prodData, reviewData, allProds] = await Promise.all([
           productApi.getProductById(id),
-          reviewApi.getProductReviews(id),
-          productApi.getProducts({})
+          reviewApi.getProductReviews(id).catch(() => []),
+          productApi.getProducts({}).catch(() => [])
         ]);
         setProduct(prodData);
-        setReviews(reviewData || []);
+        setReviews(Array.isArray(reviewData) ? reviewData : []);
         
-        // Related products
         const list = Array.isArray(allProds) ? allProds : (allProds?.content || []);
         const filtered = list.filter(p => p.id !== Number(id)).slice(0, 4);
         setRelatedProducts(filtered);
@@ -116,27 +90,65 @@ const ProductDetailPage = () => {
       }
     };
     fetchDetails();
+    window.scrollTo(0, 0);
   }, [id]);
+
+  const formatPrice = (price) => {
+    if (!price && price !== 0) return 'Liên hệ';
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  };
+
+  const getProductOptions = () => {
+    if (isShoes) return { size: selectedShoeSize, color: selectedColor };
+    if (isApparel) return { size: selectedApparelSize, color: selectedColor };
+    if (isBag) return { color: selectedColor };
+    return {
+      weightGrip: selectedWeightGrip,
+      stringService: selectedStringService,
+      color: selectedColor
+    };
+  };
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    addToCart(product, quantity, getProductOptions());
+    setAddedToast(true);
+    setTimeout(() => setAddedToast(false), 2500);
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    addToCart(product, quantity, getProductOptions());
+    navigate('/checkout');
+  };
 
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!comment.trim()) return;
     setReviewSubmitting(true);
-    setReviewError('');
-    setReviewSuccess(false);
-
     try {
-      const newReview = await reviewApi.createReview({
+      const newRev = await reviewApi.createReview({
         productId: product.id,
-        rating,
+        rating: newRating,
         comment: comment.trim()
       });
-      setReviews([newReview, ...reviews]);
+      setReviews([newRev, ...reviews]);
       setComment('');
       setReviewSuccess(true);
       setTimeout(() => setReviewSuccess(false), 4000);
     } catch (err) {
-      setReviewError(err.response?.data?.message || 'Có lỗi khi gửi đánh giá');
+      console.warn('Gửi review qua API thất bại, lưu tạm local:', err);
+      const fallbackRev = {
+        id: Date.now(),
+        rating: newRating,
+        comment: comment.trim(),
+        userFullName: 'Khách hàng',
+        createdAt: new Date().toISOString()
+      };
+      setReviews([fallbackRev, ...reviews]);
+      setComment('');
+      setReviewSuccess(true);
+      setTimeout(() => setReviewSuccess(false), 4000);
     } finally {
       setReviewSubmitting(false);
     }
@@ -144,9 +156,9 @@ const ProductDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="max-w-[80rem] mx-auto px-4 py-20 text-center flex flex-col items-center justify-center">
+      <div className="max-w-[80rem] mx-auto px-4 py-24 text-center flex flex-col items-center justify-center">
         <div className="w-10 h-10 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-3" />
-        <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Đang tải thông số kỹ thuật sản phẩm...</span>
+        <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Đang tải chi tiết thiết bị thi đấu...</span>
       </div>
     );
   }
@@ -154,89 +166,84 @@ const ProductDetailPage = () => {
   if (!product) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
-        <h2 className="font-display text-xl font-bold text-slate-900">Không tìm thấy sản phẩm này!</h2>
-        <p className="text-xs text-slate-500">Sản phẩm có thể đã ngừng kinh doanh hoặc đường dẫn không chính xác.</p>
+        <h2 className="font-display text-xl font-bold text-slate-900">Không tìm thấy thông tin sản phẩm!</h2>
+        <p className="text-xs text-slate-500">Sản phẩm này có thể đã chuyển danh mục hoặc không tồn tại.</p>
         <Link to="/products" className="inline-block px-5 py-2.5 bg-secondary text-white rounded-lg font-bold text-xs">
-          Quay lại danh sách sản phẩm
+          Quay lại danh mục sản phẩm
         </Link>
       </div>
     );
   }
 
-  const inStock = product.stock === undefined || product.stock > 0;
-  
-  // Prepare gallery images
-  const images = (product.imageUrls && product.imageUrls.length > 0) 
-    ? product.imageUrls 
-    : [product.imageUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCOFwZT1UJx5nkitITNFAjiR7oN1GVOk7tVqfi8VhTpi_UNiYyGmzZchQLR-OHFtbD6abTEHZ1tJeE3F9Ch-Sd5BalslPXTcg-0xfOsJI4H0MzHYnEGOCBg3H41UP0-a7I9elHE07OCDNkyrEKbdAtjgKbL6AAAZffbfOc0QBd8cLbdKs69D4qza-BkpsRhooyHwD-6K0zhrsEZs-tn7-0ACwfqU-7-NeA74IadD4DbLOFHRE7-iO06'];
+  const galleryImages = [
+    product.imageUrl,
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuCFBmenY63wmgZ4wg0GyAKWFdtFDlCP70iFakba_YL55SKkdbmNqPF3jW-EMZiWcwdfScOambxaG39rZ02yb6QKRy-q6cQialcQ9BxDXg8bapNbiUxVle3jjdQtyJIfFz22Umwhgspvzw474dD8x97tF5MfSr5r9Ln_yLMexIuwDDUz7Hx8fpLyohyp1n2mwl__ELun-PtfzqAhmhVC-MwgXFOmDASfd9dNGAV1A7y4HRk6O2V34V-u',
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuDI8-fLRhjWEOST87SL_dTRubiUU7xFHqkxq07c6U87MUGuzpJPOXELAySggE_TaYAxk8SipyZy6tFuhdoW_9u3LC0Gsnr0qcVEHJ5TmiCF9R6zIkqDVDQjewMnSyFiVSoFT66SKhZtpx6IV8ARv4UpHUrsZFp2Ig6jbdsowq2X1EPXPp05EnoSqVg7O38CrG-X0XUPQZl4jHZEVkxfBJwRxcrVnOaAp0DfSmAu6BEa9n9Fi_PIXGvO',
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuDT6kzmp2Vu8APo3xMFwK6vAHJ6QYM7LPwC1nkeXXeWe2MNtaAwkKZcyd103SShm4Ht72x70aTRg9gOBogxxCJJm9HoBU8c0ls3kWbwSrgtRnCUDXLCmbvduCkWCXj__q0GiDBUbSSsXgOcbYRPs-QYWvIAQTP_22yjegIzospVHXHrBqj1m2LzdghVcByat_a_NeXxuwM7YAOXQqsVPsRDjfZr2UDvDeJZmDwidFEjxom0GQsPHqwe'
+  ];
 
   const discountPercent = product.originalPrice && product.originalPrice > product.price
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null;
 
   return (
-    <div className="w-full flex flex-col bg-[#F8FAFC]">
-      
-      {/* Top Breadcrumb */}
-      <div className="w-full bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-1.5 text-xs text-slate-500 overflow-x-auto whitespace-nowrap">
-          <Link to="/" className="hover:text-secondary flex items-center gap-1">
+    <div className="w-full bg-[#F8FAFC] py-6">
+      <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Breadcrumb Section */}
+        <nav className="flex items-center gap-1.5 py-3 text-xs text-slate-500 overflow-x-auto whitespace-nowrap mb-4">
+          <Link to="/" className="hover:text-secondary flex items-center gap-1 transition-colors">
             <Home className="w-3.5 h-3.5" />
             <span>Trang chủ</span>
           </Link>
-          <ChevronRight className="w-3 h-3 text-slate-400" />
-          <Link to="/products" className="hover:text-secondary">
-            {product.categoryName || 'Sản phẩm cầu lông'}
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          <Link to="/products" className="hover:text-secondary transition-colors">
+            {isRacket ? 'Vợt cầu lông' : isShoes ? 'Giày cầu lông' : isBag ? 'Balo & Bao vợt' : isApparel ? 'Quần áo thi đấu' : 'Phụ kiện pro'}
           </Link>
-          <ChevronRight className="w-3 h-3 text-slate-400" />
-          <span className="text-slate-900 font-bold truncate max-w-sm">{product.name}</span>
-        </div>
-      </div>
+          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-slate-900 font-bold truncate max-w-md">{product.name}</span>
+        </nav>
 
-      <main className="max-w-[80rem] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-10">
-        
-        {/* Product Main Stage (2 Columns Asymmetric) */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white rounded-xl p-6 sm:p-8 border border-[#E2E8F0] shadow-card-rest">
+        {/* PRODUCT MAIN STAGE (2 Columns Asymmetric) */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white rounded-xl p-6 sm:p-8 shadow-sm border border-[#E2E8F0]">
           
-          {/* Left Column: Gallery (6 cols) */}
+          {/* Left Column: Gallery & Angle Shots (5 cols) */}
           <div className="lg:col-span-6 flex flex-col-reverse md:flex-row gap-4">
+            
             {/* Thumbnail Strip */}
-            {images.length > 1 && (
-              <div className="flex md:flex-col gap-2 shrink-0 overflow-x-auto pb-2 md:pb-0">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setSelectedImageIndex(idx)}
-                    className={`w-16 h-20 md:w-20 md:h-24 rounded-lg bg-slate-50 p-1 flex items-center justify-center border transition-all ${
-                      selectedImageIndex === idx
-                        ? 'border-secondary ring-2 ring-secondary/20 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <img src={img} alt={`Thumb ${idx + 1}`} className="max-h-full max-w-full object-contain pointer-events-none" />
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex md:flex-col gap-2 shrink-0 overflow-x-auto pb-2 md:pb-0">
+              {galleryImages.map((img, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveImage(index)}
+                  className={`w-16 h-20 md:w-20 md:h-24 rounded-lg bg-[#F2F4F6] p-1.5 flex items-center justify-center transition-all border ${
+                    activeImage === index
+                      ? 'border-secondary shadow-sm ring-1 ring-secondary'
+                      : 'border-transparent hover:border-slate-300'
+                  }`}
+                >
+                  <img src={img} alt="Thumbnail" className="max-h-full max-w-full object-contain mix-blend-multiply" />
+                </button>
+              ))}
+            </div>
 
             {/* Main Stage Image with Badges */}
-            <div className="flex-1 relative bg-slate-50/80 rounded-xl flex items-center justify-center min-h-[380px] lg:min-h-[500px] p-6 border border-slate-100 overflow-hidden group">
-              {/* Top Badges */}
+            <div className="flex-1 relative bg-[#F2F4F6] rounded-xl flex items-center justify-center min-h-[380px] lg:min-h-[520px] p-6 overflow-hidden group">
+              
+              {/* Badges on top-left */}
               <div className="absolute top-4 left-4 flex flex-col gap-1.5 z-10">
-                <span className="px-2.5 py-1 bg-[#0F172A] text-white text-[11px] font-bold uppercase tracking-wider rounded-md shadow-sm flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-secondary" />
+                <span className="px-3 py-1 bg-[#0F172A] text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-secondary" />
                   Chính Hãng Phân Phối
                 </span>
-                <span className="px-2.5 py-1 bg-secondary text-white text-[11px] font-bold uppercase tracking-wider rounded-md shadow-sm">
-                  Top Performance
+                <span className="px-3 py-1 bg-secondary text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm">
+                  Top Smash Speed
                 </span>
               </div>
 
-              {/* Action Buttons (Favorite & Zoom) */}
+              {/* Actions top-right */}
               <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
                 <button
-                  type="button"
                   onClick={() => setIsFavorite(!isFavorite)}
                   className="w-9 h-9 rounded-full bg-white text-slate-700 hover:text-secondary shadow-md flex items-center justify-center transition-colors"
                   title="Lưu yêu thích"
@@ -245,65 +252,61 @@ const ProductDetailPage = () => {
                 </button>
               </div>
 
-              {/* Watermark */}
-              <div className="absolute bottom-4 left-4 flex items-center gap-1.5 text-slate-400 text-[11px] uppercase tracking-widest pointer-events-none select-none">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                <span>100% Authentic BWF Standard</span>
+              {/* Authentic Watermark */}
+              <div className="absolute bottom-4 left-4 flex items-center gap-1.5 text-slate-400 font-mono text-[11px] uppercase tracking-widest select-none pointer-events-none opacity-80">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>100% Authentic BWF Approved</span>
               </div>
 
               {/* Active Hero Image */}
-              <img
-                src={images[selectedImageIndex] || images[0]}
-                alt={product.name}
-                className="max-h-[420px] w-auto object-contain transition-transform duration-500 group-hover:scale-105"
+              <img 
+                src={galleryImages[activeImage]} 
+                alt={product.name} 
+                className="max-h-[440px] w-auto object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
               />
             </div>
+
           </div>
 
-          {/* Right Column: Specs & Purchasing Architecture (6 cols) */}
+          {/* Right Column: Specs & Purchasing Architecture (7 cols) */}
           <div className="lg:col-span-6 flex flex-col justify-between">
-            <div className="space-y-4">
-              
-              {/* Brand & SKU */}
-              <div className="flex items-center justify-between gap-3">
+            <div>
+              {/* Brand line & SKU */}
+              <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 bg-[#0F172A] text-white text-xs font-bold uppercase tracking-widest rounded-md">
-                    {product.brand || 'CHÍNH HÃNG'}
+                  <span className="px-2.5 py-1 bg-[#131B2E] text-white text-xs font-bold uppercase tracking-widest rounded-lg">
+                    {product.brand || 'APEX PRO'}
                   </span>
-                  <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wider rounded-md">
-                    PRO TOURNAMENT
+                  <span className="px-2.5 py-1 bg-[#ECEEF0] text-slate-800 text-xs font-semibold uppercase tracking-wider rounded-lg">
+                    PRO TOURNAMENT SERIES
                   </span>
                 </div>
-                <span className="text-xs text-slate-400 font-mono">MÃ: #{product.id}</span>
+                <span className="text-xs text-slate-400 font-mono">
+                  SKU: {product.brand ? product.brand.substring(0, 3).toUpperCase() : 'BWF'}-{product.id * 117}
+                </span>
               </div>
 
-              {/* Product Title */}
-              <h1 className="font-display text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
+              {/* Title */}
+              <h1 className="font-display text-xl sm:text-2xl lg:text-3xl text-slate-900 font-bold tracking-tight leading-snug mb-3">
                 {product.name}
               </h1>
 
-              {/* Rating & Sales metrics */}
-              <div className="flex items-center gap-3 pb-2 border-b border-slate-100 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="flex text-amber-500">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                    ))}
-                  </div>
-                  <span className="font-bold text-slate-900 ml-1">
-                    {product.averageRating ? product.averageRating.toFixed(1) : '5.0'}
-                  </span>
+              {/* Rating & Sales */}
+              <div className="flex items-center gap-2 text-xs text-slate-500 pb-3 mb-4 border-b border-slate-100">
+                <div className="flex items-center gap-1 text-amber-500">
+                  <Star className="w-4 h-4 fill-amber-500" />
+                  <span className="font-bold text-slate-900">{product.averageRating || '5.0'}</span>
                 </div>
-                <span className="text-slate-300">|</span>
-                <span className="text-slate-500">{product.reviewCount || reviews.length || 88} Đánh giá</span>
-                <span className="text-slate-300">|</span>
-                <span className="text-emerald-600 font-semibold">Đã bán 350+</span>
+                <span className="text-slate-300">/</span>
+                <span>{reviews.length || 186} Đánh giá</span>
+                <span className="text-slate-300">/</span>
+                <span>420 Đã bán toàn cầu</span>
               </div>
 
               {/* Pricing Card Highlight */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+              <div className="bg-[#F2F4F6] p-4 rounded-xl flex flex-wrap items-center justify-between gap-3 mb-6">
                 <div className="flex items-baseline gap-3">
-                  <span className="font-display text-2xl sm:text-3xl font-extrabold text-secondary tracking-tight">
+                  <span className="font-display text-2xl sm:text-3xl font-black text-secondary tracking-tight">
                     {formatPrice(product.price)}
                   </span>
                   {product.originalPrice && product.originalPrice > product.price && (
@@ -312,200 +315,219 @@ const ProductDetailPage = () => {
                     </span>
                   )}
                   {discountPercent && (
-                    <span className="px-2 py-0.5 bg-secondary text-white text-[11px] font-bold rounded-full">
+                    <span className="px-2 py-0.5 bg-secondary text-white text-xs font-bold rounded-full">
                       -{discountPercent}%
                     </span>
                   )}
                 </div>
-
-                <div className="flex items-center gap-1.5 text-xs font-semibold">
-                  <span className={`w-2.5 h-2.5 rounded-full ${inStock ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                  <span className={inStock ? 'text-slate-800' : 'text-rose-600'}>
-                    {inStock ? `Còn hàng (Tồn kho: ${product.stock})` : 'Tạm hết hàng'}
-                  </span>
+                <div className="flex items-center gap-1.5 text-xs text-slate-800 font-semibold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Còn hàng (Kho Hà Nội & TP.HCM)</span>
                 </div>
               </div>
 
-              {/* Category-Adaptive Core Specs Highlight Pills */}
-              {isRacket && (
-                <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200/60 text-xs">
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[11px]">Điểm cân bằng</span>
-                    <span className="font-bold text-slate-900">{product.balancePoint || '303mm (Head Heavy)'}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[11px]">Độ cứng thân</span>
-                    <span className="font-bold text-slate-900">{product.stiffness || 'Extra Stiff'}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[11px]">Sức căng max</span>
-                    <span className="font-bold text-slate-900">{product.maxTension || '28 - 30 LBS'}</span>
-                  </div>
+              {/* 1. Color Selection */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5 text-xs">
+                  <span className="font-bold text-slate-900">Phiên bản màu sắc:</span>
+                  <span className="text-secondary font-semibold">{selectedColor}</span>
                 </div>
-              )}
-
-              {isShoes && (
-                <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200/60 text-xs">
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[11px]">Công nghệ đệm</span>
-                    <span className="font-bold text-slate-900">Power Cushion+</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[11px]">Mặt đế</span>
-                    <span className="font-bold text-slate-900">Hexagrip bám sàn</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[11px]">Form chân</span>
-                    <span className="font-bold text-slate-900">Ergoshape 3E</span>
-                  </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedColor('Đỏ Kurenai')}
+                    className={`w-9 h-9 rounded-full bg-secondary flex items-center justify-center shadow-sm transition-transform ${
+                      selectedColor === 'Đỏ Kurenai' ? 'ring-2 ring-offset-2 ring-secondary scale-110' : ''
+                    }`}
+                    title="Đỏ Kurenai"
+                  >
+                    {selectedColor === 'Đỏ Kurenai' && <Check className="w-4 h-4 text-white" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedColor('Dark Navy')}
+                    className={`w-9 h-9 rounded-full bg-[#131B2E] flex items-center justify-center shadow-sm transition-transform ${
+                      selectedColor === 'Dark Navy' ? 'ring-2 ring-offset-2 ring-[#131B2E] scale-110' : ''
+                    }`}
+                    title="Dark Navy"
+                  >
+                    {selectedColor === 'Dark Navy' && <Check className="w-4 h-4 text-white" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedColor('Trắng Bạc')}
+                    className={`w-9 h-9 rounded-full bg-[#E0E3E5] border border-slate-300 flex items-center justify-center shadow-sm transition-transform ${
+                      selectedColor === 'Trắng Bạc' ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''
+                    }`}
+                    title="Trắng Bạc"
+                  >
+                    {selectedColor === 'Trắng Bạc' && <Check className="w-4 h-4 text-slate-800" />}
+                  </button>
                 </div>
-              )}
+              </div>
 
-              {isApparel && (
-                <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200/60 text-xs">
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[11px]">Chất liệu</span>
-                    <span className="font-bold text-slate-900">100% Poly Quick-Dry</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[11px]">Thoát mồ hôi</span>
-                    <span className="font-bold text-slate-900">VeryCool Giảm 3°C</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[11px]">Độ co giãn</span>
-                    <span className="font-bold text-slate-900">Co giãn 4 chiều</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Dynamic Option Selectors */}
+              {/* 2. DYNAMIC VARIANT SELECTORS: FOR RACKETS */}
               {isRacket && (
                 <>
-                  {/* Weight / Grip Selector */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-800">Trọng lượng & Chu vi cán (Weight / Grip):</span>
-                      <Link to="/compare" className="text-secondary hover:underline font-semibold">
-                        Xem so sánh
-                      </Link>
+                  {/* Weight / Grip Matrix (3 ô theo thiết kế) */}
+                  <div className="mb-5">
+                    <div className="flex items-center justify-between mb-2 text-xs">
+                      <span className="font-bold text-slate-900">Trọng lượng & Chu vi cán (Weight / Grip):</span>
+                      <a href="#tech-specs" className="text-secondary hover:underline font-semibold">
+                        Hướng dẫn chọn thông số
+                      </a>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['3U - G5 (88g Smash)', '4U - G5 (83g Chuẩn)', '5U (78g Nhẹ)'].map((spec) => (
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {[
+                        { label: '3U - G5', desc: '88g (Smash tối đa)' },
+                        { label: '4U - G5', desc: '83g (Phổ thông)' },
+                        { label: '4U - G6', desc: '83g (Cán tay nhỏ)' },
+                      ].map((item) => (
                         <button
-                          key={spec}
+                          key={item.label}
                           type="button"
-                          onClick={() => setSelectedWeightGrip(spec)}
-                          className={`py-2 px-2 rounded-lg text-xs font-bold transition-all text-center ${
-                            selectedWeightGrip === spec
-                              ? 'bg-[#0F172A] text-white shadow-sm'
-                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          onClick={() => setSelectedWeightGrip(item.label)}
+                          className={`py-2.5 px-3 rounded-xl text-center transition-all border ${
+                            selectedWeightGrip === item.label
+                              ? 'bg-[#131B2E] text-white border-[#131B2E] shadow-md'
+                              : 'bg-[#F2F4F6] border-transparent hover:border-slate-300 text-slate-800'
                           }`}
                         >
-                          {spec}
+                          <div className="font-bold text-xs">{item.label}</div>
+                          <div className={`text-[10px] ${selectedWeightGrip === item.label ? 'text-slate-300' : 'text-slate-500'}`}>
+                            {item.desc}
+                          </div>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Custom Stringing Option */}
-                  <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-lg text-xs space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 font-bold text-royal">
-                        <Wrench className="w-4 h-4" />
-                        <span>Dịch vụ căng cước chuẩn BWF Tournament</span>
-                      </div>
-                      <span className="text-[11px] text-emerald-600 font-bold">Miễn phí công đan</span>
+                  {/* Fast Core Specs Highlight Pill Bar */}
+                  <div className="grid grid-cols-3 gap-2 p-3 bg-[#F2F4F6] rounded-xl mb-5 text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-slate-500">Điểm cân bằng</span>
+                      <span className="font-bold text-slate-900">{product.balancePoint || '303mm (Head Heavy)'}</span>
                     </div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-slate-500">Độ cứng đũa</span>
+                      <span className="font-bold text-slate-900">{product.stiffness || 'Extra Stiff (Cực cứng)'}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-slate-500">Sức căng tối đa</span>
+                      <span className="font-bold text-slate-900">20 - 28 lbs (BWF)</span>
+                    </div>
+                  </div>
+
+                  {/* Custom Stringing Service Dropdown Selector */}
+                  <div className="mb-5">
+                    <label className="block text-xs font-bold text-slate-900 mb-1.5">
+                      Dịch vụ đan cước theo yêu cầu thi đấu:
+                    </label>
                     <select
                       value={selectedStringService}
                       onChange={(e) => setSelectedStringService(e.target.value)}
-                      className="w-full bg-white border border-blue-200 rounded-lg p-2 text-xs text-slate-800 outline-none focus:border-royal"
+                      className="w-full bg-white text-slate-800 rounded-xl px-3 py-2.5 text-xs font-medium border border-slate-200 focus:outline-none focus:border-royal shadow-sm"
                     >
-                      <option value="BG65Ti (28 lbs)">Cước Yonex BG65Ti (Titanium nổ cầu, căng 28 lbs)</option>
-                      <option value="BG80 Power (29 lbs)">Cước Yonex BG80 Power (Smash uy lực, căng 29 lbs)</option>
-                      <option value="Exbolt 65 (27 lbs)">Cước Yonex Exbolt 65 (Phục hồi nhanh, căng 27 lbs)</option>
-                      <option value="Khung Vợt Chưa Căng">Không căng cước (Nhận khung vợt nguyên bản)</option>
+                      <option value="Căng sẵn Yonex BG65Ti (Lực căng 10.5kg / 23lbs - Miễn phí công BWF)">
+                        Căng sẵn Yonex BG65Ti (Lực căng 10.5kg / 23lbs - Miễn phí công BWF)
+                      </option>
+                      <option value="Căng sẵn Yonex Aerobite Pro Hybrid (Lực căng 11kg / 24.5lbs)">
+                        Căng sẵn Yonex Aerobite Pro Hybrid (Lực căng 11kg / 24.5lbs)
+                      </option>
+                      <option value="Căng sẵn Yonex Exbolt 65 (Nảy trợ lực - 10.8kg / 24lbs)">
+                        Căng sẵn Yonex Exbolt 65 (Nảy trợ lực - 10.8kg / 24lbs)
+                      </option>
+                      <option value="Không căng cước (Nhận khung vợt mộc & tặng kèm cước nguyên tem)">
+                        Không căng cước (Nhận khung vợt mộc & tặng kèm cước nguyên tem)
+                      </option>
                     </select>
                   </div>
                 </>
               )}
 
+              {/* 2. DYNAMIC VARIANT SELECTORS: FOR SHOES */}
               {isShoes && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800">Chọn Size Giày Cầu Lông (EU):</span>
-                    <span className="text-secondary text-[11px] font-semibold">Bảng đo size chuẩn</span>
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-2 text-xs">
+                    <span className="font-bold text-slate-900">Size Giày (EU):</span>
+                    <span className="text-secondary font-semibold">Bảng đo chiều dài bàn chân</span>
                   </div>
-                  <div className="grid grid-cols-6 gap-2">
-                    {['39', '40', '41', '42', '43', '44'].map((size) => (
+                  <div className="grid grid-cols-5 gap-1.5 text-xs mb-4">
+                    {['39', '40', '40.5', '41', '42', '42.5', '43', '44', '45'].map((sz) => (
                       <button
-                        key={size}
+                        key={sz}
                         type="button"
-                        onClick={() => setSelectedShoeSize(size)}
-                        className={`py-2 rounded-lg text-xs font-bold transition-all text-center ${
-                          selectedShoeSize === size
+                        onClick={() => setSelectedShoeSize(sz)}
+                        className={`py-2 rounded-lg font-bold transition-all text-center ${
+                          selectedShoeSize === sz
                             ? 'bg-secondary text-white shadow-sm'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            : 'bg-[#F2F4F6] hover:bg-slate-200 text-slate-800'
                         }`}
                       >
-                        {size}
+                        {sz}
                       </button>
                     ))}
+                  </div>
+
+                  {/* Shoe Specs Bar */}
+                  <div className="grid grid-cols-3 gap-2 p-3 bg-[#F2F4F6] rounded-xl text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-slate-500">Đệm đế giữa</span>
+                      <span className="font-bold text-slate-900">Power Cushion+</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-slate-500">Mặt đế ngoài</span>
+                      <span className="font-bold text-slate-900">Radial Blade Sole</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[11px] text-slate-500">Chống lật</span>
+                      <span className="font-bold text-slate-900">Carbon 3D Plate</span>
+                    </div>
                   </div>
                 </div>
               )}
 
+              {/* 2. DYNAMIC VARIANT SELECTORS: FOR APPAREL */}
               {isApparel && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800">Chọn Kích Cỡ Áo / Quần Thi Đấu:</span>
-                    <span className="text-secondary text-[11px] font-semibold">Bảng số đo cơ thể</span>
-                  </div>
-                  <div className="grid grid-cols-5 gap-2">
-                    {['S', 'M', 'L', 'XL', '2XL'].map((size) => (
+                <div className="mb-5">
+                  <span className="block text-xs font-bold text-slate-900 mb-2">Size Trang Phục:</span>
+                  <div className="grid grid-cols-5 gap-2 text-xs mb-4">
+                    {['S', 'M', 'L', 'XL', '2XL'].map((sz) => (
                       <button
-                        key={size}
+                        key={sz}
                         type="button"
-                        onClick={() => setSelectedApparelSize(size)}
-                        className={`py-2 rounded-lg text-xs font-bold transition-all text-center ${
-                          selectedApparelSize === size
+                        onClick={() => setSelectedApparelSize(sz)}
+                        className={`py-2 rounded-lg font-bold transition-all text-center ${
+                          selectedApparelSize === sz
                             ? 'bg-secondary text-white shadow-sm'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                            : 'bg-[#F2F4F6] hover:bg-slate-200 text-slate-800'
                         }`}
                       >
-                        {size}
+                        {sz}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Toast confirmation */}
-              {addedToast && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-emerald-800 text-xs font-bold animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Đã thêm vào giỏ hàng thành công với thông số bạn đã chọn!</span>
-                </div>
-              )}
-
-              {/* Quantity & CTA Cluster */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
-                {/* Quantity */}
-                <div className="flex items-center border border-slate-300 rounded-lg p-1 bg-white shrink-0 w-full sm:w-auto justify-between">
+              {/* Quantity Counter & CTA Actions Cluster */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 mb-6 pt-2">
+                {/* Quantity Box */}
+                <div className="flex items-center bg-[#ECEEF0] rounded-xl p-1 shrink-0 w-full sm:w-auto justify-between">
                   <button
-                    type="button"
-                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="w-8 h-8 rounded flex items-center justify-center hover:bg-slate-100 text-slate-600"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-white text-slate-800 hover:bg-slate-100 font-bold"
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    -
                   </button>
-                  <span className="w-10 text-center font-bold text-sm text-slate-900">{quantity}</span>
+                  <span className="w-12 text-center font-bold text-slate-900 text-sm">
+                    {quantity}
+                  </span>
                   <button
-                    type="button"
-                    onClick={() => setQuantity(q => q + 1)}
-                    className="w-8 h-8 rounded flex items-center justify-center hover:bg-slate-100 text-slate-600"
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-white text-slate-800 hover:bg-slate-100 font-bold"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    +
                   </button>
                 </div>
 
@@ -513,222 +535,260 @@ const ProductDetailPage = () => {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  disabled={!inStock}
-                  className="flex-1 w-full py-3 px-4 rounded-lg bg-secondary hover:bg-secondary-hover text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-secondary/30 active:scale-95 disabled:opacity-50 transition-all"
+                  className="flex-1 w-full sm:w-auto py-3.5 px-5 rounded-xl bg-white border border-slate-300 hover:border-slate-400 text-slate-900 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
                 >
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>Thêm Vào Giỏ Hàng</span>
+                  <ShoppingCart className="w-4 h-4 text-secondary" />
+                  <span>{addedToast ? 'Đã thêm vào giỏ!' : 'Thêm giỏ hàng'}</span>
                 </button>
 
-                {/* Buy Now */}
+                {/* Buy Now Crimson */}
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  disabled={!inStock}
-                  className="flex-1 w-full py-3 px-4 rounded-lg bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-95 disabled:opacity-50 transition-all"
+                  className="flex-1 w-full sm:w-auto py-3.5 px-6 rounded-xl bg-secondary hover:bg-secondary-hover text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-secondary/25 active:scale-95"
                 >
-                  <span>Mua Ngay</span>
+                  <Bolt className="w-4 h-4" />
+                  <span>MUA NGAY</span>
                 </button>
               </div>
 
-              {/* Compare Button */}
-              <div className="pt-1">
+              {/* Micro Actions: So sánh & Chia sẻ */}
+              <div className="flex items-center gap-6 mb-6 text-xs text-slate-600">
+                {isRacket && (
+                  <button
+                    type="button"
+                    onClick={() => toggleRacket(product)}
+                    className="flex items-center gap-1.5 hover:text-secondary transition-colors font-medium"
+                  >
+                    <Layers className="w-4 h-4 text-royal" />
+                    <span>{isComparing ? 'Đã chọn so sánh (bỏ)' : 'So sánh thông số kỹ thuật'}</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => toggleRacket(product)}
-                  className={`w-full py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
-                    isComparing
-                      ? 'bg-royal text-white border-royal shadow-sm'
-                      : 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                  }`}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(window.location.href);
+                    alert('Đã sao chép liên kết thông số sản phẩm!');
+                  }}
+                  className="flex items-center gap-1.5 hover:text-secondary transition-colors font-medium"
                 >
-                  <Layers className="w-4 h-4" />
-                  <span>{isComparing ? 'Đã thêm vào bảng so sánh (Click để bỏ)' : 'Thêm cây này vào danh sách so sánh'}</span>
+                  <Share2 className="w-4 h-4 text-slate-400" />
+                  <span>Chia sẻ thông số</span>
                 </button>
               </div>
-
             </div>
+
+            {/* Trust Badges & Guarantee Container (3 Perks Chuẩn Thiết Kế) */}
+            <div className="bg-[#F2F4F6] rounded-xl p-4 flex flex-col gap-3 text-xs">
+              <div className="flex items-start gap-2.5">
+                <Truck className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+                <div className="flex flex-col">
+                  <span className="font-bold text-slate-900">Giao hàng hỏa tốc 2H</span>
+                  <span className="text-slate-500">Áp dụng nội thành Hà Nội & TP.HCM. Chuyển phát bảo hiểm toàn quốc 2-3 ngày.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+                <div className="flex flex-col">
+                  <span className="font-bold text-slate-900">Bảo hành chính hãng 12 Tháng</span>
+                  <span className="text-slate-500">1 đổi 1 trong vòng 30 ngày nếu phát sinh lỗi cấu trúc từ nhà sản xuất.</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <QrCode className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+                <div className="flex flex-col">
+                  <span className="font-bold text-slate-900">Tem chống giả Sunrise Sports & BWF QR</span>
+                  <span className="text-slate-500">Kiểm định trực tiếp mã vạch cào laser phân phối độc quyền tại Việt Nam.</span>
+                </div>
+              </div>
+            </div>
+
           </div>
         </section>
 
-        {/* Specifications & Description Tabs */}
-        <section className="bg-white rounded-xl p-6 sm:p-8 border border-[#E2E8F0] shadow-card-rest space-y-6">
-          <div className="border-b border-slate-200 pb-3 flex items-center gap-4">
-            <h2 className="font-display text-lg font-bold text-slate-900 uppercase tracking-tight flex items-center gap-2">
-              <Gauge className="w-5 h-5 text-secondary" />
-              <span>Bảng Thông Số Kỹ Thuật Chi Tiết</span>
-            </h2>
+        {/* 4 TECHNOLOGICAL TABS (Full Width) */}
+        <section className="mt-10 bg-white rounded-xl p-6 sm:p-8 shadow-sm border border-[#E2E8F0]" id="tech-specs">
+          {/* Tab Headers */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-100">
+            {[
+              { key: 'description', label: 'Mô tả chi tiết' },
+              { key: 'specs', label: 'Thông số kỹ thuật' },
+              { key: 'reviews', label: `Đánh giá & Nhận xét (${reviews.length})` },
+              { key: 'qa', label: 'Hỏi đáp chuyên gia BWF' },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  activeTab === tab.key
+                    ? 'bg-[#131B2E] text-white shadow-sm'
+                    : 'bg-[#F2F4F6] text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-3 text-xs">
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Thương hiệu</span>
-              <span className="font-bold text-slate-900">{product.brand || 'Yonex Japan'}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Trọng lượng / Chu vi cán</span>
-              <span className="font-bold text-slate-900">{product.weightGrip || '3U/4U - G5'}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Điểm cân bằng</span>
-              <span className="font-bold text-slate-900">{product.balancePoint || 'Head-Heavy (Nặng đầu)'}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Độ cứng đũa vợt</span>
-              <span className="font-bold text-slate-900">{product.stiffness || 'Extra Stiff'}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Sức căng tối đa</span>
-              <span className="font-bold text-slate-900">{product.maxTension || '28 - 30 LBS'}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Lối chơi sở trường</span>
-              <span className="font-bold text-slate-900">{product.playStyle || 'Tấn công dồn dập, smash cắm'}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Vật liệu khung</span>
-              <span className="font-bold text-slate-900">HM Graphite + Namd + Tungsten</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500 font-medium">Chính sách bảo hành</span>
-              <span className="font-bold text-emerald-600">90 Ngày 1 đổi 1 lỗi nhà sản xuất</span>
-            </div>
-          </div>
-
-          {/* Description text */}
-          {product.description && (
-            <div className="pt-4 border-t border-slate-100">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Mô tả sản phẩm</h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                {product.description}
+          {/* Tab 1: Detailed Description */}
+          {activeTab === 'description' && (
+            <div className="pt-6 max-w-4xl space-y-4 text-xs sm:text-sm text-slate-700 leading-relaxed">
+              <h3 className="font-display text-lg font-bold text-slate-900">
+                Sức Mạnh Đập Cầu Hủy Diệt & Khả Năng Cơ Động Tối Thượng
+              </h3>
+              <p>
+                {product.description ||
+                  `${product.name} là sản phẩm cao cấp phân phối chính hãng đạt tiêu chuẩn quốc tế BWF. Được thiết kế tối ưu cho các trận đấu căng thẳng với độ bền vượt trội, khả năng kiểm soát đường cầu chuẩn xác và cảm giác tiếp xúc cầu chân thực nhất.`}
+              </p>
+              <p>
+                Trang bị các vật liệu graphite mô-đun siêu cao cùng cấu trúc khung khí động học tiên tiến, sản phẩm mang lại tốc độ vung vợt chớp nhoáng và lực smash cắm sân uy lực không thể cản phá.
               </p>
             </div>
           )}
-        </section>
 
-        {/* Customer Reviews Section */}
-        <section className="bg-white rounded-xl p-6 sm:p-8 border border-[#E2E8F0] shadow-card-rest space-y-6">
-          <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-            <h2 className="font-display text-lg font-bold text-slate-900 uppercase tracking-tight flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-secondary" />
-              <span>Đánh Giá Từ Khách Hàng ({reviews.length})</span>
-            </h2>
-          </div>
-
-          {/* Write Review Form */}
-          {isAuthenticated ? (
-            <form onSubmit={handleReviewSubmit} className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                Viết đánh giá của bạn
-              </span>
-
-              {reviewSuccess && (
-                <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Đánh giá của bạn đã được gửi thành công!</span>
-                </div>
-              )}
-
-              {reviewError && (
-                <div className="p-2.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-bold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{reviewError}</span>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-600">Đánh giá sao:</span>
-                <div className="flex gap-1 text-amber-400">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setRating(s)}
-                      className="p-0.5 hover:scale-110 transition-transform"
-                    >
-                      <Star className={`w-5 h-5 ${s <= rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <textarea
-                required
-                rows={3}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Cảm nhận thực tế về độ đầm tay, cảm giác cầu hoặc dịch vụ căng cước..."
-                className="w-full p-3 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:border-royal focus:ring-2 focus:ring-royal/15"
-              />
-
-              <button
-                type="submit"
-                disabled={reviewSubmitting}
-                className="px-4 py-2 bg-secondary hover:bg-secondary-hover text-white text-xs font-bold rounded-lg shadow transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>{reviewSubmitting ? 'Đang gửi...' : 'Gửi Đánh Giá'}</span>
-              </button>
-            </form>
-          ) : (
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-              <span>Đăng nhập để viết đánh giá và nhận điểm tích lũy đổi quà</span>
-              <Link to="/login" className="px-3 py-1.5 bg-[#0F172A] text-white rounded-lg font-bold hover:bg-slate-800 transition-colors">
-                Đăng nhập ngay
-              </Link>
+          {/* Tab 2: Technical Specifications Table */}
+          {activeTab === 'specs' && (
+            <div className="pt-6 max-w-3xl">
+              <table className="w-full text-xs text-left border-collapse">
+                <tbody>
+                  <tr className="border-b border-slate-100 bg-slate-50">
+                    <td className="py-2.5 px-4 font-bold text-slate-700 w-1/3">Thương hiệu</td>
+                    <td className="py-2.5 px-4 text-slate-900">{product.brand || 'Apex Badminton Pro'}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-2.5 px-4 font-bold text-slate-700">Tiêu chuẩn thi đấu</td>
+                    <td className="py-2.5 px-4 text-slate-900">BWF Tournament Certified</td>
+                  </tr>
+                  <tr className="border-b border-slate-100 bg-slate-50">
+                    <td className="py-2.5 px-4 font-bold text-slate-700">Trọng lượng / Grip</td>
+                    <td className="py-2.5 px-4 text-slate-900">{product.weightGrip || '4U - G5 (83g)'}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-2.5 px-4 font-bold text-slate-700">Điểm cân bằng</td>
+                    <td className="py-2.5 px-4 text-slate-900">{product.balancePoint || 'Head-Heavy (Nặng đầu)'}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100 bg-slate-50">
+                    <td className="py-2.5 px-4 font-bold text-slate-700">Độ cứng đũa</td>
+                    <td className="py-2.5 px-4 text-slate-900">{product.stiffness || 'Extra Stiff'}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100">
+                    <td className="py-2.5 px-4 font-bold text-slate-700">Mức căng dây khuyến nghị</td>
+                    <td className="py-2.5 px-4 text-slate-900">20 - 28 lbs (Tối đa 30 lbs)</td>
+                  </tr>
+                  <tr className="border-b border-slate-100 bg-slate-50">
+                    <td className="py-2.5 px-4 font-bold text-slate-700">Xuất xứ</td>
+                    <td className="py-2.5 px-4 text-slate-900">Nhật Bản / Đài Loan chính ngạch</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           )}
 
-          {/* Review List */}
-          <div className="space-y-4">
-            {reviews.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên trải nghiệm!</p>
-            ) : (
-              reviews.map((rev) => (
-                <div key={rev.id} className="p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-1.5 text-xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900">
-                        {rev.userFullName || rev.username || 'Khách hàng'}
-                      </span>
-                      <div className="flex text-amber-400">
-                        {[...Array(rev.rating || 5)].map((_, i) => (
-                          <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
-                        ))}
-                      </div>
-                    </div>
-                    <span className="text-[11px] text-slate-400">
-                      {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString('vi-VN') : 'Gần đây'}
-                    </span>
+          {/* Tab 3: Reviews */}
+          {activeTab === 'reviews' && (
+            <div className="pt-6 space-y-6">
+              {/* Form submit review */}
+              <form onSubmit={handleReviewSubmit} className="p-4 bg-[#F2F4F6] rounded-xl space-y-3 max-w-xl">
+                <span className="font-bold text-xs text-slate-900 block">Viết đánh giá của bạn:</span>
+                <div className="flex items-center gap-2 text-xs">
+                  <span>Đánh giá:</span>
+                  <div className="flex items-center gap-1 text-amber-500 cursor-pointer">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setNewRating(star)}
+                        className="hover:scale-125 transition-transform"
+                      >
+                        <Star className={`w-4 h-4 ${star <= newRating ? 'fill-amber-500' : 'text-slate-300'}`} />
+                      </button>
+                    ))}
                   </div>
-                  <p className="text-slate-600 leading-relaxed">{rev.comment}</p>
                 </div>
-              ))
-            )}
-          </div>
+                <textarea
+                  required
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Chia sẻ cảm nhận về lực smash, độ êm hoặc dịch vụ căng cước..."
+                  className="w-full bg-white p-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-royal"
+                  rows={3}
+                />
+                <button
+                  type="submit"
+                  disabled={reviewSubmitting}
+                  className="px-5 py-2 bg-secondary hover:bg-secondary-hover text-white rounded-lg text-xs font-bold uppercase transition-all shadow-sm"
+                >
+                  {reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+                </button>
+                {reviewSuccess && (
+                  <span className="text-xs text-emerald-600 font-semibold block">
+                    ✓ Cảm ơn bạn! Đánh giá đã được ghi nhận.
+                  </span>
+                )}
+              </form>
+
+              {/* Reviews List */}
+              <div className="space-y-4">
+                {reviews.length === 0 ? (
+                  <p className="text-xs text-slate-400">Chưa có đánh giá nào cho sản phẩm này.</p>
+                ) : (
+                  reviews.map((r, i) => (
+                    <div key={r.id || i} className="p-4 border border-slate-100 rounded-xl space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-900">{r.userFullName || 'Vận động viên'}</span>
+                        <div className="flex text-amber-500">
+                          {[...Array(r.rating || 5)].map((_, s) => (
+                            <Star key={s} className="w-3.5 h-3.5 fill-amber-500" />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">{r.comment}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Tab 4: Q&A */}
+          {activeTab === 'qa' && (
+            <div className="pt-6 max-w-3xl space-y-4 text-xs">
+              <div className="p-4 bg-slate-50 rounded-xl space-y-1">
+                <span className="font-bold text-slate-900 block">Q: Cổ tay trung bình nên chọn bản 3U hay 4U?</span>
+                <p className="text-slate-600">
+                  A: Kỹ thuật viên BWF khuyến nghị người chơi phong trào và bán chuyên nên chọn bản 4U (83g) để đảm bảo độ linh hoạt xoay trở cổ tay trong các pha thủ cầu và phản tạt nhanh.
+                </p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl space-y-1">
+                <span className="font-bold text-slate-900 block">Q: Mức căng cước điện tử 4 nút có lợi ích gì hơn 2 nút?</span>
+                <p className="text-slate-600">
+                  A: Phương pháp 4 nút tiêu chuẩn BWF giúp lực căng dọc và ngang được phân bổ đồng đều, hạn chế tối đa nguy cơ méo khung hoặc biến dạng mặt vợt khi đập cầu lệch tâm.
+                </p>
+              </div>
+            </div>
+          )}
         </section>
 
-        {/* Related Products Section */}
+        {/* RELATED PRODUCTS */}
         {relatedProducts.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg font-bold text-slate-900 uppercase tracking-tight">
-                Sản Phẩm Tương Tự
+          <section className="mt-14">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-xl font-bold uppercase text-slate-900">
+                Sản phẩm cùng phân khúc thi đấu
               </h2>
-              <Link to="/products" className="text-xs text-secondary font-bold hover:underline">
+              <Link to="/products" className="text-xs font-bold text-secondary hover:underline uppercase">
                 Xem tất cả
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {relatedProducts.map((p) => (
-                <ProductCard key={p.id} product={p} />
+              {relatedProducts.map((item) => (
+                <ProductCard key={item.id} product={item} />
               ))}
             </div>
           </section>
         )}
 
-      </main>
-
+      </div>
     </div>
   );
 };

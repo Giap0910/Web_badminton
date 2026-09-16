@@ -36,22 +36,28 @@ const Footer = () => {
           {/* Col 1: Brand Info */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-secondary to-amber-500 flex items-center justify-center text-white font-black text-sm">
-                HG
+              <div className="flex items-center gap-1.5">
+                <span className="font-display text-xl tracking-tight font-extrabold text-white">
+                  APEX <span className="text-secondary font-black">BADMINTON</span>
+                </span>
+                <span className="bg-secondary text-white px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-widest uppercase">
+                  PRO
+                </span>
               </div>
-              <span className="font-display text-xl tracking-tight font-extrabold text-white">
-                HG <span className="text-secondary">BADMINTON</span>
-              </span>
             </div>
             
             <p className="text-xs text-slate-300 leading-relaxed">
-              Hệ thống phân phối dụng cụ cầu lông chuyên nghiệp, chính hãng số 1 Việt Nam (Yonex, Victor, Li-Ning, Mizuno). Đỉnh cao công nghệ và tinh hoa thể thao.
+              Hệ thống phân phối dụng cụ cầu lông đỉnh cao, ủy quyền chính hãng Yonex, Victor, Lining. Chuyên gia tư vấn kỹ thuật căng cước tiêu chuẩn BWF Tournament.
             </p>
             
             <div className="flex flex-col gap-2.5 text-xs text-slate-300 mt-2">
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
-                <span>Số 182 Lê Duẩn, Quận Hai Bà Trưng, Hà Nội</span>
+                <span>Flagship HCM: 284 Cao Thắng, Phường 12, Quận 10, TP.HCM</span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <MapPin className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+                <span>Showroom HN: 98 Trần Đại Nghĩa, Bách Khoa, Hai Bà Trưng, Hà Nội</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-secondary shrink-0" />
@@ -59,11 +65,7 @@ const Footer = () => {
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-secondary shrink-0" />
-                <span>support@hgbadminton.vn</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Clock className="w-4 h-4 text-secondary shrink-0" />
-                <span>08:30 - 21:30 (Cả Thứ 7 & CN)</span>
+                <span>prosupport@apexbadminton.vn</span>
               </div>
             </div>
           </div>
@@ -177,19 +179,21 @@ const Footer = () => {
 
         {/* Bottom Bar: Copyright & Payment Badges */}
         <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <span className="text-center md:text-left">
-            © 2026 HG Badminton JSC. Tất cả quyền được bảo lưu. Thiết kế cho vận động viên chuyên nghiệp.
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="bg-secondary text-white px-2 py-0.5 rounded font-bold text-[10px] tracking-wider uppercase">
+              Đã thông báo Bộ Công Thương
+            </span>
+            <span>© 2025 Apex Badminton Equipment Ltd. Tất cả quyền được bảo lưu.</span>
+          </div>
           <div className="flex items-center gap-3">
-            <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold hidden sm:inline">
-              Phương thức thanh toán:
+            <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold hidden sm:inline">
+              Thanh toán an toàn:
             </span>
             <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-slate-300">
-              <span className="px-2 py-1 bg-slate-800 rounded border border-slate-700">VISA</span>
-              <span className="px-2 py-1 bg-slate-800 rounded border border-slate-700">MASTERCARD</span>
-              <span className="px-2 py-1 bg-slate-800 rounded border border-slate-700 text-secondary">VNPAY-QR</span>
-              <span className="px-2 py-1 bg-slate-800 rounded border border-slate-700 text-pink-400">MOMO</span>
-              <span className="px-2 py-1 bg-slate-800 rounded border border-slate-700">COD</span>
+              <span className="px-2 py-1 bg-white/10 text-white rounded tracking-wider uppercase">VietQR</span>
+              <span className="px-2 py-1 bg-white/10 text-white rounded tracking-wider uppercase">Visa</span>
+              <span className="px-2 py-1 bg-white/10 text-white rounded tracking-wider uppercase">Mastercard</span>
+              <span className="px-2 py-1 bg-white/10 text-white rounded tracking-wider uppercase">MoMo</span>
             </div>
           </div>
         </div>
