@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
@@ -7,6 +7,7 @@ import {
   Search, 
   SlidersHorizontal,
   Home,
+  ChevronLeft,
   ChevronRight,
   ShieldCheck,
   CheckCircle2,
@@ -103,6 +104,12 @@ const U_RATINGS = [
 
 const SHOE_SIZES = ['39', '40', '40.5', '41', '42', '42.5', '43', '44', '45'];
 const APPAREL_SIZES = ['S', 'M', 'L', 'XL', '2XL'];
+const GENDER_OPTIONS = [
+  { label: 'Tất cả', value: 'ALL' },
+  { label: 'Nam', value: 'Nam' },
+  { label: 'Nữ', value: 'Nữ' },
+  { label: 'Unisex', value: 'Unisex' },
+];
 
 const BAG_TYPES = [
   { label: 'Bao Vợt 6 Cây', value: '6-racket' },
@@ -118,6 +125,30 @@ const ACCESSORY_TYPES = [
   { label: 'Băng Bảo Vệ Khớp', value: 'support' },
 ];
 
+// Helper chuẩn hóa category từ URL param linh hoạt mọi biến thể
+const normalizeCategory = (cat) => {
+  if (!cat) return 'ALL';
+  const s = String(cat).trim().toUpperCase();
+  if (s === 'ALL' || s === 'TAT-CA' || s === 'TẤT CẢ') return 'ALL';
+
+  // 1. Vợt Cầu Lông
+  if (s === '1' || s === 'RACKET' || s === 'VOT-CAU-LONG' || s.includes('VOT') || s.includes('VỢT')) return 'RACKET';
+
+  // 2. Giày Cầu Lông
+  if (s === '2' || s === 'SHOES' || s === 'SHOE' || s === 'GIAY-CAU-LONG' || s.includes('GIAY') || s.includes('GIÀY') || s.includes('FOOTWEAR')) return 'SHOES';
+
+  // 3. Quần Áo Thi Đấu
+  if (s === '3' || s === 'APPAREL' || s === 'QUAN-AO' || s === 'QUAN-AO-THI-DAU' || s === 'QUAN-AO-DAU' || s.includes('QUẦN') || s.includes('ÁO') || s.includes('CLOTHING') || s.includes('TRANG PHỤC')) return 'APPAREL';
+
+  // 4. Balo & Bao Vợt
+  if (s === '4' || s === 'BAG' || s === 'BALO-VA-BAO-VOT' || s === 'BALO' || s === 'BAO-VOT' || s.includes('BALO') || s.includes('BAO VỢT') || s.includes('TUI') || s.includes('TÚI') || s.includes('BACKPACK')) return 'BAG';
+
+  // 5. Phụ Kiện Pro
+  if (s === '5' || s === 'ACCESSORIES' || s === 'ACCESSORY' || s === 'PHU-KIEN' || s === 'PHU-KIEN-PRO' || s.includes('PHU-KIEN') || s.includes('PHỤ KIỆN') || s.includes('CUOC') || s.includes('CƯỚC') || s.includes('GRIP')) return 'ACCESSORIES';
+
+  return s;
+};
+
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
@@ -126,33 +157,45 @@ const ProductsPage = () => {
 
   // URL State Synced
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category')?.toUpperCase() || 'ALL');
+  const [selectedCategory, setSelectedCategory] = useState(
+    normalizeCategory(searchParams.get('category') || searchParams.get('categoryId'))
+  );
   const [selectedBrand, setSelectedBrand] = useState(searchParams.get('brand') || 'ALL');
   const [selectedBalance, setSelectedBalance] = useState(searchParams.get('balancePoint') || 'ALL');
   const [selectedWeight, setSelectedWeight] = useState(searchParams.get('weightGrip') || 'ALL');
   const [selectedShoeSize, setSelectedShoeSize] = useState('ALL');
   const [selectedApparelSize, setSelectedApparelSize] = useState('ALL');
+  const [selectedGender, setSelectedGender] = useState(searchParams.get('gender') || 'ALL');
   const [selectedBagType, setSelectedBagType] = useState('ALL');
   const [selectedAccessoryType, setSelectedAccessoryType] = useState('ALL');
   const [selectedPriceRange, setSelectedPriceRange] = useState('ALL');
   
   // Sorting & Pagination
   const [sortBy, setSortBy] = useState('bestseller');
-  const [page, setPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const productListTopRef = useRef(null);
+  const ITEMS_PER_PAGE = 12;
 
   // Sync with URL query changes
   useEffect(() => {
-    const cat = searchParams.get('category');
-    if (cat) {
-      setSelectedCategory(cat.toUpperCase());
-    } else {
-      setSelectedCategory('ALL');
-    }
+    const rawCat = searchParams.get('category') || searchParams.get('categoryId');
+    const normalizedCat = normalizeCategory(rawCat);
+    setSelectedCategory(normalizedCat);
+
     const kw = searchParams.get('keyword');
     if (kw !== null) setKeyword(kw);
     const br = searchParams.get('brand');
     if (br) setSelectedBrand(br);
+    const gen = searchParams.get('gender');
+    if (gen) setSelectedGender(gen);
+
+    const pageParam = parseInt(searchParams.get('page'), 10);
+    if (!isNaN(pageParam) && pageParam > 0) {
+      setCurrentPage(pageParam);
+    } else {
+      setCurrentPage(1);
+    }
   }, [searchParams]);
 
   // Load products
@@ -164,7 +207,7 @@ const ProductsPage = () => {
         const list = Array.isArray(res) ? res : (res?.content || []);
         setProducts(list);
       } catch (err) {
-        console.warn('Lỗi tải sản phẩm, hiển thị fallback:', err);
+        console.warn('Lỗi tải sản phẩm từ backend API:', err);
       } finally {
         setLoading(false);
       }
@@ -172,65 +215,177 @@ const ProductsPage = () => {
     load();
   }, []);
 
-  // Filter and Sort Logic
+  // Helper phân loại sản phẩm chuẩn xác vào 5 danh mục nghiệp vụ
+  const getItemCategory = (item) => {
+    if (!item) return 'OTHER';
+
+    // 1. Ưu tiên cao nhất: categoryId từ CSDL MySQL (1: Racket, 2: Shoes, 3: Apparel, 4: Bag, 5: Accessories)
+    const catId = Number(item.categoryId || item.category?.id);
+    if (catId === 1) return 'RACKET';
+    if (catId === 2) return 'SHOES';
+    if (catId === 3) return 'APPAREL';
+    if (catId === 4) return 'BAG';
+    if (catId === 5) return 'ACCESSORIES';
+
+    const cat = (item.categoryName || (typeof item.category === 'string' ? item.category : item.category?.name) || '').toUpperCase();
+    const name = (item.name || '').toUpperCase();
+
+    // 2. Kiểm tra chuỗi categoryName
+    if (cat.includes('GIÀY') || cat.includes('SHOE') || cat.includes('FOOTWEAR')) return 'SHOES';
+    if (cat.includes('QUẦN ÁO') || cat.includes('ÁO') || cat.includes('QUẦN') || cat.includes('APPAREL') || cat.includes('TRANG PHỤC') || cat.includes('CLOTHING')) return 'APPAREL';
+    if (cat.includes('BALO') || cat.includes('TÚI') || cat.includes('BAG') || cat.includes('BACKPACK')) return 'BAG';
+    if (cat.includes('CƯỚC') || cat.includes('PHỤ KIỆN') || cat.includes('ACCESSOR') || cat.includes('GRIP') || cat.includes('QUẤN CÁN')) return 'ACCESSORIES';
+    if (cat.includes('VỢT') || cat.includes('RACKET')) return 'RACKET';
+
+    // 3. Phân loại theo thuộc tính kỹ thuật đặc thù
+    if (item.soleType || item.cushionTechnology || name.startsWith('GIÀY') || name.includes('GIÀY CẦU LÔNG') || name.includes('SHOE')) return 'SHOES';
+    if (item.bagType || item.capacity || item.racketCapacity || name.startsWith('BALO') || name.startsWith('TÚI') || name.includes('BAO VỢT') || name.includes('TÚI VỢT')) return 'BAG';
+    if (item.fabricType || (item.gender && (name.includes('ÁO') || name.includes('QUẦN') || name.includes('VÁY'))) || name.startsWith('ÁO ') || name.startsWith('QUẦN ') || name.includes('ÁO ĐẤU') || name.includes('QUẦN SHORTS') || name.includes('ÁO THUN')) return 'APPAREL';
+    if (item.accessoryType || name.includes('CƯỚC') || name.includes('QUẤN CÁN') || name.includes('QUẢ CẦU') || name.includes('HỘP CẦU') || name.includes('BĂNG CỔ TAY') || name.includes('TẤT ') || name.includes('VỚ ')) return 'ACCESSORIES';
+    if (item.weightGrip || item.balancePoint || item.stiffness || item.maxTension || item.playStyle || name.includes('VỢT')) return 'RACKET';
+
+    return 'OTHER';
+  };
+
+  // Filter and Sort Logic - So khớp CHÍNH XÁC (Exact Match) trên từng field tương ứng
   const filteredProducts = products.filter((item) => {
-    // 1. Category Filter
+    // 1. Lọc Danh mục (Category Filter) - Loại trừ tuyệt đối việc match lẫn giữa Vợt, Balo và Phụ kiện
     if (selectedCategory !== 'ALL') {
-      const cat = (item.categoryName || item.category || '').toUpperCase();
-      const name = item.name?.toUpperCase() || '';
-      if (selectedCategory === 'RACKET') {
-        if (!cat.includes('RACKET') && !name.includes('VỢT')) return false;
-      } else if (selectedCategory === 'SHOES') {
-        if (!cat.includes('SHOE') && !name.includes('GIÀY')) return false;
-      } else if (selectedCategory === 'BAG') {
-        if (!cat.includes('BAG') && !name.includes('BAO') && !name.includes('BALO') && !name.includes('TÚI')) return false;
-      } else if (selectedCategory === 'APPAREL') {
-        if (!cat.includes('APPAREL') && !name.includes('ÁO') && !name.includes('QUẦN')) return false;
-      } else if (selectedCategory === 'ACCESSORIES') {
-        if (!cat.includes('ACCESSORIES') && !name.includes('CƯỚC') && !name.includes('CÁN') && !name.includes('CẦU')) return false;
-      }
+      const itemCat = getItemCategory(item);
+      if (itemCat !== selectedCategory) return false;
     }
 
-    // 2. Keyword Filter
+    // 2. Lọc Từ khóa (Keyword Search) - Tìm kiếm linh hoạt trên tên hoặc thương hiệu
     if (keyword.trim()) {
       const kw = keyword.toLowerCase();
       const match = item.name?.toLowerCase().includes(kw) || item.brand?.toLowerCase().includes(kw);
       if (!match) return false;
     }
 
-    // 3. Brand Filter
+    // 3. Lọc Thương hiệu (Brand Filter) - SO KHỚP CHÍNH XÁC (EXACT MATCH) TRÊN FIELD BRAND
+    // Tuyệt đối không kiểm tra chuỗi con trên name/description để không dính sản phẩm sai
     if (selectedBrand !== 'ALL') {
-      if (!item.brand?.toLowerCase().includes(selectedBrand.toLowerCase())) return false;
+      const itemBrand = (item.brand || '').trim().toLowerCase();
+      const targetBrand = selectedBrand.trim().toLowerCase();
+      const cleanBrand = (s) => s.replace(/[\s\-_]/g, '');
+      if (itemBrand !== targetBrand && cleanBrand(itemBrand) !== cleanBrand(targetBrand)) {
+        return false;
+      }
     }
 
-    // 4. Balance Point (for rackets)
-    if (selectedBalance !== 'ALL') {
-      if (!item.balancePoint?.toLowerCase().includes(selectedBalance.toLowerCase())) return false;
+    // 4. Lọc Điểm cân bằng (Chỉ áp dụng khi xem Vợt hoặc ALL)
+    if (selectedBalance !== 'ALL' && (selectedCategory === 'RACKET' || selectedCategory === 'ALL')) {
+      const bal = (item.balancePoint || '').toLowerCase();
+      const targetBal = selectedBalance.toLowerCase();
+      if (!bal.includes(targetBal)) return false;
     }
 
-    // 5. Weight (for rackets)
-    if (selectedWeight !== 'ALL') {
-      if (!item.weightGrip?.toLowerCase().includes(selectedWeight.toLowerCase())) return false;
+    // 5. Lọc Trọng lượng (Chỉ áp dụng khi xem Vợt hoặc ALL)
+    if (selectedWeight !== 'ALL' && (selectedCategory === 'RACKET' || selectedCategory === 'ALL')) {
+      const wGrip = (item.weightGrip || item.weightClass || '').toUpperCase();
+      const targetU = selectedWeight.toUpperCase();
+      const matchU = new RegExp(`(^|[^A-Z0-9])${targetU}([^A-Z0-9]|$)`, 'i');
+      if (!matchU.test(wGrip)) return false;
     }
 
-    // 6. Shoe Size
-    if (selectedShoeSize !== 'ALL') {
-      const desc = (item.description || item.name || '');
-      if (!desc.includes(selectedShoeSize)) return false;
+    // 6. Lọc Size Giày (Chỉ áp dụng khi xem Giày hoặc ALL)
+    if (selectedShoeSize !== 'ALL' && (selectedCategory === 'SHOES' || selectedCategory === 'ALL')) {
+      let sizes = [];
+      if (Array.isArray(item.sizes)) {
+        sizes = item.sizes.map(s => String(s).trim());
+      } else if (item.availableSizes) {
+        try {
+          const parsed = typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes;
+          if (Array.isArray(parsed)) sizes = parsed.map(s => String(s).trim());
+        } catch {
+          sizes = String(item.availableSizes).split(/[,;|\s]+/).map(s => s.trim());
+        }
+      }
+      const targetSize = String(selectedShoeSize).trim();
+      if (sizes.length > 0) {
+        if (!sizes.includes(targetSize)) return false;
+      } else {
+        const sizeRegex = new RegExp(`(?:size\\s*[:\\-]?\\s*|eu\\s*|\\b)(${targetSize})(?:\\b|\\s*eu|\\s*[,\\/])`, 'i');
+        if (!sizeRegex.test(item.availableSizes || item.name || '')) return false;
+      }
     }
 
-    // 7. Apparel Size
-    if (selectedApparelSize !== 'ALL') {
-      const desc = (item.description || item.name || '');
-      if (!desc.includes(selectedApparelSize)) return false;
+    // 7. Lọc Size Quần Áo (Chỉ áp dụng khi xem Quần Áo hoặc ALL)
+    if (selectedApparelSize !== 'ALL' && (selectedCategory === 'APPAREL' || selectedCategory === 'ALL')) {
+      let sizes = [];
+      if (Array.isArray(item.sizes)) {
+        sizes = item.sizes.map(s => String(s).trim().toUpperCase());
+      } else if (item.availableSizes) {
+        try {
+          const parsed = typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes;
+          if (Array.isArray(parsed)) sizes = parsed.map(s => String(s).trim().toUpperCase());
+        } catch {
+          sizes = String(item.availableSizes).split(/[,;|\s]+/).map(s => s.trim().toUpperCase());
+        }
+      }
+      const targetSize = selectedApparelSize.trim().toUpperCase();
+      if (sizes.length > 0) {
+        if (!sizes.includes(targetSize)) return false;
+      } else {
+        const sizeRegex = new RegExp(`(?:size\\s*[:\\-]?\\s*|\\b)(${targetSize})(?:\\b|\\s*[,\\/])`, 'i');
+        if (!sizeRegex.test(item.availableSizes || item.name || '')) return false;
+      }
     }
 
-    // 8. Price Range
+    // 8. Lọc Giới tính (Chỉ áp dụng khi xem Quần Áo hoặc ALL)
+    if (selectedGender !== 'ALL' && (selectedCategory === 'APPAREL' || selectedCategory === 'ALL')) {
+      const itemGender = (item.gender || '').trim().toLowerCase();
+      const targetGender = selectedGender.trim().toLowerCase();
+      if (itemGender === 'unisex') {
+        // Unisex phù hợp cả Nam và Nữ
+      } else if (itemGender !== targetGender) {
+        const name = (item.name || '').toLowerCase();
+        if (!name.includes(targetGender)) return false;
+      }
+    }
+
+    // 9. Lọc Dung tích / Loại Balo & Bao vợt (Chỉ áp dụng khi xem Balo hoặc ALL)
+    if (selectedBagType !== 'ALL' && (selectedCategory === 'BAG' || selectedCategory === 'ALL')) {
+      const bType = (item.bagType || '').toLowerCase();
+      const cap = (item.capacity || '').toLowerCase();
+      const name = (item.name || '').toLowerCase();
+      const target = selectedBagType.toLowerCase();
+      
+      if (target === 'backpack') {
+        if (!bType.includes('balo') && !bType.includes('backpack') && !name.includes('balo')) return false;
+      } else if (target === '6-racket') {
+        if (item.racketCapacity !== 6 && !name.includes('6 cây') && !bType.includes('6-racket')) return false;
+      } else if (target === '9-racket') {
+        if (item.racketCapacity !== 9 && !name.includes('9 cây') && !bType.includes('9-racket')) return false;
+      } else if (target === 'holdall') {
+        if (!bType.includes('holdall') && !cap.includes('45l') && !name.includes('holdall') && !name.includes('túi du đấu')) return false;
+      }
+    }
+
+    // 10. Lọc Loại Phụ Kiện (Chỉ áp dụng khi xem Phụ Kiện hoặc ALL)
+    if (selectedAccessoryType !== 'ALL' && (selectedCategory === 'ACCESSORIES' || selectedCategory === 'ALL')) {
+      const acc = (item.accessoryType || '').toLowerCase();
+      const name = (item.name || '').toLowerCase();
+      const target = selectedAccessoryType.toLowerCase();
+
+      if (target === 'string') {
+        if (!acc.includes('string') && !acc.includes('cuoc') && !name.includes('cước')) return false;
+      } else if (target === 'grip') {
+        if (!acc.includes('grip') && !acc.includes('quan_can') && !name.includes('quấn cán')) return false;
+      } else if (target === 'shuttlecock') {
+        if (!acc.includes('shuttlecock') && !acc.includes('cau') && !name.includes('quả cầu') && !name.includes('hộp cầu')) return false;
+      } else if (target === 'support') {
+        if (!acc.includes('support') && !acc.includes('bao_ve') && !name.includes('bảo vệ') && !name.includes('băng cổ tay') && !name.includes('vớ') && !name.includes('tất')) return false;
+      }
+    }
+
+    // 11. Lọc Khoảng giá: So sánh số học chính xác trên item.price
     if (selectedPriceRange !== 'ALL') {
-      if (selectedPriceRange === '<2m' && item.price >= 2000000) return false;
-      if (selectedPriceRange === '2-3.5m' && (item.price < 2000000 || item.price > 3500000)) return false;
-      if (selectedPriceRange === '3.5-5m' && (item.price < 3500000 || item.price > 5000000)) return false;
-      if (selectedPriceRange === '>5m' && item.price <= 5000000) return false;
+      const price = Number(item.price) || 0;
+      if (selectedPriceRange === '<2m' && price >= 2000000) return false;
+      if (selectedPriceRange === '2-3.5m' && (price < 2000000 || price > 3500000)) return false;
+      if (selectedPriceRange === '3.5-5m' && (price < 3500000 || price > 5000000)) return false;
+      if (selectedPriceRange === '>5m' && price <= 5000000) return false;
     }
 
     return true;
@@ -244,6 +399,37 @@ const ProductsPage = () => {
     return (b.id || 0) - (a.id || 0);
   });
 
+  // Phân trang: 12 sản phẩm mỗi trang theo thiết kế
+  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE) || 1;
+  const validCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedProducts = sortedProducts.slice(startIndex, endIndex);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages && newPage !== validCurrentPage) {
+      setCurrentPage(newPage);
+      if (productListTopRef.current) {
+        const yOffset = -90; // Khoảng đệm cho sticky header
+        const y = productListTopRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (validCurrentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (validCurrentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', validCurrentPage - 1, validCurrentPage, validCurrentPage + 1, '...', totalPages];
+  };
+
   const handleResetFilters = () => {
     setKeyword('');
     setSelectedBrand('ALL');
@@ -251,10 +437,12 @@ const ProductsPage = () => {
     setSelectedWeight('ALL');
     setSelectedShoeSize('ALL');
     setSelectedApparelSize('ALL');
+    setSelectedGender('ALL');
     setSelectedBagType('ALL');
     setSelectedAccessoryType('ALL');
     setSelectedPriceRange('ALL');
     setSortBy('bestseller');
+    setCurrentPage(1);
     setSearchParams(selectedCategory !== 'ALL' ? { category: selectedCategory } : {});
   };
 
@@ -326,7 +514,15 @@ const ProductsPage = () => {
                 key={tab.value}
                 onClick={() => {
                   setSelectedCategory(tab.value);
-                  setPage(0);
+                  setCurrentPage(1);
+                  // Reset các bộ lọc con đặc thù khi chuyển danh mục chính
+                  setSelectedBalance('ALL');
+                  setSelectedWeight('ALL');
+                  setSelectedShoeSize('ALL');
+                  setSelectedApparelSize('ALL');
+                  setSelectedGender('ALL');
+                  setSelectedBagType('ALL');
+                  setSelectedAccessoryType('ALL');
                   if (tab.value === 'ALL') {
                     setSearchParams({});
                   } else {
@@ -517,21 +713,91 @@ const ProductsPage = () => {
 
             {/* DYNAMIC FILTERS: DÀNH RIÊNG CHO QUẦN ÁO ĐẤU */}
             {selectedCategory === 'APPAREL' && (
+              <>
+                {/* Giới tính */}
+                <div className="flex flex-col gap-2 pt-2 border-t border-[#E2E8F0]">
+                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Phân Loại Giới Tính</span>
+                  <div className="grid grid-cols-4 gap-1.5 text-xs">
+                    {GENDER_OPTIONS.map((g) => (
+                      <button
+                        key={g.value}
+                        type="button"
+                        onClick={() => setSelectedGender(selectedGender === g.value ? 'ALL' : g.value)}
+                        className={`py-1.5 px-1.5 rounded font-bold transition-all text-center ${
+                          selectedGender === g.value
+                            ? 'bg-secondary text-white shadow-sm'
+                            : 'bg-[#F2F4F6] hover:border-secondary border border-transparent text-slate-800'
+                        }`}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Size Trang Phục */}
+                <div className="flex flex-col gap-2 pt-2 border-t border-[#E2E8F0]">
+                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Size Trang Phục</span>
+                  <div className="grid grid-cols-5 gap-1.5 text-xs">
+                    {APPAREL_SIZES.map((sz) => (
+                      <button
+                        key={sz}
+                        type="button"
+                        onClick={() => setSelectedApparelSize(selectedApparelSize === sz ? 'ALL' : sz)}
+                        className={`py-1.5 rounded font-bold transition-all text-center ${
+                          selectedApparelSize === sz
+                            ? 'bg-secondary text-white shadow-sm'
+                            : 'bg-[#F2F4F6] hover:border-secondary border border-transparent text-slate-800'
+                        }`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* DYNAMIC FILTERS: DÀNH RIÊNG CHO BALO & BAO VỢT */}
+            {selectedCategory === 'BAG' && (
               <div className="flex flex-col gap-2 pt-2 border-t border-[#E2E8F0]">
-                <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Size Trang Phục</span>
-                <div className="grid grid-cols-5 gap-1.5 text-xs">
-                  {APPAREL_SIZES.map((sz) => (
+                <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Loại Túi & Sức Chứa</span>
+                <div className="flex flex-col gap-1.5 text-xs">
+                  {BAG_TYPES.map((bg) => (
                     <button
-                      key={sz}
+                      key={bg.value}
                       type="button"
-                      onClick={() => setSelectedApparelSize(selectedApparelSize === sz ? 'ALL' : sz)}
-                      className={`py-1.5 rounded font-bold transition-all text-center ${
-                        selectedApparelSize === sz
-                          ? 'bg-secondary text-white shadow-sm'
-                          : 'bg-[#F2F4F6] hover:border-secondary border border-transparent text-slate-800'
+                      onClick={() => setSelectedBagType(selectedBagType === bg.value ? 'ALL' : bg.value)}
+                      className={`p-2 rounded-lg flex items-center justify-between text-left transition-all ${
+                        selectedBagType === bg.value
+                          ? 'bg-rose-50 border border-secondary text-slate-900 font-bold'
+                          : 'bg-[#F2F4F6] hover:bg-slate-200 text-slate-700'
                       }`}
                     >
-                      {sz}
+                      <span>{bg.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* DYNAMIC FILTERS: DÀNH RIÊNG CHO CƯỚC & PHỤ KIỆN */}
+            {selectedCategory === 'ACCESSORIES' && (
+              <div className="flex flex-col gap-2 pt-2 border-t border-[#E2E8F0]">
+                <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Phân Loại Phụ Kiện</span>
+                <div className="flex flex-col gap-1.5 text-xs">
+                  {ACCESSORY_TYPES.map((acc) => (
+                    <button
+                      key={acc.value}
+                      type="button"
+                      onClick={() => setSelectedAccessoryType(selectedAccessoryType === acc.value ? 'ALL' : acc.value)}
+                      className={`p-2 rounded-lg flex items-center justify-between text-left transition-all ${
+                        selectedAccessoryType === acc.value
+                          ? 'bg-rose-50 border border-secondary text-slate-900 font-bold'
+                          : 'bg-[#F2F4F6] hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <span>{acc.label}</span>
                     </button>
                   ))}
                 </div>
@@ -549,7 +815,7 @@ const ProductsPage = () => {
           </aside>
 
           {/* RIGHT COLUMN: TOOLBAR & PRODUCT GRID */}
-          <section className="flex-1 w-full min-w-0 flex flex-col gap-5">
+          <section ref={productListTopRef} className="flex-1 w-full min-w-0 flex flex-col gap-5">
             
             {/* Header Toolbar */}
             <div className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex flex-col gap-3">
@@ -559,7 +825,7 @@ const ProductsPage = () => {
                     {CATEGORY_TABS.find(t => t.value === selectedCategory)?.label || 'Tất cả sản phẩm'}
                   </h2>
                   <span className="text-xs text-slate-500">
-                    Hiển thị <strong className="text-slate-900">{sortedProducts.length}</strong> mẫu trang bị cao cấp chuẩn BWF
+                    Hiển thị <strong className="text-slate-900">{sortedProducts.length === 0 ? 0 : startIndex + 1} - {Math.min(endIndex, sortedProducts.length)}</strong> trong tổng số <strong className="text-slate-900">{sortedProducts.length}</strong> mẫu trang bị cao cấp chuẩn BWF
                   </span>
                 </div>
 
@@ -696,14 +962,14 @@ const ProductsPage = () => {
               </div>
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
-                {sortedProducts.map((product) => (
+                {paginatedProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             ) : (
               /* List Mode */
               <div className="flex flex-col gap-4">
-                {sortedProducts.map((product) => (
+                {paginatedProducts.map((product) => (
                   <div 
                     key={product.id} 
                     className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center gap-5"
@@ -744,6 +1010,73 @@ const ProductsPage = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Thanh Phân Trang (Pagination Bar) Chuẩn Design System */}
+            {sortedProducts.length > 0 && (
+              <div className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
+                <span className="text-xs sm:text-sm text-slate-500">
+                  Hiển thị <strong className="text-slate-900">{startIndex + 1} - {Math.min(endIndex, sortedProducts.length)}</strong> trong tổng số <strong className="text-slate-900">{sortedProducts.length}</strong> sản phẩm
+                </span>
+
+                <div className="flex items-center gap-1.5">
+                  {/* Nút Trước (Prev) */}
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(validCurrentPage - 1)}
+                    disabled={validCurrentPage <= 1}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                      validCurrentPage <= 1
+                        ? 'bg-slate-100 text-slate-400 border border-[#E2E8F0] cursor-not-allowed opacity-50'
+                        : 'bg-white text-slate-700 border border-[#E2E8F0] hover:bg-slate-50 hover:text-slate-900 shadow-sm'
+                    }`}
+                    title="Trang trước"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* Danh sách các trang */}
+                  {getPageNumbers().map((p, idx) => {
+                    if (p === '...') {
+                      return (
+                        <span key={`ellipsis-${idx}`} className="w-8 text-center text-slate-400 font-bold select-none text-xs">
+                          ...
+                        </span>
+                      );
+                    }
+                    const isActive = p === validCurrentPage;
+                    return (
+                      <button
+                        key={`page-${p}`}
+                        type="button"
+                        onClick={() => handlePageChange(p)}
+                        className={`w-9 h-9 rounded-lg text-xs font-bold transition-all ${
+                          isActive
+                            ? 'bg-[#EF4444] text-white shadow-sm font-black'
+                            : 'bg-white text-slate-700 border border-[#E2E8F0] hover:bg-slate-50 hover:border-slate-300'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+
+                  {/* Nút Sau (Next) */}
+                  <button
+                    type="button"
+                    onClick={() => handlePageChange(validCurrentPage + 1)}
+                    disabled={validCurrentPage >= totalPages}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                      validCurrentPage >= totalPages
+                        ? 'bg-slate-100 text-slate-400 border border-[#E2E8F0] cursor-not-allowed opacity-50'
+                        : 'bg-white text-slate-700 border border-[#E2E8F0] hover:bg-slate-50 hover:text-slate-900 shadow-sm'
+                    }`}
+                    title="Trang sau"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )}
 
