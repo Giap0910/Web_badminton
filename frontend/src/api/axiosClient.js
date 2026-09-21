@@ -24,9 +24,11 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    if (error.response?.status === 401 &&
+        error.config?.headers?.Authorization === `Bearer ${localStorage.getItem('token')}`) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      window.dispatchEvent(new Event('auth:expired'));
     }
     return Promise.reject(error);
   }

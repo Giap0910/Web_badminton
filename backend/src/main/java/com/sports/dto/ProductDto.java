@@ -1,6 +1,7 @@
 package com.sports.dto;
 
 import lombok.*;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 
@@ -11,19 +12,28 @@ import java.math.BigDecimal;
 @Builder
 public class ProductDto {
     private Long id;
+    @NotBlank @Size(max = 200)
     private String name;
+    @NotBlank @Size(max = 50)
     private String brand;
+    @NotNull @DecimalMin(value = "0", inclusive = false) @Digits(integer = 10, fraction = 2)
     private BigDecimal price;
+    @DecimalMin("0") @Digits(integer = 10, fraction = 2)
     private BigDecimal originalPrice;
+    @Min(0)
     private Integer stock;
+    private Integer expectedStock;
     private Integer reservedStock;
+    @Size(max = 500)
     private String imageUrl;
     private String description;
+    @Size(max = 50)
     private String sku;
     private String weightGrip;
     private String weightClass;
     private String stiffness;
     private String balancePoint;
+    @Size(max = 50)
     private String maxTension;
     private String playStyle;
     private String frameMaterial;
@@ -41,6 +51,7 @@ public class ProductDto {
     private String accessoryType;
     private String quantityPerPack;
     private String origin;
+    @Positive
     private Long categoryId;
     private String categoryName;
     private Double averageRating;

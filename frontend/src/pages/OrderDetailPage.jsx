@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { getOrderStatusLabel } from '../utils/formatters';
 import UserLayout from '../components/UserLayout';
 import { orderApi } from '../api/orderApi';
 import {
@@ -28,7 +29,6 @@ const OrderDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(0);
   const [copiedField, setCopiedField] = useState(null);
-  const [mockTriggering, setMockTriggering] = useState(false);
   const [actionError, setActionError] = useState('');
   const navigate = useNavigate();
 
@@ -90,18 +90,6 @@ const OrderDetailPage = () => {
     }
   };
 
-  const handleMockWebhookTrigger = async () => {
-    setMockTriggering(true);
-    setActionError('');
-    try {
-      await orderApi.triggerMockWebhook(order.payosOrderCode, order.totalAmount);
-      await fetchOrder();
-    } catch (err) {
-      setActionError(err.response?.data?.message || 'Lỗi khi kích hoạt Mock Webhook');
-    } finally {
-      setMockTriggering(false);
-    }
-  };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -157,13 +145,13 @@ const OrderDetailPage = () => {
             {order.status === 'PENDING' && (
               <span className="px-3.5 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold text-xs flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-amber-600" />
-                <span>Chờ thanh toán QR ({formatTimer(timeLeft)})</span>
+                <span>{getOrderStatusLabel(order)}{order.paymentMethod === 'PAYOS_VIETQR' ? ` (${formatTimer(timeLeft)})` : ''}</span>
               </span>
             )}
-            {order.status === 'PAID' && (
+            {['PAID', 'SHIPPING', 'COMPLETED'].includes(order.status) && (
               <span className="px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Đã thanh toán thành công</span>
+                <span>{getOrderStatusLabel(order)}</span>
               </span>
             )}
             {order.status === 'CANCELLED' && (
@@ -182,7 +170,13 @@ const OrderDetailPage = () => {
         )}
 
         {/* If PENDING: Show VietQR Payment Box */}
-        {order.status === 'PENDING' && (
+        {order.status === 'PENDING' && order.paymentMethod === 'COD' && (
+          <div className="bg-white p-6 rounded-2xl space-y-3">
+            <p>Đơn COD đang chờ xử lý. Thanh toán khi nhận hàng; không áp dụng thời hạn QR.</p>
+            <button className="border rounded px-4 py-2" onClick={handleCancelOrder}>Hủy đơn</button>
+          </div>
+        )}
+        {order.status === 'PENDING' && order.paymentMethod === 'PAYOS_VIETQR' && (
           <div className="bg-white rounded-2xl border-2 border-secondary/40 shadow-sm p-6 space-y-5">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="space-y-1 text-center sm:text-left">
@@ -213,15 +207,7 @@ const OrderDetailPage = () => {
             </div>
 
             {/* Mock Webhook Helper for dev testing */}
-            <button
-              type="button"
-              onClick={handleMockWebhookTrigger}
-              disabled={mockTriggering}
-              className="w-full py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
-            >
-              {mockTriggering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-              <span>Mô phỏng ngân hàng báo có tiền (Test Webhook Dev)</span>
-            </button>
+
           </div>
         )}
 

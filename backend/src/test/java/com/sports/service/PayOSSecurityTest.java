@@ -8,13 +8,105 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import com.sports.controller.PaymentController;
+import com.sports.entity.User;
+import com.sports.entity.Role;
+import com.sports.security.CustomUserDetails;
+import com.sports.security.JwtAuthenticationFilter;
+import com.sports.security.JwtTokenProvider;
+import com.sports.security.UserDetailsServiceImpl;
+import org.springframework.mock.env.MockEnvironment;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.core.context.SecurityContextHolder;
+import static org.mockito.Mockito.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class PayOSSecurityTest {
 
     private PayOSService payosService;
-    private final String testChecksumKey = "d65c40ba7368d18b2c4e673a5a73e3a9c735d487293b6e7090886101c5cb86b7";
+    private final String testChecksumKey = "unit-test-only-checksum-not-a-production-secret";
+
+    @Test
+    void mockPaymentIsDisabledByDefault() {
+        OrderService orders = mock(OrderService.class);
+        PaymentController controller = new PaymentController(payosService, orders, new MockEnvironment());
+        assertEquals(404, controller.triggerMockWebhook(1L, BigDecimal.TEN).getStatusCode().value());
+        verifyNoInteractions(orders);
+    }
+
+    @Test
+    void mockPaymentRequiresDevelopmentProfileEvenWhenEnabled() {
+        OrderService orders = mock(OrderService.class);
+        PaymentController controller = new PaymentController(payosService, orders, new MockEnvironment());
+        ReflectionTestUtils.setField(controller, "mockEnabled", true);
+        assertEquals(404, controller.triggerMockWebhook(1L, BigDecimal.TEN).getStatusCode().value());
+        verifyNoInteractions(orders);
+    }
+
+    @Test
+    void developmentMockCanBeExplicitlyEnabled() {
+        OrderService orders = mock(OrderService.class);
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("dev");
+        PaymentController controller = new PaymentController(payosService, orders, environment);
+        ReflectionTestUtils.setField(controller, "mockEnabled", true);
+        assertEquals(200, controller.triggerMockWebhook(1L, BigDecimal.TEN).getStatusCode().value());
+        verify(orders).handlePaymentSuccess(1L, BigDecimal.TEN);
+    }
+
+    @Test
+    void failedPaymentDoesNotMarkOrderPaid() {
+        PayOSService signatures = mock(PayOSService.class);
+        OrderService orders = mock(OrderService.class);
+        PayOSWebhookRequest request = payosService.generateMockWebhook(1L, BigDecimal.TEN);
+        request.getData().setCode("01");
+        when(signatures.verifyWebhookSignature(request)).thenReturn(true);
+        PaymentController controller = new PaymentController(signatures, orders, new MockEnvironment());
+        assertEquals(200, controller.handlePayOSWebhook(request).getStatusCode().value());
+        verifyNoInteractions(orders);
+    }
+
+    @Test
+    void invalidWebhookNeverUpdatesAnOrder() {
+        OrderService orders = mock(OrderService.class);
+        PaymentController controller = new PaymentController(payosService, orders, new MockEnvironment());
+        PayOSWebhookRequest request = payosService.generateMockWebhook(1L, BigDecimal.TEN);
+        request.setSignature("invalid");
+        assertEquals(401, controller.handlePayOSWebhook(request).getStatusCode().value());
+        verifyNoInteractions(orders);
+    }
+
+    @Test
+    void lockedAccountIsDisabledAndLocked() {
+        CustomUserDetails details = new CustomUserDetails(User.builder()
+                .username("locked").role(Role.ROLE_USER).isActive(false).build());
+        assertFalse(details.isEnabled());
+        assertFalse(details.isAccountNonLocked());
+    }
+
+    @Test
+    void existingJwtCannotAuthenticateLockedAccount() throws Exception {
+        JwtTokenProvider tokens = mock(JwtTokenProvider.class);
+        UserDetailsServiceImpl users = mock(UserDetailsServiceImpl.class);
+        when(tokens.validateToken("existing-token")).thenReturn(true);
+        when(tokens.getUsernameFromJwt("existing-token")).thenReturn("locked");
+        when(users.loadUserByUsername("locked")).thenReturn(new CustomUserDetails(User.builder()
+                .username("locked").role(Role.ROLE_USER).isActive(false).build()));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer existing-token");
+        jakarta.servlet.FilterChain chain = mock(jakarta.servlet.FilterChain.class);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        SecurityContextHolder.clearContext();
+        try {
+            new JwtAuthenticationFilter(tokens, users).doFilter(request, response, chain);
+            assertNull(SecurityContextHolder.getContext().getAuthentication());
+            verify(chain, times(1)).doFilter(request, response);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
 
     @BeforeEach
     void setUp() {

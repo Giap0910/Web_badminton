@@ -17,6 +17,7 @@ public class CustomUserDetails implements UserDetails {
     private final String email;
     private final String password;
     private final String fullName;
+    private final boolean active;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomUserDetails(User user) {
@@ -25,6 +26,7 @@ public class CustomUserDetails implements UserDetails {
         this.email = user.getEmail();
         this.password = user.getPassword();
         this.fullName = user.getFullName();
+        this.active = Boolean.TRUE.equals(user.getIsActive());
         this.authorities = Collections.singletonList(
                 new SimpleGrantedAuthority(user.getRole().name())
         );
@@ -52,7 +54,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return active;
     }
 
     @Override
@@ -62,6 +64,6 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return active;
     }
 }

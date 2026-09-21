@@ -20,98 +20,12 @@ import {
   Award
 } from 'lucide-react';
 
-const MOCK_REVIEWS = [
-  {
-    id: 1,
-    productId: 1,
-    productName: 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai',
-    productBrand: 'YONEX JAPAN',
-    productImage: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-    purchasedSpec: 'Phiên bản 4U/G5 • Căng cước BG80 Power 11.5kg (25.5 lbs)',
-    rating: 5,
-    createdAt: '24/10/2024',
-    content:
-      'Cây vợt đầm đầu smash cực kỳ uy lực, đũa Hyper Slim Shaft siêu mỏng giúp vung vợt thoát gió nhanh. Xưởng Apex Pro đan 4 nút chuẩn BWF cước căng đều, giữ cân cực tốt sau 3 tuần đánh giải. Cảm giác phông cầu cuối sân rất đầm tay, xứng đáng là siêu phẩm số 1 phân khúc!',
-    feedbackImages: [
-      'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=300&q=80',
-      'https://images.unsplash.com/photo-1613918108466-292b78a8ef95?auto=format&fit=crop&w=300&q=80'
-    ],
-    verifiedBuyer: true,
-    likes: 12,
-    officialReply: {
-      author: 'Chăm Sóc Khách Hàng Apex Pro',
-      date: '25/10/2024',
-      message:
-        'Cảm ơn bạn đã tin tưởng dịch vụ căng cước điện tử 4 nút của Apex Pro. Chúc bạn thi đấu thăng hoa cùng Astrox 100ZZ Kurenai! Khi cần bảo dưỡng cước định kỳ bạn có thể mang qua xưởng kiểm tra miễn phí nhé.'
-    }
-  },
-  {
-    id: 2,
-    productId: 2,
-    productName: 'Giày Cầu Lông Yonex Power Cushion 65Z3 Men Wide',
-    productBrand: 'YONEX',
-    productImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80',
-    purchasedSpec: 'Size 42 EU / 26.5cm • Form Bè Wide',
-    rating: 5,
-    createdAt: '18/10/2024',
-    content:
-      'Đế Power Cushion+ êm vượt trội, giảm chấn gót chân và khớp gối rất tốt trong các pha bật nhảy smash liên tục. Form bè Wide chuẩn chân người Việt, không bị bó tức ngón út. Bám sân gỗ và thảm PVC cực kỳ chắc chắn.',
-    feedbackImages: [
-      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80'
-    ],
-    verifiedBuyer: true,
-    likes: 8,
-    officialReply: null
-  },
-  {
-    id: 3,
-    productId: 3,
-    productName: 'Vợt Cầu Lông Victor Thruster Ryuga Metallic',
-    productBrand: 'VICTOR TAIWAN',
-    productImage: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?auto=format&fit=crop&w=400&q=80',
-    purchasedSpec: 'Phiên bản 3U/G5 • Cước Victor VBS-66 Nano 12kg',
-    rating: 5,
-    createdAt: '10/10/2024',
-    content:
-      'Khung Metallic Carbon đanh chắc, tiếng nổ đanh vang khắp sân. Vợt thuần công nặng đầu dành cho người cổ tay khỏe. Apex đóng gói ống carton hình trụ có đệm khí cực kỳ an toàn khi nhận hàng hỏa tốc.',
-    feedbackImages: [],
-    verifiedBuyer: true,
-    likes: 5,
-    officialReply: {
-      author: 'Kỹ Thuật Viên Xưởng Cước Apex Pro',
-      date: '11/10/2024',
-      message:
-        'Cảm ơn bạn! Dòng Ryuga Metallic kết hợp cước VBS-66 Nano ở mức 12kg sẽ phát huy tối đa độ nảy kim loại đặc trưng của cây vợt.'
-    }
-  }
-];
 
-const MOCK_PENDING_REVIEWS = [
-  {
-    orderId: 2,
-    productId: 4,
-    productName: 'Ống Cầu Lông Yonex Aerosensa 50 (12 quả)',
-    productBrand: 'YONEX',
-    productImage: 'https://images.unsplash.com/photo-1613918108466-292b78a8ef95?auto=format&fit=crop&w=400&q=80',
-    purchasedSpec: 'Tốc độ 77 • Tiêu chuẩn giải đấu BWF',
-    deliveredAt: '22/10/2024',
-    rewardPoints: '+50 điểm ApexClub'
-  },
-  {
-    orderId: 4,
-    productId: 5,
-    productName: 'Balo Cầu Lông Yonex Pro Tournament Bag',
-    productBrand: 'YONEX',
-    productImage: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&q=80',
-    purchasedSpec: 'Màu Fine Blue • Chứa 6 vợt + ngăn giày',
-    deliveredAt: '06/10/2024',
-    rewardPoints: '+50 điểm ApexClub'
-  }
-];
 
 const ReviewedProductsPage = () => {
-  const [reviews, setReviews] = useState(MOCK_REVIEWS);
-  const [pendingReviews, setPendingReviews] = useState(MOCK_PENDING_REVIEWS);
+  const [dataError, setDataError] = useState('');
+  const [reviews, setReviews] = useState([]);
+  const [pendingReviews, setPendingReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,7 +43,7 @@ const ReviewedProductsPage = () => {
       try {
         const res = await reviewApi.getMyReviews();
         const list = Array.isArray(res) ? res : res?.data || [];
-        if (list.length > 0) {
+        if (Array.isArray(list)) {
           // Merge API data
           const merged = list.map((item, idx) => ({
             id: item.id || idx + 1,
@@ -137,19 +51,19 @@ const ReviewedProductsPage = () => {
             productName: item.productName || 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai',
             productBrand: item.productBrand || 'YONEX',
             productImage: item.productImageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-            purchasedSpec: item.purchasedSpec || 'Phiên bản 4U/G5 • Căng cước BG80 Power 11.5kg',
+            purchasedSpec: item.purchasedSpec || '',
             rating: item.rating || 5,
             createdAt: item.createdAt || '24/10/2024',
-            content: item.comment || item.content || 'Sản phẩm chính hãng chất lượng tuyệt vời!',
+            content: item.comment || item.content || '',
             feedbackImages: item.feedbackImages || [],
-            verifiedBuyer: true,
-            likes: 4,
+            verifiedBuyer: item.verifiedBuyer === true,
+            likes: item.likes ?? 0,
             officialReply: null
           }));
           setReviews(merged);
         }
       } catch (err) {
-        console.warn('API reviews fallback to mock list:', err);
+        setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
       } finally {
         setLoading(false);
       }
@@ -176,36 +90,14 @@ const ReviewedProductsPage = () => {
     };
 
     try {
-      if (reviewApi?.createReview) {
-        await reviewApi.createReview(payload);
-      }
+      const saved = await reviewApi.createReview(payload);
+      setReviews([{ ...selectedPending, id: saved.id, content: saved.comment || '', rating: saved.rating,
+        createdAt: saved.createdAt, feedbackImages: [], verifiedBuyer: false, likes: 0 }, ...reviews]);
     } catch (err) {
-      console.warn('Gửi review lỗi hoặc dùng fallback cục bộ:', err);
+      alert(err.response?.data?.message || 'Không thể gửi hoặc tải lại đánh giá. Vui lòng kiểm tra trước khi gửi lại.');
+      setSubmittingReview(false);
+      return;
     }
-
-    const newRev = {
-      id: Date.now(),
-      productId: selectedPending.productId,
-      productName: selectedPending.productName,
-      productBrand: selectedPending.productBrand,
-      productImage: selectedPending.productImage,
-      purchasedSpec: reviewSpec || selectedPending.purchasedSpec,
-      rating: ratingStars,
-      createdAt: 'Vừa xong',
-      content: reviewText,
-      feedbackImages: [
-        'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=300&q=80'
-      ],
-      verifiedBuyer: true,
-      likes: 1,
-      officialReply: {
-        author: 'Apex Club Master',
-        date: 'Vừa xong',
-        message: 'Cảm ơn đóng góp quý báu của bạn! 50 điểm thưởng ApexClub đã được cộng vào tài khoản.'
-      }
-    };
-
-    setReviews([newRev, ...reviews]);
     setPendingReviews((prev) => prev.filter((p) => p.productId !== selectedPending.productId));
     setSubmittingReview(false);
     setShowReviewModal(false);
@@ -221,6 +113,7 @@ const ReviewedProductsPage = () => {
 
   return (
     <UserLayout currentPage="Sản phẩm đã đánh giá" counts={{ reviews: reviews.length }}>
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & QUICK STATS CONTAINER */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200/80 flex flex-col gap-5">

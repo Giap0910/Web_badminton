@@ -34,9 +34,8 @@ public class AdminDashboardService {
         long totalCustomers = userRepository.count();
         long totalProducts = productRepository.count();
         long pendingOrders = orderRepository.countByStatus(OrderStatus.PENDING);
-        long paidOrders = orderRepository.countByStatus(OrderStatus.PAID);
-
-        List<Order> paidOrderList = orderRepository.findByStatus(OrderStatus.PAID);
+        List<Order> paidOrderList = orderRepository.findRecognizedPaymentOrders();
+        long paidOrders = paidOrderList.size();
         BigDecimal totalRevenue = paidOrderList.stream()
                 .map(Order::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

@@ -43,12 +43,12 @@ const AdminSettingsPage = () => {
   });
 
   const [paymentConfig, setPaymentConfig] = useState({
-    payosClientId: 'apex-payos-client-id-prod-89241',
-    payosApiKey: '••••••••••••••••••••••••••••••••',
-    checksumKey: '••••••••••••••••••••••••••••••••',
-    bankName: 'VietinBank (Ngân hàng TMCP Công Thương Việt Nam)',
-    accountNumber: '103876543210',
-    accountName: 'APEX BADMINTON JSC'
+    payosClientId: '',
+    payosApiKey: '',
+    checksumKey: '',
+    bankName: '',
+    accountNumber: '',
+    accountName: ''
   });
 
   const [shippingConfig, setShippingConfig] = useState({
@@ -60,12 +60,13 @@ const AdminSettingsPage = () => {
 
   const handleSave = (e) => {
     e.preventDefault();
-    setToastMessage('Đã lưu toàn bộ cấu hình hệ thống Apex Badminton thành công!');
+    setToastMessage('Chức năng lưu cấu hình chưa được kết nối máy chủ. Chưa có thay đổi nào được lưu.');
     setTimeout(() => setToastMessage(''), 3500);
   };
 
   return (
     <AdminLayout title="Cài đặt" subtitle="Cài đặt hệ thống & Cấu hình dịch vụ">
+      <p role="status" className="p-4 bg-amber-50 text-amber-800 rounded-xl">Màn hình cấu hình chưa kết nối máy chủ. Các giá trị dưới đây chỉ là mẫu giao diện, không phải cấu hình đang hoạt động. Không nhập khóa bí mật thật vào đây.</p>
       <div className="flex flex-col gap-6">
         {/* HEADER & ACTION BAR */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">

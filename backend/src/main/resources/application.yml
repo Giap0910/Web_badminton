@@ -28,13 +28,16 @@ spring:
 
 app:
   jwt:
-    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     expiration-ms: 86400000 # 24 hours
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
 
 payos:
-  client-id: ${PAYOS_CLIENT_ID:mock_client_id}
-  api-key: ${PAYOS_API_KEY:mock_api_key}
-  checksum-key: ${PAYOS_CHECKSUM_KEY:d65c40ba7368d18b2c4e673a5a73e3a9c735d487293b6e7090886101c5cb86b7}
+  client-id: ${PAYOS_CLIENT_ID:}
+  api-key: ${PAYOS_API_KEY:}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:}
+  mock-enabled: false
   return-url: http://localhost:5173/orders/success
   cancel-url: http://localhost:5173/orders/cancel
 

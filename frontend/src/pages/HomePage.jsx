@@ -18,8 +18,12 @@ import {
   Trophy,
   Swords,
   X,
-  ShoppingCart,
-  Check
+  ShoppingCart, 
+  Check,
+  ShieldCheck,
+  Truck,
+  Shield,
+  Headphones
 } from 'lucide-react';
 
 // Danh sách Hero Slides theo đúng chuẩn thi đấu APEX BWF
@@ -69,215 +73,23 @@ const HERO_SLIDES = [
     titleLine1: 'CĂNG CƯỚC 4 NÚT ĐIỆN TỬ',
     titleGradient: 'CHUẨN LỰC ĐẾN TỪNG LBS',
     description: 'Đội ngũ KTV chứng chỉ quốc tế căng vợt điện tử lấy liền sau 20 phút. Bảo hành đứt cước 24H an tâm tuyệt đối trên mọi giải đấu.',
-    ctaPrimary: 'Đặt lịch ngay',
+    ctaPrimary: 'Khám phá ngay',
     ctaPrimaryLink: '/products?category=ACCESSORIES',
     ctaSecondary: 'Xem loại cước',
-    ctaSecondaryLink: '/products?category=ACCESSORIES',
+    ctaSecondaryLink: '/product/string/string-bg80p',
     slideCode: '04 / 04 STRINGING PRO',
     bgImage: 'https://images.unsplash.com/photo-1544919982-b61976f0ba43?q=80&w=2069&auto=format&fit=crop'
   }
 ];
 
 // 8 Sản phẩm bán chạy chuẩn thiết kế gốc
-const MOCK_BESTSELLERS = [
-  {
-    id: 1,
-    name: 'Vợt Yonex Astrox 100ZZ Kurenai Pro',
-    brand: 'Yonex Japan',
-    weightGrip: '3U/4U - Head Heavy',
-    balancePoint: 'Head-Heavy (Nặng đầu)',
-    stiffness: 'Extra Stiff',
-    price: 4290000,
-    originalPrice: 4850000,
-    averageRating: 4.9,
-    reviewCount: 128,
-    badge: 'Bán chạy',
-    stock: 15,
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCOFwZT1UJx5nkitITNFAjiR7oN1GVOk7tVqfi8VhTpi_UNiYyGmzZchQLR-OHFtbD6abTEHZ1tJeE3F9Ch-Sd5BalslPXTcg-0xfOsJI4H0MzHYnEGOCBg3H41UP0-a7I9elHE07OCDNkyrEKbdAtjgKbL6AAAZffbfOc0QBd8cLbdKs69D4qza-BkpsRhooyHwD-6K0zhrsEZs-tn7-0ACwfqU-7-NeA74IadD4DbLOFHRE7-iO06',
-    category: 'racket'
-  },
-  {
-    id: 2,
-    name: 'Giày Yonex Power Cushion 65Z3 White Gold',
-    brand: 'Yonex',
-    weightGrip: 'Power Cushion+',
-    balancePoint: 'Bám sân đệm khí',
-    stiffness: 'Đế cao su chuyên dụng',
-    price: 2790000,
-    originalPrice: 3200000,
-    averageRating: 5.0,
-    reviewCount: 242,
-    badge: 'Bán chạy',
-    stock: 22,
-    imageUrl: 'https://lh3.googleusercontent.com/aida/AEtjO1WQOsbdAY0gdyqL27VcunwdURledecu-PAk-FoeRnzROUi2tcKee5cL_jvVWz-CSSedLNOWu3-aGuoq4kv1knplN-0kimisZaf_W3B99gK1Cg_eivpFwQV4gPJvZAExISgqhpD15FMvPk2DqCEh2yGwQSmW9sCnPC6IYtjY2sZ1z41dhzhbVzRGgqA0O78EQ8uSU_AdFo5VjZ66kSW5W1tT5WqnQT7OS-mT6ixALyUEQRJusofCy2aOyDg',
-    category: 'shoes'
-  },
-  {
-    id: 3,
-    name: 'Balo Cầu Lông Apex Pro Tour 30L Waterproof',
-    brand: 'Apex Pro Gear',
-    weightGrip: 'Chống nước IPX4',
-    balancePoint: 'Ngăn vợt & giày riêng',
-    stiffness: 'Quai đeo công thái học',
-    price: 950000,
-    originalPrice: 1250000,
-    averageRating: 4.8,
-    reviewCount: 96,
-    badge: 'Bán chạy',
-    stock: 18,
-    imageUrl: 'https://lh3.googleusercontent.com/aida/AEtjO1WHKPki2jTlVwub3ImA3ty3gM2YAQwj5koLaf0fSdkA1LuWAdY1CBsHP_ppZPk9zEh0l-M5KIocq8iVle1sOytRFVPtigTvZP7_ClIXQClVzKNK14ZVnTBdBI1zaJd6nqGtq_r0g_p6kV1d26qIMBVzQ15bM7SOh_N1sejl0pFwtG-noTGsMEfgs57UzRAf1mZSxlshXJilwKAvskhFVytKmP_vfhaYIAZ9WtvTO2uAyLoxl5ZvQf0XRuI',
-    category: 'bag'
-  },
-  {
-    id: 4,
-    name: 'Áo Đấu Apex Pro Tournament Navy Breathable',
-    brand: 'Victor Pro',
-    weightGrip: 'CoolMax -3°C',
-    balancePoint: 'Co giãn 4 chiều',
-    stiffness: 'Thoáng khí siêu nhẹ',
-    price: 490000,
-    originalPrice: 690000,
-    averageRating: 4.9,
-    reviewCount: 189,
-    badge: 'Bán chạy',
-    stock: 45,
-    imageUrl: 'https://lh3.googleusercontent.com/aida/AEtjO1W33GfCrAL5kowciyMaLyni5RiJDVqbk2n_EqKL2ZUu8-7l4rJpBYxuOkJAscOJ_MFf4kmeTj_nNXVtrU2sNt89M5cQqE77l2ZvDxbzswmfmfupFgy6AE17krMf3pOsq22S_LGrxzpl9DFzncwlYIY6y_8Aq28C9TFcc4rYV7-_4C158Uker61uSG44C-W2N-OIb-bf52aaCcj0FySI-ujjYKPPiNUqvVwFVusMR4lJvHpu0QsYkKSc-IA',
-    category: 'apparel'
-  },
-  {
-    id: 5,
-    name: 'Vợt Victor Thruster Ryuga II Pro Metallic',
-    brand: 'Victor Taiwan',
-    weightGrip: 'WES 2.0 Hard Flex',
-    balancePoint: 'Head-Heavy (Nặng đầu)',
-    stiffness: 'Stiff',
-    price: 4100000,
-    originalPrice: 4650000,
-    averageRating: 4.9,
-    reviewCount: 114,
-    badge: 'Bán chạy',
-    stock: 14,
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB2Esq-IZOOZqw_recVEoOclREp1RkcL3Ik6MbcPcxi2fZ0YeTqOyOxN9WZ5GHTn-DhvAPKmMsBYiTcaFATQOgYTdMB_ak6LUgbQ8MNzKXmW7qpRC2w614dQMYtZuYgWKxaYFE6e78wu9bsY_A2HcU2_9WgX8KGEafkHTuVgckreE1ihm9ttvCIPNYoJr-Ts6wvFjIFchvbkVX9B2PPPmIHyBGBrKw1_jO5nxsd1jwkrxSYLvAko4q1',
-    category: 'racket'
-  },
-  {
-    id: 6,
-    name: 'Bao Vợt Nhiệt Apex Thermo Guard 9 Cây',
-    brand: 'Apex Tour',
-    weightGrip: 'Thermo Guard 9 Rackets',
-    balancePoint: 'Lớp cách nhiệt cao cấp',
-    stiffness: 'Chống thấm nước IPX4',
-    price: 1180000,
-    originalPrice: 1450000,
-    averageRating: 4.8,
-    reviewCount: 82,
-    badge: 'Bán chạy',
-    stock: 20,
-    imageUrl: 'https://lh3.googleusercontent.com/aida/AEtjO1WXypl1zzVROpa9wlvi4aHEbpp6an-KUEQj3s1Zn_cBorV9-9KWZPeJRggWIGWLH0AOiulsUJO2BaScICZ_ir0hmbF_zg-BFWorXy38AotE9ULFdcYJHCzao8MB_shV3BSIFlRMuMm7Ov5H-snSVfWhJ4S_bu76eWxCLbNkrK2PuyU914LJ3ev3domHa8Ey-edUyvW-rKbWvrsfL3uZ_cxaAlDpJQRmadK5lHmKUp7cfkKwi1bQAneb3wQ',
-    category: 'bag'
-  },
-  {
-    id: 7,
-    name: 'Vợt Li-Ning Halbertec 9000 Pro',
-    brand: 'Li-Ning',
-    weightGrip: '6.6mm High Modulus',
-    balancePoint: 'Even-Balance (Toàn diện)',
-    stiffness: 'Medium Stiff',
-    price: 4450000,
-    originalPrice: 4990000,
-    averageRating: 5.0,
-    reviewCount: 165,
-    badge: 'Bán chạy',
-    stock: 12,
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAM0qvbH1USq-yBhuIezp7fYiKZOIdItHA4nY8t5fify70TE-mFZfYiuI5HpGQ6qIZZ2G-IuQP5fBDjb0FIxcZEaWy_KmsfpJiIW_OlwIqf1wLrFnO4OhWOaA2czSl1K8t83Aaxlglh-O8OOGvIM_-AWV3A7EFI4Vs_A-Pt5w1PBCvxlZBzjTQsOHukSOJTFGBqRyxEde8O4E3Z4-h5kQXeKoijPbQioLP9IRiq3zNYRGCJoAu1ROJf',
-    category: 'racket'
-  },
-  {
-    id: 8,
-    name: 'Quấn cán Yonex AC102EX vỉ 3 cuộn',
-    brand: 'Yonex',
-    weightGrip: 'Super Grap 3-pack',
-    balancePoint: 'Độ bám êm tay',
-    stiffness: 'Chống mồ hôi tốt',
-    price: 95000,
-    originalPrice: 120000,
-    averageRating: 5.0,
-    reviewCount: 512,
-    badge: 'Bán chạy',
-    stock: 150,
-    imageUrl: 'https://lh3.googleusercontent.com/aida/AEtjO1Vi9OaVFBPd6y0h2lY1ChhCbZUxacPh47LeL-4-CqofIOg6PE0CkZFT4JTWaUEof84EMDCWgJBLhyg-rcznbAd0uWPkOi-mxEf83c6JB8z4pkwtbLGfpZWjz4s4mHde4DQEdPY2QevLbZ4tmfyl1c7Qi19ysYkscofFnYdTuKhBIl8p2XLG9UIFDb6AJ11Re3DD02bGTBRd1bAUUcZiLuZFstUxq2Ygr3qz8pcGdzUamC0Lrc_Tw2bDsIA',
-    category: 'accessories'
-  }
-];
 
 // 4 Sản phẩm mới về (New Arrivals 2024)
-const MOCK_NEW_ARRIVALS = [
-  {
-    id: 9,
-    name: 'Vợt Yonex Nanoflare 1000Z Lightning Yellow',
-    brand: 'Yonex',
-    weightGrip: 'Sonic Flare System',
-    balancePoint: 'Head-Light (Phản tạt tốc độ)',
-    stiffness: 'Extra Stiff',
-    price: 4590000,
-    originalPrice: null,
-    averageRating: 5.0,
-    reviewCount: 38,
-    badge: 'MỚI 2024',
-    stock: 10,
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCmLNbW-eutvqdp-D_qWa1Kt5afba6rGnYKRLUYULayW5U1dV2LIVFuGONfyrTJHkhY5LgC3l2GS15eIPXGxRtRAE94-fGGV1L71GFUFwm34U4ORrN3kQa2I6z-kUiXyFJWic8-s8Xm1UB55nYEdTiUQ-GI8hxvA2fdj8UMyt1zcVpTbFjKClkhsvwB8kMpD_OILzDmZ0JbZAduuQ7hHfniB7amwVacSdTXiFzfLKOeGG8myJ0bGuJW'
-  },
-  {
-    id: 10,
-    name: 'Giày Victor P9200III Nitrolite Tournament',
-    brand: 'Victor',
-    weightGrip: 'Nitrolite Midsole',
-    balancePoint: 'Siêu nhẹ bật nhảy',
-    stiffness: 'Đế chống trượt cao cấp',
-    price: 3150000,
-    originalPrice: null,
-    averageRating: 4.9,
-    reviewCount: 28,
-    badge: 'MỚI 2024',
-    stock: 16,
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAAa3BURE1I88sAdw_GsaUYIqq1caWqE8iyzExCZvTRSoG8LXFEm3Y5tDDNdg1EP5_rnW57ii5KdbEGYTW3BgjDWJWBpBY5iKBbXHdaf8z-FDARP0V5p_6nHyc55QPdiGrFaWKbP1ys3_rdeP61J9RD78Wmt6lq5sTME6NbpQXT4IBd_u0BRkOpaqCeTKqcsHumbEu1PPOVuF2RM1MTPDyorVAlbDMEYiAAMvWLDp18XI2ksU_MM1Ck'
-  },
-  {
-    id: 11,
-    name: 'Túi Du Đấu Apex Tour Pro Holdall 45L',
-    brand: 'Apex Tour',
-    weightGrip: 'Dung tích 45L',
-    balancePoint: 'Chống thấm nước',
-    stiffness: 'Chứa 6 cây vợt + giày',
-    price: 1350000,
-    originalPrice: null,
-    averageRating: 5.0,
-    reviewCount: 19,
-    badge: 'MỚI 2024',
-    stock: 12,
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBWD-k6lHEcXn9J84Xjd7_QcDz680mSkQcdsp8iBVkfdo5VODDUCsbC5FIZgIkRB3AvM3qHiNmI7l-Tjl7XD_b7pGrQMyiKqDKO4Lro8vi6lg7Z3e2LQBTYwSztI6AR8B_n7O8cfTp_XTHq4fNYPFrmYBow03iYqCuH-I7GTXjuZaers7BI85NotMTjPFTN4dm9MMs-ZbMyunfH9yNam-wBmtZy_aW7ik6iIQ1oVi7DYorDbLbWGkpL'
-  },
-  {
-    id: 12,
-    name: 'Áo Khoác Gió Khởi Động Apex Pro Windbreaker',
-    brand: 'Apex Apparel',
-    weightGrip: 'Cản gió Warm-up',
-    balancePoint: 'Màng thở công nghệ cao',
-    stiffness: 'Khóa kéo kháng nước',
-    price: 790000,
-    originalPrice: null,
-    averageRating: 4.8,
-    reviewCount: 43,
-    badge: 'MỚI 2024',
-    stock: 25,
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9IEUCgLlL3GW5QIfUXCh_OdodRH7_6SUEKaSHWhU2Rq7VfJrxtbjPPayQDVW8hFirkY66GGyXt4mapHlXYaz5SC0f97d_1FG2RYqn-9sLHN1UsBdfzolgv4YaHRJjIUyrDoWE6q-W0rItCRvyHVaCEhY4dwLJ6tKRyNPX90TiUNrWJtKtelXtDOssE73al0GyFMYTUUitzmd0XenPGkYPuqF1-dgHtMIg-zx0QBbQRbc2COOA9jMP'
-  }
-];
 
 const HomePage = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeTab, setActiveTab] = useState('all');
-  const [products, setProducts] = useState(MOCK_BESTSELLERS);
+  const [products, setProducts] = useState([]);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [quickViewQty, setQuickViewQty] = useState(1);
   const [addedSuccess, setAddedSuccess] = useState(false);
@@ -297,11 +109,12 @@ const HomePage = () => {
     const loadProducts = async () => {
       try {
         const res = await productApi.getProducts({});
-        if (Array.isArray(res) && res.length >= 8) {
-          setProducts(res);
+        const list = Array.isArray(res) ? res : (res?.content || []);
+        if (list.length > 0) {
+          setProducts(list);
         }
       } catch (err) {
-        console.warn('Dùng danh sách sản phẩm chuẩn thiết kế:', err);
+        console.warn('Không thể tải sản phẩm:', err);
       }
     };
     loadProducts();
@@ -311,13 +124,16 @@ const HomePage = () => {
   const filteredProducts = products.filter((item) => {
     if (activeTab === 'all') return true;
     if (activeTab === 'racket') {
-      return item.category === 'racket' || item.categoryName?.toLowerCase().includes('vợt') || item.name?.toLowerCase().includes('vợt');
+      return item.categoryId === 1 || item.category === 'racket' || item.categoryName?.toLowerCase().includes('vợt') || item.name?.toLowerCase().includes('vợt');
     }
     if (activeTab === 'shoes') {
-      return item.category === 'shoes' || item.categoryName?.toLowerCase().includes('giày') || item.name?.toLowerCase().includes('giày');
+      return item.categoryId === 2 || item.category === 'shoes' || item.categoryName?.toLowerCase().includes('giày') || item.name?.toLowerCase().includes('giày');
     }
     if (activeTab === 'bag') {
-      return item.category === 'bag' || item.categoryName?.toLowerCase().includes('bao') || item.categoryName?.toLowerCase().includes('balo') || item.name?.toLowerCase().includes('bao') || item.name?.toLowerCase().includes('balo');
+      return item.categoryId === 4 || item.category === 'bag' || item.categoryName?.toLowerCase().includes('bao') || item.categoryName?.toLowerCase().includes('balo') || item.name?.toLowerCase().includes('bao') || item.name?.toLowerCase().includes('balo');
+    }
+    if (activeTab === 'accessory') {
+      return item.categoryId === 5 || item.category === 'ACCESSORIES' || item.categoryName?.toLowerCase().includes('phụ kiện') || item.name?.toLowerCase().includes('cước') || item.name?.toLowerCase().includes('quấn cán') || item.name?.toLowerCase().includes('cầu') || item.name?.toLowerCase().includes('băng');
     }
     return true;
   });
@@ -336,7 +152,10 @@ const HomePage = () => {
 
   const handleQuickAdd = () => {
     if (quickViewProduct) {
-      addToCart(quickViewProduct, quickViewQty);
+      if (!addToCart(quickViewProduct, quickViewQty)) {
+        alert('Không đủ tồn kho hoặc số lượng không hợp lệ.');
+        return;
+      }
       setAddedSuccess(true);
       setTimeout(() => {
         setAddedSuccess(false);
@@ -643,10 +462,10 @@ const HomePage = () => {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex items-center p-1 bg-[#ECEEF0] rounded-xl">
+          <div className="flex items-center p-1 bg-[#ECEEF0] rounded-xl overflow-x-auto">
             <button 
               onClick={() => setActiveTab('all')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                 activeTab === 'all' ? 'bg-white text-secondary shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -654,7 +473,7 @@ const HomePage = () => {
             </button>
             <button 
               onClick={() => setActiveTab('racket')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                 activeTab === 'racket' ? 'bg-white text-secondary shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -662,19 +481,27 @@ const HomePage = () => {
             </button>
             <button 
               onClick={() => setActiveTab('shoes')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                 activeTab === 'shoes' ? 'bg-white text-secondary shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Giày Đấu
+              Giày Siêu Bám Sân
             </button>
             <button 
               onClick={() => setActiveTab('bag')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                 activeTab === 'bag' ? 'bg-white text-secondary shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Bao Vợt
+              Balo & Túi
+            </button>
+            <button 
+              onClick={() => setActiveTab('accessory')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                activeTab === 'accessory' ? 'bg-white text-secondary shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Phụ Kiện Pro
             </button>
           </div>
         </div>
@@ -691,44 +518,70 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* 4. INTERMEDIATE PRO PROMO BANNER (Technical Customization Service) */}
-      <section className="max-w-[80rem] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <div className="relative rounded-2xl bg-gradient-to-r from-[#131B2E] via-slate-800 to-[#131B2E] p-8 lg:p-12 text-white overflow-hidden shadow-xl border border-slate-700/50">
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-8 flex flex-col gap-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-white text-xs font-bold uppercase tracking-wider w-fit">
-                <Wrench className="w-3.5 h-3.5" />
-                <span>Dịch vụ kỹ thuật chuẩn BWF Tour</span>
+      {/* 4. SECTION: GIÁ TRỊ VƯỢT TRỘI - VÌ SAO CHỌN CHÚNG TÔI (WHY CHOOSE US) */}
+      <section className="w-full bg-[#131B2E] text-white py-14 lg:py-20 border-t border-slate-800">
+        <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center text-center gap-2 mb-12">
+            <span className="px-3.5 py-1 rounded-full bg-secondary/15 text-secondary text-xs font-bold uppercase tracking-widest">
+              GIÁ TRỊ VƯỢT TRỘI
+            </span>
+            <h2 className="font-display text-2xl sm:text-3xl font-extrabold uppercase text-white tracking-tight">
+              VÌ SAO CHỌN CHÚNG TÔI
+            </h2>
+            <div className="w-12 h-1 bg-secondary rounded-full mt-1"></div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 divide-y md:divide-y-0 md:divide-x divide-slate-800/80">
+            {/* Feature 1 */}
+            <div className="flex flex-col items-center text-center p-4 pt-6 md:pt-4 gap-3">
+              <div className="w-16 h-16 rounded-full bg-secondary/15 text-secondary flex items-center justify-center mb-1">
+                <ShieldCheck className="w-8 h-8 text-secondary" />
               </div>
-              <h2 className="font-display text-2xl sm:text-3xl font-black uppercase tracking-tight">
-                CĂNG CƯỚC ĐIỆN TỬ 4 NÚT - CHUẨN LỰC ĐẾN TỪNG LBS
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl">
-                Sở hữu máy căng cước điện tử Yonex Precision 9.0 độc quyền. Đội ngũ KTV chứng chỉ quốc tế đảm bảo dây không bị chùng sụt cân sau trận đấu nảy lửa. Miễn phí tư vấn loại cước theo lối đánh tấn công hay phản tạt.
+              <h3 className="font-display text-lg font-bold text-white">
+                Hàng chính hãng 100%
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xs">
+                Nhập khẩu trực tiếp từ Yonex, Victor, Lining, Mizuno với tem chống hàng giả chuẩn Bộ Công An.
               </p>
-              <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                  <CheckCircle2 className="text-secondary w-4 h-4 shrink-0" />
-                  <span>Đo độ căng điện tử</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                  <CheckCircle2 className="text-secondary w-4 h-4 shrink-0" />
-                  <span>Bảo hành đứt cước 24h</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-                  <CheckCircle2 className="text-secondary w-4 h-4 shrink-0" />
-                  <span>Lấy liền sau 20 phút</span>
-                </div>
-              </div>
             </div>
 
-            <div className="lg:col-span-4 flex flex-col items-start lg:items-end justify-center">
-              <Link
-                to="/products?category=ACCESSORIES"
-                className="px-8 py-3.5 rounded-xl bg-white text-slate-900 font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-secondary hover:text-white transition-all shadow-lg active:scale-95 text-center"
-              >
-                Đặt lịch căng vợt
-              </Link>
+            {/* Feature 2 */}
+            <div className="flex flex-col items-center text-center p-4 pt-6 md:pt-4 gap-3">
+              <div className="w-16 h-16 rounded-full bg-secondary/15 text-secondary flex items-center justify-center mb-1">
+                <Truck className="w-8 h-8 text-secondary" />
+              </div>
+              <h3 className="font-display text-lg font-bold text-white">
+                Giao hàng nhanh 2-3 ngày
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xs">
+                Miễn phí vận chuyển toàn quốc cho đơn hàng từ 500.000đ. Đóng gói hộp chống va đập 3 lớp.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="flex flex-col items-center text-center p-4 pt-6 md:pt-4 gap-3">
+              <div className="w-16 h-16 rounded-full bg-secondary/15 text-secondary flex items-center justify-center mb-1">
+                <Shield className="w-8 h-8 text-secondary" />
+              </div>
+              <h3 className="font-display text-lg font-bold text-white">
+                Bảo hành chính hãng
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xs">
+                12 tháng cho vợt, 6 tháng cho giày và phụ kiện. Kích hoạt bảo hành điện tử nhanh qua hotline.
+              </p>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="flex flex-col items-center text-center p-4 pt-6 md:pt-4 gap-3">
+              <div className="w-16 h-16 rounded-full bg-secondary/15 text-secondary flex items-center justify-center mb-1">
+                <Headphones className="w-8 h-8 text-secondary" />
+              </div>
+              <h3 className="font-display text-lg font-bold text-white">
+                Hỗ trợ tận tâm 24/7
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xs">
+                Đội ngũ chuyên gia tư vấn chọn vợt theo lối đánh, cân lực cổ tay và hỗ trợ chọn size giày chuẩn xác.
+              </p>
             </div>
           </div>
         </div>
@@ -739,27 +592,27 @@ const HomePage = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-8">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB]"></span>
-              <span className="text-xs uppercase tracking-wider text-[#2563EB] font-bold">New Arrivals 2024</span>
+              <ShieldCheck className="w-4 h-4 text-[#2563EB]" />
+              <span className="text-xs uppercase tracking-wider text-[#2563EB] font-bold">HÀNG CHÍNH HÃNG MỚI VỀ 2024</span>
             </div>
             <h2 className="font-display text-2xl sm:text-3xl text-slate-900 font-extrabold uppercase tracking-tight">
               BỘ SƯU TẬP MỚI VỀ
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              Cập nhật những công nghệ vật liệu mới nhất vừa cập bến Apex Showroom
+              Cập nhật những công nghệ đột phá mới nhất cho vận động viên Apex Badminton
             </p>
           </div>
           <Link 
             to="/products"
-            className="inline-flex items-center gap-1 text-xs uppercase text-[#2563EB] hover:text-[#1D4ED8] transition-colors font-bold pb-1"
+            className="inline-flex items-center gap-1 text-xs uppercase text-[#2563EB] hover:text-secondary transition-colors font-bold pb-1"
           >
-            <span>Xem toàn bộ hàng mới</span>
+            <span>XEM TẤT CẢ BỘ SƯU TẬP</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-          {MOCK_NEW_ARRIVALS.map((product) => (
+          {products.slice(0, 4).map((product) => (
             <ProductCard 
               key={product.id} 
               product={product} 
@@ -775,13 +628,13 @@ const HomePage = () => {
           <div className="flex flex-col items-center text-center gap-1 mb-10">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-secondary"></span>
-              <span className="text-xs uppercase tracking-wider text-secondary font-bold">Cộng đồng cầu lông Apex</span>
+              <span className="text-xs uppercase tracking-wider text-secondary font-bold"># CỘNG ĐỒNG CẦU LÔNG APEX</span>
             </div>
             <h2 className="font-display text-2xl sm:text-3xl font-extrabold uppercase text-slate-900">
               VẬN ĐỘNG VIÊN & KHÁCH HÀNG NÓI GÌ
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 max-w-xl">
-              Cảm nhận thực tế từ các vận động viên và huấn luyện viên thi đấu hàng tuần tại các giải phong trào và chuyên nghiệp
+              Lắng nghe trọn vẹn từ các vận động viên và huấn luyện viên thi đấu hàng đầu tại các giải phong trào và chuyên nghiệp
             </p>
           </div>
 
@@ -795,7 +648,7 @@ const HomePage = () => {
                   ))}
                 </div>
                 <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                  “Dịch vụ căng cước chuẩn giải đấu 4 nút rất đều tay. Vợt Astrox 100ZZ đập cầu đầm tay và thoát lực tốt. Giao hỏa tốc 2h chuẩn giờ.”
+                  “Dịch vụ căng cước chuẩn giải đấu ở nơi tôi rất tâm đắc. Vợt Astrox 100ZZ đập cầu rất đầm tay, nổ thanh và sắc nét. Cảm giác thi đấu chuẩn xác!”
                 </p>
               </div>
               <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
@@ -808,7 +661,7 @@ const HomePage = () => {
                 </div>
                 <div className="flex flex-col">
                   <span className="font-display text-sm font-bold text-slate-900">Nguyễn Hoàng Nam</span>
-                  <span className="text-[11px] text-slate-500 font-medium">Cầu thủ phong trào giải VBS</span>
+                  <span className="text-[11px] text-slate-500 font-medium">Vận Động Viên Tuyển Trẻ</span>
                 </div>
               </div>
             </div>
@@ -822,20 +675,16 @@ const HomePage = () => {
                   ))}
                 </div>
                 <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                  “Giày Yonex 65Z3 đi ôm chân và bám thảm tuyệt vời, đệm power cushion giảm chấn tối đa cho khớp gối. Hàng chính hãng 100% có tem bảo hành.”
+                  “Giày Yonex 65Z3 đi êm chân và bám thảm tuyệt vời, đệm power cushion giảm chấn tối đa cho khớp gối. Hàng chính hãng 100% có tem bảo hành.”
                 </p>
               </div>
               <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center shrink-0">
-                  <img 
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvXl8c_8Wvwnxod7D2U0gdv9BeV53icQHVwRswVS3ODAauyEf8fbAM0H6T3NTphQdupp-uE-K-V_YBu_pOY1nHru2anxy2pJusnTRh0Tt380yywrVQJPsl0ZObLVULSphuspDt2vy3E5U6d-YrfTkT0VKRrFj5XEVbmKgfHiIcslCfuuf4jX92jkPB1KfGgNlXFSbwdLRmLEvBys30VNO6bJl4n6JTHHsMmjianYwUjLKw62jQCJ4P" 
-                    alt="HLV Trần Thu Trang" 
-                    className="w-full h-full object-cover" 
-                  />
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-[#131b2e] flex items-center justify-center shrink-0 text-white">
+                  <Trophy className="w-6 h-6 text-amber-400" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-display text-sm font-bold text-slate-900">HLV Trần Thu Trang</span>
-                  <span className="text-[11px] text-slate-500 font-medium">Apex Badminton Club</span>
+                  <span className="font-display text-sm font-bold text-slate-900">Ngô Tiến Trường</span>
+                  <span className="text-[11px] text-slate-500 font-medium">HLV CLB Cầu Lông Ba Đình</span>
                 </div>
               </div>
             </div>
@@ -849,20 +698,16 @@ const HomePage = () => {
                   ))}
                 </div>
                 <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                  “Balo Apex Pro 30L chống thấm nước rất tốt, có ngăn giày riêng thoáng khí không bị ám mùi. Rất hài lòng với dịch vụ tư vấn kỹ thuật.”
+                  “Balo Apex Pro 35L chứa được nhiều vợt và đồ, có ngăn giày riêng thoáng khí không có mùi cao su. Rất hài lòng với dịch vụ tư vấn kỹ thuật.”
                 </p>
               </div>
               <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center shrink-0">
-                  <img 
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuA15xzZVjO91Zj6tmTmT3J_ekbxmHyOgtGMX4EmHNVnWmsTtzkW4ooOmzFWCn_h9Tc3uRm6XsCkbwSfLrbp3I6ln8qdrLjyGTRNoQf9bv6X9C0urA-KVJdM1YlIeM4VXs_xzd5uKg4T-mvoWRcWn_98AvLIq4U0f56aHdWN59PPmxZpn8lOhLfySNnbvViCk_rk5JOcpD0955x035w-txpOetYycj-2x5Szv-UER_D86Z_vDhy1MWMT" 
-                    alt="Anh Lê Minh Đức" 
-                    className="w-full h-full object-cover" 
-                  />
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-secondary/15 flex items-center justify-center shrink-0 text-secondary">
+                  <Swords className="w-6 h-6" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-display text-sm font-bold text-slate-900">Anh Lê Minh Đức</span>
-                  <span className="text-[11px] text-slate-500 font-medium">Cầu thủ bán chuyên Hà Nội</span>
+                  <span className="font-display text-sm font-bold text-slate-900">Astrid Henriksen</span>
+                  <span className="text-[11px] text-slate-500 font-medium">VĐV Phong Trào Hạng Nhất</span>
                 </div>
               </div>
             </div>
@@ -957,9 +802,9 @@ const HomePage = () => {
                     ))}
                   </div>
                   <span className="font-bold text-slate-900">
-                    {quickViewProduct.averageRating || '5.0'}
+                    {quickViewProduct.averageRating || 'Chưa có'}
                   </span>
-                  <span>({quickViewProduct.reviewCount || 128} đánh giá)</span>
+                  <span>({quickViewProduct.reviewCount ?? 0} đánh giá)</span>
                 </div>
 
                 {/* Price */}

@@ -55,9 +55,9 @@ public class ReviewService {
     public Double getAverageRating(Long productId) {
         List<Review> reviews = reviewRepository.findByProductIdOrderByCreatedAtDesc(productId);
         if (reviews.isEmpty()) {
-            return 5.0; // default initial rating
+            return 0.0;
         }
-        return reviews.stream().mapToInt(Review::getRating).average().orElse(5.0);
+        return reviews.stream().mapToInt(Review::getRating).average().orElse(0.0);
     }
 
     public int getReviewCount(Long productId) {

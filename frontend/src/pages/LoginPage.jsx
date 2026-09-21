@@ -6,8 +6,8 @@ const LoginPage = () => {
   const [activeTab, setActiveTab] = useState('login');
   
   // Login form state
-  const [loginIdentifier, setLoginIdentifier] = useState('nguyenvana@gmail.com');
-  const [loginPassword, setLoginPassword] = useState('••••••••••••');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   
@@ -36,11 +36,8 @@ const LoginPage = () => {
     setSuccessMsg('');
     setSubmitting(true);
     try {
-      // If default placeholder bullet password is clicked, use demo password
-      const actualPassword = loginPassword === '••••••••••••' ? 'user123' : loginPassword;
-      const actualUsername = loginIdentifier === 'nguyenvana@gmail.com' ? 'user' : loginIdentifier;
-      await login(actualUsername, actualPassword);
-      navigate(redirectPath);
+      await login(loginIdentifier, loginPassword);
+      navigate(redirectPath, { state: location.state });
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Email/Số điện thoại hoặc mật khẩu không chính xác');
     } finally {
@@ -145,7 +142,7 @@ const LoginPage = () => {
       <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
         <Link to="/" className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors text-sm font-medium group">
           <svg className="w-4 h-4 text-slate-400 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           <span>Về trang chủ</span>
         </Link>
@@ -153,14 +150,14 @@ const LoginPage = () => {
         <div className="flex items-center gap-5 text-xs text-slate-400">
           <div className="flex items-center gap-1.5">
             <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
             <span className="hidden sm:inline">Bảo mật SSL 256-bit</span>
           </div>
           <span className="text-slate-600 hidden sm:inline">•</span>
           <div className="flex items-center gap-1.5">
             <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
             <span>Hotline: <strong className="text-slate-200 font-semibold">1900 6886</strong></span>
           </div>
@@ -361,8 +358,7 @@ const LoginPage = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      fillCredentials('user', 'user123');
-                      alert('Đã kết nối tài khoản mẫu Google thành công! Nhấn ĐĂNG NHẬP để tiếp tục.');
+                      setErrorMsg('Đăng nhập mạng xã hội chưa được tích hợp. Vui lòng dùng tài khoản của bạn.');
                     }}
                     className="flex items-center justify-center gap-2 py-2.5 px-3 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                   >
@@ -377,8 +373,7 @@ const LoginPage = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      fillCredentials('admin', 'admin123');
-                      alert('Đã kết nối tài khoản mẫu Facebook (Admin) thành công! Nhấn ĐĂNG NHẬP để tiếp tục.');
+                      setErrorMsg('Đăng nhập mạng xã hội chưa được tích hợp. Vui lòng dùng tài khoản của bạn.');
                     }}
                     className="flex items-center justify-center gap-2 py-2.5 px-3 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                   >
@@ -389,26 +384,7 @@ const LoginPage = () => {
                   </button>
                 </div>
 
-                {/* Fast One-Click Demo Credential Helpers */}
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Demo nhanh:</span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => fillCredentials('user', 'user123')}
-                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition-colors"
-                    >
-                      User (user/user123)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fillCredentials('admin', 'admin123')}
-                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition-colors"
-                    >
-                      Admin (admin/admin123)
-                    </button>
-                  </div>
-                </div>
+
               </div>
             )}
 

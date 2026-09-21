@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderApi } from '../api/orderApi';
 import { voucherApi } from '../api/voucherApi';
 import { shippingAddressApi } from '../api/shippingAddressApi';
-import { formatPrice, formatTimer } from '../utils/formatters';
+import { formatPrice } from '../utils/formatters';
 import {
   ShieldCheck,
   CreditCard,
@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 
 const CheckoutPage = () => {
-  const { cart, clearCart } = useCart();
+  const { cart, removeFromCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -50,39 +50,29 @@ const CheckoutPage = () => {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
 
   // Form Fields
-  const [customerName, setCustomerName] = useState(user?.fullName || 'Nguyễn Văn A');
-  const [shippingPhone, setShippingPhone] = useState(user?.phone || '0988 123 456');
-  const [email, setEmail] = useState(user?.email || 'nguyenvana@gmail.com');
-  const [province, setProvince] = useState('Hà Nội');
-  const [district, setDistrict] = useState('Quận Đống Đa');
-  const [ward, setWard] = useState('Phường Khâm Thiên');
-  const [addressDetail, setAddressDetail] = useState(user?.address || 'Số 182 Lê Duẩn');
-  const [note, setNote] = useState('Căng cước 11kg theo chuẩn Yonex 4 nút trước khi gửi, bọc kỹ quấn cán, gọi điện hẹn giờ trước khi giao...');
+  const [customerName, setCustomerName] = useState(user?.fullName || '');
+  const [shippingPhone, setShippingPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [province, setProvince] = useState('');
+  const [district, setDistrict] = useState('');
+  const [ward, setWard] = useState('');
+  const [addressDetail, setAddressDetail] = useState(user?.address || '');
+  const [note, setNote] = useState('');
   const [saveInfo, setSaveInfo] = useState(true);
 
   // Payment Method: 'PAYOS_VIETQR', 'MANUAL_BANK', 'COD'
   const [paymentMethod, setPaymentMethod] = useState('PAYOS_VIETQR');
 
   // Voucher state
-  const [voucherCode, setVoucherCode] = useState(locationState.voucherCode || 'APEX100K');
-  const [discountAmount, setDiscountAmount] = useState(locationState.discountAmount || 100000);
+  const [voucherCode, setVoucherCode] = useState(locationState.voucherCode || '');
+  const [discountAmount, setDiscountAmount] = useState(0);
   const [voucherError, setVoucherError] = useState('');
-  const [voucherSuccess, setVoucherSuccess] = useState('Mã APEX100K đã được áp dụng');
+  const [voucherSuccess, setVoucherSuccess] = useState('');
   const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
 
   // Loading & error
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-
-  // 15-minute reservation timer
-  const [timeLeft, setTimeLeft] = useState(13 * 60);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Load saved shipping addresses
   useEffect(() => {
@@ -116,6 +106,16 @@ const CheckoutPage = () => {
   );
   const isFreeShipping = subtotal >= 1000000;
   const shippingFee = subtotal === 0 || isFreeShipping ? 0 : 30000;
+  const voucherKey = JSON.stringify([voucherCode, checkoutItems.map((item) =>
+    [item.cartItemId, item.quantity, item.product.price])]);
+  const voucherKeyRef = useRef(voucherKey);
+  voucherKeyRef.current = voucherKey;
+  useEffect(() => {
+    setDiscountAmount(0);
+    setVoucherSuccess('');
+    setVoucherError('');
+    setIsValidatingVoucher(false);
+  }, [voucherKey]);
   const effectiveDiscount = subtotal > 0 ? Math.min(subtotal, discountAmount) : 0;
   const finalTotal = Math.max(0, subtotal - effectiveDiscount + shippingFee);
 
@@ -123,38 +123,38 @@ const CheckoutPage = () => {
     e.preventDefault();
     if (!voucherCode.trim()) return;
 
+    const requestKey = voucherKey;
+    setDiscountAmount(0);
     setIsValidatingVoucher(true);
     setVoucherError('');
     setVoucherSuccess('');
 
     try {
       const res = await voucherApi.validateVoucher(voucherCode.trim(), subtotal);
+      if (voucherKeyRef.current !== requestKey) return;
       const vData = res?.data ?? res;
       if (vData && vData.valid) {
         setDiscountAmount(vData.discountAmount || 0);
         setVoucherSuccess(`Áp dụng mã ${vData.code} thành công! Giảm ${formatPrice(vData.discountAmount)}`);
       } else {
-        if (voucherCode.toUpperCase() === 'APEX100K') {
-          setDiscountAmount(100000);
-          setVoucherSuccess('Mã APEX100K đã được áp dụng (-100.000₫)');
-        } else {
-          setVoucherError('Mã giảm giá không hợp lệ.');
-        }
+        setDiscountAmount(0);
+        setVoucherError('Mã giảm giá không hợp lệ.');
       }
     } catch (err) {
-      if (voucherCode.toUpperCase() === 'APEX100K') {
-        setDiscountAmount(100000);
-        setVoucherSuccess('Mã APEX100K đã được áp dụng (-100.000₫)');
-      } else {
-        setDiscountAmount(0);
-        setVoucherError(err.response?.data?.message || 'Mã giảm giá không hợp lệ.');
-      }
+      if (voucherKeyRef.current !== requestKey) return;
+      setDiscountAmount(0);
+      setVoucherError(err.response?.data?.message || 'Không thể xác thực mã giảm giá.');
     } finally {
-      setIsValidatingVoucher(false);
+      if (voucherKeyRef.current === requestKey) setIsValidatingVoucher(false);
     }
   };
 
   const handleSubmitOrder = async () => {
+    if (loading || isValidatingVoucher) return;
+    if (voucherCode.trim() && !voucherSuccess) {
+      setErrorMsg('Vui lòng áp dụng lại mã giảm giá hoặc xóa mã trước khi đặt hàng.');
+      return;
+    }
     if (!customerName || !shippingPhone || !addressDetail) {
       setErrorMsg('Vui lòng điền đầy đủ Họ tên, Số điện thoại và Địa chỉ giao hàng.');
       return;
@@ -174,10 +174,12 @@ const CheckoutPage = () => {
         customerName,
         shippingAddress: fullShippingAddress,
         shippingPhone,
-        paymentMethod: paymentMethod === 'COD' ? 'COD' : 'PAYOS_VIETQR',
-        voucherCode: effectiveDiscount > 0 ? voucherCode : null,
-        shippingFee: shippingFee || 0,
-        note: note || '',
+        paymentMethod,
+        voucherCode: voucherCode.trim() || null,
+        note: [note, ...checkoutItems.map((item, index) => {
+          const extra = [item.options?.gender, item.options?.capacity, item.options?.packaging].filter(Boolean);
+          return extra.length ? `Dòng ${index + 1} - ${item.product.name}: ${extra.join(', ')}` : '';
+        })].filter(Boolean).join('\n'),
         items: checkoutItems.map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -192,11 +194,8 @@ const CheckoutPage = () => {
       const res = await orderApi.createOrder(payload);
       const createdOrder = res?.data ?? res;
 
-      // Clear cart items that were ordered
-      checkoutItems.forEach((item) => {
-        // if context has item-specific remove, or clear cart
-      });
-      clearCart();
+      if (!createdOrder?.id) throw new Error('Máy chủ chưa trả về mã đơn hàng hợp lệ.');
+      checkoutItems.forEach((item) => removeFromCart(item.cartItemId));
 
       // Route based on payment method
       if (paymentMethod === 'COD') {
@@ -206,42 +205,7 @@ const CheckoutPage = () => {
         navigate(`/payment/qr/${createdOrder.id}`, { state: { order: createdOrder } });
       }
     } catch (err) {
-      console.error('Lỗi khi tạo đơn hàng:', err);
-      // Fallback demo order simulation if backend is not running or DB issue
-      const mockOrderId = 'APX-' + Math.floor(10000 + Math.random() * 90000);
-      const mockOrder = {
-        id: mockOrderId,
-        orderCode: mockOrderId,
-        payosOrderCode: 100000 + Math.floor(Math.random() * 900000),
-        customerName,
-        shippingPhone,
-        shippingAddress: `${addressDetail}, ${ward}, ${district}, ${province}`,
-        paymentMethod: paymentMethod === 'COD' ? 'COD' : 'PAYOS_VIETQR',
-        note,
-        subtotal,
-        discountAmount: effectiveDiscount,
-        shippingFee,
-        totalAmount: finalTotal,
-        items: checkoutItems.map((i) => ({
-          id: i.product.id,
-          name: i.product.name,
-          price: i.product.price,
-          quantity: i.quantity,
-          imageUrl: i.product.imageUrl || i.product.image,
-          selectedSize: i.selectedSize,
-          selectedWeight: i.selectedWeight,
-          stringingService: i.stringingService,
-          stringTension: i.stringTension
-        })),
-        createdAt: new Date().toISOString()
-      };
-      clearCart();
-
-      if (paymentMethod === 'COD') {
-        navigate(`/order-success/${mockOrderId}`, { state: { order: mockOrder } });
-      } else {
-        navigate(`/payment/qr/${mockOrderId}`, { state: { order: mockOrder } });
-      }
+      setErrorMsg(err.response?.data?.message || 'Không thể tạo đơn hàng. Giỏ hàng được giữ nguyên, vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -288,8 +252,7 @@ const CheckoutPage = () => {
           </Link>
           <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-1.5 rounded-full text-slate-600 text-xs font-semibold shadow-sm">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-            <span>Đơn hàng được giữ trong</span>
-            <strong className="text-slate-900 font-mono font-bold">{formatTimer(timeLeft)}</strong>
+            <span>Tồn kho được kiểm tra khi tạo đơn</span>
           </div>
         </div>
 
@@ -522,11 +485,11 @@ const CheckoutPage = () => {
                             Thanh toán QR Động (PayOS / VietQR)
                           </span>
                           <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                            <Zap className="w-3 h-3 fill-current" /> Khuyên dùng • Xử lý 5s
+                            <Zap className="w-3 h-3 fill-current" /> Chưa tích hợp PayOS thật
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                          Quét mã lập tức qua mọi ứng dụng ngân hàng và ví điện tử (MoMo, ZaloPay). Hệ thống tự động kích hoạt bảo hành điện tử ngay sau 5 giây.
+                          Chỉ chuyển tiền khi hệ thống cung cấp mã thanh toán đã xác thực. Hiện chưa tích hợp PayOS thật.
                         </p>
                       </div>
                     </div>
@@ -564,7 +527,7 @@ const CheckoutPage = () => {
 
                 {/* OPTION 2: Manual Bank Transfer */}
                 <label
-                  onClick={() => setPaymentMethod('MANUAL_BANK')}
+                  aria-disabled="true"
                   className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col gap-2 ${
                     paymentMethod === 'MANUAL_BANK'
                       ? 'border-red-600 bg-red-50/20'
@@ -576,16 +539,16 @@ const CheckoutPage = () => {
                       <input
                         type="radio"
                         name="payment_method"
-                        checked={paymentMethod === 'MANUAL_BANK'}
-                        onChange={() => setPaymentMethod('MANUAL_BANK')}
+                        disabled
+                        checked={false}
                         className="w-4 h-4 accent-red-600 mt-1 cursor-pointer"
                       />
                       <div>
                         <span className="text-sm font-bold text-slate-900">
-                          Chuyển khoản ngân hàng thủ công
+                          Chuyển khoản thủ công — chưa hỗ trợ
                         </span>
                         <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                          Chuyển tiền trực tiếp vào tài khoản công ty Apex Badminton Store. Kế toán duyệt trong 15-30 phút.
+                          Chưa hỗ trợ phương thức này. Vui lòng chọn COD hoặc PayOS khi đã được tích hợp.
                         </p>
                       </div>
                     </div>
@@ -637,7 +600,7 @@ const CheckoutPage = () => {
               <button
                 type="button"
                 onClick={handleSubmitOrder}
-                disabled={loading}
+                disabled={loading || isValidatingVoucher}
                 className="w-full py-4 px-6 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-extrabold text-base uppercase tracking-wider rounded-xl shadow-xl shadow-red-500/30 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
               >
                 {loading ? (

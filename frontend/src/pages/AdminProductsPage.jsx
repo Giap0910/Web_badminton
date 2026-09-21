@@ -22,95 +22,12 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-const INITIAL_PRODUCTS = [
-  {
-    id: 1,
-    sku: 'YNX-100ZZ-KRN',
-    name: 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai (4U/G5)',
-    brand: 'Yonex',
-    category: 'Vợt cầu lông',
-    categorySlug: 'vot-cau-long',
-    price: 4550000,
-    originalPrice: 4890000,
-    stock: 15,
-    maxTension: '28 lbs (12.7 kg)',
-    status: 'ACTIVE',
-    imageUrl: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    id: 2,
-    sku: 'YNX-65Z3-WHT',
-    name: 'Giày Cầu Lông Yonex Power Cushion 65Z3 Men',
-    brand: 'Yonex',
-    category: 'Giày cầu lông',
-    categorySlug: 'giay-cau-long',
-    price: 2890000,
-    originalPrice: 3200000,
-    stock: 8,
-    maxTension: 'N/A',
-    status: 'ACTIVE',
-    imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    id: 3,
-    sku: 'VIC-RYU-MET',
-    name: 'Vợt Cầu Lông Victor Thruster Ryuga Metallic (3U/G5)',
-    brand: 'Victor',
-    category: 'Vợt cầu lông',
-    categorySlug: 'vot-cau-long',
-    price: 4200000,
-    originalPrice: 4500000,
-    stock: 12,
-    maxTension: '32 lbs (14.5 kg)',
-    status: 'ACTIVE',
-    imageUrl: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    id: 4,
-    sku: 'LIN-TC9-PRO',
-    name: 'Vợt Cầu Lông Lining Tectonic 9 Pro Chen Long',
-    brand: 'Lining',
-    category: 'Vợt cầu lông',
-    categorySlug: 'vot-cau-long',
-    price: 4690000,
-    originalPrice: 5100000,
-    stock: 3,
-    maxTension: '32 lbs (14.5 kg)',
-    status: 'ACTIVE',
-    imageUrl: 'https://images.unsplash.com/photo-1613918108466-292b78a8ef95?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    id: 5,
-    sku: 'YNX-AS50-T77',
-    name: 'Ống Cầu Lông Yonex Aerosensa 50 (12 quả)',
-    brand: 'Yonex',
-    category: 'Phụ kiện',
-    categorySlug: 'phu-kien',
-    price: 450000,
-    originalPrice: 490000,
-    stock: 85,
-    maxTension: 'N/A',
-    status: 'ACTIVE',
-    imageUrl: 'https://images.unsplash.com/photo-1613918108466-292b78a8ef95?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    id: 6,
-    sku: 'YNX-PRO-BAG',
-    name: 'Balo Cầu Lông Yonex Pro Tournament Bag Blue',
-    brand: 'Yonex',
-    category: 'Balo & Túi',
-    categorySlug: 'balo-tui',
-    price: 1650000,
-    originalPrice: 1890000,
-    stock: 0,
-    maxTension: 'N/A',
-    status: 'OUT_OF_STOCK',
-    imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&q=80'
-  }
-];
 
 const AdminProductsPage = () => {
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
+  const [dataError, setDataError] = useState('');
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [categoryError, setCategoryError] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -125,7 +42,7 @@ const AdminProductsPage = () => {
     name: '',
     brand: 'Yonex',
     category: 'Vợt cầu lông',
-    categorySlug: 'vot-cau-long',
+    categoryId: '',
     price: '',
     originalPrice: '',
     stock: '',
@@ -140,26 +57,26 @@ const AdminProductsPage = () => {
       if (productApi?.getProducts) {
         const res = await productApi.getProducts();
         const list = Array.isArray(res) ? res : res?.data || [];
-        if (list.length > 0) {
+        if (Array.isArray(list)) {
           const formatted = list.map((item, idx) => ({
             id: item.id || idx + 1,
-            sku: item.sku || `SKU-APX-0${item.id || idx + 1}`,
+            sku: item.sku || '',
             name: item.name || 'Sản phẩm cầu lông Apex',
             brand: item.brand || 'Yonex',
-            category: item.category?.name || 'Vợt cầu lông',
-            categorySlug: item.category?.slug || 'vot-cau-long',
-            price: item.price || 2000000,
-            originalPrice: item.originalPrice || item.price || 2200000,
-            stock: item.stockQuantity ?? item.stock ?? 10,
-            maxTension: item.maxTension || '28 lbs',
-            status: (item.stockQuantity ?? item.stock ?? 10) > 0 ? 'ACTIVE' : 'OUT_OF_STOCK',
-            imageUrl: item.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80'
+            category: item.categoryName || 'Chưa có danh mục',
+            categoryId: item.categoryId ?? '',
+            price: item.price ?? 0,
+            originalPrice: item.originalPrice ?? item.price ?? 0,
+            stock: item.stockQuantity ?? item.stock ?? 0,
+            maxTension: item.maxTension || '',
+            status: (item.stockQuantity ?? item.stock ?? 0) > 0 ? 'ACTIVE' : 'OUT_OF_STOCK',
+            imageUrl: item.imageUrl || ''
           }));
           setProducts(formatted);
         }
       }
     } catch (err) {
-      console.warn('Fallback to initial mock products:', err);
+      setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -167,6 +84,11 @@ const AdminProductsPage = () => {
 
   useEffect(() => {
     fetchProducts();
+    productApi.getCategories().then((res) => {
+      const list = Array.isArray(res) ? res : res?.data;
+      if (!Array.isArray(list)) throw new Error();
+      setCategories(list);
+    }).catch(() => setCategoryError('Không tải được danh mục. Vui lòng tải lại trang trước khi lưu.'));
   }, []);
 
   const formatPrice = (p) =>
@@ -179,7 +101,7 @@ const AdminProductsPage = () => {
       name: '',
       brand: 'Yonex',
       category: 'Vợt cầu lông',
-      categorySlug: 'vot-cau-long',
+      categoryId: '',
       price: '',
       originalPrice: '',
       stock: '20',
@@ -196,10 +118,11 @@ const AdminProductsPage = () => {
       name: p.name,
       brand: p.brand,
       category: p.category,
-      categorySlug: p.categorySlug,
+      categoryId: p.categoryId,
       price: p.price.toString(),
       originalPrice: p.originalPrice.toString(),
       stock: p.stock.toString(),
+      expectedStock: p.stock,
       maxTension: p.maxTension,
       imageUrl: p.imageUrl
     });
@@ -217,50 +140,47 @@ const AdminProductsPage = () => {
       await fetchProducts();
       setNotification('Đã xóa sản phẩm khỏi cơ sở dữ liệu thành công.');
     } catch (e) {
-      console.warn('Lỗi gọi API xóa sản phẩm:', e);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-      setNotification('Đã xóa sản phẩm (cục bộ).');
+      setNotification(e.response?.data?.message || 'Không thể xóa sản phẩm.');
     }
     setTimeout(() => setNotification(''), 3000);
   };
 
-  const handleToggleStatus = (id) => {
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              status: p.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-            }
-          : p
-      )
-    );
+  const handleToggleStatus = () => {
+    setNotification('Chức năng ẩn/hiện sản phẩm chưa được kết nối máy chủ. Chưa có thay đổi được lưu.');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (categoryError || !categories.some((c) => String(c.id) === String(formData.categoryId))) {
+      setNotification('Vui lòng chọn danh mục hợp lệ từ máy chủ.');
+      return;
+    }
+    if (!formData.name.trim() || !formData.brand.trim() || !Number.isFinite(Number(formData.price))
+        || Number(formData.price) <= 0 || formData.stock === '' || !Number.isSafeInteger(Number(formData.stock))
+        || Number(formData.stock) < 0 || (formData.originalPrice !== '' &&
+        (!Number.isFinite(Number(formData.originalPrice)) || Number(formData.originalPrice) < Number(formData.price)))) {
+      setNotification('Kiểm tra tên, thương hiệu, giá bán, giá gốc và tồn kho nguyên không âm.');
+      return;
+    }
     setSaving(true);
 
     const priceNum = Number(formData.price) || 0;
     const origPriceNum = Number(formData.originalPrice) || priceNum;
     const stockNum = Number(formData.stock) || 0;
 
-    let categoryId = 1;
-    if (formData.categorySlug === 'giay-cau-long') categoryId = 2;
-    else if (formData.categorySlug === 'quan-ao-cau-long') categoryId = 3;
-    else if (formData.categorySlug === 'balo-tui-cau-long') categoryId = 4;
-    else if (formData.categorySlug === 'phu-kien-cau-long') categoryId = 5;
+    const categoryId = Number(formData.categoryId);
 
     const payload = {
-      sku: formData.sku || `SKU-APX-${Date.now().toString().slice(-6)}`,
-      name: formData.name,
-      brand: formData.brand,
+      sku: formData.sku.trim() || undefined,
+      name: formData.name.trim(),
+      brand: formData.brand.trim(),
       categoryId: categoryId,
       price: priceNum,
       originalPrice: origPriceNum,
       stock: stockNum,
+      expectedStock: editingId ? formData.expectedStock : undefined,
       maxTension: formData.maxTension,
-      imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80'
+      imageUrl: formData.imageUrl
     };
 
     try {
@@ -280,27 +200,12 @@ const AdminProductsPage = () => {
         setNotification('Thêm sản phẩm mới vào kho dữ liệu thành công!');
       }
       await fetchProducts();
+      setShowModal(false);
     } catch (err) {
-      console.warn('Lỗi gọi API sản phẩm, lưu dự phòng cục bộ:', err);
-      if (editingId) {
-        setProducts((prev) =>
-          prev.map((p) => (p.id === editingId ? { ...p, ...payload, category: formData.category, categorySlug: formData.categorySlug } : p))
-        );
-        setNotification('Cập nhật thông tin sản phẩm thành công!');
-      } else {
-        const newEntry = {
-          id: Date.now(),
-          ...payload,
-          category: formData.category,
-          categorySlug: formData.categorySlug,
-          status: stockNum > 0 ? 'ACTIVE' : 'OUT_OF_STOCK'
-        };
-        setProducts([newEntry, ...products]);
-        setNotification('Thêm sản phẩm mới vào kho thành công!');
-      }
+      setNotification(err.response?.data?.message || 'Không thể lưu sản phẩm.');
     } finally {
       setSaving(false);
-      setShowModal(false);
+
       setTimeout(() => setNotification(''), 3000);
     }
   };
@@ -312,7 +217,7 @@ const AdminProductsPage = () => {
       p.brand.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesCategory =
-      selectedCategory === 'ALL' ? true : p.category === selectedCategory;
+      selectedCategory === 'ALL' ? true : String(p.categoryId) === selectedCategory;
 
     const matchesBrand =
       selectedBrand === 'ALL' ? true : p.brand === selectedBrand;
@@ -331,6 +236,8 @@ const AdminProductsPage = () => {
 
   return (
     <AdminLayout title="Sản phẩm" subtitle="Quản lý sản phẩm & Kho hàng">
+      {categoryError && <p role="alert" className="p-4 text-red-700">{categoryError}</p>}
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & ACTION BAR */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
@@ -392,10 +299,7 @@ const AdminProductsPage = () => {
               className="bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer"
             >
               <option value="ALL">Tất cả danh mục</option>
-              <option value="Vợt cầu lông">Vợt cầu lông</option>
-              <option value="Giày cầu lông">Giày cầu lông</option>
-              <option value="Balo & Túi">Balo & Bao vợt</option>
-              <option value="Phụ kiện">Phụ kiện cước</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
 
             <select
@@ -583,7 +487,6 @@ const AdminProductsPage = () => {
                     <label className="text-xs font-bold text-slate-900">Mã SKU <span className="text-secondary">*</span></label>
                     <input
                       type="text"
-                      required
                       value={formData.sku}
                       onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                       placeholder="Ví dụ: YNX-100ZZ-4U"
@@ -622,15 +525,12 @@ const AdminProductsPage = () => {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-bold text-slate-900">Danh mục</label>
                     <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      value={formData.categoryId}
+                      onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                       className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                     >
-                      <option value="Vợt cầu lông">Vợt cầu lông</option>
-                      <option value="Giày cầu lông">Giày cầu lông</option>
-                      <option value="Quần áo thi đấu">Quần áo thi đấu</option>
-                      <option value="Balo & Túi">Balo & Bao vợt</option>
-                      <option value="Phụ kiện">Phụ kiện pro</option>
+                      <option value="">Chọn danh mục</option>
+                      {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
 

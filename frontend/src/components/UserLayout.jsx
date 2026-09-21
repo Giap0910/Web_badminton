@@ -22,7 +22,7 @@ const UserLayout = ({
   children,
   currentPage = 'Thông tin cá nhân',
   breadcrumbs = [],
-  counts = { addresses: 2, orders: 5, reviews: 8, returns: 4 }
+  counts = {}
 }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -43,14 +43,14 @@ const UserLayout = ({
       name: 'Sổ địa chỉ',
       path: '/shipping-addresses',
       icon: MapPin,
-      badge: counts.addresses || 2,
+      badge: counts.addresses ?? null,
       badgeClass: 'bg-slate-100 text-slate-700'
     },
     {
       name: 'Lịch sử đơn hàng',
       path: '/my-orders',
       icon: ShoppingBag,
-      badge: counts.orders || 5,
+      badge: counts.orders ?? null,
       badgeClass: 'bg-secondary text-white'
     },
     {
@@ -64,7 +64,7 @@ const UserLayout = ({
       name: 'Yêu cầu đổi trả & bảo hành',
       path: '/returns',
       icon: RotateCcw,
-      badge: counts.returns || 4,
+      badge: counts.returns ?? null,
       badgeClass: 'bg-slate-100 text-slate-700'
     },
   ];
@@ -95,7 +95,7 @@ const UserLayout = ({
                 Xin chào, <strong className="text-slate-900 font-bold">{user?.fullName || user?.username || 'Khách hàng Apex'}</strong>
                 <span className="inline-flex items-center gap-1 ml-1 px-2.5 py-0.5 rounded-full bg-[#131b2e] text-white text-[11px] font-black tracking-wider shadow-sm">
                   <Award className="w-3 h-3 text-amber-400" />
-                  APEX VIP
+                  TÀI KHOẢN
                 </span>
               </span>
             </div>
@@ -110,7 +110,7 @@ const UserLayout = ({
               <div className="flex flex-col leading-none">
                 <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Điểm tích lũy</span>
                 <span className="text-base font-black text-slate-900 mt-0.5">
-                  1.250 <span className="text-xs font-normal text-slate-400">pts</span>
+                  Chưa có dữ liệu <span className="text-xs font-normal text-slate-400">pts</span>
                 </span>
               </div>
             </div>
@@ -122,7 +122,7 @@ const UserLayout = ({
               <div className="flex flex-col leading-none">
                 <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Tổng đơn hàng</span>
                 <span className="text-base font-black text-slate-900 mt-0.5">
-                  05 <span className="text-xs font-normal text-slate-400">đơn</span>
+                  {counts.orders ?? 'Chưa tải'} <span className="text-xs font-normal text-slate-400">đơn</span>
                 </span>
               </div>
             </div>
@@ -163,13 +163,13 @@ const UserLayout = ({
               <div className="w-full mt-4 pt-3 bg-slate-50 rounded-xl p-3 flex flex-col gap-2 text-left border border-slate-100">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-800">Apex VIP Club</span>
-                  <span className="text-secondary font-black">Hạng Vàng</span>
+                  <span className="text-secondary font-black">Chưa xếp hạng</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                   <div className="h-full bg-secondary rounded-full transition-all duration-500" style={{ width: '72%' }}></div>
                 </div>
                 <span className="text-[11px] text-slate-500 leading-tight">
-                  Còn 250 điểm nữa để lên hạng <strong className="text-slate-900 font-bold">Apex Diamond</strong>
+                  Chương trình tích điểm chưa được tích hợp.
                 </span>
               </div>
             </div>

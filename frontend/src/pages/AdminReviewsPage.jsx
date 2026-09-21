@@ -19,92 +19,13 @@ import {
   Check
 } from 'lucide-react';
 
-const INITIAL_REVIEWS = [
-  {
-    id: 1,
-    customerName: 'Nguyễn Văn A',
-    customerPhone: '0988 123 456',
-    productName: 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai (4U/G5)',
-    rating: 5,
-    spec: 'Cước BG80 Power 11.5kg (25.5 lbs)',
-    comment:
-      'Cây vợt đầm đầu smash cực kỳ uy lực, đũa Hyper Slim Shaft siêu mỏng giúp vung vợt thoát gió nhanh. Xưởng Apex Pro đan 4 nút chuẩn BWF cước căng đều, giữ cân cực tốt sau 3 tuần đánh giải.',
-    createdAt: '24/10/2024',
-    isVisible: true,
-    officialReply:
-      'Cảm ơn bạn đã tin tưởng dịch vụ căng cước điện tử 4 nút của Apex Pro. Chúc bạn thi đấu thăng hoa cùng Astrox 100ZZ Kurenai!'
-  },
-  {
-    id: 2,
-    customerName: 'Trần Minh Đức',
-    customerPhone: '0912 456 789',
-    productName: 'Giày Cầu Lông Yonex Power Cushion 65Z3 Men',
-    rating: 5,
-    spec: 'Size 42 EU • Form Bè Wide',
-    comment:
-      'Đế Power Cushion+ êm vượt trội, giảm chấn gót chân và khớp gối rất tốt trong các pha bật nhảy smash liên tục. Form bè Wide chuẩn chân người Việt.',
-    createdAt: '18/10/2024',
-    isVisible: true,
-    officialReply: null
-  },
-  {
-    id: 3,
-    customerName: 'Lê Hoàng Long',
-    customerPhone: '0903 888 999',
-    productName: 'Vợt Victor Thruster Ryuga Metallic (3U/G5)',
-    rating: 4,
-    spec: 'Cước Victor VBS-66 Nano 12kg',
-    comment:
-      'Vợt thuần công nặng đầu đánh rất đã nhưng khá tốn thể lực, anh em cổ tay yếu nên cân nhắc xuống 4U nhé.',
-    createdAt: '10/10/2024',
-    isVisible: true,
-    officialReply: 'Apex Pro cảm ơn góp ý chuyên môn rất thực tế của bạn!'
-  }
-];
 
-const INITIAL_RMAS = [
-  {
-    id: 1,
-    rmaCode: '#RMA-2024-089',
-    customerName: 'Nguyễn Văn A',
-    productName: 'Vợt Yonex Astrox 100ZZ Kurenai (4U/G5)',
-    serial: 'YNX-892410-JP',
-    reasonCategory: 'Bảo hành nứt khung vợt 90 ngày',
-    reasonDetail: 'Nứt ngầm góc 10h khi đan cước BG80 Power 11.5kg tại sân thi đấu.',
-    timelineStep: 3,
-    status: 'IN_REVIEW',
-    statusLabel: 'Đang thẩm định phòng lab BWF'
-  },
-  {
-    id: 2,
-    rmaCode: '#RMA-2024-071',
-    customerName: 'Trần Minh Đức',
-    productName: 'Giày Yonex Power Cushion 65Z3 Men',
-    serial: 'SH-65Z3-42EU',
-    reasonCategory: 'Đổi size giày 7 ngày tận nhà',
-    reasonDetail: 'Kích ngón chân út khi di chuyển, xin đổi sang size 42.5 EU.',
-    timelineStep: 4,
-    status: 'COMPLETED',
-    statusLabel: 'Đã đổi mới đôi khác'
-  },
-  {
-    id: 3,
-    rmaCode: '#RMA-2024-042',
-    customerName: 'Vũ Quốc Huy',
-    productName: 'Balo Yonex Pro Tournament Bag',
-    serial: 'BAG-YXP-77',
-    reasonCategory: 'Bảo hành phụ kiện khóa kéo',
-    reasonDetail: 'Khóa kéo ngăn đựng giày bị rách đường may.',
-    timelineStep: 1,
-    status: 'RECEIVED',
-    statusLabel: 'Chờ tiếp nhận xưởng'
-  }
-];
 
 const AdminReviewsPage = () => {
+  const [dataError, setDataError] = useState('');
   const [mainTab, setMainTab] = useState('REVIEWS'); // 'REVIEWS' | 'RMAS'
-  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
-  const [rmas, setRmas] = useState(INITIAL_RMAS);
+  const [reviews, setReviews] = useState([]);
+  const [rmas, setRmas] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState('');
 
@@ -117,21 +38,21 @@ const AdminReviewsPage = () => {
       if (adminApi?.getAllReviews) {
         const res = await adminApi.getAllReviews();
         const list = Array.isArray(res) ? res : res?.data || [];
-        if (list.length > 0) {
+        if (Array.isArray(list)) {
           const mappedReviews = list.map((r, idx) => ({
             id: r.id || idx + 1,
             productName: r.productName || 'Vợt Cầu Lông Apex',
             productBrand: 'Apex Series',
             productImage: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-            customerName: r.userName || 'Khách hàng ẩn danh',
-            customerPhone: '0988 *** ***',
+            customerName: r.userFullName || r.userName || 'Khách hàng ẩn danh',
+            customerPhone: '',
             customerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-            purchasedSpec: 'Bản 4U/G5 • Cước BWF',
+            purchasedSpec: '',
             rating: r.rating || 5,
-            content: r.comment || '',
+            comment: r.comment || '',
             date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : 'Gần đây',
             isVisible: true,
-            likes: 1,
+            likes: 0,
             officialReply: null
           }));
           setReviews(mappedReviews);
@@ -141,7 +62,7 @@ const AdminReviewsPage = () => {
       if (adminApi?.getAllReturns) {
         const res = await adminApi.getAllReturns();
         const list = Array.isArray(res) ? res : res?.data || [];
-        if (list.length > 0) {
+        if (Array.isArray(list)) {
           const mappedRmas = list.map((rma, idx) => ({
             id: rma.id || idx + 1,
             rmaCode: `RMA-${1000 + (rma.id || idx)}`,
@@ -161,7 +82,7 @@ const AdminReviewsPage = () => {
         }
       }
     } catch (err) {
-      console.warn('Fallback to local reviews/rmas:', err);
+      setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     }
   };
 
@@ -169,14 +90,8 @@ const AdminReviewsPage = () => {
     fetchReviewsAndRmas();
   }, []);
 
-  const handleToggleVisibility = (id) => {
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, isVisible: !r.isVisible } : r
-      )
-    );
-    setToastMessage('Đã cập nhật trạng thái hiển thị đánh giá.');
-    setTimeout(() => setToastMessage(''), 2500);
+  const handleToggleVisibility = () => {
+    setToastMessage('Chức năng ẩn/hiện đánh giá chưa được kết nối máy chủ.');
   };
 
   const handleOpenReply = (review) => {
@@ -186,14 +101,7 @@ const AdminReviewsPage = () => {
 
   const handleSaveReply = (e) => {
     e.preventDefault();
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === replyModalReview.id ? { ...r, officialReply: replyContent } : r
-      )
-    );
-    setReplyModalReview(null);
-    setToastMessage('Đã đăng phản hồi chính thức từ Apex Pro!');
-    setTimeout(() => setToastMessage(''), 3000);
+    setToastMessage('Chức năng phản hồi chưa được kết nối máy chủ. Chưa gửi phản hồi.');
   };
 
   const handleUpdateRMAStatus = async (id, newStep, newStatus, newLabel) => {
@@ -202,7 +110,8 @@ const AdminReviewsPage = () => {
         await adminApi.updateReturnStatus(id, newStatus);
       }
     } catch (err) {
-      console.warn('Lỗi gọi API cập nhật RMA:', err);
+      setToastMessage(err.response?.data?.message || 'Không thể cập nhật yêu cầu đổi trả.');
+      return;
     }
 
     setRmas((prev) =>
@@ -237,6 +146,7 @@ const AdminReviewsPage = () => {
 
   return (
     <AdminLayout title="Đánh giá & RMA" subtitle="Quản lý đánh giá & Yêu cầu đổi trả bảo hành">
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & MAIN TAB SWITCHER */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">

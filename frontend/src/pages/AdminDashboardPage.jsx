@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { adminApi } from '../api/adminApi';
+import { getOrderStatusLabel } from '../utils/formatters';
 import {
   TrendingUp,
   ShoppingBag,
@@ -21,111 +22,21 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-const REVENUE_DATA = [
-  { day: 'T2 (18/10)', revenue: 32500000, height: 60 },
-  { day: 'T3 (19/10)', revenue: 28900000, height: 50 },
-  { day: 'T4 (20/10)', revenue: 41200000, height: 75 },
-  { day: 'T5 (21/10)', revenue: 38400000, height: 68 },
-  { day: 'T6 (22/10)', revenue: 49800000, height: 88 },
-  { day: 'T7 (23/10)', revenue: 56200000, height: 100 },
-  { day: 'CN (24/10)', revenue: 42850000, height: 78 }
-];
+const REVENUE_DATA = [];
 
-const RECENT_ORDERS = [
-  {
-    id: 1,
-    code: '#APX-89241',
-    customer: 'Nguyễn Văn A',
-    phone: '0988 123 456',
-    product: 'Vợt Yonex Astrox 100ZZ Kurenai (4U/G5)',
-    stringReq: 'Cước BG80 Power 11.5kg (4 nút BWF)',
-    amount: 4550000,
-    time: '10 phút trước',
-    status: 'STRINGING',
-    statusLabel: 'Đang vào cước'
-  },
-  {
-    id: 2,
-    code: '#APX-88910',
-    customer: 'Trần Minh Đức',
-    phone: '0912 456 789',
-    product: 'Giày Yonex Power Cushion 65Z3 Men',
-    stringReq: 'Size 42 EU • Màu Trắng Đỏ',
-    amount: 2890000,
-    time: '25 phút trước',
-    status: 'CONFIRMED',
-    statusLabel: 'Chờ giao hỏa tốc'
-  },
-  {
-    id: 3,
-    code: '#APX-87422',
-    customer: 'Lê Hoàng Long',
-    phone: '0903 888 999',
-    product: 'Vợt Victor Thruster Ryuga Metallic (3U)',
-    stringReq: 'Cước Victor VBS-66 Nano 12kg',
-    amount: 4200000,
-    time: '42 phút trước',
-    status: 'PENDING',
-    statusLabel: 'Chờ thanh toán QR'
-  },
-  {
-    id: 4,
-    code: '#APX-86105',
-    customer: 'Phạm Thu Hà',
-    phone: '0977 111 222',
-    product: 'Ống Cầu Lông Yonex AS-50 (12 quả)',
-    stringReq: 'Số lượng: 5 ống tốc độ 77',
-    amount: 2250000,
-    time: '1 giờ trước',
-    status: 'COMPLETED',
-    statusLabel: 'Đã hoàn thành'
-  }
-];
 
-const TOP_PRODUCTS = [
-  {
-    name: 'Yonex Astrox 100ZZ Kurenai',
-    category: 'Vợt cầu lông cao cấp',
-    sales: 42,
-    revenue: '191.100.000₫',
-    stock: 15,
-    trend: '+24%'
-  },
-  {
-    name: 'Yonex Power Cushion 65Z3',
-    category: 'Giày cầu lông thi đấu',
-    sales: 38,
-    revenue: '109.820.000₫',
-    stock: 8,
-    trend: '+15%'
-  },
-  {
-    name: 'Victor Thruster Ryuga Metallic',
-    category: 'Vợt thuần công BWF',
-    sales: 29,
-    revenue: '121.800.000₫',
-    stock: 12,
-    trend: '+8%'
-  },
-  {
-    name: 'Cước Yonex BG80 Power (Cuộn 200m)',
-    category: 'Phụ kiện xưởng căng cước',
-    sales: 64,
-    revenue: '105.600.000₫',
-    stock: 4,
-    trend: '+32%'
-  }
-];
+const TOP_PRODUCTS = [];
 
 const AdminDashboardPage = () => {
+  const [dataError, setDataError] = useState('');
   const [timeRange, setTimeRange] = useState('today');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [recentOrders, setRecentOrders] = useState(RECENT_ORDERS);
+  const [recentOrders, setRecentOrders] = useState([]);
   const [stats, setStats] = useState({
-    todayRevenue: '42.850.000₫',
-    newOrders: 28,
-    newCustomers: 14,
-    inventoryAlerts: 8
+    todayRevenue: 'Chưa tải',
+    newOrders: 'Chưa tải',
+    newCustomers: 'Chưa tải',
+    inventoryAlerts: 'Chưa tải'
   });
 
   const formatPrice = (p) =>
@@ -144,7 +55,7 @@ const AdminDashboardPage = () => {
             newCustomers: data.totalCustomers ?? 0,
             inventoryAlerts: data.pendingOrders ?? 0
           });
-          if (Array.isArray(data.recentOrders) && data.recentOrders.length > 0) {
+          if (Array.isArray(data.recentOrders)) {
             const mappedOrders = data.recentOrders.map((o, idx) => ({
               id: o.id || idx + 1,
               code: o.payosOrderCode ? `#APX-${o.payosOrderCode}` : `#APX-${o.id || 89000 + idx}`,
@@ -157,14 +68,14 @@ const AdminDashboardPage = () => {
               amount: o.totalAmount || 0,
               time: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('vi-VN') : 'Vừa xong',
               status: o.status || 'PENDING',
-              statusLabel: o.status === 'PAID' ? 'Đã thanh toán' : o.status === 'STRINGING' ? 'Đang vào cước' : o.status === 'COMPLETED' ? 'Đã hoàn tất' : 'Chờ xử lý'
+              statusLabel: getOrderStatusLabel(o)
             }));
             setRecentOrders(mappedOrders);
           }
         }
       }
     } catch (err) {
-      console.warn('Dashboard stats fallback:', err);
+      setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     } finally {
       setTimeout(() => setIsRefreshing(false), 600);
     }
@@ -176,6 +87,7 @@ const AdminDashboardPage = () => {
 
   return (
     <AdminLayout title="Dashboard" subtitle="Báo cáo tổng quan hoạt động">
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER / ACTION BAR */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
@@ -219,7 +131,7 @@ const AdminDashboardPage = () => {
 
             <button
               type="button"
-              onClick={() => alert('Đang xuất tệp Excel báo cáo tài chính Apex Badminton...')}
+              onClick={() => alert('Xuất báo cáo chưa được tích hợp, chưa tạo tệp.')}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#131b2e] hover:bg-slate-800 text-white text-xs font-bold transition-colors shadow-sm cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
@@ -236,7 +148,7 @@ const AdminDashboardPage = () => {
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Doanh thu hôm nay
+                  Tổng doanh thu
                 </span>
                 <span className="text-2xl font-black text-slate-900 mt-1 tracking-tight">
                   {stats.todayRevenue}
@@ -249,19 +161,19 @@ const AdminDashboardPage = () => {
             <div className="mt-4 pt-2 flex items-center gap-2 border-t border-slate-100">
               <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[11px] font-bold">
                 <ArrowUpRight className="w-3 h-3" />
-                +18.4%
+                —
               </span>
-              <span className="text-[11px] text-slate-500">so với hôm qua</span>
+              <span className="text-[11px] text-slate-500">Chưa có số liệu so sánh</span>
             </div>
           </div>
 
-          {/* Card 2: Đơn hàng mới */}
+          {/* Card 2: Tổng đơn hàng */}
           <div className="relative bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col justify-between">
             <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600"></div>
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Đơn hàng mới
+                  Tổng đơn hàng
                 </span>
                 <div className="flex items-baseline gap-1 mt-1">
                   <span className="text-2xl font-black text-slate-900 tracking-tight">
@@ -276,17 +188,17 @@ const AdminDashboardPage = () => {
             </div>
             <div className="mt-4 pt-2 flex items-center gap-1.5 border-t border-slate-100">
               <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-              <span className="text-[11px] text-slate-600 font-bold">+6 đơn chờ vào cước xưởng</span>
+              <span className="text-[11px] text-slate-600 font-bold">Xem chi tiết trong danh sách đơn hàng</span>
             </div>
           </div>
 
-          {/* Card 3: Khách hàng mới */}
+          {/* Card 3: Tổng khách hàng */}
           <div className="relative bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col justify-between">
             <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#0F172A]"></div>
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Khách hàng mới
+                  Tổng khách hàng
                 </span>
                 <div className="flex items-baseline gap-1 mt-1">
                   <span className="text-2xl font-black text-slate-900 tracking-tight">
@@ -301,9 +213,9 @@ const AdminDashboardPage = () => {
             </div>
             <div className="mt-4 pt-2 flex items-center gap-2 border-t border-slate-100">
               <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-bold">
-                5 VIP Gold
+                —
               </span>
-              <span className="text-[11px] text-slate-500">đăng ký mới hôm nay</span>
+              <span className="text-[11px] text-slate-500">Chưa có thống kê hội viên</span>
             </div>
           </div>
 
@@ -313,7 +225,7 @@ const AdminDashboardPage = () => {
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  Cảnh báo kho hàng
+                  Đơn chờ thanh toán
                 </span>
                 <div className="flex items-baseline gap-1 mt-1">
                   <span className="text-2xl font-black text-amber-600 tracking-tight">
@@ -327,7 +239,7 @@ const AdminDashboardPage = () => {
               </div>
             </div>
             <div className="mt-4 pt-2 flex items-center gap-1.5 border-t border-slate-100">
-              <span className="text-[11px] text-amber-700 font-bold">3 loại cước Yonex &lt; 5 cuộn</span>
+              <span className="text-[11px] text-amber-700 font-bold">Không phải số liệu tồn kho</span>
             </div>
           </div>
         </div>
@@ -343,7 +255,7 @@ const AdminDashboardPage = () => {
               </div>
               <div className="text-right">
                 <span className="text-xs text-slate-400 font-bold uppercase">Tổng tuần</span>
-                <p className="text-sm font-black text-secondary">289.850.000₫</p>
+                <p className="text-sm font-black text-secondary">Chưa có dữ liệu</p>
               </div>
             </div>
 
@@ -421,7 +333,7 @@ const AdminDashboardPage = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col">
           <div className="p-6 flex items-center justify-between border-b border-slate-100">
             <div>
-              <h3 className="text-base font-black text-slate-900">Đơn hàng mới nhất cần điều phối</h3>
+              <h3 className="text-base font-black text-slate-900">Tổng đơn hàng nhất cần điều phối</h3>
               <p className="text-xs text-slate-500">Ưu tiên đơn có yêu cầu kỹ thuật đan cước xưởng BWF</p>
             </div>
             <Link
@@ -464,28 +376,9 @@ const AdminDashboardPage = () => {
                       {formatPrice(order.amount)}
                     </td>
                     <td className="py-4 px-4 align-top">
-                      {order.status === 'STRINGING' && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold text-[11px]">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                          {order.statusLabel}
-                        </span>
-                      )}
-                      {order.status === 'CONFIRMED' && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold text-[11px]">
-                          {order.statusLabel}
-                        </span>
-                      )}
-                      {order.status === 'PENDING' && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[11px]">
-                          {order.statusLabel}
-                        </span>
-                      )}
-                      {order.status === 'COMPLETED' && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[11px]">
-                          <Check className="w-3 h-3 text-emerald-600" />
-                          {order.statusLabel}
-                        </span>
-                      )}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[11px]">
+                        {order.statusLabel}
+                      </span>
                     </td>
                     <td className="py-4 px-6 align-top text-right">
                       <Link

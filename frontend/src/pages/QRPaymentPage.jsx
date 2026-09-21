@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
-import { formatPrice, formatTimer } from '../utils/formatters';
+import { formatPrice, formatTimer, isOrderPaid } from '../utils/formatters';
 import {
   QrCode,
   Copy,
@@ -25,16 +25,15 @@ const QRPaymentPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [order, setOrder] = useState(location.state?.order || null);
-  const [loading, setLoading] = useState(!order);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copiedField, setCopiedField] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
 
   // Time remaining countdown (15 minutes default)
   const [secondsRemaining, setSecondsRemaining] = useState(
-    order?.timeRemainingSeconds || 14 * 60 + 55
+    order?.timeRemainingSeconds ?? 0
   );
 
   const copyToClipboard = (text, fieldName) => {
@@ -46,6 +45,7 @@ const QRPaymentPage = () => {
   // Fetch order details
   const fetchOrder = async () => {
     try {
+      setError('');
       const res = await orderApi.getOrderById(orderId);
       const data = res?.data ?? res;
       setOrder(data);
@@ -53,22 +53,11 @@ const QRPaymentPage = () => {
         setSecondsRemaining(data.timeRemainingSeconds);
       }
 
-      if (data && (data.status === 'PAID' || data.paymentStatus === 'PAID')) {
+      if (isOrderPaid(data)) {
         navigate(`/order-success/${orderId}`, { state: { order: data } });
       }
     } catch (err) {
-      console.warn('Lỗi khi tải thông tin đơn hàng, sử dụng dữ liệu giả lập:', err);
-      if (!order) {
-        // Fallback mock order if not already in state
-        setOrder({
-          id: orderId,
-          orderCode: orderId,
-          payosOrderCode: 89241,
-          totalAmount: 6910000,
-          customerName: 'Nguyễn Văn A',
-          status: 'PENDING_PAYMENT'
-        });
-      }
+      setError(err.response?.data?.message || 'Không thể tải đơn hàng để xác minh thanh toán.');
     } finally {
       setLoading(false);
     }
@@ -80,18 +69,20 @@ const QRPaymentPage = () => {
 
   // Polling check order status every 4 seconds
   useEffect(() => {
-    if (!order || order.status === 'PAID' || order.status === 'CANCELLED') return;
+    if (!order || order.status !== 'PENDING' || order.paymentMethod !== 'PAYOS_VIETQR') return;
 
     const interval = setInterval(async () => {
       try {
         const res = await orderApi.getOrderById(orderId);
         const latest = res?.data ?? res;
-        if (latest && (latest.status === 'PAID' || latest.paymentStatus === 'PAID')) {
+        setOrder(latest);
+        setSecondsRemaining(latest?.timeRemainingSeconds ?? 0);
+        if (isOrderPaid(latest)) {
           clearInterval(interval);
           navigate(`/order-success/${orderId}`, { state: { order: latest } });
         }
       } catch (e) {
-        // quiet error on background poll
+        setError('Không thể đồng bộ trạng thái thanh toán. Vui lòng kiểm tra lại.');
       }
     }, 4000);
 
@@ -120,56 +111,36 @@ const QRPaymentPage = () => {
       const res = await orderApi.getOrderById(orderId);
       const latest = res?.data ?? res;
       setOrder(latest);
-      if (latest && (latest.status === 'PAID' || latest.paymentStatus === 'PAID')) {
+      if (isOrderPaid(latest)) {
         navigate(`/order-success/${orderId}`, { state: { order: latest } });
       } else {
-        alert('Hệ thống đang đồng bộ qua Napas 24/7. Vui lòng hoàn tất chuyển khoản và chờ trong giây lát!');
+        alert('Chưa có xác nhận thanh toán từ máy chủ. Vui lòng kiểm tra lại trạng thái đơn hàng.');
       }
     } catch (err) {
-      alert('Hệ thống đang đồng bộ qua Napas 24/7. Đang kiểm tra giao dịch...');
+      setError('Không thể kiểm tra thanh toán. Vui lòng thử lại.');
     } finally {
       setIsVerifying(false);
     }
   };
 
-  // Dev Mock Webhook Trigger
-  const handleSimulateSuccess = async () => {
-    setIsSimulatingPayment(true);
-    try {
-      if (order?.payosOrderCode) {
-        await orderApi.triggerMockWebhook(order.payosOrderCode, order.totalAmount);
-      }
-      navigate(`/order-success/${orderId}`, {
-        state: {
-          order: {
-            ...order,
-            status: 'PAID',
-            paymentStatus: 'PAID'
-          }
-        }
-      });
-    } catch (err) {
-      // Fallback navigate directly
-      navigate(`/order-success/${orderId}`, {
-        state: {
-          order: {
-            ...order,
-            status: 'PAID',
-            paymentStatus: 'PAID'
-          }
-        }
-      });
-    } finally {
-      setIsSimulatingPayment(false);
-    }
-  };
-
   const displayOrderCode = order?.orderCode || `#APX-${orderId || '89241'}`;
-  const displayAmount = order?.totalAmount || 6910000;
+  const displayAmount = order?.totalAmount ?? 0;
+
+  if (loading) return <p className="p-8" role="status">Đang tải đơn hàng...</p>;
+  if (error || !order || !order.qrCode || order.status !== 'PENDING' || order.paymentMethod !== 'PAYOS_VIETQR' || secondsRemaining <= 0) {
+    return <div className="max-w-2xl mx-auto p-8 space-y-4">
+      <h1 className="text-xl font-bold">Thanh toán đơn hàng #{orderId}</h1>
+      <p role="alert">{error || (order?.status === 'PENDING'
+        ? 'Chưa có mã thanh toán được xác thực. Vui lòng không chuyển tiền theo thông tin mẫu.'
+        : 'Đơn hàng không ở trạng thái chờ thanh toán.')}</p>
+      <button className="border rounded px-4 py-2" onClick={fetchOrder}>Kiểm tra lại</button>
+      <Link className="block text-red-600 underline" to="/my-orders">Xem đơn hàng</Link>
+    </div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans flex flex-col justify-between antialiased selection:bg-red-500 selection:text-white">
-      
+
       {/* Inline scanner animation styles */}
       <style>{`
         @keyframes scanline {
@@ -240,7 +211,7 @@ const QRPaymentPage = () => {
 
       {/* Main Content - Căn giữa tối giản */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8 md:py-12 flex flex-col items-center justify-center">
-        
+
         {/* Link quay lại & Thông báo */}
         <div className="w-full max-w-[540px] flex items-center justify-between mb-4">
           <Link
@@ -255,7 +226,7 @@ const QRPaymentPage = () => {
 
         {/* Card Trắng Lớn Ở Giữa */}
         <div className="w-full max-w-[540px] bg-white rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-200 p-6 sm:p-8 flex flex-col items-center relative overflow-hidden">
-          
+
           {/* Viền màu thương hiệu trang trí trên đỉnh card */}
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-600 via-slate-900 to-red-600"></div>
 
@@ -279,7 +250,7 @@ const QRPaymentPage = () => {
 
           {/* Khung Mã QR To Ở Giữa */}
           <div className="relative bg-white p-4 sm:p-5 rounded-2xl border-2 border-slate-200/90 shadow-md flex flex-col items-center mb-5 group w-full max-w-[340px]">
-            
+
             {/* Header frame */}
             <div className="w-full flex items-center justify-between pb-3 mb-2 border-b border-slate-100">
               <div className="flex items-center gap-1.5">
@@ -307,90 +278,7 @@ const QRPaymentPage = () => {
                 />
               ) : (
                 /* Authentic SVG QR Graphic */
-                <svg className="w-full h-full" viewBox="0 0 250 250" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="250" height="250" fill="white" rx="8" />
-                  {/* Position markers */}
-                  <rect x="20" y="20" width="55" height="55" rx="6" fill="#0F172A" />
-                  <rect x="27" y="27" width="41" height="41" rx="4" fill="white" />
-                  <rect x="34" y="34" width="27" height="27" rx="3" fill="#0F172A" />
-
-                  <rect x="175" y="20" width="55" height="55" rx="6" fill="#0F172A" />
-                  <rect x="182" y="27" width="41" height="41" rx="4" fill="white" />
-                  <rect x="189" y="34" width="27" height="27" rx="3" fill="#0F172A" />
-
-                  <rect x="20" y="175" width="55" height="55" rx="6" fill="#0F172A" />
-                  <rect x="27" y="182" width="41" height="41" rx="4" fill="white" />
-                  <rect x="34" y="189" width="27" height="27" rx="3" fill="#0F172A" />
-
-                  {/* Clusters & Data */}
-                  <g fill="#0F172A">
-                    <rect x="85" y="35" width="8" height="8" rx="1" />
-                    <rect x="101" y="35" width="8" height="8" rx="1" />
-                    <rect x="117" y="35" width="8" height="8" rx="1" />
-                    <rect x="133" y="35" width="8" height="8" rx="1" />
-                    <rect x="149" y="35" width="8" height="8" rx="1" />
-                    <rect x="85" y="47" width="8" height="8" rx="1" />
-                    <rect x="117" y="47" width="8" height="8" rx="1" />
-                    <rect x="149" y="47" width="8" height="8" rx="1" />
-                    <rect x="35" y="85" width="8" height="8" rx="1" />
-                    <rect x="35" y="101" width="8" height="8" rx="1" />
-                    <rect x="35" y="117" width="8" height="8" rx="1" />
-                    <rect x="35" y="133" width="8" height="8" rx="1" />
-                    <rect x="35" y="149" width="8" height="8" rx="1" />
-
-                    <rect x="65" y="85" width="8" height="16" rx="1" />
-                    <rect x="81" y="85" width="16" height="8" rx="1" />
-                    <rect x="145" y="85" width="8" height="8" rx="1" />
-                    <rect x="161" y="85" width="16" height="8" rx="1" />
-                    <rect x="185" y="85" width="8" height="16" rx="1" />
-                    <rect x="201" y="85" width="16" height="8" rx="1" />
-
-                    <rect x="65" y="109" width="16" height="8" rx="1" />
-                    <rect x="169" y="109" width="8" height="16" rx="1" />
-                    <rect x="193" y="109" width="16" height="8" rx="1" />
-                    <rect x="217" y="109" width="8" height="8" rx="1" />
-
-                    <rect x="81" y="125" width="8" height="8" rx="1" />
-                    <rect x="161" y="125" width="16" height="8" rx="1" />
-                    <rect x="201" y="125" width="8" height="16" rx="1" />
-
-                    <rect x="65" y="141" width="8" height="16" rx="1" />
-                    <rect x="81" y="149" width="16" height="8" rx="1" />
-                    <rect x="145" y="141" width="8" height="8" rx="1" />
-                    <rect x="169" y="141" width="16" height="8" rx="1" />
-                    <rect x="217" y="141" width="8" height="16" rx="1" />
-
-                    <rect x="117" y="175" width="8" height="8" rx="1" />
-                    <rect x="133" y="175" width="16" height="8" rx="1" />
-                    <rect x="165" y="175" width="8" height="8" rx="1" />
-                    <rect x="181" y="175" width="16" height="8" rx="1" />
-                    <rect x="213" y="175" width="16" height="8" rx="1" />
-
-                    <rect x="101" y="189" width="8" height="16" rx="1" />
-                    <rect x="125" y="189" width="16" height="8" rx="1" />
-                    <rect x="157" y="189" width="8" height="8" rx="1" />
-                    <rect x="189" y="189" width="8" height="16" rx="1" />
-                    <rect x="205" y="189" width="16" height="8" rx="1" />
-
-                    <rect x="85" y="213" width="16" height="8" rx="1" />
-                    <rect x="117" y="213" width="8" height="8" rx="1" />
-                    <rect x="141" y="213" width="16" height="8" rx="1" />
-                    <rect x="173" y="213" width="8" height="16" rx="1" />
-                    <rect x="197" y="213" width="16" height="8" rx="1" />
-                    <rect x="221" y="213" width="8" height="8" rx="1" />
-                  </g>
-
-                  {/* Center APEX Emblem */}
-                  <rect x="95" y="95" width="60" height="60" rx="12" fill="white" stroke="#0F172A" strokeWidth="2.5" />
-                  <g transform="translate(103, 102)">
-                    <path d="M12 28 L17 14 L23 14 L28 28 Z" fill="#EF4444" />
-                    <path d="M9 12 L15 5 L25 5 L31 12 Z" fill="#2563EB" />
-                    <circle cx="20" cy="30" r="3" fill="#0F172A" />
-                    <text x="22" y="42" fontFamily="'Plus Jakarta Sans', sans-serif" fontWeight="900" fontSize="7" fill="#0F172A" textAnchor="middle" letterSpacing="0.5">
-                      APEX
-                    </text>
-                  </g>
-                </svg>
+                <p>Chưa có mã QR được xác thực.</p>
               )}
             </div>
 
@@ -515,15 +403,7 @@ const QRPaymentPage = () => {
 
             {/* Dev Mock Simulation Button for Fast Testing */}
             <div className="pt-2 border-t border-slate-100 flex justify-center">
-              <button
-                type="button"
-                onClick={handleSimulateSuccess}
-                disabled={isSimulatingPayment}
-                className="text-[11px] text-slate-400 hover:text-emerald-600 font-semibold flex items-center gap-1 transition-colors"
-              >
-                <RefreshCw className={`w-3 h-3 ${isSimulatingPayment ? 'animate-spin' : ''}`} />
-                <span>[Kiểm thử nhanh: Giả lập thanh toán thành công]</span>
-              </button>
+
             </div>
           </div>
 

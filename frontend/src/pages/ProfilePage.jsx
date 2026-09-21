@@ -25,7 +25,7 @@ const ProfilePage = () => {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [dob, setDob] = useState('1994-08-15');
+  const [dob, setDob] = useState('');
   const [gender, setGender] = useState('nam');
   const [avatarUrl, setAvatarUrl] = useState(
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
@@ -53,17 +53,17 @@ const ProfilePage = () => {
         const res = await userApi.getProfile();
         const data = res?.data ?? res;
         if (data) {
-          setFullName(data.fullName || user?.fullName || 'Nguyễn Văn A');
-          setPhone(data.phone || '0988 123 456');
-          setEmail(data.email || user?.email || 'van.nguyen@apexpro.vn');
+          setFullName(data.fullName || user?.fullName || '');
+          setPhone(data.phone || '');
+          setEmail(data.email || user?.email || '');
           if (data.gender) setGender(data.gender);
           if (data.dob) setDob(data.dob);
         }
       } catch (err) {
         console.error('Lỗi tải hồ sơ:', err);
-        setFullName(user?.fullName || 'Nguyễn Văn A');
-        setPhone('0988 123 456');
-        setEmail(user?.email || 'van.nguyen@apexpro.vn');
+        setFullName(user?.fullName || '');
+        setPhone('');
+        setEmail(user?.email || '');
       } finally {
         setLoadingProfile(false);
       }
@@ -79,7 +79,7 @@ const ProfilePage = () => {
 
     try {
       await userApi.updateProfile({ fullName, phone });
-      setProfileSuccess('Cập nhật thông tin cá nhân thành công!');
+      setProfileSuccess('Đã lưu họ tên và số điện thoại. Các trường khác chưa hỗ trợ cập nhật.');
     } catch (err) {
       setProfileError(err.response?.data?.message || 'Không thể cập nhật thông tin cá nhân. Vui lòng thử lại.');
     } finally {

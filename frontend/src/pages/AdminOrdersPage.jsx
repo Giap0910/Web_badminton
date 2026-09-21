@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getOrderStatusLabel, getNextOrderStatuses, isOrderPaid } from '../utils/formatters';
 import AdminLayout from '../components/AdminLayout';
 import { adminApi } from '../api/adminApi';
 import { orderApi } from '../api/orderApi';
@@ -22,101 +23,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-const INITIAL_ORDERS = [
-  {
-    id: 1,
-    code: '#APX-89241',
-    createdAt: '14:35 - 24/10/2024',
-    customerName: 'Nguyễn Văn A',
-    customerPhone: '0988 123 456',
-    customerAddress: 'Tầng 12, Landmark 81, P. 22, Q. Bình Thạnh, TP. HCM',
-    productName: 'Vợt Yonex Astrox 100ZZ Kurenai (4U/G5)',
-    productImage: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-    stringReq: '+ Cước BG80 Power (Căng 11.5kg / 25.5 lbs - 4 nút BWF)',
-    gift: 'Tặng 01 Cuốn cán Yonex AC102EX',
-    totalAmount: 4550000,
-    paymentMethod: 'VietQR Pro',
-    paymentRef: 'FT2429810293847',
-    isPaid: true,
-    status: 'STRINGING',
-    statusLabel: 'Đang vào cước'
-  },
-  {
-    id: 2,
-    code: '#APX-88910',
-    createdAt: '09:15 - 22/10/2024',
-    customerName: 'Trần Minh Đức',
-    customerPhone: '0912 456 789',
-    customerAddress: 'Số 182 Lê Duẩn, P. Nguyễn Du, Q. Hai Bà Trưng, Hà Nội',
-    productName: 'Giày Yonex Power Cushion 65Z3 Men',
-    productImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80',
-    stringReq: 'Size 42 EU • Form Bè Wide',
-    gift: 'Tặng vớ thi đấu Apex Pro',
-    totalAmount: 2890000,
-    paymentMethod: 'COD',
-    paymentRef: 'COD-SHIPPER-HUB',
-    isPaid: false,
-    status: 'SHIPPING',
-    statusLabel: 'Đang giao hỏa tốc'
-  },
-  {
-    id: 3,
-    code: '#APX-87422',
-    createdAt: '18:40 - 15/10/2024',
-    customerName: 'Lê Hoàng Long',
-    customerPhone: '0903 888 999',
-    customerAddress: 'Sân số 4, Kỳ Hòa 2, Sư Vạn Hạnh, Q.10, TP. HCM',
-    productName: 'Vợt Victor Thruster Ryuga Metallic (3U/G5)',
-    productImage: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?auto=format&fit=crop&w=400&q=80',
-    stringReq: '+ Cước Victor VBS-66 Nano 12kg (4 nút)',
-    gift: 'Tặng túi nhung Victor cao cấp',
-    totalAmount: 4200000,
-    paymentMethod: 'VNPAY-QR',
-    paymentRef: 'VNPAY-891029',
-    isPaid: true,
-    status: 'COMPLETED',
-    statusLabel: 'Đã hoàn tất'
-  },
-  {
-    id: 4,
-    code: '#APX-86105',
-    createdAt: '11:00 - 05/10/2024',
-    customerName: 'Phạm Thu Hà',
-    customerPhone: '0977 111 222',
-    customerAddress: 'Căn hộ Masteri Thảo Điền, TP. Thủ Đức',
-    productName: 'Ống Cầu Lông Yonex Aerosensa 50 (12 quả)',
-    productImage: 'https://images.unsplash.com/photo-1613918108466-292b78a8ef95?auto=format&fit=crop&w=400&q=80',
-    stringReq: 'Tốc độ 77 • Số lượng: 5 ống',
-    gift: 'Tích 150 điểm ApexClub',
-    totalAmount: 2250000,
-    paymentMethod: 'VietQR Pro',
-    paymentRef: 'FT242781928374',
-    isPaid: true,
-    status: 'COMPLETED',
-    statusLabel: 'Đã hoàn tất'
-  },
-  {
-    id: 5,
-    code: '#APX-85219',
-    createdAt: '16:20 - 28/09/2024',
-    customerName: 'Vũ Quốc Huy',
-    customerPhone: '0944 333 555',
-    customerAddress: 'Số 45 Trần Phú, Ba Đình, Hà Nội',
-    productName: 'Balo Yonex Pro Tournament Bag Blue',
-    productImage: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&q=80',
-    stringReq: 'Màu Fine Blue • Chứa 6 vợt',
-    gift: 'Không',
-    totalAmount: 1650000,
-    paymentMethod: 'VietQR Pro',
-    paymentRef: 'EXPIRED',
-    isPaid: false,
-    status: 'CANCELLED',
-    statusLabel: 'Đã hủy'
-  }
-];
 
 const AdminOrdersPage = () => {
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
+  const [dataError, setDataError] = useState('');
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,7 +39,7 @@ const AdminOrdersPage = () => {
       if (adminApi?.getOrders) {
         const res = await adminApi.getOrders();
         const list = Array.isArray(res) ? res : res?.data || [];
-        if (list.length > 0) {
+        if (Array.isArray(list)) {
           const mapped = list.map((item, idx) => {
             const firstItem = item.items?.[0] || item.orderItems?.[0];
             const techStr = firstItem?.stringingService
@@ -138,13 +48,7 @@ const AdminOrdersPage = () => {
               ? `Phiên bản: ${firstItem.selectedWeight}`
               : item.stringOption || 'Kỹ thuật viên vào cước BWF';
 
-            let statusLabel = 'Đang xử lý';
-            if (item.status === 'PAID') statusLabel = 'Đã thanh toán';
-            else if (item.status === 'STRINGING') statusLabel = 'Đang vào cước';
-            else if (item.status === 'SHIPPING') statusLabel = 'Đang giao hỏa tốc';
-            else if (item.status === 'COMPLETED') statusLabel = 'Đã hoàn tất';
-            else if (item.status === 'CANCELLED') statusLabel = 'Đã hủy';
-            else if (item.status === 'PENDING') statusLabel = 'Chờ thanh toán QR';
+            const statusLabel = getOrderStatusLabel(item);
 
             return {
               id: item.id || idx + 1,
@@ -158,9 +62,11 @@ const AdminOrdersPage = () => {
               stringReq: techStr,
               gift: 'Cuốn cán Yonex chính hãng',
               totalAmount: item.totalAmount || 0,
+              rawPaymentMethod: item.paymentMethod,
+              nextStatuses: getNextOrderStatuses(item),
               paymentMethod: item.paymentMethod?.includes('PAYOS') ? 'VietQR Pro' : 'COD',
               paymentRef: item.payosOrderCode ? `PAYOS-${item.payosOrderCode}` : `REF-${item.id || 999}`,
-              isPaid: item.status === 'PAID' || item.status === 'COMPLETED',
+              isPaid: isOrderPaid(item),
               status: item.status || 'PENDING',
               statusLabel: statusLabel
             };
@@ -169,7 +75,7 @@ const AdminOrdersPage = () => {
         }
       }
     } catch (e) {
-      console.warn('Fallback to local orders:', e);
+      setDataError(e.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -197,47 +103,27 @@ const AdminOrdersPage = () => {
     if (newStatus === 'PAID') label = 'Đã thanh toán';
 
     try {
-      if (adminApi?.updateOrderStatus) {
-        await adminApi.updateOrderStatus(orderId, newStatus);
-      }
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId
-            ? {
-                ...o,
-                status: newStatus,
-                statusLabel: label
-              }
-            : o
-        )
-      );
+      const response = await adminApi.updateOrderStatus(orderId, newStatus);
+      const updated = response?.data ?? response;
+      if (!updated?.id) throw new Error('Máy chủ chưa xác nhận trạng thái đơn');
+      await fetchOrders();
+      setSelectedOrder(null);
       setToastMessage(`Đã cập nhật trạng thái đơn sang: "${label}"`);
     } catch (err) {
-      console.warn('Lỗi cập nhật trạng thái đơn hàng:', err);
-      setToastMessage(`Không thể cập nhật trên máy chủ, đã lưu cục bộ.`);
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === orderId
-            ? {
-                ...o,
-                status: newStatus,
-                statusLabel: label
-              }
-            : o
-        )
-      );
+      setToastMessage(err.response?.data?.message || 'Không thể cập nhật trạng thái đơn hàng.');
     }
     setTimeout(() => setToastMessage(''), 3000);
   };
 
   const handleReconcileQR = () => {
-    setToastMessage('Đang kết nối PayOS Gateway đối soát 12 mã giao dịch VietQR... Tất cả đều khớp 100%!');
+    setToastMessage('Chức năng đối soát PayOS chưa được tích hợp. Chưa có kết quả xác minh.');
     setTimeout(() => setToastMessage(''), 4000);
   };
 
   const tabs = [
     { key: 'ALL', label: 'Tất cả' },
-    { key: 'STRINGING', label: 'Đang vào cước xưởng' },
+    { key: 'PENDING', label: 'Chờ xử lý / thanh toán' },
+    { key: 'PAID', label: 'Đã thanh toán' },
     { key: 'SHIPPING', label: 'Đang giao hàng' },
     { key: 'COMPLETED', label: 'Đã hoàn tất' },
     { key: 'CANCELLED', label: 'Đã hủy' }
@@ -256,6 +142,7 @@ const AdminOrdersPage = () => {
 
   return (
     <AdminLayout title="Đơn hàng" subtitle="Quản lý đơn hàng & Đối soát VietQR">
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & ACTION STRIP */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
@@ -421,7 +308,7 @@ const AdminOrdersPage = () => {
                           <span className="text-[10px] text-slate-400 font-mono mt-0.5">Ref: {order.paymentRef}</span>
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 mt-1">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            Đã quyết toán
+                            {order.isPaid ? 'Đã ghi nhận thanh toán' : 'Chưa thu tiền'}
                           </span>
                         </div>
                       </td>
@@ -433,10 +320,12 @@ const AdminOrdersPage = () => {
                           onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
                           className="text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer outline-none transition-colors"
                         >
-                          <option value="STRINGING">Đang vào cước xưởng</option>
-                          <option value="SHIPPING">Đang giao hỏa tốc</option>
-                          <option value="COMPLETED">Đã hoàn tất đơn</option>
-                          <option value="CANCELLED">Hủy đơn hàng</option>
+                          <option value={order.status}>{order.statusLabel}</option>
+                          {order.nextStatuses.map((status) => (
+                            <option key={status} value={status}>
+                              {getOrderStatusLabel({ status, paymentMethod: order.rawPaymentMethod })}
+                            </option>
+                          ))}
                         </select>
                       </td>
 

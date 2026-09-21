@@ -1,0 +1,317 @@
+[
+  {
+    "id": "grip-ac102ex",
+    "sku": "AC102EX-3IN1",
+    "name": "Quấn Cán Vợt Cầu Lông Yonex Super Grap AC102EX (Vỉ 3 Cuộn)",
+    "brand": "YONEX",
+    "category": "ACCESSORIES",
+    "subcategory": "racket-grip",
+    "price": 95000,
+    "originalPrice": 120000,
+    "discount": "-21%",
+    "badge": "TOP 1 BÁN CHẠY TOÀN CẦU",
+    "rating": 4.9,
+    "reviewsCount": 1240,
+    "soldCount": "14.8k vỉ",
+    "stock": 450,
+    "origin": "Nhật Bản (Made in Japan)",
+    "officialDistributor": "Sunrise Sports Việt Nam",
+    "images": [
+      "https://lh3.googleusercontent.com/aida/AEtjO1ULqG2pjkYDmyPQ0IN88Bk2nVUMX_hkwGQ5mKuL1wqjriT3HGSdcHn-u2vTs8vCqtWT_TWg-PvESmtOAy8Amg77cPe4mBmVwkEP0hZvdPWYHGy7YRvd9sol_5HD2D2RCOoOWodHNTjZI8M3P0S0cSVE78B6pcYHp82FuGNdNsfeO1zQE3h-BtRxy2RlaP2Id9Pc9DKMSGs0f3NIFkJliOUQKcttpdyS9bXHQdAg9I4PCoLDFvWfnA8W6Po",
+      "https://lh3.googleusercontent.com/aida/AEtjO1UYxkKhvl-V-jTO7Law9SnbZpfkjTBvFFiProbAxnZV0vZhOMFfHCMJvSvZP-HTEDYyaCc1EbnYwb0--C7HXpKfN1d3GY3dk7DgS2UFBtMKaFwfPQkOY3dtGksUkabG83Irdtz0N1sqo0imkwgArDKKbcq_8uVw0r32cKEKUd-t8yPmMelUPg2NaxzKQ3uODONOEJ63VP6ViXa9_7chq4giA_dxV7BtGQOLhrFwgrM-sl6QyKYuHbrr9Xc",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBo4fI1hHjOQdDvuGtK3DLLtaxrzpVhSkhLlCypUWl_exwH69sO0TmcZ9VtHb-96yaLpMp59wbhMJSVOgLMe6mJAJw1mGKgkkNLD4YN42kCyDcBp3lmTMeT849sNb2lOI7DbMjEO5vc3XQQvgqWQ4vA8ExwfEztKA6taqZNteTQwpUa7kHv3g-DxAwMw3hhEKNF3mVS-74cHcyP5wsy8CmSbb5eU-bN8qHdM1CXhLPzFsbtpoBdX1Yn",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuCsLoDf0K8mIIcqd79U7deE4HdtPAb0CTbfacxXKR27CltLdOvIlHJo-TjcRFM73DXy1xTNqrsUsreRZdeG1TXeoXZAJgdgI_qxGcIc2ExZPH9rJGPwKb53OxKytOyzveLTYfhqRFjnGbNCegRX2RO8x7_j0bJhhEFMNuUuV3uwyM9EFbPv13V1YVfE54WAgOO22T1jX9iEAP9q_RSuUH9PpNKN43YGdDiso44zbp6cj17Oi7of6fKJ"
+    ],
+    "colors": [
+      { "id": "yellow", "name": "Vàng Chanh Neon (Yellow)", "hex": "#facc15" },
+      { "id": "white", "name": "Trắng Tinh Khiết (White)", "hex": "#ffffff" },
+      { "id": "black", "name": "Đen Matte (Black)", "hex": "#18181b" },
+      { "id": "red", "name": "Đỏ Kurenai (Deep Red)", "hex": "#dc2626" },
+      { "id": "blue", "name": "Xanh Hoàng Gia (Royal Blue)", "hex": "#2563EB" },
+      { "id": "orange", "name": "Cam Neon (Neon Orange)", "hex": "#f97316" },
+      { "id": "pink", "name": "Hồng Phấn (Pastel Pink)", "hex": "#f472b6" },
+      { "id": "emerald", "name": "Xanh Ngọc Lục Bảo (Emerald)", "hex": "#059669" }
+    ],
+    "surfaceTypes": [
+      {
+        "id": "wet",
+        "title": "Ướt / Wet (Tacky)",
+        "subtitle": "Độ bám dính cực cao, không trơn trượt",
+        "recommended": true
+      },
+      {
+        "id": "dry",
+        "title": "Khô / Dry (Absorbent)",
+        "subtitle": "Siêu hút ẩm mồ hôi cho bàn tay nhiều mồ hôi",
+        "recommended": false
+      },
+      {
+        "id": "mesh",
+        "title": "Lưới / Mesh (Perforated)",
+        "subtitle": "Đục lỗ thoát khí thoáng mát nhanh",
+        "recommended": false
+      }
+    ],
+    "comboOffer": {
+      "title": "Combo Phụ Kiện Bảo Vệ Cán",
+      "subtitle": "Vỉ Quấn Yonex AC102EX + 1 Phấn Chống Trượt Cán Vợt",
+      "price": 145000,
+      "originalPrice": 185000,
+      "savings": "Tiết kiệm 40.000₫",
+      "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuBubWwh7YazCO6zjwPveMY4w1ZMp7wtUzRUhGNixu5SXsal9tfuIXCsdziz3ELJOYE7EW8Q1Uf4myASQjF65xEX9RTO7aHa8rdZvQ_kPeKXxVD_wmq2j0va_SPIYjVRwIARTHS_aMiaTg-wZ9C-vbcsnbLfaNHKhIE37yMSU6PEqp0uLyVhyON-kJEE24d2cXKmNyI4pZZ6uvTD22-EBgKFLh-TQpX5VWYp7oxxOY2wzqHoNU-gdVBi"
+    },
+    "specs": {
+      "Chất liệu": "Polyurethane (PU) cao cấp tổng hợp",
+      "Chiều rộng": "25 mm",
+      "Chiều dài": "1.200 mm",
+      "Độ dày": "0.6 mm",
+      "Quy cách": "Vỉ 3 cuộn kèm băng keo dán hoàn thiện Yonex",
+      "Xuất xứ": "Made in Japan (Nhật Bản)"
+    },
+    "description": "Yonex Super Grap AC102EX được giới thiệu từ năm 1987 và trở thành dòng quấn cán bán chạy nhất lịch sử cầu lông thế giới. Với độ bám dính Tacky tuyệt hảo kết hợp độ dày 0.6mm tiêu chuẩn, sản phẩm tối ưu cảm giác cầm vợt, hấp thụ chấn rung tốt và tạo độ bám dính chắc chắn ngay cả khi tay ra nhiều mồ hôi.",
+    "tutorialSteps": [
+      {
+        "step": 1,
+        "title": "Bóc lớp màng bảo vệ",
+        "desc": "Tháo bỏ lớp ni-lông bóng phủ trên bề mặt quấn cán và gỡ băng dính cố định ở đuôi dải quấn."
+      },
+      {
+        "step": 2,
+        "title": "Cố định phần vát ở nắp chuôi",
+        "desc": "Đặt phần đầu đã cắt vát dán sát mép nắp chuôi vợt, quấn 1 vòng đè kín chuôi đáy để định vị chắc chắn."
+      },
+      {
+        "step": 3,
+        "title": "Quấn chéo gối mép đều đặn",
+        "desc": "Kéo căng vừa tay với góc nghiêng khoảng 45 độ, các mép quấn sau đè lên mép trước từ 2mm - 3mm đều đặn dọc thân cán."
+      },
+      {
+        "step": 4,
+        "title": "Cắt tỉa & dán băng keo hoàn thiện",
+        "desc": "Khi quấn tới chóp nón chụp cán vợt, dùng kéo cắt vát ngang mép và dán chặt dải băng dán Yonex đen đi kèm."
+      }
+    ]
+  },
+  {
+    "id": "string-bg80p",
+    "sku": "BG80P-068-JP",
+    "name": "Cước Đan Vợt Cầu Lông Yonex BG80 Power Chính Hãng",
+    "brand": "YONEX",
+    "category": "ACCESSORIES",
+    "subcategory": "string",
+    "price": 185000,
+    "originalPrice": 220000,
+    "discount": "-16%",
+    "badge": "#1 CƯỚC TẤN CÔNG BÁN CHẠY",
+    "rating": 4.9,
+    "reviewsCount": 685,
+    "soldCount": "4.2k sợi",
+    "stock": 320,
+    "origin": "Nhật Bản (Made in Japan)",
+    "officialDistributor": "Sunrise Sports Việt Nam",
+    "images": [
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuCsGlJZqbxyEU1OXWgwGhTx0KASHsj4-H9UCVrNYHIpQGQYQimAg3-D0M1OnaQbwIm0okPFwaT2E32csiq7ocSFkPrgUDuUp0eJH5aqeXR3Ev7Pedic-NSQ01kqxIoqoh1hNJnK_9NRQAfhfYxIqZzSnBzxa62mrcTGti1v5TaWpsWPtc4oC7seDLFCnGJ4REMEId-_16BopIZsTydbjRsosDFSsFd5Noy9SYaFUcVPb1pvPIoAMHhJ",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuDn0B1mJlLJ5wDaouL5AnR-y0WUOpC8WYaaBLIqiUzWM42COvqfz-rY0j8xjGoFgarxjksdCbzUJ4NBigkyueWTBQv4AC4oBGiuor9g0nfXuQ3UdFUE8gj_1MHNuGXUIZaRMoj1hq5MfPbsUu133CN6EQnPlrScM1YtuV_IQFFaqAGQPG0VFSrcKA3S02WrPMAy6e2Ks0m1T-g1XCZOH3ipY6ia2iGEEQsmm4zZ6j48C-0m7JwRJbuP",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBaOEjY0rkcCUIBYM3dFLmNRU2gCQAdhPbauB7VRT1yjsPKhostvZnhOyn3sudZ0RL4GtWAfWNRn5IybWrYTnln9lw-AcyCf9pVDp_aPdyu08K4YFtlNgN82_1fBmN0rYFKJZ6EDQyYKSWkemMpzoqgdyz5bDqzsJq7z615HCHACmo_GtrbS73603y-60ivCwlnb8irzuDmNLeyu8g1g2gUjI9Xmi7tDR2c_Pcz7QvqgzP4iRY8tZyJ",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuDju9VELEQU5-PcM8Rk8iYSCaSvOWlFiwAjDkVFr-ijGV4tJata4bY6CggmaSL6BA2y8ABu8mT1xK1yiyJh5O-e2YFamhyn0KmsaiAdvzcDltByyhHtjZNrUGpyJJh9xGfgvZRSdXQwc1sjPFR5CSKaqkTiO2D-p9xjryroDC7XnsPo68h-bn622buREzXtktMmYp-4_jZq_B8GI8RQHg_XciNLTg2NmZm6hJ0K9l7S-pdlsa7RjUoy"
+    ],
+    "colors": [
+      { "id": "yellow", "name": "Vàng Chanh (Electric Yellow)", "hex": "#eab308" },
+      { "id": "white", "name": "Trắng Sứ (Optic White)", "hex": "#ffffff" },
+      { "id": "black", "name": "Đen Nhám (Matte Black)", "hex": "#1e293b" },
+      { "id": "orange", "name": "Cam Neon (Vibrant Orange)", "hex": "#ea580c" }
+    ],
+    "gauges": [
+      { "value": "0.65 mm", "label": "0.65 mm", "desc": "Trợ lực mạnh, nảy bén" },
+      { "value": "0.68 mm", "label": "0.68 mm", "desc": "Chuẩn BG80P cân bằng", "recommended": true },
+      { "value": "0.70 mm", "label": "0.70 mm", "desc": "Độ bền cước tối đa" }
+    ],
+    "packagingOptions": [
+      {
+        "id": "set",
+        "title": "Cắt sẵn 1 set lẻ (10m - Đủ căng 1 cây vợt)",
+        "subtitle": "Bao bì ép chân không vỉ treo chống ẩm mốc",
+        "price": 185000,
+        "originalPrice": 220000
+      },
+      {
+        "id": "reel",
+        "title": "Nguyên cuộn lớn (200m - Đan được 20-22 cây vợt)",
+        "subtitle": "Tiết kiệm tới 40% chi phí cho CLB và VĐV thi đấu",
+        "price": 1950000,
+        "originalPrice": 2400000
+      }
+    ],
+    "performanceRadar": {
+      "repulsion": 9.5,
+      "durability": 7.0,
+      "sound": 9.0,
+      "shock": 6.0,
+      "control": 6.0
+    },
+    "playStyle": "Tấn Công Smash Uy Lực",
+    "specs": {
+      "Đường kính": "0.68 mm",
+      "Chiều dài": "10 m (33 ft) / 200 m (656 ft)",
+      "Lõi dây": "High-Intensity Nylon Multifilament",
+      "Lớp phủ ngoài": "High Polymer Braided Vectran Fiber",
+      "Cảm giác tiếp xúc": "Hard Feeling (Cứng, dứt khoát)",
+      "Xuất xứ": "Made in Japan"
+    },
+    "stringingBanner": {
+      "title": "DỊCH VỤ CĂNG CƯỚC THI ĐẤU CHUẨN BWF",
+      "desc": "Máy căng điện tử Victor C-7032 Pro, kỹ thuật đan 4 mối gút Yonex tiêu chuẩn quốc tế, bảo hành độ căng 72 giờ.",
+      "ctaText": "Đặt lịch căng cước ngay",
+      "ctaLink": "/products?category=ACCESSORIES"
+    },
+    "description": "Yonex BG80 Power là lựa chọn hàng đầu của các tay vợt tấn công chuyên nghiệp nhờ lõi sợi Vectran bện kép siêu bền. Cước tạo cảm giác tiếp xúc cứng đanh, âm thanh nổ smash chói tai làm chủ hoàn toàn thế trận cầu công phá."
+  },
+  {
+    "id": "shuttle-as50",
+    "sku": "AS-50-JPN",
+    "name": "Ống Cầu Lông Yonex Aerosensa 50 (AS-50) Thi Đấu BWF Grade 1",
+    "brand": "YONEX",
+    "category": "ACCESSORIES",
+    "subcategory": "shuttlecock",
+    "price": 520000,
+    "originalPrice": 580000,
+    "discount": "-10%",
+    "badge": "CHUẨN OLYMPIC & BWF WORLD TOUR",
+    "rating": 4.9,
+    "reviewsCount": 682,
+    "soldCount": "8.4k ống",
+    "stock": 190,
+    "origin": "Nhật Bản (Made in Japan)",
+    "officialDistributor": "Sunrise Sports Việt Nam",
+    "images": [
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuCyZXdxJpoFOlwmtmeFFODdaKMjWEGX2OyWaSaX_Nvho97g9G2jdBvtbw6G-jedPZbN32CxgmEkgRM3S-HegblDFAiod0n2Gjju2TfcNgFCii_3MP2QTxgImjoE-EMDMz6DzpghRiVk84mNGTCq0VlQNL1kz8U66lFDhXa23U3u2XwIzUacKys-q-Bc_tXkQxsol67tQfYIxOVssAac6PCMfc2Iuw1t2zRoQH1i6yEmZ8_xDLFh4U1b",
+      "https://lh3.googleusercontent.com/aida/AEtjO1Vi9OaVFBPd6y0h2lY1ChhCbZUxacPh47LeL-4-CqofIOg6PE0CkZFT4JTWaUEof84EMDCWgJBLhyg-rcznbAd0uWPkOi-mxEf83c6JB8z4pkwtbLGfpZWjz4s4mHde4DQEdPY2QevLbZ4tmfyl1c7Qi19ysYkscofFnYdTuKhBIl8p2XLG9UIFDb6AJ11Re3DD02bGTBRd1bAUUcZiLuZFstUxq2Ygr3qz8pcGdzUamC0Lrc_Tw2bDsIA"
+    ],
+    "featherTypes": [
+      {
+        "id": "goose",
+        "title": "Lông vũ tự nhiên (Goose Feather)",
+        "subtitle": "100% Lông ngỗng cao cấp AS-50 tuyển chọn",
+        "recommended": true
+      },
+      {
+        "id": "nylon",
+        "title": "Cầu nhựa tập luyện (Mavis Nylon)",
+        "subtitle": "Bền bỉ, dùng cho trường học/ngoài trời",
+        "recommended": false
+      }
+    ],
+    "speeds": [
+      {
+        "id": "77",
+        "title": "Speed 77",
+        "subtitle": "Tốc độ Chậm - Vừa",
+        "temp": "Sân máy lạnh hoặc nhiệt độ < 26°C",
+        "recommended": true
+      },
+      {
+        "id": "76",
+        "title": "Speed 76",
+        "subtitle": "Tốc độ Chuẩn VN",
+        "temp": "Khí hậu miền Nam & Trung (26°C - 31°C)",
+        "recommended": false
+      },
+      {
+        "id": "75",
+        "title": "Speed 75",
+        "subtitle": "Tốc độ Nhanh",
+        "temp": "Vùng nóng ẩm cao hoặc trên 32°C",
+        "recommended": false
+      }
+    ],
+    "bulkOffers": [
+      {
+        "tier": "Thùng 10 Ống (120 quả)",
+        "unit": "thùng",
+        "price": 4950000,
+        "originalPrice": 5200000,
+        "savings": "Tiết kiệm ngay 250.000₫ + Tặng kèm túi vải Yonex BWF",
+        "qty": 10
+      },
+      {
+        "tier": "Thùng 50 Ống Đại Lý",
+        "unit": "thùng",
+        "price": 24200000,
+        "originalPrice": 26000000,
+        "savings": "Chiết khấu đại lý & CLB cực tốt",
+        "qty": 50
+      }
+    ],
+    "specs": {
+      "Loại lông": "Lông ngỗng tự nhiên cao cấp (Grade A Goose Feather)",
+      "Đế cầu": "100% Gỗ bần tự nhiên 3 lớp (Natural Solid Cork)",
+      "Quy cách đóng gói": "Ống 12 quả nén bảo quản niêm phong",
+      "Tiêu chuẩn": "BWF Approved Grade 1 Tournaments",
+      "Độ bay ổn định": "Tuyệt đối (Sai số đường bay < 1.2%)",
+      "Xuất xứ": "Made in Japan"
+    },
+    "description": "Yonex Aerosensa 50 là đỉnh cao quả cầu lông thi đấu chính thức tại các giải đấu World Tour Super 1000 và Olympic. Mỗi chiếc lông ngỗng được tuyển chọn bằng máy quang học với đế bần 3 lớp cao cấp, mang lại quỹ đạo xoay ổn định tuyệt đối và cảm giác đón cầu chính xác từng milimet."
+  },
+  {
+    "id": "sweatband-ac402",
+    "sku": "AC402-PRO-SET",
+    "name": "Băng Chặn Mồ Hôi Yonex Dry-Fit Cotton Thể Thao Pro",
+    "brand": "YONEX",
+    "category": "ACCESSORIES",
+    "subcategory": "sweatband",
+    "price": 175000,
+    "originalPrice": 220000,
+    "discount": "-20%",
+    "badge": "COMBO THI ĐẤU KHUYÊN DÙNG",
+    "rating": 4.9,
+    "reviewsCount": 328,
+    "soldCount": "2.4k bộ",
+    "stock": 142,
+    "origin": "Nhật Bản (Made in Japan)",
+    "officialDistributor": "Sunrise Sports Việt Nam",
+    "images": [
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuC9IEUCgLlL3GW5QIfUXCh_OdodRH7_6SUEKaSHWhU2Rq7VfJrxtbjPPayQDVW8hFirkY66GGyXt4mapHlXYaz5SC0f97d_1FG2RYqn-9sLHN1UsBdfzolgv4YaHRJjIUyrDoWE6q-W0rItCRvyHVaCEhY4dwLJ6tKRyNPX90TiUNrWJtKtelXtDOssE73al0GyFMYTUUitzmd0XenPGkYPuqF1-dgHtMIg-zx0QBbQRbc2COOA9jMP",
+      "https://lh3.googleusercontent.com/aida/AEtjO1Vi9OaVFBPd6y0h2lY1ChhCbZUxacPh47LeL-4-CqofIOg6PE0CkZFT4JTWaUEof84EMDCWgJBLhyg-rcznbAd0uWPkOi-mxEf83c6JB8z4pkwtbLGfpZWjz4s4mHde4DQEdPY2QevLbZ4tmfyl1c7Qi19ysYkscofFnYdTuKhBIl8p2XLG9UIFDb6AJ11Re3DD02bGTBRd1bAUUcZiLuZFstUxq2Ygr3qz8pcGdzUamC0Lrc_Tw2bDsIA"
+    ],
+    "types": [
+      {
+        "id": "headband",
+        "name": "Băng đầu (Headband)",
+        "price": 75000,
+        "originalPrice": 95000,
+        "discount": "-21%"
+      },
+      {
+        "id": "wristband",
+        "name": "Băng cổ tay (Cặp 2 chiếc)",
+        "price": 85000,
+        "originalPrice": 110000,
+        "discount": "-22%"
+      },
+      {
+        "id": "combo",
+        "name": "Combo 1 Đầu + 2 Cổ Tay",
+        "price": 175000,
+        "originalPrice": 220000,
+        "discount": "-20%",
+        "recommended": true
+      }
+    ],
+    "colors": [
+      { "id": "white", "name": "Trắng Tuyết (Classic White)", "hex": "#ffffff" },
+      { "id": "navy", "name": "Xanh Navy (Navy Blue)", "hex": "#0F172A" },
+      { "id": "red", "name": "Đỏ Laser (Laser Red)", "hex": "#EF4444" },
+      { "id": "black", "name": "Đen Obsidian (Black)", "hex": "#191c1e" },
+      { "id": "blue", "name": "Xanh Electric (Electric Blue)", "hex": "#2563EB" }
+    ],
+    "specs": {
+      "Chất liệu": "78% Cotton tự nhiên, 18% Polyester Dry, 4% Spandex co giãn",
+      "Khả năng thấm hút": "Siêu nhanh, ngăn mồ hôi chảy xuống mắt và tay cầm vợt",
+      "Kích thước băng đầu": "5 cm x 18 cm (Co giãn vòng đầu 52 - 62 cm)",
+      "Kích thước băng tay": "8 cm x 8 cm (Co giãn ôm trọn cổ tay)",
+      "Quy chuẩn đóng gói": "Túi zip bảo vệ kháng khuẩn",
+      "Xuất xứ": "Made in Japan"
+    },
+    "description": "Bộ băng chặn mồ hôi Yonex Pro được dệt từ sợi cotton chải kỹ cao cấp kết hợp sợi spandex co giãn phục hồi nhanh. Khả năng hút ẩm vượt trội giữ cho vùng mắt và lòng bàn tay luôn khô ráo trong những pha giằng co nghẹt thở."
+  }
+]

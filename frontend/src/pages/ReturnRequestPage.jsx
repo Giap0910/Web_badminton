@@ -25,83 +25,20 @@ import {
   Award
 } from 'lucide-react';
 
-const MOCK_RETURNS = [
-  {
-    id: 1,
-    rmaCode: '#RMA-2024-089',
-    createdAt: '25/10/2024',
-    status: 'IN_REVIEW',
-    statusLabel: 'Đang thẩm định phòng lab',
-    productName: 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai (4U/G5)',
-    productImage: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-    serialNumber: 'SN: YNX-892410-JP',
-    reasonCategory: 'Bảo hành khung vợt 90 ngày',
-    reasonDetail: 'Nứt ngầm khung góc 10h khi đan cước BG80 Power mức 11.5kg, nghi ngờ lỗi carbon từ nhà sản xuất.',
-    evidenceImages: [
-      'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=300&q=80'
-    ],
-    timelineStep: 3, // 1: Tiếp nhận, 2: Gửi về xưởng, 3: Thẩm định BWF, 4: Đổi mới
-    technicianNote: 'Kỹ thuật viên BWF đang soi laser kiểm tra vết nứt không có dấu hiệu va chạm ngoại lực. Dự kiến phản hồi kết quả trong 24h.'
-  },
-  {
-    id: 2,
-    rmaCode: '#RMA-2024-071',
-    createdAt: '19/10/2024',
-    status: 'COMPLETED',
-    statusLabel: 'Đã đổi mới 100%',
-    productName: 'Giày Cầu Lông Yonex Power Cushion 65Z3 Men',
-    productImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80',
-    serialNumber: 'SN: SH-65Z3-42EU',
-    reasonCategory: 'Đổi size giày 7 ngày tận nhà',
-    reasonDetail: 'Mang thử size 42 EU bị kích ngón út khi di chuyển bước chéo, yêu cầu đổi sang size 42.5 EU Form Wide.',
-    evidenceImages: [],
-    timelineStep: 4,
-    technicianNote: 'Đã thu hồi size 42 và giao tận nhà đôi mới size 42.5 EU hoàn toàn miễn phí.'
-  },
-  {
-    id: 3,
-    rmaCode: '#RMA-2024-055',
-    createdAt: '08/10/2024',
-    status: 'COMPLETED',
-    statusLabel: 'Đã xử lý xong',
-    productName: 'Vợt Victor Thruster Ryuga Metallic (3U/G5)',
-    productImage: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?auto=format&fit=crop&w=400&q=80',
-    serialNumber: 'SN: VIC-RYU-0941',
-    reasonCategory: 'Bảo hành lót gen chống đứt cước',
-    reasonDetail: 'Gen số 6 bị mòn gây cứa cước khi đập cầu smash.',
-    evidenceImages: [],
-    timelineStep: 4,
-    technicianNote: 'Xưởng Apex Pro đã thay thế toàn bộ dải gen liên hoàn chính hãng Victor và căng lại cước mới miễn phí.'
-  },
-  {
-    id: 4,
-    rmaCode: '#RMA-2024-042',
-    createdAt: '28/09/2024',
-    status: 'RECEIVED',
-    statusLabel: 'Chờ tiếp nhận tại xưởng',
-    productName: 'Balo Cầu Lông Yonex Pro Tournament Bag',
-    productImage: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&q=80',
-    serialNumber: 'SN: BAG-YXP-77',
-    reasonCategory: 'Bảo hành khóa kéo phụ kiện',
-    reasonDetail: 'Khóa kéo ngăn đựng giày bị kẹt đường rãnh.',
-    evidenceImages: [],
-    timelineStep: 1,
-    technicianNote: 'Đã tạo vận đơn thu hồi qua bưu cục Viettel Post. Shipper sẽ đến lấy hàng trong ngày mai.'
-  }
-];
 
 const ReturnRequestPage = () => {
+  const [dataError, setDataError] = useState('');
   const [searchParams] = useSearchParams();
   const preselectedOrderId = searchParams.get('orderId');
 
-  const [returnRequests, setReturnRequests] = useState(MOCK_RETURNS);
+  const [returnRequests, setReturnRequests] = useState([]);
   const [paidOrders, setPaidOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
 
   // Modal Creation State
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState(preselectedOrderId || '1');
+  const [selectedOrderId, setSelectedOrderId] = useState(preselectedOrderId || '');
   const [selectedProduct, setSelectedProduct] = useState('Vợt Yonex Astrox 100ZZ Kurenai (4U/G5)');
   const [reasonCategory, setReasonCategory] = useState('Bảo hành khung vợt 90 ngày (Lỗi NSX/Nứt ngầm)');
   const [reasonDetail, setReasonDetail] = useState('');
@@ -117,21 +54,21 @@ const ReturnRequestPage = () => {
           orderApi.getMyOrders(),
         ]);
         const returnsList = Array.isArray(returnsRes) ? returnsRes : returnsRes?.data || [];
-        if (returnsList.length > 0) {
+        if (Array.isArray(returnsList)) {
           const formatted = returnsList.map((item, idx) => ({
             id: item.id || idx + 1,
-            rmaCode: `#RMA-2024-0${item.id || 89}`,
-            createdAt: item.createdAt || '25/10/2024',
+            rmaCode: `#RMA-${item.id}`,
+            createdAt: item.createdAt || '',
             status: item.status || 'IN_REVIEW',
-            statusLabel: item.status === 'COMPLETED' ? 'Đã đổi mới 100%' : 'Đang thẩm định phòng lab',
+            statusLabel: item.status || 'Chưa rõ',
             productName: item.productName || 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai (4U/G5)',
             productImage: item.productImage || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-            serialNumber: item.serialNumber || 'SN: YNX-892410-JP',
+            serialNumber: item.serialNumber || '',
             reasonCategory: 'Bảo hành khung vợt 90 ngày',
-            reasonDetail: item.reason || 'Nứt ngầm khung góc 10h khi đan cước.',
+            reasonDetail: item.reason || '',
             evidenceImages: item.imageUrl ? [item.imageUrl] : [],
             timelineStep: item.status === 'COMPLETED' ? 4 : 3,
-            technicianNote: 'Kỹ thuật viên BWF đang thẩm định độ giãn khung carbon.'
+            technicianNote: ''
           }));
           setReturnRequests(formatted);
         }
@@ -139,7 +76,7 @@ const ReturnRequestPage = () => {
         const ordersList = Array.isArray(ordersRes) ? ordersRes : ordersRes?.data || [];
         setPaidOrders(ordersList);
       } catch (err) {
-        console.warn('API returns fallback to mock data:', err);
+        setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
       } finally {
         setLoading(false);
       }
@@ -155,35 +92,24 @@ const ReturnRequestPage = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const newRMA = {
-      id: Date.now(),
-      rmaCode: `#RMA-2024-0${Math.floor(Math.random() * 900) + 100}`,
-      createdAt: 'Vừa xong',
-      status: 'RECEIVED',
-      statusLabel: 'Tiếp nhận yêu cầu',
-      productName: selectedProduct,
-      productImage: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-      serialNumber: serialNumber || 'SN: APEX-SERIES-PRO',
-      reasonCategory: reasonCategory,
-      reasonDetail: reasonDetail,
-      evidenceImages: [
-        'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=300&q=80'
-      ],
-      timelineStep: 1,
-      technicianNote: 'Hệ thống đã tự động tạo phiếu tiếp nhận. Kỹ thuật viên bảo hành Apex Lab sẽ liên hệ xác nhận trong 24 giờ làm việc.'
-    };
-
     try {
+      if (!selectedOrderId) throw new Error('Vui lòng chọn đơn hàng thực tế.');
       await returnApi.createReturnRequest({
-        orderId: Number(selectedOrderId) || 1,
+        orderId: Number(selectedOrderId),
         reason: `${reasonCategory}: ${reasonDetail}`,
         imageUrl: null
       });
+      const list = await returnApi.getMyReturns();
+      setReturnRequests((Array.isArray(list) ? list : []).map((item) => ({
+        ...item, rmaCode: `#RMA-${item.id}`, productName: item.productName || 'Xem trong đơn hàng',
+        statusLabel: item.status, reasonDetail: item.reason || '', evidenceImages: [],
+        technicianNote: '', serialNumber: '', timelineStep: 1
+      })));
     } catch (err) {
-      console.warn('API create return fallback to local state:', err);
+      alert(err.response?.data?.message || err.message || 'Không thể gửi yêu cầu đổi trả.');
+      setSubmitting(false);
+      return;
     }
-
-    setReturnRequests([newRMA, ...returnRequests]);
     setSubmitting(false);
     setShowCreateModal(false);
     setReasonDetail('');
@@ -202,6 +128,7 @@ const ReturnRequestPage = () => {
 
   return (
     <UserLayout currentPage="Yêu cầu đổi trả & bảo hành" counts={{ returns: returnRequests.length }}>
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER STRIP WITH TITLE & TRIGGER CTA */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200/80">
@@ -485,9 +412,8 @@ const ReturnRequestPage = () => {
                     onChange={(e) => setSelectedOrderId(e.target.value)}
                     className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                   >
-                    <option value="1">Đơn #APX-89241 - Vợt Yonex Astrox 100ZZ Kurenai (4U/G5)</option>
-                    <option value="2">Đơn #APX-88910 - Giày Yonex Power Cushion 65Z3 Men</option>
-                    <option value="3">Đơn #APX-87422 - Vợt Victor Thruster Ryuga Metallic</option>
+                    <option value="">Chọn đơn hàng của bạn</option>
+                    {paidOrders.map((order) => <option key={order.id} value={order.id}>Đơn #{order.id}</option>)}
                   </select>
                 </div>
 

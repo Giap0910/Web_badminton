@@ -12,7 +12,8 @@ import {
   LogOut, 
   Flame, 
   Menu, 
-  X
+  X,
+  ChevronDown
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -184,7 +185,7 @@ const Navbar = () => {
 
         {/* Secondary Navigation Row (Categories & Hot Promo) */}
         <nav className="hidden lg:flex items-center justify-between border-t border-slate-800/80 pt-2 mt-2">
-          <div className="flex items-center gap-6 overflow-x-auto">
+          <div className="flex items-center gap-6">
             {navCategories.map((cat, idx) => (
               <Link
                 key={idx}
@@ -219,6 +220,38 @@ const Navbar = () => {
                   {cat.label}
                 </Link>
               ))}
+            </div>
+
+            {/* Mobile links cho 4 phụ kiện */}
+            <div className="pt-2 border-t border-slate-800/60 grid grid-cols-2 gap-1 text-[11px]">
+              <Link
+                to="/product/racket-grip/grip-ac102ex"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-2 py-1.5 rounded text-slate-400 hover:text-white"
+              >
+                • Quấn Cán Vợt
+              </Link>
+              <Link
+                to="/product/string/string-bg80p"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-2 py-1.5 rounded text-slate-400 hover:text-white"
+              >
+                • Cước Cầu Lông
+              </Link>
+              <Link
+                to="/product/shuttlecock/shuttle-as50"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-2 py-1.5 rounded text-slate-400 hover:text-white"
+              >
+                • Ống Cầu Lông
+              </Link>
+              <Link
+                to="/product/sweatband/sweatband-ac402"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-2 py-1.5 rounded text-slate-400 hover:text-white"
+              >
+                • Băng Chặn Mồ Hôi
+              </Link>
             </div>
 
             <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between">

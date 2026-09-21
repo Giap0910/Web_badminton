@@ -34,11 +34,11 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
   ];
 
   const navSales = [
-    { to: '/admin/products', label: 'Sản phẩm', icon: Package, badge: '248', badgeClass: 'bg-slate-800 text-slate-300' },
-    { to: '/admin/orders', label: 'Đơn hàng', icon: ShoppingBag, badge: '12 mới', badgeClass: 'bg-secondary text-white' },
+    { to: '/admin/products', label: 'Sản phẩm', icon: Package, badge: null },
+    { to: '/admin/orders', label: 'Đơn hàng', icon: ShoppingBag, badge: null },
     { to: '/admin/customers', label: 'Khách hàng', icon: Users, badge: null },
     { to: '/admin/vouchers', label: 'Khuyến mãi', icon: Tag, badge: null },
-    { to: '/admin/reviews', label: 'Đánh giá & RMA', icon: Star, badge: '4.9★', badgeClass: 'bg-amber-500/20 text-amber-300' },
+    { to: '/admin/reviews', label: 'Đánh giá & RMA', icon: Star, badge: null },
     { to: '/admin/payments', label: 'Giao dịch', icon: CreditCard, badge: null }
   ];
 

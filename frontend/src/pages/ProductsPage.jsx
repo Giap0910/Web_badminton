@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
-import { 
-  Filter, 
-  Search, 
+import { productCategory } from '../utils/formatters';
+import {
+  Filter,
+  Search,
   SlidersHorizontal,
   Home,
   ChevronLeft,
@@ -119,16 +120,18 @@ const BAG_TYPES = [
 ];
 
 const ACCESSORY_TYPES = [
-  { label: 'Cước Đan Vợt', value: 'string' },
-  { label: 'Quấn Cán Overgrip', value: 'grip' },
-  { label: 'Quả Cầu Thi Đấu', value: 'shuttlecock' },
-  { label: 'Băng Bảo Vệ Khớp', value: 'support' },
+  { label: 'Cước Cầu Lông', value: 'string' },
+  { label: 'Quấn Cán Vợt', value: 'grip' },
+  { label: 'Ống Cầu Lông', value: 'shuttlecock' },
+  { label: 'Băng Chặn Mồ Hôi', value: 'sweatband' },
 ];
 
 // Helper chuẩn hóa category từ URL param linh hoạt mọi biến thể
 const normalizeCategory = (cat) => {
   if (!cat) return 'ALL';
   const s = String(cat).trim().toUpperCase();
+  if (/^\d+$/.test(s)) return s;
+  if (/BALO|BAO[- ]V[ỢO]T|T[ÚU]I|BAG|BACKPACK/.test(s)) return 'BAG';
   if (s === 'ALL' || s === 'TAT-CA' || s === 'TẤT CẢ') return 'ALL';
 
   // 1. Vợt Cầu Lông
@@ -153,6 +156,7 @@ const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
   // URL State Synced
@@ -169,9 +173,9 @@ const ProductsPage = () => {
   const [selectedBagType, setSelectedBagType] = useState('ALL');
   const [selectedAccessoryType, setSelectedAccessoryType] = useState('ALL');
   const [selectedPriceRange, setSelectedPriceRange] = useState('ALL');
-  
+
   // Sorting & Pagination
-  const [sortBy, setSortBy] = useState('bestseller');
+  const [sortBy, setSortBy] = useState('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const productListTopRef = useRef(null);
@@ -184,11 +188,11 @@ const ProductsPage = () => {
     setSelectedCategory(normalizedCat);
 
     const kw = searchParams.get('keyword');
-    if (kw !== null) setKeyword(kw);
+    setKeyword(kw || '');
     const br = searchParams.get('brand');
-    if (br) setSelectedBrand(br);
+    setSelectedBrand(br || 'ALL');
     const gen = searchParams.get('gender');
-    if (gen) setSelectedGender(gen);
+    setSelectedGender(gen || 'ALL');
 
     const pageParam = parseInt(searchParams.get('page'), 10);
     if (!isNaN(pageParam) && pageParam > 0) {
@@ -202,12 +206,14 @@ const ProductsPage = () => {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setDataError('');
       try {
         const res = await productApi.getProducts({});
         const list = Array.isArray(res) ? res : (res?.content || []);
         setProducts(list);
       } catch (err) {
-        console.warn('Lỗi tải sản phẩm từ backend API:', err);
+        setProducts([]);
+        setDataError('Không tải được danh sách sản phẩm. Vui lòng thử lại.');
       } finally {
         setLoading(false);
       }
@@ -216,43 +222,16 @@ const ProductsPage = () => {
   }, []);
 
   // Helper phân loại sản phẩm chuẩn xác vào 5 danh mục nghiệp vụ
-  const getItemCategory = (item) => {
-    if (!item) return 'OTHER';
-
-    // 1. Ưu tiên cao nhất: categoryId từ CSDL MySQL (1: Racket, 2: Shoes, 3: Apparel, 4: Bag, 5: Accessories)
-    const catId = Number(item.categoryId || item.category?.id);
-    if (catId === 1) return 'RACKET';
-    if (catId === 2) return 'SHOES';
-    if (catId === 3) return 'APPAREL';
-    if (catId === 4) return 'BAG';
-    if (catId === 5) return 'ACCESSORIES';
-
-    const cat = (item.categoryName || (typeof item.category === 'string' ? item.category : item.category?.name) || '').toUpperCase();
-    const name = (item.name || '').toUpperCase();
-
-    // 2. Kiểm tra chuỗi categoryName
-    if (cat.includes('GIÀY') || cat.includes('SHOE') || cat.includes('FOOTWEAR')) return 'SHOES';
-    if (cat.includes('QUẦN ÁO') || cat.includes('ÁO') || cat.includes('QUẦN') || cat.includes('APPAREL') || cat.includes('TRANG PHỤC') || cat.includes('CLOTHING')) return 'APPAREL';
-    if (cat.includes('BALO') || cat.includes('TÚI') || cat.includes('BAG') || cat.includes('BACKPACK')) return 'BAG';
-    if (cat.includes('CƯỚC') || cat.includes('PHỤ KIỆN') || cat.includes('ACCESSOR') || cat.includes('GRIP') || cat.includes('QUẤN CÁN')) return 'ACCESSORIES';
-    if (cat.includes('VỢT') || cat.includes('RACKET')) return 'RACKET';
-
-    // 3. Phân loại theo thuộc tính kỹ thuật đặc thù
-    if (item.soleType || item.cushionTechnology || name.startsWith('GIÀY') || name.includes('GIÀY CẦU LÔNG') || name.includes('SHOE')) return 'SHOES';
-    if (item.bagType || item.capacity || item.racketCapacity || name.startsWith('BALO') || name.startsWith('TÚI') || name.includes('BAO VỢT') || name.includes('TÚI VỢT')) return 'BAG';
-    if (item.fabricType || (item.gender && (name.includes('ÁO') || name.includes('QUẦN') || name.includes('VÁY'))) || name.startsWith('ÁO ') || name.startsWith('QUẦN ') || name.includes('ÁO ĐẤU') || name.includes('QUẦN SHORTS') || name.includes('ÁO THUN')) return 'APPAREL';
-    if (item.accessoryType || name.includes('CƯỚC') || name.includes('QUẤN CÁN') || name.includes('QUẢ CẦU') || name.includes('HỘP CẦU') || name.includes('BĂNG CỔ TAY') || name.includes('TẤT ') || name.includes('VỚ ')) return 'ACCESSORIES';
-    if (item.weightGrip || item.balancePoint || item.stiffness || item.maxTension || item.playStyle || name.includes('VỢT')) return 'RACKET';
-
-    return 'OTHER';
-  };
+  const getItemCategory = productCategory;
 
   // Filter and Sort Logic - So khớp CHÍNH XÁC (Exact Match) trên từng field tương ứng
   const filteredProducts = products.filter((item) => {
     // 1. Lọc Danh mục (Category Filter) - Loại trừ tuyệt đối việc match lẫn giữa Vợt, Balo và Phụ kiện
     if (selectedCategory !== 'ALL') {
       const itemCat = getItemCategory(item);
-      if (itemCat !== selectedCategory) return false;
+      if (/^\d+$/.test(selectedCategory)) {
+        if (String(item.categoryId) !== selectedCategory) return false;
+      } else if (itemCat !== selectedCategory) return false;
     }
 
     // 2. Lọc Từ khóa (Keyword Search) - Tìm kiếm linh hoạt trên tên hoặc thương hiệu
@@ -350,7 +329,7 @@ const ProductsPage = () => {
       const cap = (item.capacity || '').toLowerCase();
       const name = (item.name || '').toLowerCase();
       const target = selectedBagType.toLowerCase();
-      
+
       if (target === 'backpack') {
         if (!bType.includes('balo') && !bType.includes('backpack') && !name.includes('balo')) return false;
       } else if (target === '6-racket') {
@@ -364,18 +343,18 @@ const ProductsPage = () => {
 
     // 10. Lọc Loại Phụ Kiện (Chỉ áp dụng khi xem Phụ Kiện hoặc ALL)
     if (selectedAccessoryType !== 'ALL' && (selectedCategory === 'ACCESSORIES' || selectedCategory === 'ALL')) {
-      const acc = (item.accessoryType || '').toLowerCase();
+      const acc = (item.accessoryType || item.accessory_type || item.subcategory || '').toLowerCase();
       const name = (item.name || '').toLowerCase();
       const target = selectedAccessoryType.toLowerCase();
 
       if (target === 'string') {
-        if (!acc.includes('string') && !acc.includes('cuoc') && !name.includes('cước')) return false;
+        if (!acc.includes('string') && !acc.includes('cuoc') && !acc.includes('day_cuoc') && !name.includes('cước')) return false;
       } else if (target === 'grip') {
         if (!acc.includes('grip') && !acc.includes('quan_can') && !name.includes('quấn cán')) return false;
       } else if (target === 'shuttlecock') {
-        if (!acc.includes('shuttlecock') && !acc.includes('cau') && !name.includes('quả cầu') && !name.includes('hộp cầu')) return false;
-      } else if (target === 'support') {
-        if (!acc.includes('support') && !acc.includes('bao_ve') && !name.includes('bảo vệ') && !name.includes('băng cổ tay') && !name.includes('vớ') && !name.includes('tất')) return false;
+        if (!acc.includes('shuttlecock') && !acc.includes('cau') && !acc.includes('qua_cau') && !name.includes('cầu') && !name.includes('hộp cầu') && !name.includes('ống cầu')) return false;
+      } else if (target === 'sweatband' || target === 'support') {
+        if (!acc.includes('sweatband') && !acc.includes('bang_do') && !acc.includes('bang_chan_mo_hoi') && !acc.includes('support') && !name.includes('băng') && !name.includes('mồ hôi')) return false;
       }
     }
 
@@ -441,7 +420,7 @@ const ProductsPage = () => {
     setSelectedBagType('ALL');
     setSelectedAccessoryType('ALL');
     setSelectedPriceRange('ALL');
-    setSortBy('bestseller');
+    setSortBy('newest');
     setCurrentPage(1);
     setSearchParams(selectedCategory !== 'ALL' ? { category: selectedCategory } : {});
   };
@@ -450,11 +429,12 @@ const ProductsPage = () => {
 
   return (
     <div className="w-full flex flex-col bg-[#F8FAFC]">
-      
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50">{dataError}</p>}
+
       {/* 1. TOP PANORAMIC CATEGORY HERO BANNER */}
       <section className="relative w-full overflow-hidden bg-[#131B2E] text-white">
-        <div 
-          className="absolute inset-0 z-0 opacity-40 mix-blend-luminosity bg-cover bg-center transition-all duration-700" 
+        <div
+          className="absolute inset-0 z-0 opacity-40 mix-blend-luminosity bg-cover bg-center transition-all duration-700"
           style={{ backgroundImage: `url('${currentBanner.bgImage}')` }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#131B2E] via-[#131B2E]/90 to-transparent" />
@@ -494,7 +474,7 @@ const ProductsPage = () => {
       {/* 2. BREADCRUMB & 5-CATEGORY SUB-NAV RIBBON */}
       <div className="w-full bg-white border-b border-[#E2E8F0] shadow-sm sticky top-[60px] z-30">
         <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-          
+
           {/* Breadcrumb path */}
           <nav className="flex items-center gap-1.5 text-slate-500 overflow-x-auto w-full sm:w-auto">
             <Link to="/" className="flex items-center gap-1 hover:text-secondary transition-colors">
@@ -544,12 +524,12 @@ const ProductsPage = () => {
 
       {/* 3. MAIN CONTENT: DYNAMIC SIDEBAR FILTERS + PRODUCT GRID */}
       <div className="max-w-[80rem] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-        
+
         <div className="flex flex-col lg:flex-row gap-8 items-start">
-          
+
           {/* LEFT SIDEBAR: DYNAMIC TECHNICAL FILTERS (280px) */}
           <aside className="w-full lg:w-[280px] shrink-0 bg-white rounded-xl p-5 border border-[#E2E8F0] shadow-sm flex flex-col gap-5">
-            
+
             {/* Sidebar Header */}
             <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
               <div className="flex items-center gap-2 text-slate-900 font-bold">
@@ -816,7 +796,7 @@ const ProductsPage = () => {
 
           {/* RIGHT COLUMN: TOOLBAR & PRODUCT GRID */}
           <section ref={productListTopRef} className="flex-1 w-full min-w-0 flex flex-col gap-5">
-            
+
             {/* Header Toolbar */}
             <div className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex flex-col gap-3">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -838,7 +818,7 @@ const ProductsPage = () => {
                       onChange={(e) => setSortBy(e.target.value)}
                       className="bg-transparent font-bold text-slate-900 outline-none cursor-pointer"
                     >
-                      <option value="bestseller">Bán chạy nhất</option>
+                      <option value="newest">Mới nhất</option>
                       <option value="rating">Đánh giá cao nhất</option>
                       <option value="price-asc">Giá tăng dần</option>
                       <option value="price-desc">Giá giảm dần</option>
@@ -875,7 +855,7 @@ const ProductsPage = () => {
               {(selectedBrand !== 'ALL' || selectedBalance !== 'ALL' || selectedWeight !== 'ALL' || selectedShoeSize !== 'ALL' || selectedApparelSize !== 'ALL' || selectedPriceRange !== 'ALL') && (
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
                   <span className="text-slate-500 font-bold uppercase text-[11px]">Đang lọc:</span>
-                  
+
                   {selectedBrand !== 'ALL' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
                       Hãng: {selectedBrand}
@@ -970,14 +950,14 @@ const ProductsPage = () => {
               /* List Mode */
               <div className="flex flex-col gap-4">
                 {paginatedProducts.map((product) => (
-                  <div 
-                    key={product.id} 
+                  <div
+                    key={product.id}
                     className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center gap-5"
                   >
                     <div className="w-full sm:w-44 h-44 bg-[#F2F4F6] rounded-lg p-2 flex items-center justify-center shrink-0">
-                      <img 
-                        src={product.imageUrl} 
-                        alt={product.name} 
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
                         className="max-h-full object-contain mix-blend-multiply"
                       />
                     </div>
@@ -985,7 +965,7 @@ const ProductsPage = () => {
                       <div className="flex items-center justify-between text-xs text-slate-500">
                         <span className="font-bold text-slate-900 uppercase">{product.brand}</span>
                         <span className="bg-[#ECEEF0] text-slate-700 px-2 py-0.5 rounded font-mono text-[11px]">
-                          {product.weightGrip || 'Chính Hãng BWF'}
+                          {product.weightGrip || 'Chưa có thông số'}
                         </span>
                       </div>
                       <Link to={`/products/${product.id}`}>
@@ -994,7 +974,7 @@ const ProductsPage = () => {
                         </h3>
                       </Link>
                       <p className="text-xs text-slate-500 line-clamp-2">
-                        {product.description || 'Thiết bị thi đấu thể thao cầu lông chuyên nghiệp, phân phối chính hãng đạt chuẩn quốc tế BWF.'}
+                        {product.description || 'Chưa có mô tả sản phẩm.'}
                       </p>
                       <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                         <span className="font-display text-xl font-black text-secondary">

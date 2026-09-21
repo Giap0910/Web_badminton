@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
-import { formatPrice } from '../utils/formatters';
+import { formatPrice, isOrderPaid, getOrderStatusLabel } from '../utils/formatters';
 import {
+  Tag,
   CheckCircle2,
   Copy,
   Check,
@@ -31,8 +32,8 @@ const OrderSuccessPage = () => {
   const { orderId } = useParams();
   const location = useLocation();
 
-  const [order, setOrder] = useState(location.state?.order || null);
-  const [loading, setLoading] = useState(!order);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -50,59 +51,14 @@ const OrderSuccessPage = () => {
         const res = await orderApi.getOrderById(orderId);
         setOrder(res?.data ?? res);
       } catch (err) {
-        console.warn('Không thể tải từ backend, sử dụng mock order thành công:', err);
-        if (!order) {
-          setOrder({
-            id: orderId,
-            orderCode: `APX-${orderId || '89241'}`,
-            customerName: 'Nguyễn Văn A',
-            shippingPhone: '0988 123 456',
-            shippingAddress: 'Số 182 Lê Duẩn, Phường Khâm Thiên, Quận Đống Đa, Hà Nội',
-            paymentMethod: 'PAYOS_VIETQR',
-            paymentStatus: 'PAID',
-            note: 'Căng cước 11kg theo chuẩn Yonex 4 nút trước khi gửi, bọc kỹ quấn cán, gọi điện hẹn giờ trước khi giao...',
-            subtotal: 7010000,
-            discountAmount: 100000,
-            shippingFee: 0,
-            totalAmount: 6910000,
-            createdAt: new Date().toISOString(),
-            items: [
-              {
-                id: 1,
-                name: 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai Chính Hãng',
-                price: 4050000,
-                quantity: 1,
-                imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCeVo-HZvjewr2fWlNtjw-DzfvOx_Cvjwy2Q0ytHepr7kET-scMkqJtqK_1rv0-HdqeBM9xta5egOe9UjR7wrWcESj3qnyKamWdym08lgN46jvGWyw97xZHGXF87S9xxR53OWjma5noDZ1QqyEqn3no3BM6480x4qjel2IUP_1WgXbc_9hoIkA-l918WlHk1L7Nlyp51RLEI2A8AFgpqL9h3ZvEqeI-pwaVOMTUQqv6adf2UTkZmRBh',
-                selectedWeight: '4U (80-84g) G5',
-                selectedColor: 'Đỏ Kurenai',
-                stringingService: 'Cước BG65Ti (11.0 kg)'
-              },
-              {
-                id: 2,
-                name: 'Giày Cầu Lông Yonex Power Cushion 65Z3 Trắng Vàng',
-                price: 2650000,
-                quantity: 1,
-                imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA8r5F4rj6ao0sn_Wi0GnD_m-sPD4U4vM8EPh4ByEtQVfxyo3s9Ccw1OEhhNE_1otzNgg5PUrNMKrwpkXJJ2hIpfm09XwRs3ClXnaNlC8ktMA2Ef3drz8CRlMVtRZAbBygez9IJcRYaT0Nefs0JoZqTCxSXIzVAAlP9qgBZRlZvsBzrqeYKXrs1jhj4wEv3mnV_C4bQi6Cn2dY2C0B1krJE5iu71mp25v0Aoc79p6FAAwKa-oDci-Re',
-                selectedSize: '42 EU (26.5 cm)',
-                selectedColor: 'Trắng / Vàng Solar'
-              },
-              {
-                id: 3,
-                name: 'Cước Đan Vợt Cầu Lông Yonex BG65Ti JP',
-                price: 155000,
-                quantity: 2,
-                imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAMBJyzaV_le-ZGqzIghSliOUjdp30wS877hiqJwakrN4fMFMNDvOkce2Ajr0H73HBasgBmXOzgJlnRrTaBZXpszH48bG9pa_nEd4A22L5VDnJViMBYdkjrUngKQh7ZPuLzZKkCZRcUIHgaPzy0IpDVNUvIcc2CXl5D1DiiXaak510CMDlXDHYn9JuzGibUQIomCzxbgt4hMCSrbtyS0I3Sp8lfuynNIHpXVLXQZabL69t7rpWfSebV',
-                selectedColor: 'Trắng (0.70mm)'
-              }
-            ]
-          });
-        }
+        setError(err.response?.data?.message || 'Không thể xác minh đơn hàng. Vui lòng kiểm tra lại danh sách đơn hàng.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchOrder();
+    if (orderId) fetchOrder();
+    else { setError('Thiếu mã đơn hàng, chưa thể xác minh thanh toán.'); setLoading(false); }
   }, [orderId]);
 
   if (loading) {
@@ -114,20 +70,20 @@ const OrderSuccessPage = () => {
     );
   }
 
-  const items = order?.items && order.items.length > 0 ? order.items : [
-    {
-      id: 1,
-      name: 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai',
-      price: 4050000,
-      quantity: 1,
-      imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCeVo-HZvjewr2fWlNtjw-DzfvOx_Cvjwy2Q0ytHepr7kET-scMkqJtqK_1rv0-HdqeBM9xta5egOe9UjR7wrWcESj3qnyKamWdym08lgN46jvGWyw97xZHGXF87S9xxR53OWjma5noDZ1QqyEqn3no3BM6480x4qjel2IUP_1WgXbc_9hoIkA-l918WlHk1L7Nlyp51RLEI2A8AFgpqL9h3ZvEqeI-pwaVOMTUQqv6adf2UTkZmRBh',
-      selectedWeight: '4U (80-84g) G5',
-      stringingService: 'Cước BG65Ti (11.0 kg)'
-    }
-  ];
+  if (error || !order || !isOrderPaid(order)) {
+    return <div className="max-w-2xl mx-auto p-8 space-y-4">
+      <h1 className="text-xl font-bold">Trạng thái đơn hàng</h1>
+      <p role="status">{error || (order?.paymentMethod === 'COD' && order?.status === 'PENDING'
+        ? 'Đơn hàng đã được ghi nhận, chưa thanh toán. Thanh toán khi nhận hàng.'
+        : order ? getOrderStatusLabel(order) : 'Chưa có xác nhận thanh toán thành công cho đơn hàng này.')}</p>
+      <Link className="text-red-600 underline" to="/my-orders">Kiểm tra đơn hàng</Link>
+    </div>;
+  }
+
+  const items = order?.items || [];
 
   const subtotal = order?.subtotal || items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
-  const discountAmount = order?.discountAmount || 100000;
+  const discountAmount = order?.discountAmount || 0;
   const shippingFee = order?.shippingFee !== undefined ? order.shippingFee : 0;
   const totalAmount = order?.totalAmount || Math.max(0, subtotal - discountAmount + shippingFee);
 
@@ -178,7 +134,7 @@ const OrderSuccessPage = () => {
             Đặt hàng thành công!
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
-            Cảm ơn bạn <strong className="font-semibold text-slate-800">{order?.customerName || 'Nguyễn Văn A'}</strong> đã tin tưởng lựa chọn <strong className="font-bold text-slate-900">Apex Badminton</strong>. Email xác nhận đơn hàng kèm hóa đơn điện tử VAT đã được gửi tới địa chỉ đăng ký.
+            Cảm ơn bạn <strong className="font-semibold text-slate-800">{order?.customerName || 'Chưa có thông tin'}</strong> đã tin tưởng lựa chọn <strong className="font-bold text-slate-900">Apex Badminton</strong>. Vui lòng theo dõi tình trạng xử lý trong danh sách đơn hàng.
           </p>
 
           {/* 4 Summary Cards Grid */}
@@ -248,14 +204,14 @@ const OrderSuccessPage = () => {
               </span>
               <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col gap-1 h-full">
                 <span className="text-sm font-bold text-slate-900">
-                  {order?.customerName || 'Nguyễn Văn A'} <span className="text-xs font-normal text-slate-500">| {order?.shippingPhone || '0988 123 456'}</span>
+                  {order?.customerName || 'Chưa có thông tin'} <span className="text-xs font-normal text-slate-500">| {order?.shippingPhone || 'Chưa có thông tin'}</span>
                 </span>
                 <p className="text-xs text-slate-600 mt-0.5">
-                  {order?.shippingAddress || 'Số 182 Lê Duẩn, Phường Khâm Thiên, Quận Đống Đa, Hà Nội'}
+                  {order?.shippingAddress || 'Chưa có thông tin'}
                 </p>
                 <div className="mt-2 pt-2 border-t border-slate-100 flex items-center gap-1.5 text-red-600 text-xs font-semibold">
                   <Zap className="w-3.5 h-3.5 fill-current" />
-                  <span>Phương thức: Giao hỏa tốc 2h - Ahamove / GrabExpress Apex</span>
+                  <span>Lịch giao hàng sẽ được xác nhận sau.</span>
                 </div>
               </div>
             </div>
@@ -267,13 +223,13 @@ const OrderSuccessPage = () => {
               </span>
               <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between h-full gap-2">
                 <p className="text-xs text-slate-600 italic leading-relaxed">
-                  “{order?.note || 'Căng cước 11kg theo chuẩn Yonex 4 nút trước khi gửi, bọc kỹ quấn cán, gọi điện hẹn giờ trước khi giao...'}”
+                  “{order?.note || 'Chưa có thông tin'}”
                 </p>
                 <div className="flex items-center justify-between text-xs text-slate-500 pt-1.5 border-t border-slate-100">
                   <span className="flex items-center gap-1 text-slate-700 font-medium">
-                    <Wrench className="w-3.5 h-3.5 text-red-500" /> Đã bàn giao xưởng căng vợt
+                    <Wrench className="w-3.5 h-3.5 text-red-500" /> Theo dõi tiến độ trong đơn hàng
                   </span>
-                  <span className="font-bold text-slate-900">KTV: Trần Đình L.</span>
+                  <span className="font-bold text-slate-900">Chưa có thông tin kỹ thuật viên</span>
                 </div>
               </div>
             </div>
@@ -363,7 +319,7 @@ const OrderSuccessPage = () => {
               <div className="flex justify-between items-baseline pt-1">
                 <div>
                   <span className="text-sm font-black text-slate-900 block">Tổng thanh toán:</span>
-                  <span className="text-[11px] text-red-600 font-semibold">Đã thanh toán đủ qua VietQR</span>
+                  <span className="text-[11px] text-red-600 font-semibold">Máy chủ đã ghi nhận thanh toán</span>
                 </div>
                 <span className="text-2xl font-black text-red-600 tracking-tight">
                   {formatPrice(totalAmount)}

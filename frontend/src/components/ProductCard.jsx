@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { productImages, productRating, productOptions, productCategory } from '../utils/formatters';
 import { useCart } from '../context/CartContext';
-import { ShoppingCart, Eye, Star, Heart } from 'lucide-react';
+import { ShoppingCart, Star, Heart } from 'lucide-react';
 
 const ProductCard = ({ product, onQuickView }) => {
   const { addToCart } = useCart();
+  const navigate = useNavigate();
+  const needsSelection = ['SHOES', 'APPAREL'].includes(productCategory(product))
+    || productOptions(product.weightGrip || product.weightClass).length > 0;
   const [isFavorite, setIsFavorite] = useState(false);
   const [addedAnimation, setAddedAnimation] = useState(false);
+  const inStock = Number.isInteger(product.stock) && product.stock > 0;
+  const imageUrl = productImages(product)[0];
 
   // Format VND currency
   const formatPrice = (price) => {
@@ -14,10 +20,38 @@ const ProductCard = ({ product, onQuickView }) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
+  // Xác định đường dẫn chi tiết tương ứng (hỗ trợ 4 loại phụ kiện chuyên biệt)
+  const getProductDetailUrl = (prod) => {
+    const sub = prod.subcategory || '';
+    const nameLower = (prod.name || '').toLowerCase();
+    if (sub === 'racket-grip' || nameLower.includes('quấn cán') || nameLower.includes('super grap')) {
+      return `/product/racket-grip/${prod.id}`;
+    }
+    if (sub === 'string' || nameLower.includes('cước') || nameLower.includes('bg80') || nameLower.includes('bg65')) {
+      return `/product/string/${prod.id}`;
+    }
+    if (sub === 'shuttlecock' || nameLower.includes('ống cầu') || nameLower.includes('quả cầu') || nameLower.includes('aerosensa')) {
+      return `/product/shuttlecock/${prod.id}`;
+    }
+    if (sub === 'sweatband' || nameLower.includes('băng chặn') || nameLower.includes('headband') || nameLower.includes('wristband')) {
+      return `/product/sweatband/${prod.id}`;
+    }
+    return `/products/${prod.id}`;
+  };
+
+  const productDetailUrl = getProductDetailUrl(product);
+
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1);
+    if (inStock && needsSelection) {
+      navigate(productDetailUrl);
+      return;
+    }
+    if (!inStock || !addToCart(product, 1)) {
+      alert('Không đủ tồn kho để thêm sản phẩm.');
+      return;
+    }
     setAddedAnimation(true);
     setTimeout(() => setAddedAnimation(false), 1500);
   };
@@ -36,10 +70,10 @@ const ProductCard = ({ product, onQuickView }) => {
     : null;
 
   const isNew = product.badge === 'MỚI 2024' || product.badge === 'Mới' || product.isNew;
-  const badgeLabel = product.badge || (discountPercent ? `-${discountPercent}%` : (isNew ? 'Mới' : 'Bán chạy'));
+  const badgeLabel = product.badge || (discountPercent ? `-${discountPercent}%` : (isNew ? 'Mới' : ''));
 
   // Specs pill label
-  const specLabel = product.weightGrip || product.specification || (product.category === 'shoes' ? 'Power Cushion+' : 'Head Heavy');
+  const specLabel = product.weightGrip || product.specification || 'Chưa có thông số';
 
   return (
     <div className="group relative flex flex-col bg-white rounded-xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 border border-[#E2E8F0] hover:border-[#CBD5E1]">
@@ -69,38 +103,29 @@ const ProductCard = ({ product, onQuickView }) => {
 
       {/* Product Image Stage with Hover Quick-Actions */}
       <div className="relative w-full h-56 bg-[#F2F4F6] rounded-lg overflow-hidden flex items-center justify-center p-3">
-        <Link to={`/products/${product.id}`} className="w-full h-full flex items-center justify-center">
-          <img 
-            src={product.imageUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCOFwZT1UJx5nkitITNFAjiR7oN1GVOk7tVqfi8VhTpi_UNiYyGmzZchQLR-OHFtbD6abTEHZ1tJeE3F9Ch-Sd5BalslPXTcg-0xfOsJI4H0MzHYnEGOCBg3H41UP0-a7I9elHE07OCDNkyrEKbdAtjgKbL6AAAZffbfOc0QBd8cLbdKs69D4qza-BkpsRhooyHwD-6K0zhrsEZs-tn7-0ACwfqU-7-NeA74IadD4DbLOFHRE7-iO06'} 
+        <Link to={productDetailUrl} className="w-full h-full flex items-center justify-center">
+          {imageUrl ? <img 
+            src={imageUrl} 
             alt={product.name} 
             className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
-          />
+          /> : <span>Chưa có ảnh sản phẩm</span>}
         </Link>
 
         {/* Hover Action Bar */}
-        <div className="absolute inset-x-3 bottom-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="absolute inset-x-3 bottom-3 flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button 
             type="button"
+            disabled={!inStock}
             onClick={handleAddToCart}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-all ${
+            className={`w-full py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-all ${
               addedAnimation 
                 ? 'bg-emerald-600 text-white' 
                 : 'bg-secondary hover:bg-secondary-hover text-white active:scale-95'
             }`}
           >
             <ShoppingCart className="w-4 h-4" />
-            <span>{addedAnimation ? 'Đã thêm!' : 'Thêm giỏ hàng'}</span>
-          </button>
-          
-          <button 
-            type="button"
-            onClick={handleQuickView}
-            aria-label="Xem nhanh" 
-            className="w-9 h-9 bg-white text-slate-800 hover:text-secondary rounded-lg flex items-center justify-center shadow-md transition-colors shrink-0"
-            title="Xem nhanh thông số"
-          >
-            <Eye className="w-4 h-4" />
+            <span>{!inStock ? 'Hết hàng' : addedAnimation ? 'Đã thêm!' : needsSelection ? 'Chọn phiên bản' : 'Thêm giỏ hàng'}</span>
           </button>
         </div>
       </div>
@@ -119,7 +144,7 @@ const ProductCard = ({ product, onQuickView }) => {
           </div>
 
           {/* Title */}
-          <Link to={`/products/${product.id}`}>
+          <Link to={productDetailUrl}>
             <h3 className="font-display text-sm sm:text-base font-bold text-slate-900 group-hover:text-secondary transition-colors line-clamp-1">
               {product.name}
             </h3>
@@ -129,14 +154,14 @@ const ProductCard = ({ product, onQuickView }) => {
           <div className="flex items-center gap-1.5 text-xs text-slate-500 my-1">
             <div className="flex text-amber-500">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                <Star key={i} className={`w-3.5 h-3.5 ${product.reviewCount > 0 && i < Math.round(product.averageRating || 0) ? 'fill-amber-500 text-amber-500' : 'text-slate-300'}`} />
               ))}
             </div>
             <span className="font-bold text-slate-900">
-              {product.averageRating ? product.averageRating.toFixed(1) : '5.0'}
+              {productRating(product)}
             </span>
             <span className="text-slate-400 text-[11px]">
-              ({product.reviewCount || 128} đánh giá)
+              ({product.reviewCount ?? 0} đánh giá)
             </span>
           </div>
         </div>

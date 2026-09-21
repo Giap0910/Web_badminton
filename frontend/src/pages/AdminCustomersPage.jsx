@@ -18,81 +18,10 @@ import {
   Receipt
 } from 'lucide-react';
 
-const INITIAL_CUSTOMERS = [
-  {
-    id: 1,
-    fullName: 'Nguyễn Văn A',
-    email: 'van.nguyen@apexpro.vn',
-    phone: '0988 123 456',
-    tier: 'GOLD',
-    tierLabel: 'Hạng Vàng',
-    points: 1250,
-    totalOrders: 5,
-    totalSpent: 18450000,
-    joinedDate: '15/03/2023',
-    status: 'ACTIVE',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 2,
-    fullName: 'Trần Minh Đức',
-    email: 'duc.tran@badminton.vn',
-    phone: '0912 456 789',
-    tier: 'DIAMOND',
-    tierLabel: 'Hạng Kim Cương',
-    points: 3840,
-    totalOrders: 14,
-    totalSpent: 52100000,
-    joinedDate: '10/01/2023',
-    status: 'ACTIVE',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 3,
-    fullName: 'Lê Hoàng Long',
-    email: 'long.le@gmail.com',
-    phone: '0903 888 999',
-    tier: 'GOLD',
-    tierLabel: 'Hạng Vàng',
-    points: 1100,
-    totalOrders: 4,
-    totalSpent: 15200000,
-    joinedDate: '20/06/2023',
-    status: 'ACTIVE',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 4,
-    fullName: 'Phạm Thu Hà',
-    email: 'ha.pham@outlook.com',
-    phone: '0977 111 222',
-    tier: 'SILVER',
-    tierLabel: 'Hạng Bạc',
-    points: 620,
-    totalOrders: 2,
-    totalSpent: 6450000,
-    joinedDate: '05/08/2024',
-    status: 'ACTIVE',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 5,
-    fullName: 'Vũ Quốc Huy',
-    email: 'huy.vu@yahoo.com',
-    phone: '0944 333 555',
-    tier: 'STANDARD',
-    tierLabel: 'Tiêu chuẩn',
-    points: 150,
-    totalOrders: 1,
-    totalSpent: 1650000,
-    joinedDate: '12/09/2024',
-    status: 'LOCKED',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=300&q=80'
-  }
-];
 
 const AdminCustomersPage = () => {
-  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+  const [dataError, setDataError] = useState('');
+  const [customers, setCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTier, setSelectedTier] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
@@ -107,7 +36,7 @@ const AdminCustomersPage = () => {
       if (adminApi?.getAllUsers) {
         const res = await adminApi.getAllUsers();
         const list = Array.isArray(res) ? res : res?.data || [];
-        if (list.length > 0) {
+        if (Array.isArray(list)) {
           const mapped = list.map((u, idx) => ({
             id: u.id || idx + 1,
             code: `KH-${1000 + (u.id || idx)}`,
@@ -115,17 +44,17 @@ const AdminCustomersPage = () => {
             email: u.email || 'N/A',
             phone: u.phone || 'Chưa cập nhật',
             tier: u.role === 'ROLE_ADMIN' ? 'DIAMOND' : 'GOLD',
-            totalSpent: 4500000,
-            orderCount: 2,
+            totalSpent: u.totalSpent ?? 0,
+            orderCount: u.totalOrders ?? 0,
             lastActive: 'Gần đây',
-            status: u.active !== false ? 'ACTIVE' : 'LOCKED',
+            status: u.isActive === true ? 'ACTIVE' : 'LOCKED',
             avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
           }));
           setCustomers(mapped);
         }
       }
     } catch (err) {
-      console.warn('Fallback to local customers:', err);
+      setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     }
   };
 
@@ -146,7 +75,8 @@ const AdminCustomersPage = () => {
       setToastMessage(`Đã ${isActive ? 'mở khóa' : 'tạm khóa'} tài khoản của ${target.fullName}.`);
     } catch (err) {
       console.warn('Lỗi cập nhật trạng thái user:', err);
-      setToastMessage(`Đã cập nhật trạng thái (cục bộ).`);
+      setToastMessage(err.response?.data?.message || 'Không thể cập nhật trạng thái tài khoản.');
+      return;
     }
 
     setCustomers((prev) =>
@@ -169,6 +99,7 @@ const AdminCustomersPage = () => {
 
   return (
     <AdminLayout title="Khách hàng" subtitle="Quản lý khách hàng & Thành viên ApexClub">
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & ACTION STRIP */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
@@ -182,7 +113,7 @@ const AdminCustomersPage = () => {
                   Khách hàng & Hội viên
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-black">
-                  1.420 thành viên
+                  Chưa có dữ liệu
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -204,8 +135,8 @@ const AdminCustomersPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tổng khách hàng</span>
-              <span className="text-2xl font-black text-slate-900 mt-1">1.420</span>
-              <span className="text-[11px] text-emerald-600 font-bold mt-1">+24 đăng ký tuần này</span>
+              <span className="text-2xl font-black text-slate-900 mt-1">Chưa có dữ liệu</span>
+              <span className="text-[11px] text-emerald-600 font-bold mt-1">Chưa có dữ liệu</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Users className="w-6 h-6" />
@@ -215,8 +146,8 @@ const AdminCustomersPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Hội viên VIP Gold & Diamond</span>
-              <span className="text-2xl font-black text-secondary mt-1">385</span>
-              <span className="text-[11px] text-slate-500 font-medium mt-1">Chiếm 27.1% doanh thu</span>
+              <span className="text-2xl font-black text-secondary mt-1">Chưa có dữ liệu</span>
+              <span className="text-[11px] text-slate-500 font-medium mt-1">Chưa có dữ liệu</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-red-50 text-secondary flex items-center justify-center">
               <Crown className="w-6 h-6" />
@@ -226,8 +157,8 @@ const AdminCustomersPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Giá trị đơn TB (AOV)</span>
-              <span className="text-2xl font-black text-slate-900 mt-1">3.650.000₫</span>
-              <span className="text-[11px] text-emerald-600 font-bold mt-1">+12% so với tháng trước</span>
+              <span className="text-2xl font-black text-slate-900 mt-1">Chưa có dữ liệu</span>
+              <span className="text-[11px] text-emerald-600 font-bold mt-1">Chưa có dữ liệu</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <TrendingUp className="w-6 h-6" />

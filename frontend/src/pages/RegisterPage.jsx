@@ -15,8 +15,8 @@ const RegisterPage = () => {
   const [agreeTerms, setAgreeTerms] = useState(true);
 
   // Login form state (if switched to login)
-  const [loginIdentifier, setLoginIdentifier] = useState('nguyenvana@gmail.com');
-  const [loginPassword, setLoginPassword] = useState('user123');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -74,9 +74,7 @@ const RegisterPage = () => {
     setSuccessMsg('');
     setSubmitting(true);
     try {
-      const actualPassword = loginPassword === '••••••••••••' ? 'user123' : loginPassword;
-      const actualUsername = loginIdentifier === 'nguyenvana@gmail.com' ? 'user' : loginIdentifier;
-      await login(actualUsername, actualPassword);
+      await login(loginIdentifier, loginPassword);
       navigate('/');
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Email/Số điện thoại hoặc mật khẩu không chính xác');
@@ -518,8 +516,7 @@ const RegisterPage = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      fillCredentials('user', 'user123');
-                      alert('Đã kết nối tài khoản mẫu Google thành công! Nhấn ĐĂNG NHẬP để tiếp tục.');
+                      setErrorMsg('Đăng nhập mạng xã hội chưa được tích hợp. Vui lòng dùng tài khoản của bạn.');
                     }}
                     className="flex items-center justify-center gap-2 py-2.5 px-3 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                   >
@@ -534,8 +531,7 @@ const RegisterPage = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      fillCredentials('admin', 'admin123');
-                      alert('Đã kết nối tài khoản mẫu Facebook thành công! Nhấn ĐĂNG NHẬP để tiếp tục.');
+                      setErrorMsg('Đăng nhập mạng xã hội chưa được tích hợp. Vui lòng dùng tài khoản của bạn.');
                     }}
                     className="flex items-center justify-center gap-2 py-2.5 px-3 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                   >

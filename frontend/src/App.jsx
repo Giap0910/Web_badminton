@@ -15,6 +15,10 @@ import HomePage from './pages/HomePage';
 // Lazy-loaded Customer & Shop Routes
 const ProductsPage = lazy(() => import('./pages/ProductsPage'));
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
+const RacketGripDetailPage = lazy(() => import('./pages/RacketGripDetailPage'));
+const StringDetailPage = lazy(() => import('./pages/StringDetailPage'));
+const ShuttlecockDetailPage = lazy(() => import('./pages/ShuttlecockDetailPage'));
+const SweatbandDetailPage = lazy(() => import('./pages/SweatbandDetailPage'));
 const ComparePage = lazy(() => import('./pages/ComparePage'));
 const CartPage = lazy(() => import('./pages/CartPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
@@ -83,6 +87,18 @@ function AppContent() {
             <Route path="/" element={<HomePage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/products/:id" element={<ProductDetailPage />} />
+
+            {/* 4 Trang Chi Tiết Phụ Kiện Chuyên Biệt Mới */}
+            <Route path="/product/racket-grip/:id" element={<RacketGripDetailPage />} />
+            <Route path="/product/string/:id" element={<StringDetailPage />} />
+            <Route path="/product/shuttlecock/:id" element={<ShuttlecockDetailPage />} />
+            <Route path="/product/sweatband/:id" element={<SweatbandDetailPage />} />
+
+            {/* Alias tương thích /products/... */}
+            <Route path="/products/racket-grip/:id" element={<RacketGripDetailPage />} />
+            <Route path="/products/string/:id" element={<StringDetailPage />} />
+            <Route path="/products/shuttlecock/:id" element={<ShuttlecockDetailPage />} />
+            <Route path="/products/sweatband/:id" element={<SweatbandDetailPage />} />
             <Route path="/compare" element={<ComparePage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route

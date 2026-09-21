@@ -1,6 +1,6 @@
 /**
  * Format currency to Vietnamese Dong (VNĐ)
- * @param {number|string} price 
+ * @param {number|string} price
  * @returns {string} Formatted price string (e.g., "2.500.000 ₫")
  */
 export const formatPrice = (price) => {
@@ -12,8 +12,8 @@ export const formatPrice = (price) => {
 
 /**
  * Format ISO date string to Vietnamese localized format
- * @param {string|Date} date 
- * @param {boolean} includeTime 
+ * @param {string|Date} date
+ * @param {boolean} includeTime
  * @returns {string} Formatted date (e.g., "14:30 12/09/2026")
  */
 export const formatDate = (date, includeTime = true) => {
@@ -35,7 +35,7 @@ export const formatDate = (date, includeTime = true) => {
 
 /**
  * Format remaining seconds into mm:ss display
- * @param {number} totalSeconds 
+ * @param {number} totalSeconds
  * @returns {string} Formatted timer (e.g., "14:59")
  */
 export const formatTimer = (totalSeconds) => {
@@ -44,3 +44,59 @@ export const formatTimer = (totalSeconds) => {
   const s = sec % 60;
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
+
+export const isOrderPaid = (order) => !!order && (
+  order.status === 'PAID' ||
+  (order.paymentMethod === 'PAYOS_VIETQR' && order.status === 'SHIPPING') ||
+  order.status === 'COMPLETED'
+);
+
+export const getOrderStatusLabel = (order) => {
+  if (order.status === 'PENDING') {
+    return order.paymentMethod === 'COD' ? 'Chờ xử lý COD' : 'Chờ thanh toán PayOS';
+  }
+  return { PAID: 'Đã thanh toán, chờ giao', SHIPPING: 'Đang giao hàng',
+    COMPLETED: 'Đã giao và thanh toán', CANCELLED: 'Đã hủy' }[order.status] || 'Chưa xác định';
+};
+
+export const getNextOrderStatuses = (order) => {
+  if (order.status === 'PENDING') {
+    return order.paymentMethod === 'COD' ? ['SHIPPING', 'CANCELLED'] : ['CANCELLED'];
+  }
+  if (order.status === 'PAID' && order.paymentMethod === 'PAYOS_VIETQR') return ['SHIPPING'];
+  if (order.status === 'SHIPPING') return ['COMPLETED'];
+  return [];
+};
+
+export const productOptions = (value) => {
+  if (value == null || value === '') return [];
+  let values = value;
+  if (typeof value === 'string') {
+    try { values = JSON.parse(value); } catch { values = value.split(/[,;|]+/); }
+  }
+  if (!Array.isArray(values)) values = [values];
+  return [...new Set(values.filter((v) => typeof v === 'string' || typeof v === 'number')
+    .map((v) => String(v).trim()).filter(Boolean))];
+};
+
+export const productCategory = (product) => {
+  const category = String(product?.categoryName || product?.category?.name || '').toUpperCase();
+  const name = String(product?.name || '').toUpperCase();
+  const classify = (text) => {
+    if (/GIÀY|SHOE|FOOTWEAR/.test(text)) return 'SHOES';
+    if (/BALO|BAO VỢT|TÚI|BAG|BACKPACK/.test(text)) return 'BAG';
+    if (/QUẦN|ÁO|VÁY|APPAREL|CLOTHING|TRANG PHỤC/.test(text)) return 'APPAREL';
+    if (/CƯỚC|PHỤ KIỆN|ACCESSOR|GRIP|QUẤN CÁN|QUẢ CẦU|HỘP CẦU|ỐNG CẦU|BĂNG/.test(text)) return 'ACCESSORIES';
+    if (/VỢT|RACKET/.test(text)) return 'RACKET';
+    return null;
+  };
+  return classify(category) || classify(name) || 'OTHER';
+};
+
+export const productImages = (product) => [...new Set([
+  product?.imageUrl, ...(Array.isArray(product?.imageUrls) ? product.imageUrls : [])
+].filter((url) => typeof url === 'string' && url.trim()))];
+
+export const productRating = (product) => Number(product?.reviewCount) > 0
+  && product?.averageRating != null && Number.isFinite(Number(product.averageRating))
+  ? Number(product.averageRating).toFixed(1) : 'Chưa có đánh giá';

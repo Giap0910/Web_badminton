@@ -5,27 +5,46 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
-      const savedToken = localStorage.getItem('token');
-      const savedUser = localStorage.getItem('user');
-
-      if (savedToken && savedUser) {
-        try {
-          setUser(JSON.parse(savedUser));
-          setToken(savedToken);
-        } catch (e) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        }
-      }
-      setLoading(false);
+    let active = true;
+    const savedToken = localStorage.getItem('token');
+    const clearSession = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setToken(null);
+      setUser(null);
     };
-    initAuth();
+    window.addEventListener('auth:expired', clearSession);
+    if (savedToken) {
+      authApi.getMe().then((data) => {
+        if (active && localStorage.getItem('token') === savedToken) {
+          setUser(data);
+          setToken(savedToken);
+        }
+      }).catch(() => { if (active) clearSession(); })
+        .finally(() => { if (active) setLoading(false); });
+    } else setLoading(false);
+    return () => {
+      active = false;
+      window.removeEventListener('auth:expired', clearSession);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      const remaining = payload.exp * 1000 - Date.now();
+      if (!Number.isFinite(remaining)) throw new Error('Token không hợp lệ');
+      const timer = setTimeout(() => window.dispatchEvent(new Event('auth:expired')), Math.max(0, remaining));
+      return () => clearTimeout(timer);
+    } catch {
+      window.dispatchEvent(new Event('auth:expired'));
+    }
+  }, [token]);
 
   const login = async (username, password) => {
     const res = await authApi.login({ username, password });

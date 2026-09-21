@@ -18,13 +18,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,199 +39,189 @@ public class OrderService {
     private final UserRepository userRepository;
     private final PayOSService payosService;
     private final VoucherService voucherService;
+    private final EntityManager entityManager;
 
     private static final int MAX_PENDING_ORDERS_PER_USER = 3;
     private static final int ORDER_TIMEOUT_MINUTES = 15;
 
-    /**
-     * Creates an order with Atomic Stock Reservation (Pessimistic Locking).
-     */
     @Transactional
     public OrderResponse createOrder(Long userId, OrderCreateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
-
-        // 1. Anti-Denial of Inventory: Limit active PENDING orders per user
-        int activePendingOrders = orderRepository.countByUserIdAndStatus(userId, OrderStatus.PENDING);
-        if (activePendingOrders >= MAX_PENDING_ORDERS_PER_USER) {
-            throw new BadRequestException("Bạn đang có " + activePendingOrders + " đơn hàng chưa thanh toán. Vui lòng thanh toán hoặc hủy đơn cũ trước khi tạo thêm đơn mới!");
+        User user = lockOrderingUser(userId);
+        validateRequestedItems(request.getItems());
+        Order order = buildOrder(user, request, normalizePaymentMethod(request.getPaymentMethod()));
+        List<OrderItem> items = new ArrayList<>();
+        for (OrderItemRequest item : request.getItems().stream()
+                .sorted(Comparator.comparing(OrderItemRequest::getProductId)).toList()) {
+            items.add(reserveItem(order, item));
         }
-
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        List<OrderItem> orderItems = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime expiresAt = now.plusMinutes(ORDER_TIMEOUT_MINUTES);
-
-        // Generate unique 6-8 digit numeric order code for PayOS
-        long payosOrderCode = System.currentTimeMillis() % 100000000L;
-
-        String paymentMethod = (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank())
-                ? request.getPaymentMethod().trim()
-                : "PAYOS_VIETQR";
-
-        Order order = Order.builder()
-                .user(user)
-                .customerName(request.getCustomerName())
-                .shippingPhone(request.getShippingPhone())
-                .shippingAddress(request.getShippingAddress())
-                .totalAmount(BigDecimal.ZERO)
-                .status(OrderStatus.PENDING)
-                .paymentMethod(paymentMethod)
-                .payosOrderCode(payosOrderCode)
-                .expiresAt(expiresAt)
-                .note(request.getNote())
-                .createdAt(now)
-                .build();
-
-        // 2. Atomic Stock Reservation with Pessimistic Locking
-        for (OrderItemRequest itemReq : request.getItems()) {
-            if (itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
-                throw new BadRequestException("Số lượng đặt mua phải lớn hơn 0");
-            }
-            if (itemReq.getQuantity() > 100) {
-                throw new BadRequestException("Số lượng đặt mua tối đa cho mỗi mặt hàng là 100");
-            }
-
-            // Pessimistic Lock on product row
-            Product product = productRepository.findByIdForUpdate(itemReq.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + itemReq.getProductId()));
-
-            // Stock check
-            if (product.getStock() < itemReq.getQuantity()) {
-                throw new InsufficientStockException("Sản phẩm '" + product.getName() + "' chỉ còn " + product.getStock() + " chiếc trong kho. Không đủ số lượng bạn yêu cầu (" + itemReq.getQuantity() + ")!");
-            }
-
-            // Atomic shift: stock -> reservedStock
-            product.setStock(product.getStock() - itemReq.getQuantity());
-            product.setReservedStock(product.getReservedStock() + itemReq.getQuantity());
-            productRepository.save(product);
-
-            BigDecimal itemSubtotal = product.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
-            totalAmount = totalAmount.add(itemSubtotal);
-
-            OrderItem orderItem = OrderItem.builder()
-                    .order(order)
-                    .product(product)
-                    .quantity(itemReq.getQuantity())
-                    .price(product.getPrice())
-                    .selectedSize(itemReq.getSelectedSize())
-                    .selectedColor(itemReq.getSelectedColor())
-                    .selectedWeight(itemReq.getSelectedWeight())
-                    .stringingService(itemReq.getStringingService())
-                    .stringTension(itemReq.getStringTension())
-                    .build();
-
-            orderItems.add(orderItem);
+        order.setItems(items);
+        calculateOrderTotal(order, request.getVoucherCode());
+        Order saved = orderRepository.save(order);
+        if ("PAYOS_VIETQR".equals(order.getPaymentMethod())) {
+            saved.setPayosOrderCode(Math.addExact(1_000_000_000L, saved.getId()));
         }
-
-        // Calculate Shipping Fee (Free for orders >= 1,000,000đ, otherwise 30,000đ)
-        BigDecimal shippingFee = BigDecimal.ZERO;
-        if (request.getShippingFee() != null) {
-            shippingFee = request.getShippingFee();
-        } else if (totalAmount.compareTo(new BigDecimal("1000000")) < 0 && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
-            shippingFee = new BigDecimal("30000");
-        }
-
-        // Voucher application
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        String appliedVoucherCode = null;
-        if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
-            try {
-                VoucherValidateResponse val = voucherService.validateVoucher(
-                        new VoucherValidateRequest(request.getVoucherCode().trim(), totalAmount));
-                discountAmount = val.getDiscountAmount();
-                totalAmount = val.getFinalTotal();
-                appliedVoucherCode = val.getCode();
-                voucherService.incrementUsedCount(appliedVoucherCode);
-            } catch (Exception e) {
-                log.warn("Không thể áp dụng voucher '{}': {}", request.getVoucherCode(), e.getMessage());
-            }
-        }
-
-        // Final total amount incorporates shipping fee
-        totalAmount = totalAmount.add(shippingFee);
-
-        order.setTotalAmount(totalAmount);
-        order.setShippingFee(shippingFee);
-        order.setDiscountAmount(discountAmount);
-        order.setVoucherCode(appliedVoucherCode);
-        order.setItems(orderItems);
-
-        Order savedOrder = orderRepository.save(order);
-        log.info("Tạo đơn hàng thành công ID={}, PayOS Code={}, Tổng tiền={}, Phí ship={}, Giảm giá={}, Khóa tạm {} sản phẩm",
-                savedOrder.getId(), payosOrderCode, totalAmount, shippingFee, discountAmount, orderItems.size());
-
-        return toDto(savedOrder);
+        log.info("Tạo đơn ID={}, phương thức={}, tổng tiền={}", saved.getId(),
+                saved.getPaymentMethod(), saved.getTotalAmount());
+        return toDto(saved);
     }
 
-    /**
-     * User actively cancels an order before expiration -> Immediately release reserved stock.
-     */
+    private User lockOrderingUser(Long userId) {
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userId));
+        if (orderRepository.countByUserIdAndStatus(userId, OrderStatus.PENDING) >= MAX_PENDING_ORDERS_PER_USER) {
+            throw new BadRequestException("Bạn đang có 3 đơn hàng chưa thanh toán hoặc chờ xử lý");
+        }
+        return user;
+    }
+
+    private void validateRequestedItems(List<OrderItemRequest> items) {
+        if (items == null || items.isEmpty()) throw new BadRequestException("Đơn hàng phải có sản phẩm");
+        java.util.Map<Long, Integer> quantities = new java.util.HashMap<>();
+        for (OrderItemRequest item : items) {
+            if (item == null || item.getProductId() == null || item.getQuantity() == null
+                    || item.getQuantity() <= 0 || item.getQuantity() > 100) {
+                throw new BadRequestException("Sản phẩm và số lượng đặt mua không hợp lệ");
+            }
+            int total = quantities.merge(item.getProductId(), item.getQuantity(), Integer::sum);
+            if (total > 100) throw new BadRequestException("Tổng số lượng mỗi sản phẩm tối đa là 100");
+        }
+    }
+
+    private Order buildOrder(User user, OrderCreateRequest request, String paymentMethod) {
+        LocalDateTime now = LocalDateTime.now();
+        return Order.builder().user(user).customerName(request.getCustomerName())
+                .shippingPhone(request.getShippingPhone()).shippingAddress(request.getShippingAddress())
+                .totalAmount(BigDecimal.ZERO).status(OrderStatus.PENDING).paymentMethod(paymentMethod)
+                .expiresAt("COD".equals(paymentMethod) ? null : now.plusMinutes(ORDER_TIMEOUT_MINUTES))
+                .note(request.getNote()).createdAt(now).build();
+    }
+
+    private OrderItem reserveItem(Order order, OrderItemRequest request) {
+        Product product = lockProduct(request.getProductId());
+        if (product.getStock() < request.getQuantity()) {
+            throw new InsufficientStockException("Sản phẩm '" + product.getName() + "' không đủ tồn kho");
+        }
+        if (product.getPrice() == null || product.getPrice().signum() <= 0) {
+            throw new BadRequestException("Giá sản phẩm không hợp lệ");
+        }
+        product.setStock(product.getStock() - request.getQuantity());
+        product.setReservedStock(product.getReservedStock() + request.getQuantity());
+        productRepository.save(product);
+        return OrderItem.builder().order(order).product(product).quantity(request.getQuantity())
+                .price(product.getPrice()).selectedSize(request.getSelectedSize())
+                .selectedColor(request.getSelectedColor()).selectedWeight(request.getSelectedWeight())
+                .stringingService(request.getStringingService()).stringTension(request.getStringTension()).build();
+    }
+
+    private void calculateOrderTotal(Order order, String voucherCode) {
+        BigDecimal subtotal = order.getItems().stream()
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal shippingFee = subtotal.compareTo(new BigDecimal("1000000")) >= 0
+                ? BigDecimal.ZERO : new BigDecimal("30000");
+        BigDecimal discount = BigDecimal.ZERO;
+        if (voucherCode != null && !voucherCode.isBlank()) {
+            VoucherValidateResponse voucher = voucherService.reserveVoucher(
+                    new VoucherValidateRequest(voucherCode.trim(), subtotal));
+            discount = voucher.getDiscountAmount();
+            order.setVoucherCode(voucher.getCode());
+        }
+        order.setDiscountAmount(discount);
+        order.setShippingFee(shippingFee);
+        order.setTotalAmount(subtotal.subtract(discount).add(shippingFee));
+    }
+
+    private String normalizePaymentMethod(String value) {
+        String method = value == null || value.isBlank() ? "PAYOS_VIETQR" : value.trim();
+        if (!"COD".equals(method) && !"PAYOS_VIETQR".equals(method)) {
+            throw new BadRequestException("Phương thức thanh toán chưa được hỗ trợ");
+        }
+        return method;
+    }
+
+    private Order lockOrder(Long orderId) {
+        return orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng: " + orderId));
+    }
+
+    private Product lockProduct(Long productId) {
+        entityManager.flush();
+        Product product = productRepository.findByIdForUpdate(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm: " + productId));
+        entityManager.refresh(product, LockModeType.PESSIMISTIC_WRITE);
+        return product;
+    }
+
     @Transactional
     public OrderResponse cancelOrder(Long orderId, Long currentUserId, boolean isAdmin) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
-
-        // Anti-IDOR: verify ownership
+        Order order = lockOrder(orderId);
         if (!isAdmin && !order.getUser().getId().equals(currentUserId)) {
             throw new UnauthorizedException("Bạn không có quyền thao tác trên đơn hàng này!");
         }
-
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new BadRequestException("Chỉ có thể hủy đơn hàng đang ở trạng thái Chờ thanh toán (PENDING)");
-        }
-
-        // Return reserved_stock back to available stock
-        for (OrderItem item : order.getItems()) {
-            Product product = productRepository.findByIdForUpdate(item.getProduct().getId())
-                    .orElse(item.getProduct());
-            product.setStock(product.getStock() + item.getQuantity());
-            product.setReservedStock(Math.max(0, product.getReservedStock() - item.getQuantity()));
-            productRepository.save(product);
-        }
-
-        order.setStatus(OrderStatus.CANCELLED);
-        Order updated = orderRepository.save(order);
-        log.info("Hủy đơn hàng ID={}, Đã hoàn trả lại số lượng tồn kho thành công", orderId);
-        return toDto(updated);
+        if (order.getStatus() == OrderStatus.CANCELLED) return toDto(order);
+        cancelPendingOrder(order);
+        return toDto(orderRepository.save(order));
     }
 
-    /**
-     * Handles PayOS Webhook successful payment confirmation:
-     * Validates amount (anti-Parameter Tampering), converts status to PAID, permanently clears reserved_stock.
-     */
-    @Transactional
-    public void handlePaymentSuccess(Long payosOrderCode, BigDecimal amount) {
-        Order order = orderRepository.findByPayosOrderCode(payosOrderCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với mã PayOS: " + payosOrderCode));
-
-        // Parameter Tampering Check: Verify totalAmount matches exactly
-        if (order.getTotalAmount().compareTo(amount) != 0) {
-            log.error("CẢNH BÁO BẢO MẬT: Phát hiện sai lệch số tiền thanh toán! DB={}, Webhook={}", order.getTotalAmount(), amount);
-            throw new BadRequestException("Số tiền thanh toán không khớp với đơn hàng!");
-        }
-
-        if (order.getStatus() == OrderStatus.PAID) {
-            log.info("Đơn hàng PayOS Code={} đã được ghi nhận thanh toán trước đó", payosOrderCode);
-            return;
-        }
-
+    private void cancelPendingOrder(Order order) {
         if (order.getStatus() != OrderStatus.PENDING) {
-            log.warn("Đơn hàng PayOS Code={} không ở trạng thái PENDING (Hiện tại: {})", payosOrderCode, order.getStatus());
-            return;
+            throw new BadRequestException("Chỉ được hủy đơn chưa thanh toán và chưa giao hàng");
         }
+        settleReservedStock(order, true);
+        voucherService.releaseVoucher(order.getVoucherCode());
+        order.setStatus(OrderStatus.CANCELLED);
+    }
 
-        // Permanently deduct reserved_stock
-        for (OrderItem item : order.getItems()) {
-            Product product = productRepository.findByIdForUpdate(item.getProduct().getId())
-                    .orElse(item.getProduct());
-            product.setReservedStock(Math.max(0, product.getReservedStock() - item.getQuantity()));
+    private void settleReservedStock(Order order, boolean restoreAvailable) {
+        List<OrderItem> items = order.getItems().stream()
+                .sorted(Comparator.comparing(item -> item.getProduct().getId())).toList();
+        for (OrderItem item : items) {
+            Product product = lockProduct(item.getProduct().getId());
+            if (product.getReservedStock() < item.getQuantity()) {
+                throw new BadRequestException("Tồn kho giữ chỗ không khớp; cần kiểm tra trước khi xử lý đơn");
+            }
+            product.setReservedStock(product.getReservedStock() - item.getQuantity());
+            if (restoreAvailable) product.setStock(product.getStock() + item.getQuantity());
             productRepository.save(product);
         }
+    }
 
+    @Transactional
+    public boolean expireOrder(Long orderId) {
+        Order order = lockOrder(orderId);
+        if (order.getStatus() != OrderStatus.PENDING || !"PAYOS_VIETQR".equals(order.getPaymentMethod())
+                || order.getExpiresAt() == null || order.getExpiresAt().isAfter(LocalDateTime.now())) {
+            return false;
+        }
+        cancelPendingOrder(order);
+        orderRepository.save(order);
+        return true;
+    }
+
+    @Transactional
+    public void handlePaymentSuccess(Long payosOrderCode, BigDecimal amount) {
+        Order order = orderRepository.findByPayosOrderCodeForUpdate(payosOrderCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với mã PayOS"));
+        validatePayment(order, amount);
+        if (order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.SHIPPING
+                || order.getStatus() == OrderStatus.COMPLETED) return;
+        if (order.getStatus() != OrderStatus.PENDING || order.getExpiresAt() == null
+                || !order.getExpiresAt().isAfter(LocalDateTime.now())) {
+            log.warn("Thanh toán đến cho đơn đã hủy/hết hạn ID={}; cần đối soát thủ công", order.getId());
+            throw new BadRequestException("Đơn đã hủy hoặc hết hạn; cần đối soát thanh toán thủ công");
+        }
+        settleReservedStock(order, false);
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
-        log.info("Thanh toán thành công đơn hàng ID={}, PayOS Code={}, Đã trừ đứt reserved_stock", order.getId(), payosOrderCode);
+    }
+
+    private void validatePayment(Order order, BigDecimal amount) {
+        if (!"PAYOS_VIETQR".equals(order.getPaymentMethod())) {
+            throw new BadRequestException("Đơn hàng không sử dụng PayOS");
+        }
+        if (amount == null || amount.signum() < 0 || order.getTotalAmount().compareTo(amount) != 0) {
+            throw new BadRequestException("Số tiền thanh toán không khớp với đơn hàng!");
+        }
     }
 
     /**
@@ -265,10 +256,24 @@ public class OrderService {
 
     @Transactional
     public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
-        order.setStatus(newStatus);
+        Order order = lockOrder(orderId);
+        if (newStatus == order.getStatus()) return toDto(order);
+        if (newStatus == OrderStatus.CANCELLED) {
+            cancelPendingOrder(order);
+        } else if (newStatus == OrderStatus.SHIPPING && canShip(order)) {
+            if ("COD".equals(order.getPaymentMethod())) settleReservedStock(order, false);
+            order.setStatus(newStatus);
+        } else if (newStatus == OrderStatus.COMPLETED && order.getStatus() == OrderStatus.SHIPPING) {
+            order.setStatus(newStatus);
+        } else {
+            throw new BadRequestException("Không được chuyển trạng thái đơn hàng theo luồng này");
+        }
         return toDto(orderRepository.save(order));
+    }
+
+    private boolean canShip(Order order) {
+        return ("COD".equals(order.getPaymentMethod()) && order.getStatus() == OrderStatus.PENDING)
+                || ("PAYOS_VIETQR".equals(order.getPaymentMethod()) && order.getStatus() == OrderStatus.PAID);
     }
 
     private OrderResponse toDto(Order order) {
@@ -301,18 +306,6 @@ public class OrderService {
                 })
                 .collect(Collectors.toList());
 
-        // VietQR Dynamic generation link
-        String bankBin = "970422"; // MBBank
-        String accountNo = "0987654321";
-        String accountName = "SHOP BADMINTON AI";
-        String memo = "BADMINTON " + order.getPayosOrderCode();
-
-        String encodedAccountName = URLEncoder.encode(accountName, StandardCharsets.UTF_8);
-        String encodedMemo = URLEncoder.encode(memo, StandardCharsets.UTF_8);
-        long totalLong = order.getTotalAmount() != null ? order.getTotalAmount().longValue() : 0L;
-        String vietQrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%d&addInfo=%s&accountName=%s",
-                bankBin, accountNo, totalLong, encodedMemo, encodedAccountName);
-
         return OrderResponse.builder()
                 .id(order.getId())
                 .userId(order.getUser().getId())
@@ -331,12 +324,6 @@ public class OrderService {
                 .timeRemainingSeconds(secondsRemaining)
                 .createdAt(order.getCreatedAt())
                 .items(itemResponses)
-                .accountNo(accountNo)
-                .accountName(accountName)
-                .bin(bankBin)
-                .qrCode(vietQrUrl)
-                .qrCodeUrl(vietQrUrl)
-                .checkoutUrl(vietQrUrl)
                 .build();
     }
 }

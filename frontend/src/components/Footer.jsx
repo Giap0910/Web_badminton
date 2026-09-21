@@ -20,9 +20,7 @@ const Footer = () => {
   const handleSubscribe = (e) => {
     e.preventDefault();
     if (email.trim()) {
-      setSubscribed(true);
-      setEmail('');
-      setTimeout(() => setSubscribed(false), 4000);
+      alert('Đăng ký nhận tin chưa được tích hợp. Email của bạn chưa được gửi hoặc lưu.');
     }
   };
 

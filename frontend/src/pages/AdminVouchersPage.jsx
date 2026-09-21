@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { adminApi } from '../api/adminApi';
 import AdminLayout from '../components/AdminLayout';
 import { voucherApi } from '../api/voucherApi';
 import {
@@ -18,63 +19,10 @@ import {
   Calendar
 } from 'lucide-react';
 
-const INITIAL_VOUCHERS = [
-  {
-    id: 1,
-    code: 'APEX100K',
-    title: 'Giảm 100K cho đơn vợt từ 1.000.000₫',
-    discountType: 'FIXED',
-    discountValue: 100000,
-    minOrderValue: 1000000,
-    usedCount: 85,
-    maxUsage: 100,
-    startDate: '01/10/2024',
-    endDate: '31/12/2024',
-    status: 'ACTIVE'
-  },
-  {
-    id: 2,
-    code: 'FREESHIP',
-    title: 'Miễn phí vận chuyển toàn quốc cho đơn từ 1.000.000₫',
-    discountType: 'SHIPPING',
-    discountValue: 30000,
-    minOrderValue: 1000000,
-    usedCount: 240,
-    maxUsage: 500,
-    startDate: '01/09/2024',
-    endDate: '31/12/2024',
-    status: 'ACTIVE'
-  },
-  {
-    id: 3,
-    code: 'VIPGOLD200K',
-    title: 'Đặc quyền thành viên VIP Hạng Vàng',
-    discountType: 'FIXED',
-    discountValue: 200000,
-    minOrderValue: 2500000,
-    usedCount: 42,
-    maxUsage: 150,
-    startDate: '15/10/2024',
-    endDate: '30/11/2024',
-    status: 'ACTIVE'
-  },
-  {
-    id: 4,
-    code: 'WELCOME50K',
-    title: 'Tặng khách hàng mới đăng ký tài khoản',
-    discountType: 'FIXED',
-    discountValue: 50000,
-    minOrderValue: 500000,
-    usedCount: 110,
-    maxUsage: 110,
-    startDate: '01/08/2024',
-    endDate: '30/09/2024',
-    status: 'EXPIRED'
-  }
-];
 
 const AdminVouchersPage = () => {
-  const [vouchers, setVouchers] = useState(INITIAL_VOUCHERS);
+  const [dataError, setDataError] = useState('');
+  const [vouchers, setVouchers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
@@ -89,8 +37,8 @@ const AdminVouchersPage = () => {
     discountValue: '',
     minOrderValue: '',
     maxUsage: '100',
-    startDate: '2024-10-24',
-    endDate: '2024-12-31'
+    startDate: '',
+    endDate: ''
   });
 
   const formatPrice = (p) =>
@@ -111,8 +59,8 @@ const AdminVouchersPage = () => {
       discountValue: '100000',
       minOrderValue: '1000000',
       maxUsage: '100',
-      startDate: '2024-10-24',
-      endDate: '2024-12-31'
+      startDate: '',
+      endDate: ''
     });
     setShowModal(true);
   };
@@ -126,8 +74,8 @@ const AdminVouchersPage = () => {
       discountValue: v.discountValue.toString(),
       minOrderValue: v.minOrderValue.toString(),
       maxUsage: v.maxUsage.toString(),
-      startDate: '2024-10-24',
-      endDate: '2024-12-31'
+      startDate: '',
+      endDate: v.expiresAt?.slice(0, 10) || ''
     });
     setShowModal(true);
   };
@@ -137,25 +85,26 @@ const AdminVouchersPage = () => {
       if (adminApi?.getAllVouchers) {
         const res = await adminApi.getAllVouchers();
         const list = Array.isArray(res) ? res : res?.data || [];
-        if (list.length > 0) {
+        if (Array.isArray(list)) {
           const mapped = list.map((v, idx) => ({
             id: v.id || idx + 1,
             code: v.code || 'APEX100K',
             title: v.title || v.description || 'Khuyến mãi Apex Badminton',
             discountType: v.discountType || 'FIXED',
-            discountValue: v.discountValue || v.discountAmount || 50000,
-            minOrderValue: v.minOrderValue || 500000,
+            discountValue: v.discountValue ?? 0,
+            minOrderValue: v.minOrderValue ?? 0,
             usedCount: v.usedCount || 0,
-            maxUsage: v.maxUsage || v.usageLimit || 100,
-            startDate: v.startDate ? new Date(v.startDate).toLocaleDateString('vi-VN') : '01/10/2024',
-            endDate: v.endDate ? new Date(v.endDate).toLocaleDateString('vi-VN') : '31/12/2024',
-            status: v.active !== false ? 'ACTIVE' : 'INACTIVE'
+            maxUsage: v.maxUses ?? 0,
+            startDate: v.startDate ? new Date(v.startDate).toLocaleDateString('vi-VN') : 'Không hỗ trợ lịch bắt đầu',
+            expiresAt: v.expiresAt,
+            endDate: v.expiresAt ? new Date(v.expiresAt).toLocaleDateString('vi-VN') : 'Không giới hạn',
+            status: v.isActive !== false ? 'ACTIVE' : 'INACTIVE'
           }));
           setVouchers(mapped);
         }
       }
     } catch (err) {
-      console.warn('Fallback to local vouchers:', err);
+      setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     }
   };
 
@@ -170,34 +119,28 @@ const AdminVouchersPage = () => {
       await fetchVouchers();
     } catch (err) {
       console.warn('Lỗi xóa voucher:', err);
-      setVouchers((prev) => prev.filter((v) => v.id !== id));
+      setToastMessage(err.response?.data?.message || 'Không thể xóa mã giảm giá.');
+      return;
     }
     setToastMessage('Đã xóa mã giảm giá.');
     setTimeout(() => setToastMessage(''), 2500);
   };
 
-  const handleToggleStatus = (id) => {
-    setVouchers((prev) =>
-      prev.map((v) =>
-        v.id === id
-          ? { ...v, status: v.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }
-          : v
-      )
-    );
+  const handleToggleStatus = () => {
+    setToastMessage('Thao tác bật/tắt mã chưa được kết nối máy chủ. Chưa lưu thay đổi.');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = {
       code: formData.code.toUpperCase(),
-      title: formData.title,
+      description: formData.title,
       discountType: formData.discountType,
       discountValue: Number(formData.discountValue) || 0,
       minOrderValue: Number(formData.minOrderValue) || 0,
-      maxUsage: Number(formData.maxUsage) || 100,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      active: true
+      maxUses: Number(formData.maxUsage) || 100,
+      expiresAt: formData.endDate ? `${formData.endDate}T23:59:59` : null,
+      isActive: true
     };
 
     try {
@@ -210,22 +153,8 @@ const AdminVouchersPage = () => {
       }
       await fetchVouchers();
     } catch (err) {
-      console.warn('Lỗi gọi API voucher, lưu dự phòng cục bộ:', err);
-      if (editingId) {
-        setVouchers((prev) =>
-          prev.map((v) => (v.id === editingId ? { ...v, ...payload } : v))
-        );
-        setToastMessage('Đã cập nhật mã giảm giá thành công!');
-      } else {
-        const newEntry = {
-          id: Date.now(),
-          usedCount: 0,
-          ...payload,
-          status: 'ACTIVE'
-        };
-        setVouchers([newEntry, ...vouchers]);
-        setToastMessage('Đã tạo mã giảm giá mới thành công!');
-      }
+      setToastMessage(err.response?.data?.message || 'Không thể lưu mã giảm giá.');
+      return;
     }
     setShowModal(false);
     setTimeout(() => setToastMessage(''), 2500);
@@ -239,6 +168,7 @@ const AdminVouchersPage = () => {
 
   return (
     <AdminLayout title="Khuyến mãi" subtitle="Quản lý khuyến mãi & Mã Voucher">
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & ACTION BAR */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
@@ -283,8 +213,8 @@ const AdminVouchersPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Doanh số qua Voucher</span>
-              <span className="text-2xl font-black text-slate-900 mt-1">124.500.000₫</span>
-              <span className="text-[11px] text-emerald-600 font-bold mt-1">+18.5% so với tháng trước</span>
+              <span className="text-2xl font-black text-slate-900 mt-1">Chưa có dữ liệu</span>
+              <span className="text-[11px] text-emerald-600 font-bold mt-1">Chưa có dữ liệu</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <TrendingUp className="w-6 h-6" />
@@ -294,8 +224,8 @@ const AdminVouchersPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lượt dùng thành công</span>
-              <span className="text-2xl font-black text-secondary mt-1">477 lượt</span>
-              <span className="text-[11px] text-slate-500 font-medium mt-1">Chiếm 38.2% tổng đơn hàng</span>
+              <span className="text-2xl font-black text-secondary mt-1">Chưa có dữ liệu</span>
+              <span className="text-[11px] text-slate-500 font-medium mt-1">Chưa có dữ liệu</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-red-50 text-secondary flex items-center justify-center">
               <Tag className="w-6 h-6" />
@@ -305,7 +235,7 @@ const AdminVouchersPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tiết kiệm cho khách</span>
-              <span className="text-2xl font-black text-emerald-600 mt-1">18.240.000₫</span>
+              <span className="text-2xl font-black text-emerald-600 mt-1">Chưa có dữ liệu</span>
               <span className="text-[11px] text-emerald-700 font-bold mt-1">Tăng độ gắn kết khách quen</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">

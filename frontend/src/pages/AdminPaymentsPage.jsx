@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { isOrderPaid } from '../utils/formatters';
 import AdminLayout from '../components/AdminLayout';
 import { adminApi } from '../api/adminApi';
 import {
@@ -18,76 +19,11 @@ import {
   Check
 } from 'lucide-react';
 
-const INITIAL_TRANSACTIONS = [
-  {
-    id: 1,
-    transId: 'PAYOS-89241029',
-    orderCode: '#APX-89241',
-    createdAt: '14:35:12 - 24/10/2024',
-    customer: 'Nguyễn Văn A',
-    bank: 'VietinBank (103876543210)',
-    bankRef: 'FT2429810293847',
-    amount: 4550000,
-    status: 'SUCCESS',
-    statusLabel: 'Thành công (Đã đối soát)',
-    method: 'VietQR Pro (Napas 247)'
-  },
-  {
-    id: 2,
-    transId: 'PAYOS-87422105',
-    orderCode: '#APX-87422',
-    createdAt: '18:40:02 - 15/10/2024',
-    customer: 'Lê Hoàng Long',
-    bank: 'VietinBank (103876543210)',
-    bankRef: 'FT2428819283741',
-    amount: 4200000,
-    status: 'SUCCESS',
-    statusLabel: 'Thành công (Đã đối soát)',
-    method: 'VNPAY-QR'
-  },
-  {
-    id: 3,
-    transId: 'PAYOS-86105411',
-    orderCode: '#APX-86105',
-    createdAt: '11:00:45 - 05/10/2024',
-    customer: 'Phạm Thu Hà',
-    bank: 'VietinBank (103876543210)',
-    bankRef: 'FT2427819283742',
-    amount: 2250000,
-    status: 'SUCCESS',
-    statusLabel: 'Thành công (Đã đối soát)',
-    method: 'VietQR Pro'
-  },
-  {
-    id: 4,
-    transId: 'COD-88910-SHIP',
-    orderCode: '#APX-88910',
-    createdAt: '09:15:00 - 22/10/2024',
-    customer: 'Trần Minh Đức',
-    bank: 'Shipper Giao Hàng Tiết Kiệm',
-    bankRef: 'COD-HUB-HN-01',
-    amount: 2890000,
-    status: 'PENDING_COD',
-    statusLabel: 'Chờ shipper nộp tiền',
-    method: 'COD Đồng kiểm'
-  },
-  {
-    id: 5,
-    transId: 'PAYOS-85219900',
-    orderCode: '#APX-85219',
-    createdAt: '16:20:10 - 28/09/2024',
-    customer: 'Vũ Quốc Huy',
-    bank: 'VietinBank (103876543210)',
-    bankRef: 'TIMEOUT-CANCELLED',
-    amount: 1650000,
-    status: 'FAILED',
-    statusLabel: 'Hết hạn thanh toán 15:00',
-    method: 'VietQR Pro'
-  }
-];
 
 const AdminPaymentsPage = () => {
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [dataError, setDataError] = useState('');
+  const [transactions, setTransactions] = useState([]);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMethod, setSelectedMethod] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
@@ -103,25 +39,27 @@ const AdminPaymentsPage = () => {
       if (adminApi?.getAllPayments) {
         const res = await adminApi.getAllPayments();
         const list = Array.isArray(res) ? res : res?.data || [];
-        if (list.length > 0) {
+        if (Array.isArray(list)) {
           const mapped = list.map((p, idx) => ({
             id: p.orderId || idx + 1,
             transId: p.payosOrderCode ? `PAYOS-${p.payosOrderCode}` : `TX-${10000 + (p.orderId || idx)}`,
             orderCode: p.payosOrderCode ? `#APX-${p.payosOrderCode}` : `#APX-${p.orderId || 89000 + idx}`,
             createdAt: p.createdAt ? new Date(p.createdAt).toLocaleString('vi-VN') : 'Gần đây',
             customer: p.customerName || 'Khách hàng Apex',
-            bank: 'MBBank (0987654321)',
+            bank: 'Chưa có dữ liệu ngân hàng',
             bankRef: p.payosOrderCode ? `QR-${p.payosOrderCode}` : 'COD-DIRECT',
             amount: p.amount || 0,
-            status: p.status === 'PAID' || p.status === 'COMPLETED' ? 'SUCCESS' : p.status === 'CANCELLED' ? 'FAILED' : 'PENDING_COD',
-            statusLabel: p.status === 'PAID' || p.status === 'COMPLETED' ? 'Khớp lệnh tự động 100%' : p.status === 'CANCELLED' ? 'Đã hủy / Hết hạn' : 'Chờ xác nhận',
+            status: isOrderPaid(p) ? 'SUCCESS' : p.status === 'CANCELLED' ? 'FAILED' : p.paymentMethod === 'COD' ? 'PENDING_COD' : 'PENDING_QR',
+            statusLabel: isOrderPaid(p) ? 'Đã ghi nhận thanh toán' : p.status === 'CANCELLED' ? 'Đã hủy / Hết hạn' : 'Chờ xác nhận',
             method: p.paymentMethod?.includes('PAYOS') ? 'VietQR Pro' : 'COD Đồng kiểm'
           }));
           setTransactions(mapped);
+          setHasLoaded(true);
+          setDataError('');
         }
       }
     } catch (err) {
-      console.warn('Fallback to local payment transactions:', err);
+      setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     }
   };
 
@@ -136,12 +74,7 @@ const AdminPaymentsPage = () => {
   };
 
   const handleVerifyWebhook = () => {
-    setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      setToastMessage('Webhook HMAC-SHA256 kết nối PayOS an toàn: 100% chữ ký số hợp lệ!');
-      setTimeout(() => setToastMessage(''), 4000);
-    }, 800);
+    setToastMessage('Chưa có dữ liệu kiểm tra webhook. Không thể kết luận chữ ký hay giao dịch hợp lệ.');
   };
 
   const filteredTransactions = transactions.filter((t) => {
@@ -168,6 +101,7 @@ const AdminPaymentsPage = () => {
 
   return (
     <AdminLayout title="Giao dịch" subtitle="Quản lý giao dịch & Thanh toán PayOS VietQR">
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & CONTROLS */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
@@ -181,11 +115,11 @@ const AdminPaymentsPage = () => {
                   Quản lý giao dịch PayOS VietQR
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black">
-                  HMAC-SHA256 Live
+                  Kết nối PayOS chưa được xác minh
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Đối soát tự động tức thì các giao dịch Napas 247 qua tài khoản VietinBank xưởng Apex Pro
+                Trạng thái lấy từ đơn hàng; chưa có xác nhận kết nối hoặc đối soát ngân hàng trực tiếp.
               </p>
             </div>
           </div>
@@ -201,7 +135,7 @@ const AdminPaymentsPage = () => {
             </button>
             <button
               type="button"
-              onClick={() => alert('Đang xuất sổ phụ đối soát tài chính ngân hàng...')}
+              onClick={() => alert('Xuất sổ đối soát chưa được tích hợp, chưa tạo tệp.')}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#131b2e] hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
@@ -221,29 +155,29 @@ const AdminPaymentsPage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Doanh thu QR hôm nay</span>
-            <span className="text-2xl font-black text-slate-900 mt-1">38.500.000₫</span>
+            <span className="text-2xl font-black text-slate-900 mt-1">Chưa có dữ liệu</span>
             <span className="text-[11px] text-emerald-600 font-bold mt-2 flex items-center gap-1">
               <ArrowUpRight className="w-3 h-3" />
-              24 giao dịch thành công
+              Chưa có dữ liệu
             </span>
           </div>
 
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tỷ lệ đối soát tự động</span>
-            <span className="text-2xl font-black text-blue-600 mt-1">100%</span>
+            <span className="text-2xl font-black text-blue-600 mt-1">Chưa có dữ liệu</span>
             <span className="text-[11px] text-slate-500 font-medium mt-2">Khớp số tiền & nội dung đơn</span>
           </div>
 
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">COD chờ thu hộ</span>
-            <span className="text-2xl font-black text-amber-600 mt-1">4.350.000₫</span>
-            <span className="text-[11px] text-slate-500 font-medium mt-2">4 đơn shipper đang giao</span>
+            <span className="text-2xl font-black text-amber-600 mt-1">Chưa có dữ liệu</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-2">Chưa có dữ liệu</span>
           </div>
 
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Giao dịch hủy / Quá hạn</span>
-            <span className="text-2xl font-black text-slate-400 mt-1">01</span>
-            <span className="text-[11px] text-slate-400 mt-2">Hết hạn thanh toán 15 phút</span>
+            <span className="text-2xl font-black text-slate-400 mt-1">{hasLoaded && !dataError ? transactions.filter((t) => t.status === 'FAILED').length : 'Chưa có dữ liệu'}</span>
+            <span className="text-[11px] text-slate-400 mt-2">Tổng đơn đã hủy, bao gồm PayOS hết hạn</span>
           </div>
         </div>
 
@@ -280,6 +214,7 @@ const AdminPaymentsPage = () => {
               <option value="ALL">Tất cả trạng thái</option>
               <option value="SUCCESS">Thành công (Đã đối soát)</option>
               <option value="PENDING_COD">Chờ thu tiền COD</option>
+              <option value="PENDING_QR">Chờ thanh toán PayOS</option>
               <option value="FAILED">Hết hạn / Lỗi</option>
             </select>
           </div>
@@ -365,7 +300,7 @@ const AdminPaymentsPage = () => {
                             {t.statusLabel}
                           </span>
                         )}
-                        {t.status === 'PENDING_COD' && (
+                        {['PENDING_COD', 'PENDING_QR'].includes(t.status) && (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 font-bold text-xs">
                             <Clock className="w-3.5 h-3.5 text-amber-600" />
                             {t.statusLabel}

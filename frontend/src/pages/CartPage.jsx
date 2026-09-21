@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -31,11 +31,11 @@ const CartPage = () => {
   const navigate = useNavigate();
 
   // Coupon state
-  const [couponCode, setCouponCode] = useState('APEX100K');
-  const [couponDiscount, setCouponDiscount] = useState(100000);
-  const [appliedVoucher, setAppliedVoucher] = useState({ code: 'APEX100K', discountAmount: 100000, description: 'Giảm 100k đơn từ 5tr' });
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [couponError, setCouponError] = useState('');
-  const [couponSuccess, setCouponSuccess] = useState('Đã tự động kích hoạt mã giảm giá VIP APEX100K');
+  const [couponSuccess, setCouponSuccess] = useState('');
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   // Selected items state (default all selected)
@@ -79,6 +79,18 @@ const CartPage = () => {
   const shippingFee = selectedSubtotal === 0 || isFreeShipping ? 0 : 30000;
   const shippingProgress = Math.min(100, Math.round((selectedSubtotal / freeShippingThreshold) * 100));
 
+  const voucherKey = JSON.stringify([couponCode, cart.filter((item) =>
+    selectedItemIds.has(item.cartItemId)).map((item) => [item.cartItemId, item.quantity, item.product.price])]);
+  const voucherKeyRef = useRef(voucherKey);
+  voucherKeyRef.current = voucherKey;
+  useEffect(() => {
+    setCouponDiscount(0);
+    setAppliedVoucher(null);
+    setCouponSuccess('');
+    setCouponError('');
+    setIsValidatingCoupon(false);
+  }, [voucherKey]);
+
   // Effective coupon discount
   const effectiveDiscount = selectedSubtotal > 0 ? Math.min(selectedSubtotal, couponDiscount) : 0;
 
@@ -89,39 +101,33 @@ const CartPage = () => {
     e.preventDefault();
     if (!couponCode.trim()) return;
 
+    const requestKey = voucherKey;
+    setCouponDiscount(0);
+    setAppliedVoucher(null);
     setIsValidatingCoupon(true);
     setCouponError('');
     setCouponSuccess('');
 
     try {
       const res = await voucherApi.validateVoucher(couponCode.trim(), selectedSubtotal);
+      if (voucherKeyRef.current !== requestKey) return;
       const vData = res?.data ?? res;
       if (vData && vData.valid) {
         setCouponDiscount(vData.discountAmount || 0);
         setAppliedVoucher(vData);
         setCouponSuccess(`Áp dụng thành công mã ${vData.code}! Giảm ${formatPrice(vData.discountAmount)}`);
       } else {
-        // Fallback demo coupon
-        if (couponCode.toUpperCase() === 'APEX100K') {
-          setCouponDiscount(100000);
-          setAppliedVoucher({ code: 'APEX100K', discountAmount: 100000, description: 'Giảm 100k đơn từ 5tr' });
-          setCouponSuccess('Áp dụng mã APEX100K thành công! Giảm 100.000₫');
-        } else {
-          setCouponError('Mã giảm giá không tồn tại hoặc đã hết hạn.');
-        }
-      }
-    } catch (err) {
-      if (couponCode.toUpperCase() === 'APEX100K') {
-        setCouponDiscount(100000);
-        setAppliedVoucher({ code: 'APEX100K', discountAmount: 100000, description: 'Giảm 100k đơn từ 5tr' });
-        setCouponSuccess('Áp dụng mã APEX100K thành công! Giảm 100.000₫');
-      } else {
         setCouponDiscount(0);
         setAppliedVoucher(null);
-        setCouponError(err.response?.data?.message || 'Mã giảm giá không hợp lệ hoặc không đủ điều kiện.');
+        setCouponError('Mã giảm giá không hợp lệ.');
       }
+    } catch (err) {
+      if (voucherKeyRef.current !== requestKey) return;
+      setCouponDiscount(0);
+      setAppliedVoucher(null);
+      setCouponError(err.response?.data?.message || 'Không thể xác thực mã giảm giá.');
     } finally {
-      setIsValidatingCoupon(false);
+      if (voucherKeyRef.current === requestKey) setIsValidatingCoupon(false);
     }
   };
 
@@ -134,7 +140,8 @@ const CartPage = () => {
   };
 
   const handleCheckoutClick = () => {
-    if (selectedItemIds.size === 0) {
+    if (isValidatingCoupon) return;
+    if (!cart.some((item) => selectedItemIds.has(item.cartItemId))) {
       alert('Vui lòng chọn ít nhất một sản phẩm để tiến hành thanh toán!');
       return;
     }
@@ -152,32 +159,7 @@ const CartPage = () => {
   };
 
   // Frequently bought together accessories
-  const crossSellProducts = [
-    {
-      id: 991,
-      name: 'Quấn Cán Vợt Yonex Super Grap AC102EX (Vỉ 3 Cuộn)',
-      price: 135000,
-      originalPrice: 160000,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAxYTyP_ZWO_d5ROErKTL7CBs6d2_YtZNY3pU297hBzzeWGpRUDi6m4SO4mGjpZ53OXZaUnllZznJH3aZyAJj0ronGexuWdWbg9kMHhl6VbBfp6Ylep1h_g0fEgpra-fWkcKzrPas1S7kciGvFCa7a3Ldu_kdseMmChnx0wGAudDT3dlCGKRL-L_uLZi7ZUQ136xIM9Y8qWiRmhMlexIWHJuM_0eM7gh_qtj3x7x2-85dXb7MwEoNMW',
-      tag: 'Bán chạy nhất'
-    },
-    {
-      id: 992,
-      name: 'Băng Cổ Chân Bảo Vệ Khớp Cầu Lông Yonex Pro Shield',
-      price: 245000,
-      originalPrice: 290000,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDchjtqQYK2N_Dqcq2t7-1ReSP7OGliG0G2CknRT8MPJBRmLDguCTLt9VEbIYxOBVNIpVjpB90f34Crw3hTZWxF4Nng1nW7WuZlc5uUGVdnS_875yDPLBfrq8ekk7ZIOTUawoiXEc0wHUoP-qjIDueqfNZxbrmyb5L8SWdtwknnvs-kSSJ7rjyw3Dc-81NYyZajmsrmBwxj5LuKSnwvhgKbAR9JidkcaasqY6PgofzpJBVfGL39-Niw',
-      tag: 'Phụ kiện an toàn'
-    },
-    {
-      id: 993,
-      name: 'Túi Đựng Giày Thể Thao Khử Mùi Thoáng Khí Yonex Pro',
-      price: 190000,
-      originalPrice: 250000,
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBLs7bMgLAvhlsjb8n42G2i546YnlF9frRIQUhynLb0uaIovwub4-M_JUM8kLyAs9cnzUUjENc-GYNZTuv2l8MT07Lfs-mx58f4fu9E6gE83ZSqPXdBCEP2uVh9cr2w6SJ2nOcQyuNY3sJIZQ0tWWslsXk9xcgHZhfOWJrJyCc8ZdZ9vUw9wnArTE7CTJ9fKDse8Vg8e6dLB8wB08ppX-JeqXeNwiu-F1U7SBOYFKtfc-xfdRnHqpKQ',
-      tag: 'Chống ẩm mốc'
-    }
-  ];
+  const crossSellProducts = [];
 
   if (cart.length === 0) {
     return (
@@ -363,7 +345,8 @@ const CartPage = () => {
                               )}
                               {item.stringingService && item.stringingService !== 'none' && (
                                 <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[11px] font-bold text-blue-700">
-                                  Căng cước: {item.stringingService} ({item.stringTension || '10.5'} kg)
+                                  Căng cước: {item.stringingService}
+                                  {item.stringTension && !item.stringingService.includes(item.stringTension) ? ` (${item.stringTension})` : ''}
                                 </span>
                               )}
                             </div>

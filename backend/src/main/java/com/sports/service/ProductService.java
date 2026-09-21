@@ -122,6 +122,7 @@ public class ProductService {
 
     @Transactional
     public ProductDto createProduct(ProductDto dto) {
+        validateStockAndPrice(dto);
         Category category = null;
         if (dto.getCategoryId() != null) {
             category = categoryRepository.findById(dto.getCategoryId())
@@ -151,8 +152,10 @@ public class ProductService {
 
     @Transactional
     public ProductDto updateProduct(Long id, ProductDto dto) {
-        Product product = productRepository.findById(id)
+        validateStockAndPrice(dto);
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id));
+        validateStockSnapshot(product, dto);
 
         if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())
@@ -163,22 +166,46 @@ public class ProductService {
         if (dto.getSku() != null) {
             product.setSku(dto.getSku());
         }
-        product.setName(dto.getName());
-        product.setBrand(dto.getBrand());
+        if (dto.getName() != null) product.setName(dto.getName());
+        if (dto.getBrand() != null) product.setBrand(dto.getBrand());
         product.setPrice(dto.getPrice());
-        product.setOriginalPrice(dto.getOriginalPrice());
+        if (dto.getOriginalPrice() != null) product.setOriginalPrice(dto.getOriginalPrice());
         if (dto.getStock() != null) {
             product.setStock(dto.getStock());
         }
-        product.setImageUrl(dto.getImageUrl());
-        product.setDescription(dto.getDescription());
-        product.setWeightGrip(dto.getWeightGrip());
-        product.setStiffness(dto.getStiffness());
-        product.setBalancePoint(dto.getBalancePoint());
-        product.setMaxTension(dto.getMaxTension());
-        product.setPlayStyle(dto.getPlayStyle());
+        if (dto.getImageUrl() != null) product.setImageUrl(dto.getImageUrl());
+        if (dto.getDescription() != null) product.setDescription(dto.getDescription());
+        if (dto.getWeightGrip() != null) product.setWeightGrip(dto.getWeightGrip());
+        if (dto.getStiffness() != null) product.setStiffness(dto.getStiffness());
+        if (dto.getBalancePoint() != null) product.setBalancePoint(dto.getBalancePoint());
+        if (dto.getMaxTension() != null) product.setMaxTension(dto.getMaxTension());
+        if (dto.getPlayStyle() != null) product.setPlayStyle(dto.getPlayStyle());
 
         return toDto(productRepository.save(product));
+    }
+
+    private void validateStockSnapshot(Product product, ProductDto dto) {
+        if (dto.getStock() == null) return;
+        if (dto.getExpectedStock() == null || !dto.getExpectedStock().equals(product.getStock())) {
+            throw new BadRequestException("Tồn kho đã thay đổi hoặc thiếu số liệu gốc. Vui lòng tải lại sản phẩm trước khi lưu");
+        }
+    }
+
+    private void validateStockAndPrice(ProductDto dto) {
+        if (dto.getName() != null && (dto.getName().isBlank() || dto.getName().length() > 200)
+                || dto.getBrand() != null && (dto.getBrand().isBlank() || dto.getBrand().length() > 50)) {
+            throw new BadRequestException("Tên hoặc thương hiệu không hợp lệ");
+        }
+        if (dto.getOriginalPrice() != null && (dto.getOriginalPrice().signum() < 0
+                || dto.getPrice() != null && dto.getOriginalPrice().compareTo(dto.getPrice()) < 0)) {
+            throw new BadRequestException("Giá gốc phải không nhỏ hơn giá bán");
+        }
+        if (dto.getStock() != null && dto.getStock() < 0) {
+            throw new BadRequestException("Tồn kho không được âm");
+        }
+        if (dto.getPrice() == null || dto.getPrice().signum() <= 0) {
+            throw new BadRequestException("Giá sản phẩm phải lớn hơn 0");
+        }
     }
 
     @Transactional

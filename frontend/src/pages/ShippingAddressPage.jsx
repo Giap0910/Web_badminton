@@ -19,41 +19,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-const INITIAL_MOCK_ADDRESSES = [
-  {
-    id: 1,
-    fullName: 'Nguyễn Văn A',
-    phone: '(+84) 0988 123 456',
-    address: 'Tầng 12, Tòa nhà Landmark 81, 720A Điện Biên Phủ, Phường 22, Quận Bình Thạnh, TP. Hồ Chí Minh',
-    note: 'Gọi điện trước khi giao hàng 15 phút, gửi lễ tân nếu vắng mặt.',
-    type: 'default',
-    tag: 'Nhà riêng / Mặc định',
-    isDefault: true
-  },
-  {
-    id: 2,
-    fullName: 'Nguyễn Văn A - Cty Apex Pro',
-    phone: '(+84) 0912 345 678',
-    address: 'Số 182 Lê Duẩn, Phường Nguyễn Du, Quận Hai Bà Trưng, TP. Hà Nội',
-    note: 'Chỉ giao trong giờ hành chính từ Thứ 2 đến Thứ 6.',
-    type: 'office',
-    tag: 'Văn phòng',
-    isDefault: false
-  },
-  {
-    id: 3,
-    fullName: 'Nguyễn Văn A (CLB Cầu Lông Kỳ Hòa 2)',
-    phone: '(+84) 0988 123 456',
-    address: 'Sân số 4, CLB Cầu Lông Kỳ Hòa 2, Sư Vạn Hạnh, Phường 12, Quận 10, TP. Hồ Chí Minh',
-    note: 'Giao vào buổi tối sau 18:00 các ngày Thứ 3 - 5 - 7.',
-    type: 'court',
-    tag: 'Sân cầu lông',
-    isDefault: false
-  }
-];
 
 const ShippingAddressPage = () => {
-  const [addresses, setAddresses] = useState(INITIAL_MOCK_ADDRESSES);
+  const [dataError, setDataError] = useState('');
+  const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -76,11 +45,11 @@ const ShippingAddressPage = () => {
     try {
       const res = await shippingAddressApi.getMyAddresses();
       const list = Array.isArray(res) ? res : res?.data || [];
-      if (list.length > 0) {
+      if (Array.isArray(list)) {
         setAddresses(list);
       }
     } catch (err) {
-      console.warn('API addresses fallback to mock list:', err);
+      setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -121,13 +90,7 @@ const ShippingAddressPage = () => {
       await fetchAddresses();
       setMessage('Đã đặt làm địa chỉ mặc định thành công!');
     } catch (err) {
-      setAddresses((prev) =>
-        prev.map((a) => ({
-          ...a,
-          isDefault: a.id === id
-        }))
-      );
-      setMessage('Đã đặt làm địa chỉ mặc định thành công!');
+      setMessage(err.response?.data?.message || 'Không thể cập nhật địa chỉ. Vui lòng thử lại.');
     }
     setTimeout(() => setMessage(''), 3000);
   };
@@ -139,8 +102,7 @@ const ShippingAddressPage = () => {
       await fetchAddresses();
       setMessage('Đã xóa địa chỉ nhận hàng.');
     } catch (err) {
-      setAddresses((prev) => prev.filter((a) => a.id !== id));
-      setMessage('Đã xóa địa chỉ nhận hàng.');
+      setMessage(err.response?.data?.message || 'Không thể cập nhật địa chỉ. Vui lòng thử lại.');
     }
     setTimeout(() => setMessage(''), 3000);
   };
@@ -167,42 +129,19 @@ const ShippingAddressPage = () => {
         setMessage('Thêm địa chỉ mới thành công!');
       }
       await fetchAddresses();
+      setShowForm(false);
     } catch (err) {
-      console.warn('Lỗi gọi API địa chỉ, lưu dự phòng cục bộ:', err);
-      const newEntry = {
-        id: editingId || Date.now(),
-        fullName: formName,
-        phone: formPhone,
-        address: fullAddrString,
-        note: formNote,
-        tag: formTag,
-        isDefault: formIsDefault
-      };
-
-      if (formIsDefault) {
-        setAddresses((prev) =>
-          prev.map((a) => ({ ...a, isDefault: false }))
-        );
-      }
-
-      if (editingId) {
-        setAddresses((prev) =>
-          prev.map((a) => (a.id === editingId ? { ...newEntry } : a))
-        );
-        setMessage('Cập nhật địa chỉ nhận hàng thành công!');
-      } else {
-        setAddresses((prev) => [newEntry, ...prev]);
-        setMessage('Thêm địa chỉ mới thành công!');
-      }
+      setMessage(err.response?.data?.message || 'Không thể lưu địa chỉ. Dữ liệu chưa được lưu.');
     } finally {
       setSaving(false);
-      setShowForm(false);
+
       setTimeout(() => setMessage(''), 3000);
     }
   };
 
   return (
     <UserLayout currentPage="Sổ địa chỉ" counts={{ addresses: addresses.length }}>
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* MAIN ADDRESS LIST CARD */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 flex flex-col gap-6">

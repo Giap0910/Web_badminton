@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class VoucherService {
 
     private final VoucherRepository voucherRepository;
+    private final org.springframework.core.env.Environment environment;
 
     @Transactional(readOnly = true)
     public VoucherValidateResponse validateVoucher(VoucherValidateRequest request) {
@@ -34,6 +35,34 @@ public class VoucherService {
         Voucher voucher = voucherRepository.findByCodeIgnoreCase(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Mã giảm giá '" + code + "' không tồn tại!"));
 
+        return validateVoucher(voucher, orderTotal);
+    }
+
+    @Transactional
+    public VoucherValidateResponse reserveVoucher(VoucherValidateRequest request) {
+        Voucher voucher = voucherRepository.findByCodeForUpdate(request.getCode().trim())
+                .orElseThrow(() -> new BadRequestException("Mã giảm giá không tồn tại"));
+        VoucherValidateResponse result = validateVoucher(voucher, request.getOrderTotal());
+        voucher.setUsedCount(voucher.getUsedCount() + 1);
+        voucherRepository.save(voucher);
+        return result;
+    }
+
+    @Transactional
+    public void releaseVoucher(String code) {
+        if (code == null || code.isBlank()) return;
+        voucherRepository.findByCodeForUpdate(code).ifPresent(voucher -> {
+            voucher.setUsedCount(Math.max(0, voucher.getUsedCount() - 1));
+            voucherRepository.save(voucher);
+        });
+    }
+
+    private VoucherValidateResponse validateVoucher(Voucher voucher, BigDecimal orderTotal) {
+        String code = voucher.getCode();
+        if (orderTotal == null || orderTotal.signum() < 0 || voucher.getDiscountValue() == null
+                || voucher.getDiscountValue().signum() < 0) {
+            throw new BadRequestException("Giá trị đơn hàng hoặc mã giảm giá không hợp lệ");
+        }
         if (Boolean.FALSE.equals(voucher.getIsActive())) {
             throw new BadRequestException("Mã giảm giá '" + code + "' đã bị tạm ngưng áp dụng!");
         }
@@ -165,6 +194,7 @@ public class VoucherService {
 
     @PostConstruct
     public void seedInitialVouchers() {
+        if (!environment.acceptsProfiles(org.springframework.core.env.Profiles.of("dev"))) return;
         if (voucherRepository.count() == 0) {
             log.info("Khởi tạo danh sách Voucher demo cho hệ thống Apex Badminton...");
             LocalDateTime nextYear = LocalDateTime.now().plusYears(1);

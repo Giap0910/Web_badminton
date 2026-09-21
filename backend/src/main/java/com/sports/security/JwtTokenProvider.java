@@ -21,6 +21,11 @@ public class JwtTokenProvider {
     @Value("${app.jwt.expiration-ms:86400000}")
     private long jwtExpirationMs;
 
+    @jakarta.annotation.PostConstruct
+    public void validateSigningKey() {
+        getSigningKey();
+    }
+
     private Key getSigningKey() {
         byte[] keyBytes = java.util.HexFormat.of().parseHex(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);

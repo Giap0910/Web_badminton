@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getOrderStatusLabel } from '../utils/formatters';
 import UserLayout from '../components/UserLayout';
 import { orderApi } from '../api/orderApi';
 import {
@@ -21,106 +22,10 @@ import {
   PackageCheck
 } from 'lucide-react';
 
-const MOCK_ORDERS = [
-  {
-    id: 1,
-    orderCode: '#APX-89241',
-    createdAt: '14:35 - 24/10/2024',
-    paymentMethod: 'VietQR Pro Đã xác nhận',
-    productName: 'Vợt Yonex Astrox 100ZZ Kurenai (4U/G5)',
-    productImage: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-    stringDetail: '+ Cước BG80 Power (Căng 11.5kg / 25.5 lbs)',
-    giftDetail: 'Kèm 01 Cuốn cán Yonex AC102EX',
-    quantitySummary: 'Số lượng: 1 sản phẩm chính (2 quà tặng)',
-    totalPrice: 4550000,
-    shippingFee: 0,
-    status: 'PROCESSING',
-    statusLabel: 'Đang xử lý',
-    statusSub: 'Kỹ thuật viên đang vào cước',
-    receiverName: 'Nguyễn Văn A',
-    receiverPhone: '0988 123 456',
-    shippingAddress: 'Tầng 12, Tòa nhà Landmark 81, 720A Điện Biên Phủ, Phường 22, Quận Bình Thạnh, TP. HCM'
-  },
-  {
-    id: 2,
-    orderCode: '#APX-88910',
-    createdAt: '09:15 - 22/10/2024',
-    paymentMethod: 'COD - Thanh toán khi nhận',
-    productName: 'Giày Cầu Lông Yonex Power Cushion 65Z3 Men',
-    productImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400&q=80',
-    stringDetail: 'Size 42 EU / 26.5cm (Form bè Wide)',
-    giftDetail: 'Tặng 01 đôi vớ thi đấu dệt kim Apex Pro',
-    quantitySummary: 'Số lượng: 1 đôi giày',
-    totalPrice: 2890000,
-    shippingFee: 0,
-    status: 'SHIPPING',
-    statusLabel: 'Đang giao',
-    statusSub: 'Tài xế công nghệ đang giao hỏa tốc 2H',
-    receiverName: 'Nguyễn Văn A',
-    receiverPhone: '0988 123 456',
-    shippingAddress: 'Số 182 Lê Duẩn, Phường Nguyễn Du, Quận Hai Bà Trưng, TP. Hà Nội'
-  },
-  {
-    id: 3,
-    orderCode: '#APX-87422',
-    createdAt: '18:40 - 15/10/2024',
-    paymentMethod: 'VNPAY-QR Thành công',
-    productName: 'Vợt Victor Thruster Ryuga Metallic (3U/G5)',
-    productImage: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?auto=format&fit=crop&w=400&q=80',
-    stringDetail: '+ Cước Victor VBS-66 Nano (Căng 12.0kg)',
-    giftDetail: 'Tặng bao vợt đơn nhung cao cấp',
-    quantitySummary: 'Số lượng: 1 sản phẩm chính',
-    totalPrice: 4200000,
-    shippingFee: 0,
-    status: 'DELIVERED',
-    statusLabel: 'Đã giao',
-    statusSub: 'Ký nhận lúc 11:20 - 17/10/2024',
-    receiverName: 'Nguyễn Văn A',
-    receiverPhone: '0988 123 456',
-    shippingAddress: 'Tầng 12, Tòa nhà Landmark 81, 720A Điện Biên Phủ, Phường 22, Bình Thạnh'
-  },
-  {
-    id: 4,
-    orderCode: '#APX-86105',
-    createdAt: '11:00 - 05/10/2024',
-    paymentMethod: 'Chuyển khoản Vietcombank',
-    productName: 'Ống Cầu Lông Yonex Aerosensa 50 (12 quả)',
-    productImage: 'https://images.unsplash.com/photo-1613918108466-292b78a8ef95?auto=format&fit=crop&w=400&q=80',
-    stringDetail: 'Tốc độ 77 - Tiêu chuẩn giải đấu quốc tế',
-    giftDetail: 'Tích lũy 150 điểm ApexClub',
-    quantitySummary: 'Số lượng: 5 ống',
-    totalPrice: 2250000,
-    shippingFee: 0,
-    status: 'DELIVERED',
-    statusLabel: 'Đã giao',
-    statusSub: 'Ký nhận lúc 15:00 - 06/10/2024',
-    receiverName: 'Nguyễn Văn A',
-    receiverPhone: '0988 123 456',
-    shippingAddress: 'Sân số 4, CLB Cầu Lông Kỳ Hòa 2, Sư Vạn Hạnh, Q10, TP. HCM'
-  },
-  {
-    id: 5,
-    orderCode: '#APX-85219',
-    createdAt: '16:20 - 28/09/2024',
-    paymentMethod: 'VietQR - Hết hạn thanh toán',
-    productName: 'Balo Cầu Lông Yonex Pro Tournament Bag',
-    productImage: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&q=80',
-    stringDetail: 'Màu Fine Blue (Chứa 3-6 cây vợt + ngăn để giày riêng)',
-    giftDetail: 'Hủy đơn do người dùng đổi nhu cầu',
-    quantitySummary: 'Số lượng: 1 balo',
-    totalPrice: 1650000,
-    shippingFee: 30000,
-    status: 'CANCELLED',
-    statusLabel: 'Đã hủy',
-    statusSub: 'Hủy theo yêu cầu khách hàng',
-    receiverName: 'Nguyễn Văn A',
-    receiverPhone: '0988 123 456',
-    shippingAddress: 'Số 182 Lê Duẩn, Hai Bà Trưng, Hà Nội'
-  }
-];
 
 const MyOrdersPage = () => {
-  const [orders, setOrders] = useState(MOCK_ORDERS);
+  const [dataError, setDataError] = useState('');
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,7 +37,7 @@ const MyOrdersPage = () => {
       try {
         const res = await orderApi.getMyOrders();
         const list = Array.isArray(res) ? res : res?.data || [];
-        if (list.length > 0) {
+        if (Array.isArray(list)) {
           // Merge API fields with design-specific fields
           const formatted = list.map((item, idx) => {
             const firstItem = item.items?.[0] || item.orderItems?.[0];
@@ -155,8 +60,8 @@ const MyOrdersPage = () => {
               totalPrice: item.totalAmount || item.totalPrice || 0,
               shippingFee: item.shippingFee || 0,
               status: item.status || 'PROCESSING',
-              statusLabel: item.status === 'CANCELLED' ? 'Đã hủy' : item.status === 'PAID' ? 'Đã thanh toán' : item.status === 'PENDING' ? 'Chờ thanh toán VietQR' : item.status === 'COMPLETED' ? 'Đã hoàn tất' : 'Đang xử lý',
-              statusSub: item.status === 'PAID' ? 'Kỹ thuật viên đang vào cước' : item.status === 'PENDING' ? 'Vui lòng quét VietQR thanh toán' : item.status === 'COMPLETED' ? 'Đã giao thành công' : item.status === 'CANCELLED' ? 'Đơn hàng đã được hoàn kho' : 'Hệ thống đã tiếp nhận',
+              statusLabel: getOrderStatusLabel(item),
+              statusSub: getOrderStatusLabel(item),
               receiverName: item.customerName || item.shippingName || 'Khách hàng Apex',
               receiverPhone: item.shippingPhone || '',
               shippingAddress: item.shippingAddress || ''
@@ -165,7 +70,7 @@ const MyOrdersPage = () => {
           setOrders(formatted);
         }
       } catch (err) {
-        console.warn('API orders fallback to mock orders:', err);
+        setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
       } finally {
         setLoading(false);
       }
@@ -188,7 +93,8 @@ const MyOrdersPage = () => {
     try {
       await orderApi.cancelOrder(orderId);
     } catch (e) {
-      console.warn('Cancel order via API fallback to local state:', e);
+      alert(e.response?.data?.message || 'Không thể hủy đơn hàng.');
+      return;
     }
     setOrders((prev) =>
       prev.map((o) =>
@@ -209,9 +115,9 @@ const MyOrdersPage = () => {
 
   const tabs = [
     { key: 'ALL', label: 'Tất cả', count: orders.length },
-    { key: 'PROCESSING', label: 'Đang xử lý', count: orders.filter((o) => o.status === 'PROCESSING' || o.status === 'PENDING').length },
-    { key: 'SHIPPING', label: 'Đang giao', count: orders.filter((o) => o.status === 'SHIPPING' || o.status === 'CONFIRMED').length },
-    { key: 'DELIVERED', label: 'Đã giao', count: orders.filter((o) => o.status === 'DELIVERED' || o.status === 'PAID').length },
+    { key: 'PROCESSING', label: 'Đang xử lý', count: orders.filter((o) => o.status === 'PAID' || o.status === 'PENDING').length },
+    { key: 'SHIPPING', label: 'Đang giao', count: orders.filter((o) => o.status === 'SHIPPING').length },
+    { key: 'DELIVERED', label: 'Đã giao', count: orders.filter((o) => o.status === 'COMPLETED').length },
     { key: 'CANCELLED', label: 'Đã hủy', count: orders.filter((o) => o.status === 'CANCELLED').length },
   ];
 
@@ -220,11 +126,11 @@ const MyOrdersPage = () => {
       activeTab === 'ALL'
         ? true
         : activeTab === 'PROCESSING'
-        ? order.status === 'PROCESSING' || order.status === 'PENDING'
+        ? order.status === 'PAID' || order.status === 'PENDING'
         : activeTab === 'SHIPPING'
-        ? order.status === 'SHIPPING' || order.status === 'CONFIRMED'
+        ? order.status === 'SHIPPING'
         : activeTab === 'DELIVERED'
-        ? order.status === 'DELIVERED' || order.status === 'PAID'
+        ? order.status === 'COMPLETED'
         : order.status === 'CANCELLED';
 
     const matchesSearch =
@@ -237,6 +143,7 @@ const MyOrdersPage = () => {
 
   return (
     <UserLayout currentPage="Lịch sử đơn hàng" counts={{ orders: orders.length }}>
+      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* MAIN ORDER HISTORY CONTAINER */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col">
@@ -317,9 +224,9 @@ const MyOrdersPage = () => {
                   </tr>
                 ) : (
                   filteredOrders.map((order) => {
-                    const isProcessing = order.status === 'PROCESSING' || order.status === 'PENDING';
-                    const isShipping = order.status === 'SHIPPING' || order.status === 'CONFIRMED';
-                    const isDelivered = order.status === 'DELIVERED' || order.status === 'PAID';
+                    const isProcessing = order.status === 'PAID' || order.status === 'PENDING';
+                    const isShipping = order.status === 'SHIPPING';
+                    const isDelivered = order.status === 'COMPLETED';
                     const isCancelled = order.status === 'CANCELLED';
 
                     return (
@@ -393,7 +300,7 @@ const MyOrdersPage = () => {
 
                         {/* Cột 4: Trạng thái */}
                         <td className="py-4 px-4 align-top">
-                          {isProcessing && (
+                          {order.status === 'PENDING' && (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 font-bold text-[11px] shadow-sm">
                               <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
                               {order.statusLabel}
@@ -433,7 +340,7 @@ const MyOrdersPage = () => {
                               Xem chi tiết
                             </button>
 
-                            {isProcessing && (
+                            {order.status === 'PENDING' && (
                               <button
                                 type="button"
                                 onClick={() => handleCancelOrder(order.id)}
@@ -530,7 +437,7 @@ const MyOrdersPage = () => {
                 >
                   Đóng
                 </button>
-                {selectedOrder.status === 'DELIVERED' && (
+                {selectedOrder.status === 'COMPLETED' && (
                   <Link
                     to={`/returns?orderId=${selectedOrder.id}`}
                     className="px-5 py-2 rounded-xl bg-secondary text-white hover:bg-secondary/90 text-xs font-bold shadow-sm"
