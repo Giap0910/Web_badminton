@@ -36,7 +36,7 @@ const Footer = () => {
             <div className="flex items-center gap-2.5">
               <div className="flex items-center gap-1.5">
                 <span className="font-display text-xl tracking-tight font-extrabold text-white">
-                  APEX <span className="text-secondary font-black">BADMINTON</span>
+                  HG <span className="text-secondary font-black">BADMINTON</span>
                 </span>
                 <span className="bg-secondary text-white px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-widest uppercase">
                   PRO
@@ -63,7 +63,7 @@ const Footer = () => {
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-secondary shrink-0" />
-                <span>prosupport@apexbadminton.vn</span>
+                <span>prosupport@hgbadminton.vn</span>
               </div>
             </div>
           </div>
@@ -181,7 +181,7 @@ const Footer = () => {
             <span className="bg-secondary text-white px-2 py-0.5 rounded font-bold text-[10px] tracking-wider uppercase">
               Đã thông báo Bộ Công Thương
             </span>
-            <span>© 2025 Apex Badminton Equipment Ltd. Tất cả quyền được bảo lưu.</span>
+            <span>© 2025 HG Badminton Equipment Ltd. Tất cả quyền được bảo lưu.</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold hidden sm:inline">

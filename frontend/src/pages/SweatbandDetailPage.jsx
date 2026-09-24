@@ -257,13 +257,13 @@ const SweatbandDetailPage = () => {
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                    {product.brand || 'Apex Badminton'} x Yonex OEM Edition
+                    {product.brand || 'HG Badminton'} x Yonex OEM Edition
                   </span>
                   <span className="px-2 py-0.5 bg-red-100 text-secondary text-[10px] uppercase rounded-md font-bold">
                     Bán chạy #1 Phụ Kiện
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400">Mã SP: {product.sku || 'APX-SWT-TR'}</span>
+                <span className="text-[11px] text-slate-400">Mã SP: {product.sku || 'HG-SWT-TR'}</span>
               </div>
 
               <h1 className="text-xl sm:text-2xl font-black text-[#0F172A] leading-snug">
@@ -429,7 +429,7 @@ const SweatbandDetailPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-secondary shrink-0" />
-                <span>Tích lũy 180đ ApexClub</span>
+                <span>Tích lũy 180đ HGClub</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
@@ -507,7 +507,7 @@ const SweatbandDetailPage = () => {
                     Giữ tầm nhìn thông thoáng &amp; Cầm chắc tay vợt tuyệt đối trong từng set đấu
                   </h2>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    Dòng phụ kiện băng chặn mồ hôi <strong>Apex Pro Tour Sweatband</strong> được thiết kế theo tiêu chuẩn thi đấu đỉnh cao của Liên đoàn Cầu lông Thế giới (BWF). Sản phẩm giải quyết dứt điểm nỗi lo mồ hôi trán chảy vào cay mắt hoặc trơn tuột cán vợt khi thực hiện các pha smash dứt điểm tốc độ cao.
+                    Dòng phụ kiện băng chặn mồ hôi <strong>HG Pro Tour Sweatband</strong> được thiết kế theo tiêu chuẩn thi đấu đỉnh cao của Liên đoàn Cầu lông Thế giới (BWF). Sản phẩm giải quyết dứt điểm nỗi lo mồ hôi trán chảy vào cay mắt hoặc trơn tuột cán vợt khi thực hiện các pha smash dứt điểm tốc độ cao.
                   </p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -562,7 +562,7 @@ const SweatbandDetailPage = () => {
                   <Award className="w-6 h-6 text-secondary" />
                   <h3 className="text-sm font-black text-[#0F172A]">Thêu Nổi Thủ Công 3D</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Logo biểu tượng quả cầu lông Apex được thêu vi tính mật độ cao, đường nét sắc sảo, chống bong tróc hoàn toàn so với công nghệ in nhiệt thông thường.
+                    Logo biểu tượng quả cầu lông HG được thêu vi tính mật độ cao, đường nét sắc sảo, chống bong tróc hoàn toàn so với công nghệ in nhiệt thông thường.
                   </p>
                 </div>
               </div>
@@ -750,7 +750,7 @@ const SweatbandDetailPage = () => {
           {/* TAB 4: HỎI ĐÁP CHUYÊN GIA */}
           {activeTab === 'faq' && (
             <div className="pt-6 flex flex-col gap-4">
-              <h3 className="text-base font-black text-slate-800">Giải đáp thắc mắc cùng ban chuyên môn Apex</h3>
+              <h3 className="text-base font-black text-slate-800">Giải đáp thắc mắc cùng ban chuyên môn HG</h3>
               <div className="flex flex-col gap-3">
                 <div className="p-4 bg-[#F8FAFC] rounded-xl border border-slate-100 flex flex-col gap-1.5">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-2">
@@ -758,7 +758,7 @@ const SweatbandDetailPage = () => {
                     Hỏi: Băng trán có bị dão sau khi giặt máy không?
                   </span>
                   <p className="text-xs text-slate-600 pl-6">
-                    Trả lời: Băng chặn Apex có thành phần 20% sợi đàn hồi Elastodiene kết hợp dệt mật độ cao nên giữ form rất tốt. Khuyến khích bạn bỏ vào túi giặt lưới và giặt chế độ nhẹ để tuổi thọ sản phẩm được hơn 1 năm sử dụng.
+                    Trả lời: Băng chặn HG có thành phần 20% sợi đàn hồi Elastodiene kết hợp dệt mật độ cao nên giữ form rất tốt. Khuyến khích bạn bỏ vào túi giặt lưới và giặt chế độ nhẹ để tuổi thọ sản phẩm được hơn 1 năm sử dụng.
                   </p>
                 </div>
 

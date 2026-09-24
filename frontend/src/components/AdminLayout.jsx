@@ -53,12 +53,12 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* BRAND HEADER */}
           <div className="h-16 px-5 flex items-center gap-3 border-b border-slate-800 bg-[#0B1120]">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-secondary to-red-500 flex items-center justify-center font-black text-white text-lg tracking-wider shadow-md shadow-red-600/30">
-              A
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-secondary to-red-500 flex items-center justify-center font-black text-white text-sm tracking-wider shadow-md shadow-red-600/30">
+              HG
             </div>
             <div className="flex flex-col">
               <span className="font-black text-sm tracking-tight text-white uppercase leading-none">
-                APEX <span className="text-secondary">ADMIN</span>
+                HG <span className="text-secondary">ADMIN</span>
               </span>
               <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider mt-1">
                 Pro Badminton Portal

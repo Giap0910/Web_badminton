@@ -619,7 +619,7 @@ const CheckoutPage = () => {
 
               <div className="flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-2 px-1 text-xs text-slate-400">
                 <p>
-                  Bằng cách nhấn Đặt hàng, bạn đồng ý với <span className="text-blue-600 hover:underline cursor-pointer">Điều khoản mua hàng</span> và <span className="text-blue-600 hover:underline cursor-pointer">Chính sách bảo mật</span> của Apex Badminton.
+                  Bằng cách nhấn Đặt hàng, bạn đồng ý với <span className="text-blue-600 hover:underline cursor-pointer">Điều khoản mua hàng</span> và <span className="text-blue-600 hover:underline cursor-pointer">Chính sách bảo mật</span> của HG Badminton.
                 </p>
                 <div className="flex items-center gap-1 shrink-0 text-slate-600 font-bold">
                   <ShieldCheck className="w-4 h-4 text-emerald-500" />
@@ -740,13 +740,13 @@ const CheckoutPage = () => {
                   <span className="font-bold text-slate-900">{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-red-600 font-semibold">
-                  <span>Giảm giá Voucher Apex</span>
+                  <span>Giảm giá Voucher HG</span>
                   <span>-{formatPrice(effectiveDiscount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Phí vận chuyển</span>
                   <span className="text-emerald-600 font-bold">
-                    {shippingFee === 0 ? '0₫ (Miễn phí Apex VIP)' : formatPrice(shippingFee)}
+                    {shippingFee === 0 ? '0₫ (Miễn phí HG VIP)' : formatPrice(shippingFee)}
                   </span>
                 </div>
                 <div className="h-px bg-slate-200 my-1"></div>

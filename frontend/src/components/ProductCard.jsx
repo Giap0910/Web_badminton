@@ -136,7 +136,7 @@ const ProductCard = ({ product, onQuickView }) => {
           {/* Brand & Specification Tag */}
           <div className="flex items-center justify-between text-slate-600 text-xs mb-1">
             <span className="font-bold text-slate-900 uppercase">
-              {product.brand || 'APEX PRO'}
+              {product.brand || 'HG PRO'}
             </span>
             <span className="bg-[#ECEEF0] text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-mono">
               {specLabel}

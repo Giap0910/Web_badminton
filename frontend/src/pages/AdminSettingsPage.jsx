@@ -24,10 +24,10 @@ const AdminSettingsPage = () => {
 
   // Form states
   const [storeInfo, setStoreInfo] = useState({
-    brandName: 'APEX BADMINTON JSC',
+    brandName: 'HG BADMINTON JSC',
     slogan: 'Pro Equipment & Tour Gear - Phân phối chính hãng số 1 Việt Nam',
     hotline: '1900 6886',
-    email: 'support@apexbadminton.vn',
+    email: 'support@hgbadminton.vn',
     addressHanoi: 'Số 182 Lê Duẩn, P. Nguyễn Du, Q. Hai Bà Trưng, Hà Nội',
     addressHcm: 'Tầng 12, Tòa nhà Landmark 81, 720A Điện Biên Phủ, Q. Bình Thạnh, TP. HCM',
     workingHours: '08:30 - 21:30 (Cả Thứ 7 & Chủ Nhật)'

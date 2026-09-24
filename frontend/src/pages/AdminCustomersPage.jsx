@@ -98,7 +98,7 @@ const AdminCustomersPage = () => {
   });
 
   return (
-    <AdminLayout title="Khách hàng" subtitle="Quản lý khách hàng & Thành viên ApexClub">
+    <AdminLayout title="Khách hàng" subtitle="Quản lý khách hàng & Thành viên HGClub">
       {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & ACTION STRIP */}
@@ -117,7 +117,7 @@ const AdminCustomersPage = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Chính sách tích điểm ApexClub, quản lý cấp bậc VIP và hạn mức ưu đãi xưởng BWF
+                Chính sách tích điểm HGClub, quản lý cấp bậc VIP và hạn mức ưu đãi xưởng BWF
               </p>
             </div>
           </div>
@@ -212,7 +212,7 @@ const AdminCustomersPage = () => {
                 <tr className="bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
                   <th className="py-3.5 px-6">Hội viên & Cấp bậc</th>
                   <th className="py-3.5 px-4">Thông tin liên hệ</th>
-                  <th className="py-3.5 px-4">Điểm ApexClub</th>
+                  <th className="py-3.5 px-4">Điểm HGClub</th>
                   <th className="py-3.5 px-4">Đơn hàng</th>
                   <th className="py-3.5 px-4">Tổng chi tiêu</th>
                   <th className="py-3.5 px-4">Trạng thái</th>
@@ -276,7 +276,7 @@ const AdminCustomersPage = () => {
                           <span className="text-[11px] text-slate-400">{c.phone}</span>
                         </td>
 
-                        {/* Cột 3: Điểm ApexClub */}
+                        {/* Cột 3: Điểm HGClub */}
                         <td className="py-4 px-4 align-top">
                           <span className="font-black text-slate-900">{c.points.toLocaleString()} pts</span>
                         </td>
@@ -345,7 +345,7 @@ const AdminCustomersPage = () => {
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="text-base font-black text-slate-900">Hồ sơ hội viên ApexClub</h3>
+                <h3 className="text-base font-black text-slate-900">Hồ sơ hội viên HGClub</h3>
                 <button
                   type="button"
                   onClick={() => setViewCustomer(null)}

@@ -53,7 +53,7 @@ const AdminVouchersPage = () => {
   const handleOpenAdd = () => {
     setEditingId(null);
     setFormData({
-      code: `APEX${Math.floor(Math.random() * 90) + 10}K`,
+      code: `HG${Math.floor(Math.random() * 90) + 10}K`,
       title: '',
       discountType: 'FIXED',
       discountValue: '100000',
@@ -88,8 +88,8 @@ const AdminVouchersPage = () => {
         if (Array.isArray(list)) {
           const mapped = list.map((v, idx) => ({
             id: v.id || idx + 1,
-            code: v.code || 'APEX100K',
-            title: v.title || v.description || 'Khuyến mãi Apex Badminton',
+            code: v.code || 'HG100K',
+            title: v.title || v.description || 'Khuyến mãi HG Badminton',
             discountType: v.discountType || 'FIXED',
             discountValue: v.discountValue ?? 0,
             minOrderValue: v.minOrderValue ?? 0,
@@ -252,7 +252,7 @@ const AdminVouchersPage = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo mã coupon (APEX...), mô tả..."
+              placeholder="Tìm theo mã coupon (HG...), mô tả..."
               className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
             />
           </div>
@@ -382,7 +382,7 @@ const AdminVouchersPage = () => {
                       required
                       value={formData.code}
                       onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                      placeholder="Ví dụ: APEX100K"
+                      placeholder="Ví dụ: HG100K"
                       className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner font-mono font-bold"
                     />
                   </div>

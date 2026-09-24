@@ -229,7 +229,7 @@ const RacketGripDetailPage = () => {
                   <span className="bg-secondary text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase">-21%</span>
                 </div>
                 <div className="text-xs text-slate-700 bg-white px-3 py-1.5 rounded-lg shadow-sm font-semibold">
-                  Tích luỹ <strong className="text-secondary">+950 ApexClub</strong>
+                  Tích luỹ <strong className="text-secondary">+950 HGClub</strong>
                 </div>
               </div>
 

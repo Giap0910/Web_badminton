@@ -123,7 +123,7 @@ const ReviewedProductsPage = () => {
                 Sản phẩm đã đánh giá
               </h1>
               <p className="text-xs text-slate-500 mt-1">
-                Xem lại đóng góp chuyên môn của bạn và tiếp tục tích lũy điểm thưởng ApexClub để đổi voucher mua hàng
+                Xem lại đóng góp chuyên môn của bạn và tiếp tục tích lũy điểm thưởng HGClub để đổi voucher mua hàng
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
@@ -335,7 +335,7 @@ const ReviewedProductsPage = () => {
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
                     <div className="flex items-center gap-1.5 text-emerald-700 text-[11px] font-bold">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Đã xác thực đã mua hàng tại Apex Pro
+                      Đã xác thực đã mua hàng tại HG Pro
                     </div>
                     <div className="flex items-center gap-4">
                       <button
@@ -372,7 +372,7 @@ const ReviewedProductsPage = () => {
                   </div>
                   <div>
                     <h3 className="text-base font-black text-slate-900">Đánh giá sản phẩm</h3>
-                    <p className="text-xs text-slate-400">Nhận ngay +50 điểm ApexClub</p>
+                    <p className="text-xs text-slate-400">Nhận ngay +50 điểm HGClub</p>
                   </div>
                 </div>
                 <button
@@ -433,7 +433,7 @@ const ReviewedProductsPage = () => {
                     required
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
-                    placeholder="Hãy chia sẻ cảm nhận về độ nảy, cảm giác cầm vợt, chất lượng đan cước từ xưởng Apex Pro..."
+                    placeholder="Hãy chia sẻ cảm nhận về độ nảy, cảm giác cầm vợt, chất lượng đan cước từ xưởng HG Pro..."
                     className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs p-3.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                   ></textarea>
                 </div>

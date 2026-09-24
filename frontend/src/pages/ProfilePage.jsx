@@ -129,7 +129,7 @@ const ProfilePage = () => {
           <div className="flex flex-col gap-1 pb-4 border-b border-slate-100">
             <h2 className="text-xl font-black text-slate-900">Thông tin cá nhân</h2>
             <p className="text-xs text-slate-500">
-              Quản lý thông tin hồ sơ để bảo mật tài khoản và nhận ưu đãi thành viên ApexClub
+              Quản lý thông tin hồ sơ để bảo mật tài khoản và nhận ưu đãi thành viên HGClub
             </p>
           </div>
 
@@ -178,7 +178,7 @@ const ProfilePage = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 max-w-md leading-relaxed">
-                Định dạng JPG, PNG tối đa 5MB. Tỉ lệ khuyến nghị 1:1 để hiển thị tối ưu trên bảng xếp hạng Apex Club.
+                Định dạng JPG, PNG tối đa 5MB. Tỉ lệ khuyến nghị 1:1 để hiển thị tối ưu trên bảng xếp hạng HG Club.
               </p>
               <div className="flex items-center gap-3 mt-1.5 justify-center sm:justify-start">
                 <button

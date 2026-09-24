@@ -196,7 +196,7 @@ public class VoucherService {
     public void seedInitialVouchers() {
         if (!environment.acceptsProfiles(org.springframework.core.env.Profiles.of("dev"))) return;
         if (voucherRepository.count() == 0) {
-            log.info("Khởi tạo danh sách Voucher demo cho hệ thống Apex Badminton...");
+            log.info("Khởi tạo danh sách Voucher demo cho hệ thống HG Badminton...");
             LocalDateTime nextYear = LocalDateTime.now().plusYears(1);
 
             Voucher v1 = Voucher.builder()

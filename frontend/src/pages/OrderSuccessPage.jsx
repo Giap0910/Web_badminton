@@ -37,7 +37,7 @@ const OrderSuccessPage = () => {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const displayOrderCode = order?.orderCode || `#APX-${orderId || '89241'}`;
+  const displayOrderCode = order?.orderCode || `#HG-${orderId || '89241'}`;
 
   const copyOrderId = () => {
     navigator.clipboard.writeText(displayOrderCode.replace('#', ''));
@@ -134,7 +134,7 @@ const OrderSuccessPage = () => {
             Đặt hàng thành công!
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
-            Cảm ơn bạn <strong className="font-semibold text-slate-800">{order?.customerName || 'Chưa có thông tin'}</strong> đã tin tưởng lựa chọn <strong className="font-bold text-slate-900">Apex Badminton</strong>. Vui lòng theo dõi tình trạng xử lý trong danh sách đơn hàng.
+            Cảm ơn bạn <strong className="font-semibold text-slate-800">{order?.customerName || 'Chưa có thông tin'}</strong> đã tin tưởng lựa chọn <strong className="font-bold text-slate-900">HG Badminton</strong>. Vui lòng theo dõi tình trạng xử lý trong danh sách đơn hàng.
           </p>
 
           {/* 4 Summary Cards Grid */}
@@ -186,7 +186,7 @@ const OrderSuccessPage = () => {
               <Receipt className="w-5 h-5 text-red-500" />
               <div>
                 <h2 className="text-sm sm:text-base font-bold tracking-tight">Chi tiết đơn hàng {displayOrderCode}</h2>
-                <p className="text-[11px] text-slate-400">Được phân phối chính thức bởi Apex Badminton Center</p>
+                <p className="text-[11px] text-slate-400">Được phân phối chính thức bởi HG Badminton Center</p>
               </div>
             </div>
             <span className="text-[10px] font-bold uppercase bg-white/10 text-white px-2.5 py-1 rounded-md tracking-wider">
@@ -307,13 +307,13 @@ const OrderSuccessPage = () => {
               </div>
               <div className="flex justify-between items-center text-xs text-red-600 font-bold">
                 <span className="flex items-center gap-1">
-                  <Tag className="w-3.5 h-3.5" /> Voucher Apex (APEX100K):
+                  <Tag className="w-3.5 h-3.5" /> Voucher HG (HG100K):
                 </span>
                 <span>-{formatPrice(discountAmount)}</span>
               </div>
               <div className="flex justify-between items-center text-xs text-slate-600">
                 <span>Phí vận chuyển hỏa tốc:</span>
-                <span className="font-bold text-emerald-600">0₫ (Miễn phí Apex VIP)</span>
+                <span className="font-bold text-emerald-600">0₫ (Miễn phí HG VIP)</span>
               </div>
               <div className="w-full h-px bg-slate-200 my-1"></div>
               <div className="flex justify-between items-baseline pt-1">
@@ -369,7 +369,7 @@ const OrderSuccessPage = () => {
               </a>
               <a
                 href="#"
-                onClick={(e) => { e.preventDefault(); alert('Đang kết nối tới Zalo CSKH Apex Badminton...'); }}
+                onClick={(e) => { e.preventDefault(); alert('Đang kết nối tới Zalo CSKH HG Badminton...'); }}
                 className="flex items-center gap-1.5 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors"
               >
                 <MessageSquare className="w-3.5 h-3.5" /> Zalo CSKH

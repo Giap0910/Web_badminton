@@ -490,7 +490,7 @@ const CartPage = () => {
                       type="text"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      placeholder="Nhập mã (Vd: APEX100K)"
+                      placeholder="Nhập mã (Vd: HG100K)"
                       className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold uppercase focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
                   </div>

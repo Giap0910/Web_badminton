@@ -26,7 +26,7 @@ public class CustomUserDetails implements UserDetails {
         this.email = user.getEmail();
         this.password = user.getPassword();
         this.fullName = user.getFullName();
-        this.active = Boolean.TRUE.equals(user.getIsActive());
+        this.active = user.getIsActive() == null || Boolean.TRUE.equals(user.getIsActive());
         this.authorities = Collections.singletonList(
                 new SimpleGrantedAuthority(user.getRole().name())
         );

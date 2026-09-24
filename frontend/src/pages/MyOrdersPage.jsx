@@ -49,10 +49,10 @@ const MyOrdersPage = () => {
 
             return {
               id: item.id || idx + 1,
-              orderCode: item.payosOrderCode ? `#APX-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#APX-${item.id || 89000 + idx}`,
+              orderCode: item.payosOrderCode ? `#HG-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#HG-${item.id || 89000 + idx}`,
               createdAt: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '14:35 - 24/10/2024',
               paymentMethod: item.paymentMethod?.includes('PAYOS') ? 'VietQR Pro Chuyển khoản' : 'COD Đồng kiểm',
-              productName: firstItem?.productName || firstItem?.product?.name || item.productName || 'Vợt Cầu Lông Apex',
+              productName: firstItem?.productName || firstItem?.product?.name || item.productName || 'Vợt Cầu Lông HG',
               productImage: firstItem?.productImageUrl || firstItem?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
               stringDetail: techString,
               giftDetail: 'Kèm 01 Cuốn cán Yonex AC102EX',
@@ -62,7 +62,7 @@ const MyOrdersPage = () => {
               status: item.status || 'PROCESSING',
               statusLabel: getOrderStatusLabel(item),
               statusSub: getOrderStatusLabel(item),
-              receiverName: item.customerName || item.shippingName || 'Khách hàng Apex',
+              receiverName: item.customerName || item.shippingName || 'Khách hàng HG',
               receiverPhone: item.shippingPhone || '',
               shippingAddress: item.shippingAddress || ''
             };
@@ -175,7 +175,7 @@ const MyOrdersPage = () => {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Tìm theo mã đơn (#APX-...) hoặc tên vợt, giày..."
+                  placeholder="Tìm theo mã đơn (#HG-...) hoặc tên vợt, giày..."
                   className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                 />
               </div>

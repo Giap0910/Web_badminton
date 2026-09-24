@@ -58,10 +58,10 @@ const AdminDashboardPage = () => {
           if (Array.isArray(data.recentOrders)) {
             const mappedOrders = data.recentOrders.map((o, idx) => ({
               id: o.id || idx + 1,
-              code: o.payosOrderCode ? `#APX-${o.payosOrderCode}` : `#APX-${o.id || 89000 + idx}`,
-              customer: o.customerName || 'Khách hàng Apex',
+              code: o.payosOrderCode ? `#HG-${o.payosOrderCode}` : `#HG-${o.id || 89000 + idx}`,
+              customer: o.customerName || 'Khách hàng HG',
               phone: o.shippingPhone || '0988 123 456',
-              product: o.items?.[0]?.productName || 'Vợt Cầu Lông Apex',
+              product: o.items?.[0]?.productName || 'Vợt Cầu Lông HG',
               stringReq: o.items?.[0]?.stringingService
                 ? `${o.items[0].stringingService}${o.items[0].stringTension ? ` (${o.items[0].stringTension})` : ''}`
                 : 'Đan vợt tiêu chuẩn BWF',

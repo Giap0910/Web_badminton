@@ -41,8 +41,8 @@ const AdminReviewsPage = () => {
         if (Array.isArray(list)) {
           const mappedReviews = list.map((r, idx) => ({
             id: r.id || idx + 1,
-            productName: r.productName || 'Vợt Cầu Lông Apex',
-            productBrand: 'Apex Series',
+            productName: r.productName || 'Vợt Cầu Lông HG',
+            productBrand: 'HG Series',
             productImage: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
             customerName: r.userFullName || r.userName || 'Khách hàng ẩn danh',
             customerPhone: '',
@@ -66,9 +66,9 @@ const AdminReviewsPage = () => {
           const mappedRmas = list.map((rma, idx) => ({
             id: rma.id || idx + 1,
             rmaCode: `RMA-${1000 + (rma.id || idx)}`,
-            orderCode: `#APX-${rma.orderId || 89000}`,
+            orderCode: `#HG-${rma.orderId || 89000}`,
             createdAt: rma.createdAt ? new Date(rma.createdAt).toLocaleDateString('vi-VN') : 'Gần đây',
-            customerName: rma.customerName || 'Khách hàng Apex',
+            customerName: rma.customerName || 'Khách hàng HG',
             customerPhone: rma.customerPhone || '0988 123 456',
             productName: rma.productName || 'Sản phẩm bảo hành',
             serial: `SN-${rma.id || 100}`,
@@ -160,7 +160,7 @@ const AdminReviewsPage = () => {
                   Đánh giá & Bảo hành RMA
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-black">
-                  4.9★ Apex Pro
+                  4.9★ HG Pro
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -266,7 +266,7 @@ const AdminReviewsPage = () => {
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-slate-900 flex items-center gap-1.5">
                         <ShieldCheck className="w-4 h-4 text-secondary" />
-                        Phản hồi từ Ban Quản Trị Apex Pro:
+                        Phản hồi từ Ban Quản Trị HG Pro:
                       </span>
                     </div>
                     <p className="text-slate-600 leading-relaxed mt-0.5">{rev.officialReply}</p>

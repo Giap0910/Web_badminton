@@ -92,7 +92,7 @@ const UserLayout = ({
                 Tài khoản của tôi
               </h1>
               <span className="text-sm text-slate-600 flex items-center gap-1.5">
-                Xin chào, <strong className="text-slate-900 font-bold">{user?.fullName || user?.username || 'Khách hàng Apex'}</strong>
+                Xin chào, <strong className="text-slate-900 font-bold">{user?.fullName || user?.username || 'Khách hàng HG'}</strong>
                 <span className="inline-flex items-center gap-1 ml-1 px-2.5 py-0.5 rounded-full bg-[#131b2e] text-white text-[11px] font-black tracking-wider shadow-sm">
                   <Award className="w-3 h-3 text-amber-400" />
                   TÀI KHOẢN
@@ -157,12 +157,12 @@ const UserLayout = ({
               <h2 className="font-black text-base text-slate-900">
                 {user?.fullName || user?.username || 'Nguyễn Văn A'}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">{user?.email || 'van.nguyen@apexpro.vn'}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{user?.email || 'van.nguyen@hgpro.vn'}</p>
 
               {/* TIER PROGRESSION */}
               <div className="w-full mt-4 pt-3 bg-slate-50 rounded-xl p-3 flex flex-col gap-2 text-left border border-slate-100">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-800">Apex VIP Club</span>
+                  <span className="font-bold text-slate-800">HG VIP Club</span>
                   <span className="text-secondary font-black">Chưa xếp hạng</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
@@ -225,7 +225,7 @@ const UserLayout = ({
             <div className="bg-gradient-to-br from-[#131b2e] to-[#00174b] text-white rounded-2xl p-5 shadow-sm relative overflow-hidden flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] tracking-wider uppercase font-black text-blue-200 bg-blue-900/40 px-2 py-0.5 rounded">
-                  Dịch vụ Apex Pro
+                  Dịch vụ HG Pro
                 </span>
                 <span className="text-secondary font-black text-xs">BWF Standard</span>
               </div>

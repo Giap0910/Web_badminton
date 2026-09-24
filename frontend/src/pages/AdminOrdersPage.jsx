@@ -52,12 +52,12 @@ const AdminOrdersPage = () => {
 
             return {
               id: item.id || idx + 1,
-              code: item.payosOrderCode ? `#APX-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#APX-${item.id || 89000 + idx}`,
+              code: item.payosOrderCode ? `#HG-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#HG-${item.id || 89000 + idx}`,
               createdAt: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '24/10/2024',
-              customerName: item.customerName || item.shippingName || 'Khách hàng Apex',
+              customerName: item.customerName || item.shippingName || 'Khách hàng HG',
               customerPhone: item.shippingPhone || '0988 123 456',
               customerAddress: item.shippingAddress || 'TP. Hồ Chí Minh',
-              productName: firstItem?.productName || firstItem?.product?.name || 'Vợt Cầu Lông Apex',
+              productName: firstItem?.productName || firstItem?.product?.name || 'Vợt Cầu Lông HG',
               productImage: firstItem?.productImageUrl || firstItem?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
               stringReq: techStr,
               gift: 'Cuốn cán Yonex chính hãng',
@@ -200,7 +200,7 @@ const AdminOrdersPage = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo mã đơn (#APX-...), SĐT, tên khách, vợt..."
+              placeholder="Tìm theo mã đơn (#HG-...), SĐT, tên khách, vợt..."
               className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
             />
           </div>

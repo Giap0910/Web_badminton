@@ -186,7 +186,7 @@ const ReturnRequestPage = () => {
 
           <div className="bg-gradient-to-br from-[#131b2e] to-[#00174b] text-white p-4 rounded-2xl shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-black tracking-wider text-blue-200">Apex Lab Tech</span>
+              <span className="text-[10px] uppercase font-black tracking-wider text-blue-200">HG Lab Tech</span>
               <PhoneCall className="w-4 h-4 text-secondary" />
             </div>
             <div className="mt-1">
@@ -368,7 +368,7 @@ const ReturnRequestPage = () => {
                 <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
                   <Award className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-blue-900">Ý kiến chuyên viên Apex Lab:</span>
+                    <span className="text-xs font-bold text-blue-900">Ý kiến chuyên viên HG Lab:</span>
                     <span className="text-xs text-blue-800 leading-relaxed mt-0.5 font-normal">
                       {item.technicianNote}
                     </span>

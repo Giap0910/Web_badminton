@@ -61,7 +61,7 @@ const AdminProductsPage = () => {
           const formatted = list.map((item, idx) => ({
             id: item.id || idx + 1,
             sku: item.sku || '',
-            name: item.name || 'Sản phẩm cầu lông Apex',
+            name: item.name || 'Sản phẩm cầu lông HG',
             brand: item.brand || 'Yonex',
             category: item.categoryName || 'Chưa có danh mục',
             categoryId: item.categoryId ?? '',

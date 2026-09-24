@@ -123,7 +123,7 @@ const QRPaymentPage = () => {
     }
   };
 
-  const displayOrderCode = order?.orderCode || `#APX-${orderId || '89241'}`;
+  const displayOrderCode = order?.orderCode || `#HG-${orderId || '89241'}`;
   const displayAmount = order?.totalAmount ?? 0;
 
   if (loading) return <p className="p-8" role="status">Đang tải đơn hàng...</p>;
@@ -162,7 +162,7 @@ const QRPaymentPage = () => {
             </div>
             <div className="flex flex-col">
               <span className="text-base font-black tracking-wider text-slate-900 leading-tight">
-                APEX<span className="text-red-600">BADMINTON</span>
+                HG<span className="text-red-600">BADMINTON</span>
               </span>
               <span className="text-[8px] font-bold text-slate-400 tracking-[0.2em] -mt-0.5">
                 PRO SPORT & GEAR
@@ -426,7 +426,7 @@ const QRPaymentPage = () => {
       {/* Footer Tối Giản */}
       <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>© 2025 Apex Badminton Store Co., Ltd. Tất cả quyền được bảo lưu.</p>
+          <p>© 2025 HG Badminton Store Co., Ltd. Tất cả quyền được bảo lưu.</p>
           <div className="flex items-center gap-4 text-[11px] text-slate-400 font-medium">
             <span>Bảo mật PCI-DSS</span>
             <span>•</span>

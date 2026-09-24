@@ -467,7 +467,7 @@ const ProductDetailPage = () => {
               <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <span className="px-2.5 py-1 bg-[#131B2E] text-white text-xs font-bold uppercase tracking-widest rounded-lg">
-                    {product.brand || (isShoes || isRacket ? 'YONEX JAPAN' : 'APEX PRO GEAR')}
+                    {product.brand || (isShoes || isRacket ? 'YONEX JAPAN' : 'HG PRO GEAR')}
                   </span>
                   <span className="px-2.5 py-1 bg-[#ECEEF0] text-slate-800 text-xs font-semibold uppercase tracking-wider rounded-lg">
                     {isShoes ? 'PRO TOURNAMENT ALL-COURT' : isRacket ? 'PRO TOURNAMENT SERIES' : isApparel ? 'BWF 2024 COLLECTION' : 'TOURNAMENT SERIES'}
@@ -1277,7 +1277,7 @@ const ProductDetailPage = () => {
                       Thiết kế công thái học Ergonomic Dynamic Fit – Sẵn sàng cho những chuỗi trận đỉnh cao
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                      Balo Cầu Lông Apex Pro Tour 35L được thiết kế dựa trên phản hồi của các tay vợt thi đấu chuyên nghiệp giải Grand Prix. Với kết cấu trọng tâm đối xứng và hệ thống quai đai phân bổ trọng lực đa điểm, balo loại bỏ hoàn toàn áp lực đè nặng lên các đốt sống lưng khi phải mang vác toàn bộ đồ nghề, từ 3 khung vợt căng cước áp suất cao đến giày đấu và bình nước.
+                      Balo Cầu Lông HG Pro Tour 35L được thiết kế dựa trên phản hồi của các tay vợt thi đấu chuyên nghiệp giải Grand Prix. Với kết cấu trọng tâm đối xứng và hệ thống quai đai phân bổ trọng lực đa điểm, balo loại bỏ hoàn toàn áp lực đè nặng lên các đốt sống lưng khi phải mang vác toàn bộ đồ nghề, từ 3 khung vợt căng cước áp suất cao đến giày đấu và bình nước.
                     </p>
                   </div>
 
@@ -1345,18 +1345,18 @@ const ProductDetailPage = () => {
                   <div className="bg-[#F2F4F6] rounded-2xl p-6">
                     <h3 className="font-bold text-sm text-slate-900 mb-4 flex items-center gap-2">
                       <Wrench className="w-4 h-4 text-secondary" />
-                      <span>Bảng Thông Số Kỹ Thuật Chi Tiết (Apex Pro Tour 35L)</span>
+                      <span>Bảng Thông Số Kỹ Thuật Chi Tiết (HG Pro Tour 35L)</span>
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-xs">
                       {[
-                        ['Thương hiệu', 'Apex Pro Gear (Hàn Quốc)'],
+                        ['Thương hiệu', 'HG Pro Gear (Hàn Quốc)'],
                         ['Dung tích chứa', '35 Lít (Chuyên đấu Tour)'],
                         ['Chất liệu thân vỏ', '900D Oxford Polyester tráng PU 3 lớp'],
                         ['Khả năng kháng nước', 'IPX4 Hydro-Repellent (Mưa vừa & Văng nước)'],
                         ['Cơ cấu ngăn chứa', '5 Khoang chức năng riêng biệt'],
                         ['Kích thước chuẩn', '33cm x 22cm x 50cm'],
                         ['Trọng lượng rỗng', '880g (Tối ưu cơ động siêu nhẹ)'],
-                        ['Phụ kiện tặng kèm', 'Túi áo mưa trùm phản quang Apex Shield']
+                        ['Phụ kiện tặng kèm', 'Túi áo mưa trùm phản quang HG Shield']
                       ].map(([lbl, val]) => (
                         <div key={lbl} className="flex justify-between py-2 bg-white px-3.5 rounded-lg shadow-sm">
                           <span className="text-slate-500">{lbl}</span>
@@ -1430,7 +1430,7 @@ const ProductDetailPage = () => {
                 <div className="space-y-6 max-w-4xl">
                   <h3 className="font-bold text-base text-slate-900">Chi Tiết Quy Cách Tiêu Chuẩn Thi Đấu</h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Sản phẩm phụ kiện cầu lông chính hãng Apex/Yonex được sản xuất theo quy chuẩn thi đấu quốc tế BWF Tournament. Lớp cao su non và sợi tổng hợp được xử lý chống ẩm mốc, tăng cường độ bám dính và cảm giác tiếp xúc cầu chân thực nhất.
+                    Sản phẩm phụ kiện cầu lông chính hãng HG/Yonex được sản xuất theo quy chuẩn thi đấu quốc tế BWF Tournament. Lớp cao su non và sợi tổng hợp được xử lý chống ẩm mốc, tăng cường độ bám dính và cảm giác tiếp xúc cầu chân thực nhất.
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div className="p-3 bg-[#F2F4F6] rounded-xl text-center">
@@ -1464,7 +1464,7 @@ const ProductDetailPage = () => {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs">
                 {[
-                  ['Thương hiệu', product.brand || 'Yonex / Apex Badminton'],
+                  ['Thương hiệu', product.brand || 'Yonex / HG Badminton'],
                   ['Xuất xứ sản xuất', product.origin || 'Made in Japan / Taiwan'],
                   ['Độ cứng đũa / Khung', product.stiffness || 'Extra Stiff (Rất cứng)'],
                   ['Điểm cân bằng', product.balancePoint || '303 ± 2 mm (Nặng đầu)'],
@@ -1612,7 +1612,7 @@ const ProductDetailPage = () => {
                 },
                 {
                   q: 'Shop có hỗ trợ đan cước máy điện tử 4 nút theo tiêu chuẩn BWF không?',
-                  a: 'Apex Badminton trang bị 100% hệ thống máy đan vợt điện tử Victor/Yonex đời mới, kỹ thuật đan 4 nút BWF chuẩn xác đến từng 0.1 lbs theo đúng lực căng quý khách yêu cầu.'
+                  a: 'HG Badminton trang bị 100% hệ thống máy đan vợt điện tử Victor/Yonex đời mới, kỹ thuật đan 4 nút BWF chuẩn xác đến từng 0.1 lbs theo đúng lực căng quý khách yêu cầu.'
                 },
                 {
                   q: 'Chính sách đổi trả hoặc bảo hành khi xảy ra lỗi sản phẩm thế nào?',

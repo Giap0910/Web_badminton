@@ -26,12 +26,12 @@ import {
   Headphones
 } from 'lucide-react';
 
-// Danh sách Hero Slides theo đúng chuẩn thi đấu APEX BWF
+// Danh sách Hero Slides theo đúng chuẩn thi đấu HG BWF
 const HERO_SLIDES = [
   {
     badgeText: 'Giải đấu Quốc tế 2024',
     tagline: 'Tournament Series 2024',
-    titleLine1: 'APEX PRO TOUR 2024',
+    titleLine1: 'HG PRO TOUR 2024',
     titleGradient: 'BỨT PHÁ MỌI GIỚI HẠN SMASH',
     description: 'Khám phá bộ sưu tập vợt, giày và trang bị thi đấu chuyên nghiệp chuẩn BWF. Giảm tới 35% cho thành viên mới cùng dịch vụ căng cước chuẩn BWF Tournament.',
     ctaPrimary: 'Mua ngay',
@@ -599,7 +599,7 @@ const HomePage = () => {
               BỘ SƯU TẬP MỚI VỀ
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              Cập nhật những công nghệ đột phá mới nhất cho vận động viên Apex Badminton
+              Cập nhật những công nghệ đột phá mới nhất cho vận động viên HG Badminton
             </p>
           </div>
           <Link 
@@ -628,7 +628,7 @@ const HomePage = () => {
           <div className="flex flex-col items-center text-center gap-1 mb-10">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-secondary"></span>
-              <span className="text-xs uppercase tracking-wider text-secondary font-bold"># CỘNG ĐỒNG CẦU LÔNG APEX</span>
+              <span className="text-xs uppercase tracking-wider text-secondary font-bold"># CỘNG ĐỒNG CẦU LÔNG HG</span>
             </div>
             <h2 className="font-display text-2xl sm:text-3xl font-extrabold uppercase text-slate-900">
               VẬN ĐỘNG VIÊN & KHÁCH HÀNG NÓI GÌ
@@ -698,7 +698,7 @@ const HomePage = () => {
                   ))}
                 </div>
                 <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                  “Balo Apex Pro 35L chứa được nhiều vợt và đồ, có ngăn giày riêng thoáng khí không có mùi cao su. Rất hài lòng với dịch vụ tư vấn kỹ thuật.”
+                  “Balo HG Pro 35L chứa được nhiều vợt và đồ, có ngăn giày riêng thoáng khí không có mùi cao su. Rất hài lòng với dịch vụ tư vấn kỹ thuật.”
                 </p>
               </div>
               <div className="flex items-center gap-3 pt-3 border-t border-slate-100">

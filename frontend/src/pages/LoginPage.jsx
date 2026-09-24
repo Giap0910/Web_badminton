@@ -66,7 +66,7 @@ const LoginPage = () => {
       const generatedUsername = isEmail 
         ? registerIdentifier.split('@')[0] + Math.floor(Math.random() * 100)
         : registerIdentifier;
-      const finalEmail = isEmail ? registerIdentifier : `${registerIdentifier}@apexbadminton.vn`;
+      const finalEmail = isEmail ? registerIdentifier : `${registerIdentifier}@hgbadminton.vn`;
 
       await register({
         username: generatedUsername,
@@ -179,7 +179,7 @@ const LoginPage = () => {
             </div>
             <div className="text-left">
               <span className="block text-2xl font-extrabold tracking-wider text-white uppercase leading-none">
-                APEX<span className="text-red-500 ml-1">BADMINTON</span>
+                HG<span className="text-red-500 ml-1">BADMINTON</span>
               </span>
               <span className="block text-[11px] font-semibold text-slate-400 uppercase tracking-widest mt-1">
                 Pro Performance Gear & Service
@@ -392,7 +392,7 @@ const LoginPage = () => {
             {activeTab === 'register' && (
               <div className="space-y-4 transition-opacity duration-200">
                 <div className="mb-3">
-                  <h1 className="text-xl font-bold text-slate-900">Tạo tài khoản Apex Club</h1>
+                  <h1 className="text-xl font-bold text-slate-900">Tạo tài khoản HG Club</h1>
                   <p className="text-xs text-slate-500 mt-1">Đăng ký thành viên để nhận voucher 100K và tích điểm đổi quà</p>
                 </div>
 
@@ -533,7 +533,7 @@ const LoginPage = () => {
                         className="w-4 h-4 mt-0.5 text-red-600 border-slate-300 rounded focus:ring-red-500 cursor-pointer accent-red-600"
                       />
                       <span className="text-xs text-slate-500 leading-tight">
-                        Tôi đồng ý với <a href="#" onClick={(e) => { e.preventDefault(); alert('Điều khoản Apex Badminton: Cam kết hàng chính hãng BWF 100%, bảo mật thanh toán SSL.'); }} className="text-blue-600 font-medium hover:underline">Điều khoản dịch vụ</a> và <a href="#" onClick={(e) => { e.preventDefault(); alert('Chính sách bảo mật: Tuân thủ quy chuẩn bảo mật PCI-DSS và bảo vệ dữ liệu người dùng.'); }} className="text-blue-600 font-medium hover:underline">Chính sách quyền riêng tư</a> của Apex Badminton.
+                        Tôi đồng ý với <a href="#" onClick={(e) => { e.preventDefault(); alert('Điều khoản HG Badminton: Cam kết hàng chính hãng BWF 100%, bảo mật thanh toán SSL.'); }} className="text-blue-600 font-medium hover:underline">Điều khoản dịch vụ</a> và <a href="#" onClick={(e) => { e.preventDefault(); alert('Chính sách bảo mật: Tuân thủ quy chuẩn bảo mật PCI-DSS và bảo vệ dữ liệu người dùng.'); }} className="text-blue-600 font-medium hover:underline">Chính sách quyền riêng tư</a> của HG Badminton.
                       </span>
                     </label>
                   </div>
@@ -563,7 +563,7 @@ const LoginPage = () => {
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span>Bảo mật dữ liệu chuẩn mã hóa PCI-DSS</span>
             </div>
-            <a href="#" onClick={(e) => { e.preventDefault(); alert('Tổng đài hỗ trợ 24/7: 1900 6886 hoặc email support@apexbadminton.vn'); }} className="text-blue-600 hover:underline font-medium">Trợ giúp 24/7</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); alert('Tổng đài hỗ trợ 24/7: 1900 6886 hoặc email support@hgbadminton.vn'); }} className="text-blue-600 hover:underline font-medium">Trợ giúp 24/7</a>
           </div>
 
         </div>
@@ -601,7 +601,7 @@ const LoginPage = () => {
       {/* Minimal Footer */}
       <footer className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 border-t border-slate-800/80 gap-3">
         <div>
-          © 2025 Apex Badminton Store Co., Ltd. Tất cả quyền được bảo lưu.
+          © 2025 HG Badminton Store Co., Ltd. Tất cả quyền được bảo lưu.
         </div>
         <div className="flex items-center gap-5">
           <a href="#" className="hover:text-slate-300 transition-colors">Điều khoản dịch vụ</a>

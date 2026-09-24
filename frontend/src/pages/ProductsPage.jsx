@@ -71,7 +71,7 @@ const CATEGORY_BANNERS = {
   },
   ALL: {
     title: 'TẤT CẢ TRANG BỊ CẦU LÔNG',
-    gradientText: 'CHÍNH HÃNG APEX BADMINTON PRO',
+    gradientText: 'CHÍNH HÃNG HG BADMINTON PRO',
     badge: 'TOURNAMENT EQUIPMENT & STRINGING',
     description: 'Trải nghiệm hệ sinh thái dụng cụ cầu lông đỉnh cao từ các thương hiệu số 1 thế giới với chế độ bảo hành chính hãng và dịch vụ căng cước chuẩn BWF.',
     bgImage: 'https://lh3.googleusercontent.com/aida/AEtjO1WnCri4_js0e8_-uBsfS2jif7zSpzBPOHaHnHP0kIUHp3v5h6_D5sR-XfIHJytBPt3KgbcRUEHT6PMS9K52OI_DaS-Ro61enM8us2nebGYymeA-IrL3Bzt_a_Q5BwTJj2Hjp2WaCT_yDorE3D9Zr2YfwifheyDXtK4J3AfimAlwfYF-c29Yv-Dj7ydJVciQMv6RwTtr9zmzgTew16-rgAneEdC0a9lpAb99jsq4WApfao2LO-yx73JDa2I',

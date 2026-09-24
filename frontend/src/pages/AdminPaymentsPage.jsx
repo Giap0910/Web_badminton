@@ -43,9 +43,9 @@ const AdminPaymentsPage = () => {
           const mapped = list.map((p, idx) => ({
             id: p.orderId || idx + 1,
             transId: p.payosOrderCode ? `PAYOS-${p.payosOrderCode}` : `TX-${10000 + (p.orderId || idx)}`,
-            orderCode: p.payosOrderCode ? `#APX-${p.payosOrderCode}` : `#APX-${p.orderId || 89000 + idx}`,
+            orderCode: p.payosOrderCode ? `#HG-${p.payosOrderCode}` : `#HG-${p.orderId || 89000 + idx}`,
             createdAt: p.createdAt ? new Date(p.createdAt).toLocaleString('vi-VN') : 'Gần đây',
-            customer: p.customerName || 'Khách hàng Apex',
+            customer: p.customerName || 'Khách hàng HG',
             bank: 'Chưa có dữ liệu ngân hàng',
             bankRef: p.payosOrderCode ? `QR-${p.payosOrderCode}` : 'COD-DIRECT',
             amount: p.amount || 0,
@@ -189,7 +189,7 @@ const AdminPaymentsPage = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo mã GD, mã đơn (#APX-...), Ref ngân hàng..."
+              placeholder="Tìm theo mã GD, mã đơn (#HG-...), Ref ngân hàng..."
               className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
             />
           </div>
