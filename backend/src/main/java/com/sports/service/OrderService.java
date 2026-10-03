@@ -4,6 +4,7 @@ import com.sports.dto.OrderCreateRequest;
 import com.sports.dto.OrderItemRequest;
 import com.sports.dto.OrderItemResponse;
 import com.sports.dto.OrderResponse;
+import com.sports.dto.OrderCreationResult;
 import com.sports.dto.VoucherValidateRequest;
 import com.sports.dto.VoucherValidateResponse;
 import com.sports.entity.*;
@@ -11,6 +12,8 @@ import com.sports.exception.BadRequestException;
 import com.sports.exception.InsufficientStockException;
 import com.sports.exception.ResourceNotFoundException;
 import com.sports.exception.UnauthorizedException;
+import com.sports.exception.IdempotencyConflictException;
+import org.springframework.dao.DataIntegrityViolationException;
 import com.sports.repository.OrderRepository;
 import com.sports.repository.ProductRepository;
 import com.sports.repository.UserRepository;
@@ -24,7 +27,6 @@ import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -45,18 +47,31 @@ public class OrderService {
     private static final int ORDER_TIMEOUT_MINUTES = 15;
 
     @Transactional
-    public OrderResponse createOrder(Long userId, OrderCreateRequest request) {
+    public OrderCreationResult createOrder(Long userId, OrderCreateRequest request, String idempotencyKey) {
+        String key = OrderRequestFingerprint.validateKey(idempotencyKey);
+        if (request == null) throw new BadRequestException("Dữ liệu đơn hàng không hợp lệ");
         User user = lockOrderingUser(userId);
-        validateRequestedItems(request.getItems());
-        Order order = buildOrder(user, request, normalizePaymentMethod(request.getPaymentMethod()));
-        List<OrderItem> items = new ArrayList<>();
-        for (OrderItemRequest item : request.getItems().stream()
-                .sorted(Comparator.comparing(OrderItemRequest::getProductId)).toList()) {
-            items.add(reserveItem(order, item));
+        String hash = OrderRequestFingerprint.hash(request);
+        var existing = orderRepository.findByUserIdAndIdempotencyKey(userId, key);
+        if (existing.isPresent()) {
+            Order order = existing.get();
+            if (!hash.equals(order.getRequestHash())) throw new IdempotencyConflictException();
+            return new OrderCreationResult(toDto(order), true);
         }
-        order.setItems(items);
+        validatePendingLimit(userId);
+        return new OrderCreationResult(createNewOrder(user, request, key, hash), false);
+    }
+
+    private OrderResponse createNewOrder(User user, OrderCreateRequest request, String key, String hash) {
+        validateRequestedItems(request.getItems());
+        validateOrderInput(request);
+        Order order = buildOrder(user, request, normalizePaymentMethod(request.getPaymentMethod()));
+        order.setIdempotencyKey(key);
+        order.setRequestHash(hash);
+        order.setItems(prepareItems(order, request.getItems()));
         calculateOrderTotal(order, request.getVoucherCode());
-        Order saved = orderRepository.save(order);
+        reserveItems(order.getItems());
+        Order saved = saveNewOrder(order);
         if ("PAYOS_VIETQR".equals(order.getPaymentMethod())) {
             saved.setPayosOrderCode(Math.addExact(1_000_000_000L, saved.getId()));
         }
@@ -66,24 +81,72 @@ public class OrderService {
     }
 
     private User lockOrderingUser(Long userId) {
-        User user = userRepository.findByIdForUpdate(userId)
+        return userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng: " + userId));
+    }
+
+    private void validatePendingLimit(Long userId) {
         if (orderRepository.countByUserIdAndStatus(userId, OrderStatus.PENDING) >= MAX_PENDING_ORDERS_PER_USER) {
             throw new BadRequestException("Bạn đang có 3 đơn hàng chưa thanh toán hoặc chờ xử lý");
         }
-        return user;
+    }
+
+    private Order saveNewOrder(Order order) {
+        try {
+            return orderRepository.saveAndFlush(order);
+        } catch (DataIntegrityViolationException ex) {
+            if (!isIdempotencyConstraint(ex)) throw ex;
+            throw new IdempotencyConflictException();
+        }
+    }
+
+    private boolean isIdempotencyConstraint(Throwable exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
+                    && violation.getConstraintName() != null
+                    && violation.getConstraintName().contains("uk_orders_user_idempotency")) return true;
+        }
+        return false;
     }
 
     private void validateRequestedItems(List<OrderItemRequest> items) {
-        if (items == null || items.isEmpty()) throw new BadRequestException("Đơn hàng phải có sản phẩm");
+        if (items == null || items.isEmpty() || items.size() > 100) {
+            throw new BadRequestException("Đơn hàng phải có từ 1 đến 100 dòng sản phẩm");
+        }
         java.util.Map<Long, Integer> quantities = new java.util.HashMap<>();
         for (OrderItemRequest item : items) {
             if (item == null || item.getProductId() == null || item.getQuantity() == null
-                    || item.getQuantity() <= 0 || item.getQuantity() > 100) {
+                    || item.getProductId() <= 0 || item.getQuantity() <= 0 || item.getQuantity() > 100) {
                 throw new BadRequestException("Sản phẩm và số lượng đặt mua không hợp lệ");
             }
             int total = quantities.merge(item.getProductId(), item.getQuantity(), Integer::sum);
             if (total > 100) throw new BadRequestException("Tổng số lượng mỗi sản phẩm tối đa là 100");
+            validateText(item.getSelectedSize(), 50, false);
+            validateText(item.getSelectedColor(), 50, false);
+            validateText(item.getSelectedWeight(), 50, false);
+            validateText(item.getStringingService(), 100, false);
+            validateText(item.getStringTension(), 50, false);
+        }
+    }
+
+    private void validateOrderInput(OrderCreateRequest request) {
+        validateText(request.getCustomerName(), 100, true);
+        validateText(request.getShippingPhone(), 20, true);
+        if (!request.getShippingPhone().matches("^(\\+84|0)[35789][0-9]{8}$")) {
+            throw new BadRequestException("Số điện thoại không đúng định dạng Việt Nam");
+        }
+        if (request.getShippingAddress() == null || request.getShippingAddress().isBlank()) {
+            throw new BadRequestException("Địa chỉ nhận hàng không được để trống");
+        }
+        validateText(request.getNote(), 2000, false);
+        validateText(request.getVoucherCode(), 50, false);
+        validateText(request.getPaymentMethod(), 50, false);
+        if (request.getShippingFee() != null) VndAmount.requireValid(request.getShippingFee());
+    }
+
+    private void validateText(String value, int maxLength, boolean required) {
+        if (required && (value == null || value.isBlank()) || value != null && value.length() > maxLength) {
+            throw new BadRequestException("Trường dữ liệu bắt buộc hoặc độ dài không hợp lệ");
         }
     }
 
@@ -96,39 +159,73 @@ public class OrderService {
                 .note(request.getNote()).createdAt(now).build();
     }
 
-    private OrderItem reserveItem(Order order, OrderItemRequest request) {
-        Product product = lockProduct(request.getProductId());
-        if (product.getStock() < request.getQuantity()) {
+    private List<OrderItem> prepareItems(Order order, List<OrderItemRequest> requests) {
+        java.util.Map<Long, Integer> quantities = new java.util.TreeMap<>();
+        requests.forEach(item -> quantities.merge(item.getProductId(), item.getQuantity(), Integer::sum));
+        java.util.Map<Long, Product> products = new java.util.HashMap<>();
+        quantities.forEach((id, quantity) -> {
+            Product product = lockProduct(id);
+            validateProductForOrder(product, quantity);
+            products.put(id, product);
+        });
+        return requests.stream().sorted(Comparator.comparing(OrderItemRequest::getProductId))
+                .map(item -> prepareItem(order, item, products.get(item.getProductId())))
+                .collect(Collectors.toList());
+    }
+
+    private void validateProductForOrder(Product product, int quantity) {
+        if (product.getStock() < quantity) {
             throw new InsufficientStockException("Sản phẩm '" + product.getName() + "' không đủ tồn kho");
         }
-        if (product.getPrice() == null || product.getPrice().signum() <= 0) {
-            throw new BadRequestException("Giá sản phẩm không hợp lệ");
+        VndAmount.requireValid(product.getPrice());
+        if (product.getPrice().signum() == 0) throw new BadRequestException("Giá sản phẩm không hợp lệ");
+        long reservedStock = (long) product.getReservedStock() + quantity;
+        if (reservedStock > Integer.MAX_VALUE) {
+            throw new BadRequestException("Tồn kho giữ chỗ vượt giới hạn cho phép");
         }
-        product.setStock(product.getStock() - request.getQuantity());
-        product.setReservedStock(product.getReservedStock() + request.getQuantity());
-        productRepository.save(product);
+    }
+
+    private OrderItem prepareItem(Order order, OrderItemRequest request, Product product) {
         return OrderItem.builder().order(order).product(product).quantity(request.getQuantity())
                 .price(product.getPrice()).selectedSize(request.getSelectedSize())
                 .selectedColor(request.getSelectedColor()).selectedWeight(request.getSelectedWeight())
                 .stringingService(request.getStringingService()).stringTension(request.getStringTension()).build();
     }
 
+    private void reserveItems(List<OrderItem> items) {
+        for (OrderItem item : items) {
+            Product product = item.getProduct();
+            product.setStock(product.getStock() - item.getQuantity());
+            product.setReservedStock(product.getReservedStock() + item.getQuantity());
+            productRepository.save(product);
+        }
+    }
+
+    private BigDecimal calculateSubtotal(List<OrderItem> items) {
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (OrderItem item : items) {
+            BigDecimal lineTotal = VndAmount.requireValid(
+                    item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+            subtotal = VndAmount.requireValid(subtotal.add(lineTotal));
+        }
+        return subtotal;
+    }
+
     private void calculateOrderTotal(Order order, String voucherCode) {
-        BigDecimal subtotal = order.getItems().stream()
-                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal subtotal = calculateSubtotal(order.getItems());
         BigDecimal shippingFee = subtotal.compareTo(new BigDecimal("1000000")) >= 0
                 ? BigDecimal.ZERO : new BigDecimal("30000");
         BigDecimal discount = BigDecimal.ZERO;
         if (voucherCode != null && !voucherCode.isBlank()) {
             VoucherValidateResponse voucher = voucherService.reserveVoucher(
                     new VoucherValidateRequest(voucherCode.trim(), subtotal));
-            discount = voucher.getDiscountAmount();
+            discount = VndAmount.requireValid(voucher.getDiscountAmount());
             order.setVoucherCode(voucher.getCode());
         }
-        order.setDiscountAmount(discount);
-        order.setShippingFee(shippingFee);
-        order.setTotalAmount(subtotal.subtract(discount).add(shippingFee));
+        BigDecimal discountedSubtotal = VndAmount.requireValid(subtotal.subtract(discount));
+        order.setDiscountAmount(VndAmount.requireValid(discount));
+        order.setShippingFee(VndAmount.requireValid(shippingFee));
+        order.setTotalAmount(VndAmount.requireValid(discountedSubtotal.add(shippingFee)));
     }
 
     private String normalizePaymentMethod(String value) {
@@ -216,6 +313,8 @@ public class OrderService {
     }
 
     private void validatePayment(Order order, BigDecimal amount) {
+        VndAmount.requireValid(amount);
+        VndAmount.requireValid(order.getTotalAmount());
         if (!"PAYOS_VIETQR".equals(order.getPaymentMethod())) {
             throw new BadRequestException("Đơn hàng không sử dụng PayOS");
         }

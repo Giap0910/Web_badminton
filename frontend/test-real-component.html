@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FIX-018: Real Component Runtime Test</title>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.error("GLOBAL ERROR:", message, source, lineno, colno, error);
+        fetch("http://127.0.0.1:5178/test-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "GLOBAL_ONERROR",
+            message,
+            source,
+            lineno,
+            colno,
+            stack: error ? error.stack : null
+          })
+        }).catch(() => {});
+      };
+      window.onunhandledrejection = function(event) {
+        console.error("UNHANDLED REJECTION:", event.reason);
+        fetch("http://127.0.0.1:5178/test-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "UNHANDLED_REJECTION",
+            reason: String(event.reason),
+            stack: event.reason && event.reason.stack ? event.reason.stack : null
+          })
+        }).catch(() => {});
+      };
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/test-real-component.jsx"></script>
+  </body>
+</html>

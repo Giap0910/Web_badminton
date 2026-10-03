@@ -155,7 +155,7 @@ class OrderServiceTest {
         when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(mockUser));
         OrderCreateRequest request = new OrderCreateRequest();
         request.setItems(java.util.List.of(new OrderItemRequest(10L, 50), new OrderItemRequest(10L, 51)));
-        assertThrows(BadRequestException.class, () -> orderService.createOrder(1L, request));
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(1L, request, java.util.UUID.randomUUID().toString()).order());
         verifyNoInteractions(productRepository);
     }
 
@@ -182,8 +182,8 @@ class OrderServiceTest {
     void codHasNoPaymentExpiryOrPayosCode() {
         OrderCreateRequest request = prepareOrder("500000");
         request.setPaymentMethod("COD");
-        allowOrderSave();
-        OrderResponse response = orderService.createOrder(1L, request);
+        allowOrderSave(true);
+        OrderResponse response = orderService.createOrder(1L, request, java.util.UUID.randomUUID().toString()).order();
         assertNull(response.getExpiresAt());
         assertNull(response.getPayosOrderCode());
         assertEquals("PENDING", response.getStatus());
@@ -194,7 +194,7 @@ class OrderServiceTest {
         Order order = pendingOrder("COD");
         lockExisting(order);
         allowStockUpdate();
-        allowOrderSave();
+        allowOrderSave(false);
         orderService.cancelOrder(99L, 1L, false);
         orderService.cancelOrder(99L, 1L, false);
         assertEquals(5, mockProduct.getStock());
@@ -219,7 +219,7 @@ class OrderServiceTest {
         order.setExpiresAt(java.time.LocalDateTime.now().minusMinutes(1));
         lockExisting(order);
         allowStockUpdate();
-        allowOrderSave();
+        allowOrderSave(false);
         assertTrue(orderService.expireOrder(99L));
         assertFalse(orderService.expireOrder(99L));
         assertEquals(5, mockProduct.getStock());
@@ -231,7 +231,7 @@ class OrderServiceTest {
         Order order = pendingOrder("COD");
         lockExisting(order);
         allowStockUpdate();
-        allowOrderSave();
+        allowOrderSave(false);
         orderService.updateOrderStatus(99L, OrderStatus.SHIPPING);
         orderService.updateOrderStatus(99L, OrderStatus.SHIPPING);
         orderService.updateOrderStatus(99L, OrderStatus.COMPLETED);
@@ -267,7 +267,7 @@ class OrderServiceTest {
         Order order = pendingOrder("PAYOS_VIETQR");
         when(orderRepository.findByPayosOrderCodeForUpdate(1000000099L)).thenReturn(Optional.of(order));
         allowStockUpdate();
-        allowOrderSave();
+        allowOrderSave(false);
         orderService.handlePaymentSuccess(1000000099L, order.getTotalAmount());
         orderService.handlePaymentSuccess(1000000099L, order.getTotalAmount());
         order.setStatus(OrderStatus.SHIPPING);
@@ -311,7 +311,7 @@ class OrderServiceTest {
         assertThrows(BadRequestException.class, () -> orderService.cancelOrder(99L, 1L, false));
         assertEquals(OrderStatus.PENDING, order.getStatus());
         assertEquals(3, mockProduct.getStock());
-        verify(orderRepository, never()).save(any());
+        verify(orderRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -364,11 +364,15 @@ class OrderServiceTest {
         when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(mockProduct));
         OrderCreateRequest request = new OrderCreateRequest();
         request.setItems(Collections.singletonList(new OrderItemRequest(10L, 1)));
+        request.setCustomerName("Khách kiểm thử");
+        request.setShippingPhone("0900000000");
+        request.setShippingAddress("Địa chỉ kiểm thử");
         return request;
     }
 
-    private void allowOrderSave() {
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+    private void allowOrderSave(boolean creating) {
+        when(creating ? orderRepository.saveAndFlush(any(Order.class)) : orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> {
             Order order = invocation.getArgument(0);
             order.setId(99L);
             return order;
@@ -376,11 +380,11 @@ class OrderServiceTest {
     }
 
     @Test
-    void ignoresNegativeClientShippingFee() {
+    void ignoresValidClientShippingFee() {
         OrderCreateRequest request = prepareOrder("500000");
-        request.setShippingFee(new BigDecimal("-999999"));
-        allowOrderSave();
-        OrderResponse response = orderService.createOrder(1L, request);
+        request.setShippingFee(new BigDecimal("999999"));
+        allowOrderSave(true);
+        OrderResponse response = orderService.createOrder(1L, request, java.util.UUID.randomUUID().toString()).order();
         assertEquals(0, new BigDecimal("30000").compareTo(response.getShippingFee()));
         assertEquals(0, new BigDecimal("530000").compareTo(response.getTotalAmount()));
     }
@@ -389,8 +393,8 @@ class OrderServiceTest {
     void freeShippingAtThresholdIgnoresClientFee() {
         OrderCreateRequest request = prepareOrder("1000000");
         request.setShippingFee(new BigDecimal("999999"));
-        allowOrderSave();
-        OrderResponse response = orderService.createOrder(1L, request);
+        allowOrderSave(true);
+        OrderResponse response = orderService.createOrder(1L, request, java.util.UUID.randomUUID().toString()).order();
         assertEquals(0, BigDecimal.ZERO.compareTo(response.getShippingFee()));
         assertEquals(0, new BigDecimal("1000000").compareTo(response.getTotalAmount()));
     }
@@ -400,8 +404,8 @@ class OrderServiceTest {
         OrderCreateRequest request = prepareOrder("500000");
         request.setVoucherCode("EXPIRED");
         when(voucherService.reserveVoucher(any())).thenThrow(new BadRequestException("Mã hết hạn"));
-        assertThrows(BadRequestException.class, () -> orderService.createOrder(1L, request));
-        verify(orderRepository, never()).save(any());
+        assertThrows(BadRequestException.class, () -> orderService.createOrder(1L, request, java.util.UUID.randomUUID().toString()).order());
+        verify(orderRepository, never()).saveAndFlush(any());
         verify(voucherService, never()).incrementUsedCount(any());
     }
 
@@ -416,8 +420,8 @@ class OrderServiceTest {
         when(voucherService.reserveVoucher(any())).thenReturn(
                 com.sports.dto.VoucherValidateResponse.builder().valid(true).code("SALE")
                 .discountAmount(new BigDecimal("100000")).finalTotal(new BigDecimal("900000")).build());
-        allowOrderSave();
-        OrderResponse response = orderService.createOrder(1L, request);
+        allowOrderSave(true);
+        OrderResponse response = orderService.createOrder(1L, request, java.util.UUID.randomUUID().toString()).order();
         assertEquals(0, new BigDecimal("900000").compareTo(response.getTotalAmount()));
         assertEquals(0, BigDecimal.ZERO.compareTo(response.getShippingFee()));
         assertEquals("Đỏ", response.getItems().get(0).getSelectedColor());
@@ -433,7 +437,7 @@ class OrderServiceTest {
         when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(mockUser));
         when(orderRepository.countByUserIdAndStatus(1L, OrderStatus.PENDING)).thenReturn(0);
         when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(mockProduct));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+        when(orderRepository.saveAndFlush(any(Order.class))).thenAnswer(invocation -> {
             Order o = invocation.getArgument(0);
             o.setId(99L);
             return o;
@@ -445,7 +449,7 @@ class OrderServiceTest {
         request.setShippingAddress("Ha Noi");
         request.setItems(Collections.singletonList(new OrderItemRequest(10L, 2)));
 
-        OrderResponse response = orderService.createOrder(1L, request);
+        OrderResponse response = orderService.createOrder(1L, request, java.util.UUID.randomUUID().toString()).order();
 
         assertNotNull(response);
         assertEquals(99L, response.getId());
@@ -467,7 +471,7 @@ class OrderServiceTest {
         request.setShippingAddress("Ha Noi");
         request.setItems(Collections.singletonList(new OrderItemRequest(10L, 10))); // Muốn mua 10 trong khi kho chỉ có 5
 
-        assertThrows(InsufficientStockException.class, () -> orderService.createOrder(1L, request));
+        assertThrows(InsufficientStockException.class, () -> orderService.createOrder(1L, request, java.util.UUID.randomUUID().toString()).order());
         assertEquals(5, mockProduct.getStock()); // Tồn kho không bị thay đổi
         assertEquals(0, mockProduct.getReservedStock());
     }
@@ -481,7 +485,7 @@ class OrderServiceTest {
         OrderCreateRequest request = new OrderCreateRequest();
         request.setItems(Collections.singletonList(new OrderItemRequest(10L, 1)));
 
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> orderService.createOrder(1L, request));
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> orderService.createOrder(1L, request, java.util.UUID.randomUUID().toString()).order());
         assertTrue(ex.getMessage().contains("chưa thanh toán"));
         verify(productRepository, never()).findByIdForUpdate(any());
     }

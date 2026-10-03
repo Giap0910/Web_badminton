@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -58,6 +57,7 @@ public class VoucherService {
     }
 
     private VoucherValidateResponse validateVoucher(Voucher voucher, BigDecimal orderTotal) {
+        validateVoucherAmounts(voucher, orderTotal);
         String code = voucher.getCode();
         if (orderTotal == null || orderTotal.signum() < 0 || voucher.getDiscountValue() == null
                 || voucher.getDiscountValue().signum() < 0) {
@@ -77,13 +77,13 @@ public class VoucherService {
 
         if (voucher.getMinOrderValue() != null && orderTotal.compareTo(voucher.getMinOrderValue()) < 0) {
             throw new BadRequestException(String.format("Đơn hàng phải từ %,d₫ mới đủ điều kiện áp dụng mã '%s'!",
-                    voucher.getMinOrderValue().longValue(), code));
+                    voucher.getMinOrderValue().longValueExact(), code));
         }
 
         BigDecimal discountAmount;
         if ("PERCENT".equalsIgnoreCase(voucher.getDiscountType())) {
             discountAmount = orderTotal.multiply(voucher.getDiscountValue())
-                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+                    .divide(BigDecimal.valueOf(100));
             if (voucher.getMaxDiscountAmount() != null && discountAmount.compareTo(voucher.getMaxDiscountAmount()) > 0) {
                 discountAmount = voucher.getMaxDiscountAmount();
             }
@@ -96,7 +96,8 @@ public class VoucherService {
             discountAmount = orderTotal;
         }
 
-        BigDecimal finalTotal = orderTotal.subtract(discountAmount);
+        VndAmount.requireValid(discountAmount);
+        BigDecimal finalTotal = VndAmount.requireValid(orderTotal.subtract(discountAmount));
         if (finalTotal.compareTo(BigDecimal.ZERO) < 0) {
             finalTotal = BigDecimal.ZERO;
         }
@@ -111,6 +112,15 @@ public class VoucherService {
                 .finalTotal(finalTotal)
                 .message("Áp dụng mã giảm giá thành công!")
                 .build();
+    }
+
+    private void validateVoucherAmounts(Voucher voucher, BigDecimal orderTotal) {
+        VndAmount.requireValid(orderTotal);
+        if (!"PERCENT".equalsIgnoreCase(voucher.getDiscountType())) {
+            VndAmount.requireValid(voucher.getDiscountValue());
+        }
+        if (voucher.getMinOrderValue() != null) VndAmount.requireValid(voucher.getMinOrderValue());
+        if (voucher.getMaxDiscountAmount() != null) VndAmount.requireValid(voucher.getMaxDiscountAmount());
     }
 
     @Transactional(readOnly = true)

@@ -192,6 +192,8 @@ public class ProductService {
     }
 
     private void validateStockAndPrice(ProductDto dto) {
+        VndAmount.requireValid(dto.getPrice());
+        if (dto.getOriginalPrice() != null) VndAmount.requireValid(dto.getOriginalPrice());
         if (dto.getName() != null && (dto.getName().isBlank() || dto.getName().length() > 200)
                 || dto.getBrand() != null && (dto.getBrand().isBlank() || dto.getBrand().length() > 50)) {
             throw new BadRequestException("Tên hoặc thương hiệu không hợp lệ");

@@ -7,6 +7,14 @@ import { voucherApi } from '../api/voucherApi';
 import { shippingAddressApi } from '../api/shippingAddressApi';
 import { formatPrice } from '../utils/formatters';
 import {
+  buildOrderPayload,
+  isResponseStale,
+  canonicalStringify,
+  getOrCreateIdempotencyKey,
+  clearStoredCheckoutIntent,
+  getOrCreatePaymentLinkKey,
+} from '../utils/idempotency';
+import {
   ShieldCheck,
   CreditCard,
   QrCode,
@@ -74,6 +82,9 @@ const CheckoutPage = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Idempotency & submit guard (FIX-018)
+  const isSubmittingRef = useRef(false);
+
   // Load saved shipping addresses
   useEffect(() => {
     const fetchAddresses = async () => {
@@ -119,6 +130,23 @@ const CheckoutPage = () => {
   const effectiveDiscount = subtotal > 0 ? Math.min(subtotal, discountAmount) : 0;
   const finalTotal = Math.max(0, subtotal - effectiveDiscount + shippingFee);
 
+  // Live order payload and canonical fingerprint (continuously updated on every render)
+  const currentPayload = buildOrderPayload({
+    customerName,
+    addressDetail,
+    ward,
+    district,
+    province,
+    shippingPhone,
+    paymentMethod,
+    voucherCode,
+    note,
+    checkoutItems,
+  });
+  const currentFingerprint = canonicalStringify(currentPayload);
+  const currentFingerprintRef = useRef(currentFingerprint);
+  currentFingerprintRef.current = currentFingerprint;
+
   const handleApplyVoucher = async (e) => {
     e.preventDefault();
     if (!voucherCode.trim()) return;
@@ -150,7 +178,7 @@ const CheckoutPage = () => {
   };
 
   const handleSubmitOrder = async () => {
-    if (loading || isValidatingVoucher) return;
+    if (isSubmittingRef.current || loading || isValidatingVoucher) return;
     if (voucherCode.trim() && !voucherSuccess) {
       setErrorMsg('Vui lòng áp dụng lại mã giảm giá hoặc xóa mã trước khi đặt hàng.');
       return;
@@ -165,48 +193,98 @@ const CheckoutPage = () => {
       return;
     }
 
+    const payload = currentPayload;
+    const submittedFingerprint = currentFingerprint;
+
+    // FIX-018: 1 checkout intent = 1 UUID. Reuse key if unchanged; generate new UUID if changed.
+    let idempotencyKey;
+    try {
+      const intent = getOrCreateIdempotencyKey(payload);
+      idempotencyKey = intent.key;
+    } catch {
+      setErrorMsg('Không thể khởi tạo mã giao dịch an toàn (Web Crypto không khả dụng). Vui lòng thử lại trên trình duyệt hiện đại.');
+      return;
+    }
+
+    isSubmittingRef.current = true;
     setLoading(true);
     setErrorMsg('');
 
     try {
-      const fullShippingAddress = `${addressDetail}, ${ward}, ${district}, ${province}`;
-      const payload = {
-        customerName,
-        shippingAddress: fullShippingAddress,
-        shippingPhone,
-        paymentMethod,
-        voucherCode: voucherCode.trim() || null,
-        note: [note, ...checkoutItems.map((item, index) => {
-          const extra = [item.options?.gender, item.options?.capacity, item.options?.packaging].filter(Boolean);
-          return extra.length ? `Dòng ${index + 1} - ${item.product.name}: ${extra.join(', ')}` : '';
-        })].filter(Boolean).join('\n'),
-        items: checkoutItems.map((item) => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          selectedSize: item.selectedSize || '',
-          selectedColor: item.selectedColor || '',
-          selectedWeight: item.selectedWeight || '',
-          stringingService: item.stringingService || '',
-          stringTension: item.stringTension || '',
-        })),
-      };
-
-      const res = await orderApi.createOrder(payload);
+      const res = await orderApi.createOrder(payload, idempotencyKey);
       const createdOrder = res?.data ?? res;
 
       if (!createdOrder?.id) throw new Error('Máy chủ chưa trả về mã đơn hàng hợp lệ.');
+
+      // STALE RESPONSE GUARD:
+      // Compare submitted fingerprint with current live fingerprint of the UI.
+      // If user altered form fields or cart items while request was in-flight, response is stale.
+      if (isResponseStale(submittedFingerprint, currentFingerprintRef.current)) {
+        return;
+      }
+
+      // Success (both 201 Created and 200 Replay) for CURRENT checkout intent:
+      // Clear persisted idempotency intent so subsequent orders don't reuse this key
+      clearStoredCheckoutIntent();
+
       checkoutItems.forEach((item) => removeFromCart(item.cartItemId));
 
       // Route based on payment method
       if (paymentMethod === 'COD') {
         navigate(`/order-success/${createdOrder.id}`, { state: { order: createdOrder } });
       } else {
-        // PAYOS_VIETQR or MANUAL_BANK
-        navigate(`/payment/qr/${createdOrder.id}`, { state: { order: createdOrder } });
+        // PAYOS_VIETQR or electronic payment
+        let paymentAttempt = null;
+        let paymentError = null;
+        try {
+          const paymentKey = getOrCreatePaymentLinkKey(createdOrder.id);
+          const payRes = await orderApi.createPaymentLink(createdOrder.id, paymentKey);
+          paymentAttempt = payRes?.data ?? payRes;
+        } catch (payErr) {
+          // Note: DO NOT re-create order! Order has already been created and cart cleared.
+          paymentError =
+            payErr.response?.data?.message ||
+            'Chưa thể chuẩn bị liên kết thanh toán. Vui lòng kiểm tra lại.';
+        }
+
+        navigate(`/payment/qr/${createdOrder.id}`, {
+          state: {
+            order: createdOrder,
+            payment: paymentAttempt,
+            paymentError: paymentError,
+          },
+        });
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Không thể tạo đơn hàng. Giỏ hàng được giữ nguyên, vui lòng thử lại.');
+      // Stale response guard for errors: do not overwrite UI state with stale failure
+      if (isResponseStale(submittedFingerprint, currentFingerprintRef.current)) {
+        return;
+      }
+
+      const isConflict = err.response?.status === 409 || err.response?.data?.code === 'IDEMPOTENCY_CONFLICT';
+      const apiMessage = err.response?.data?.message;
+
+      if (isConflict) {
+        // Invalidate stored key for this conflict so subsequent submit creates a fresh UUID
+        clearStoredCheckoutIntent();
+        setErrorMsg(
+          typeof apiMessage === 'string'
+            ? apiMessage
+            : 'Yêu cầu đặt hàng bị xung đột hoặc thông tin đã thay đổi. Vui lòng kiểm tra lại thông tin và thử lại.'
+        );
+      } else {
+        // Network timeout / connection error / 5xx / 400 validation:
+        // DO NOT clear cart!
+        // DO NOT clear stored idempotency intent!
+        // Preserves key so retry with same payload reuses the same Idempotency-Key.
+        setErrorMsg(
+          typeof apiMessage === 'string'
+            ? apiMessage
+            : 'Không thể tạo đơn hàng. Giỏ hàng được giữ nguyên, vui lòng thử lại.'
+        );
+      }
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };

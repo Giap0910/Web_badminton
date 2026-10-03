@@ -27,6 +27,10 @@ public class JwtTokenProvider {
     }
 
     private Key getSigningKey() {
+        if (jwtSecret == null || jwtSecret.length() < 64 || jwtSecret.length() % 2 != 0
+                || !jwtSecret.matches("[0-9a-fA-F]+")) {
+            throw new IllegalStateException("JWT signing secret is missing or invalid");
+        }
         byte[] keyBytes = java.util.HexFormat.of().parseHex(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }

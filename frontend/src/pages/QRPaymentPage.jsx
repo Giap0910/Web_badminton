@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
 import { formatPrice, formatTimer, isOrderPaid } from '../utils/formatters';
+import { getOrCreatePaymentLinkKey } from '../utils/idempotency';
 import {
   QrCode,
   Copy,
@@ -25,15 +26,33 @@ const QRPaymentPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [order, setOrder] = useState(location.state?.order || null);
+  const [payment, setPayment] = useState(location.state?.payment || null);
+  const [loading, setLoading] = useState(!order && !payment);
+  const [error, setError] = useState(location.state?.paymentError || '');
   const [copiedField, setCopiedField] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // Request & loop guards
+  const isCheckingRef = useRef(false);
+  const hasInitialRecoveredRef = useRef(false);
+  const currentOrderIdRef = useRef(orderId);
+  currentOrderIdRef.current = orderId;
+  const isMountedRef = useRef(true);
+  const pollGenerationRef = useRef(0);
+  const orderRef = useRef(order);
+  orderRef.current = order;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Time remaining countdown (15 minutes default)
   const [secondsRemaining, setSecondsRemaining] = useState(
-    order?.timeRemainingSeconds ?? 0
+    order?.timeRemainingSeconds ?? 900
   );
 
   const copyToClipboard = (text, fieldName) => {
@@ -42,52 +61,162 @@ const QRPaymentPage = () => {
     setTimeout(() => setCopiedField(''), 2000);
   };
 
-  // Fetch order details
+  // Fetch order details & latest payment attempt
   const fetchOrder = async () => {
+    const targetOrderId = orderId;
     try {
       setError('');
-      const res = await orderApi.getOrderById(orderId);
+      const res = await orderApi.getOrderById(targetOrderId);
       const data = res?.data ?? res;
+      if (currentOrderIdRef.current !== targetOrderId) return;
       setOrder(data);
       if (data && data.timeRemainingSeconds !== undefined) {
         setSecondsRemaining(data.timeRemainingSeconds);
       }
 
       if (isOrderPaid(data)) {
-        navigate(`/order-success/${orderId}`, { state: { order: data } });
+        navigate(`/order-success/${targetOrderId}`, { state: { order: data } });
+        return;
+      }
+
+      // Fetch latest payment attempt
+      let payData = null;
+      let getFailed404 = false;
+      try {
+        const payRes = await orderApi.getOrderPayment(targetOrderId);
+        payData = payRes && 'data' in payRes ? payRes.data : payRes;
+      } catch (payErr) {
+        if (payErr.response?.status === 404) {
+          getFailed404 = true;
+        } else {
+          setError(payErr.response?.data?.message || 'Không thể đồng bộ trạng thái thanh toán.');
+          return;
+        }
+      }
+
+      if (currentOrderIdRef.current !== targetOrderId) return;
+
+      // Handle null (BUG A: 200 with null body) or 404 -> no payment attempt yet
+      if (payData == null || getFailed404) {
+        if (!hasInitialRecoveredRef.current && data?.status === 'PENDING') {
+          hasInitialRecoveredRef.current = true;
+          try {
+            const paymentKey = getOrCreatePaymentLinkKey(targetOrderId);
+            const createdPayRes = await orderApi.createPaymentLink(targetOrderId, paymentKey);
+            const createdPay = createdPayRes && 'data' in createdPayRes ? createdPayRes.data : createdPayRes;
+            if (currentOrderIdRef.current !== targetOrderId) return;
+            setPayment(createdPay);
+            if (createdPay?.status === 'PAID') {
+              navigate(`/order-success/${targetOrderId}`, { state: { order: data } });
+              return;
+            }
+          } catch (createErr) {
+            if (currentOrderIdRef.current !== targetOrderId) return;
+            setError(
+              createErr.response?.data?.message ||
+                'Chưa thể chuẩn bị liên kết thanh toán. Vui lòng kiểm tra lại.'
+            );
+          }
+        } else {
+          setPayment(null);
+        }
+      } else {
+        setPayment(payData);
+        if (payData.status === 'PAID') {
+          navigate(`/order-success/${targetOrderId}`, { state: { order: data } });
+          return;
+        }
       }
     } catch (err) {
+      if (currentOrderIdRef.current !== targetOrderId) return;
       setError(err.response?.data?.message || 'Không thể tải đơn hàng để xác minh thanh toán.');
     } finally {
-      setLoading(false);
+      if (currentOrderIdRef.current === targetOrderId) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    hasInitialRecoveredRef.current = false;
     fetchOrder();
   }, [orderId]);
 
   // Polling check order status every 4 seconds
   useEffect(() => {
-    if (!order || order.status !== 'PENDING' || order.paymentMethod !== 'PAYOS_VIETQR') return;
+    let cancelled = false;
+    const targetOrderId = orderId;
+    const generation = ++pollGenerationRef.current;
+    let isPolling = false;
+
+    const isCurrentActive = () => {
+      if (cancelled) return false;
+      if (isMountedRef?.current === false) return false;
+      if (currentOrderIdRef?.current !== undefined && currentOrderIdRef.current !== targetOrderId) return false;
+      if (pollGenerationRef?.current !== undefined && pollGenerationRef.current !== generation) return false;
+      return true;
+    };
 
     const interval = setInterval(async () => {
+      const currentOrder = orderRef?.current;
+      if (
+        currentOrder &&
+        (isOrderPaid(currentOrder) ||
+          (currentOrder.status && currentOrder.status !== 'PENDING') ||
+          (currentOrder.paymentMethod && currentOrder.paymentMethod !== 'PAYOS_VIETQR'))
+      ) {
+        return;
+      }
+
+      if (!isCurrentActive() || isPolling) return;
+      isPolling = true;
+
       try {
-        const res = await orderApi.getOrderById(orderId);
-        const latest = res?.data ?? res;
+        const res = await orderApi.getOrderById(targetOrderId);
+        if (!isCurrentActive()) return;
+
+        const latest = res && 'data' in res ? res.data : res;
         setOrder(latest);
-        setSecondsRemaining(latest?.timeRemainingSeconds ?? 0);
+        if (latest?.timeRemainingSeconds !== undefined) {
+          setSecondsRemaining(latest.timeRemainingSeconds);
+        }
         if (isOrderPaid(latest)) {
           clearInterval(interval);
-          navigate(`/order-success/${orderId}`, { state: { order: latest } });
+          if (!isCurrentActive()) return;
+          navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
+          return;
+        }
+
+        try {
+          const payRes = await orderApi.getOrderPayment(targetOrderId);
+          if (!isCurrentActive()) return;
+
+          const latestPay = payRes && 'data' in payRes ? payRes.data : payRes;
+          if (latestPay) {
+            setPayment(latestPay);
+            if (latestPay.status === 'PAID') {
+              clearInterval(interval);
+              if (!isCurrentActive()) return;
+              navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
+              return;
+            }
+          }
+        } catch {
+          // quiet fallback
         }
       } catch (e) {
-        setError('Không thể đồng bộ trạng thái thanh toán. Vui lòng kiểm tra lại.');
+        // quiet fallback
+      } finally {
+        isPolling = false;
       }
     }, 4000);
 
-    return () => clearInterval(interval);
-  }, [orderId, order]);
+    return () => {
+      cancelled = true;
+      pollGenerationRef.current++;
+      clearInterval(interval);
+    };
+  }, [orderId]);
 
   // 1-second interval countdown
   useEffect(() => {
@@ -104,36 +233,91 @@ const QRPaymentPage = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Manual verify check
+  // Manual verify check / retry
   const handleCheckPayment = async () => {
+    if (isCheckingRef.current || isVerifying) return; // Guard double-click & overlapping requests
+
+    const targetOrderId = orderId;
+    isCheckingRef.current = true;
     setIsVerifying(true);
     try {
-      const res = await orderApi.getOrderById(orderId);
+      setError('');
+      const res = await orderApi.getOrderById(targetOrderId);
       const latest = res?.data ?? res;
+      if (currentOrderIdRef.current !== targetOrderId) return;
       setOrder(latest);
+
       if (isOrderPaid(latest)) {
-        navigate(`/order-success/${orderId}`, { state: { order: latest } });
-      } else {
+        navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
+        return;
+      }
+
+      let payData = null;
+      let getFailed404 = false;
+      try {
+        const payRes = await orderApi.getOrderPayment(targetOrderId);
+        payData = payRes && 'data' in payRes ? payRes.data : payRes;
+      } catch (pErr) {
+        if (pErr.response?.status === 404) {
+          getFailed404 = true;
+        } else {
+          throw pErr;
+        }
+      }
+
+      if (currentOrderIdRef.current !== targetOrderId) return;
+
+      if (payData?.status === 'PAID') {
+        setPayment(payData);
+        navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
+        return;
+      }
+
+      // If payment is null (200 + null or 404) OR status is CREATING:
+      // Must call POST payment-link with SAME orderId and SAME payment key to trigger creation / provider recovery
+      if (payData == null || getFailed404 || payData.status === 'CREATING') {
+        const key = getOrCreatePaymentLinkKey(targetOrderId);
+        const postRes = await orderApi.createPaymentLink(targetOrderId, key);
+        const updatedPayment = postRes && 'data' in postRes ? postRes.data : postRes;
+        if (currentOrderIdRef.current !== targetOrderId) return;
+        setPayment(updatedPayment);
+
+        if (updatedPayment?.status === 'PAID') {
+          navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
+          return;
+        } else if (updatedPayment?.status === 'CREATING') {
+          setError('');
+        } else if (updatedPayment?.status === 'PENDING') {
+          setError('');
+        }
+      } else if (payData.status === 'PENDING') {
+        setPayment(payData);
         alert('Chưa có xác nhận thanh toán từ máy chủ. Vui lòng kiểm tra lại trạng thái đơn hàng.');
+      } else {
+        setPayment(payData);
       }
     } catch (err) {
-      setError('Không thể kiểm tra thanh toán. Vui lòng thử lại.');
+      if (currentOrderIdRef.current !== targetOrderId) return;
+      setError(err.response?.data?.message || 'Không thể kiểm tra thanh toán. Vui lòng thử lại.');
     } finally {
-      setIsVerifying(false);
+      if (currentOrderIdRef.current === targetOrderId) {
+        setIsVerifying(false);
+      }
+      isCheckingRef.current = false;
     }
   };
 
-  const displayOrderCode = order?.orderCode || `#HG-${orderId || '89241'}`;
-  const displayAmount = order?.totalAmount ?? 0;
+  const displayOrderCode = payment?.orderCode ? `#${payment.orderCode}` : (order?.orderCode || `#HG-${orderId || '89241'}`);
+  const displayAmount = payment?.amount ?? (order?.totalAmount ?? 0);
 
   if (loading) return <p className="p-8" role="status">Đang tải đơn hàng...</p>;
-  if (error || !order || !order.qrCode || order.status !== 'PENDING' || order.paymentMethod !== 'PAYOS_VIETQR' || secondsRemaining <= 0) {
+  if (!order || (error && !payment && !order?.qrCode) || (order && order.status !== 'PENDING') || secondsRemaining <= 0) {
     return <div className="max-w-2xl mx-auto p-8 space-y-4">
       <h1 className="text-xl font-bold">Thanh toán đơn hàng #{orderId}</h1>
       <p role="alert">{error || (order?.status === 'PENDING'
         ? 'Chưa có mã thanh toán được xác thực. Vui lòng không chuyển tiền theo thông tin mẫu.'
         : 'Đơn hàng không ở trạng thái chờ thanh toán.')}</p>
-      <button className="border rounded px-4 py-2" onClick={fetchOrder}>Kiểm tra lại</button>
+      <button className="border rounded px-4 py-2" onClick={handleCheckPayment}>Kiểm tra lại</button>
       <Link className="block text-red-600 underline" to="/my-orders">Xem đơn hàng</Link>
     </div>;
   }
@@ -231,14 +415,26 @@ const QRPaymentPage = () => {
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-600 via-slate-900 to-red-600"></div>
 
           {/* Trạng thái "Đang chờ thanh toán" */}
-          <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-800 mb-5 shadow-sm">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-            </span>
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
-            <span>Đang chờ thanh toán...</span>
-          </div>
+          {error ? (
+            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-red-800 mb-5 shadow-sm">
+              <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+              <span>{error}</span>
+            </div>
+          ) : payment?.status === 'CREATING' ? (
+            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-800 mb-5 shadow-sm">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+              <span>Đang chuẩn bị liên kết thanh toán...</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-800 mb-5 shadow-sm">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+              </span>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+              <span>Đang chờ thanh toán...</span>
+            </div>
+          )}
 
           {/* Tiêu đề phía trên mã QR */}
           <h1 className="text-2xl sm:text-[26px] font-black tracking-tight text-slate-900 text-center mb-1">
@@ -276,9 +472,28 @@ const QRPaymentPage = () => {
                   alt="VietQR Code"
                   className="w-full h-full object-contain"
                 />
+              ) : payment?.status === 'CREATING' ? (
+                <div className="text-center p-4 flex flex-col items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-amber-600 mb-2" />
+                  <p className="text-xs font-medium text-slate-500">Đang chuẩn bị liên kết thanh toán...</p>
+                </div>
+              ) : payment?.checkoutUrl ? (
+                <div className="text-center p-4 flex flex-col items-center justify-center gap-2">
+                  <QrCode className="w-16 h-16 text-slate-700" />
+                  <a
+                    href={payment.checkoutUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-blue-600 hover:underline"
+                  >
+                    Mở cổng thanh toán PayOS
+                  </a>
+                </div>
               ) : (
                 /* Authentic SVG QR Graphic */
-                <p>Chưa có mã QR được xác thực.</p>
+                <p className="text-xs text-slate-500 text-center p-4">
+                  {error || 'Chưa có mã QR được xác thực.'}
+                </p>
               )}
             </div>
 
@@ -367,6 +582,16 @@ const QRPaymentPage = () => {
 
           {/* Nút "Tôi đã thanh toán" */}
           <div className="w-full flex flex-col gap-2.5">
+            {payment?.checkoutUrl && (
+              <a
+                href={payment.checkoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm sm:text-base transition-all duration-200 shadow-sm flex items-center justify-center gap-2"
+              >
+                <span>Tiếp tục thanh toán qua PayOS</span>
+              </a>
+            )}
             <button
               type="button"
               onClick={handleCheckPayment}
@@ -377,6 +602,11 @@ const QRPaymentPage = () => {
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   <span>Đang kiểm tra giao dịch...</span>
+                </>
+              ) : (!payment || payment?.status === 'CREATING') ? (
+                <>
+                  <RefreshCw className="w-5 h-5 text-blue-600 group-hover:text-white transition-colors" />
+                  <span>Kiểm tra lại</span>
                 </>
               ) : (
                 <>

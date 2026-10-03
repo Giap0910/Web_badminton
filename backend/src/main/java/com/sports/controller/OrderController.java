@@ -25,10 +25,12 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
             @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody OrderCreateRequest request
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(orderService.createOrder(userDetails.getId(), request));
+        var result = orderService.createOrder(userDetails.getId(), request, idempotencyKey);
+        return ResponseEntity.status(result.replay() ? HttpStatus.OK : HttpStatus.CREATED)
+                .body(result.order());
     }
 
     @GetMapping("/{id}")

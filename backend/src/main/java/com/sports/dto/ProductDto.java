@@ -16,9 +16,10 @@ public class ProductDto {
     private String name;
     @NotBlank @Size(max = 50)
     private String brand;
-    @NotNull @DecimalMin(value = "0", inclusive = false) @Digits(integer = 10, fraction = 2)
+    @NotNull @DecimalMin(value = "0", inclusive = false)
+    @DecimalMax("9999999999") @Digits(integer = 10, fraction = 0)
     private BigDecimal price;
-    @DecimalMin("0") @Digits(integer = 10, fraction = 2)
+    @DecimalMin("0") @DecimalMax("9999999999") @Digits(integer = 10, fraction = 0)
     private BigDecimal originalPrice;
     @Min(0)
     private Integer stock;

@@ -13,6 +13,28 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(PaymentLinkException.class)
+    public ResponseEntity<Map<String, Object>> handlePaymentLink(PaymentLinkException ex,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.status(ex.getStatus()).body(Map.of(
+                "timestamp", java.time.OffsetDateTime.now().toString(), "status", ex.getStatus(),
+                "code", ex.getCode(), "message", ex.getMessage(), "path", request.getRequestURI(),
+                "errors", Map.of()));
+    }
+
+    @ExceptionHandler(IdempotencyConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleIdempotencyConflict(IdempotencyConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "status", 409, "error", "Conflict", "code", "IDEMPOTENCY_CONFLICT",
+                "message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadableRequest(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        return handleBadRequest(new BadRequestException("Dữ liệu JSON hoặc kiểu dữ liệu không hợp lệ"));
+    }
+
     @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthenticationException(Exception ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

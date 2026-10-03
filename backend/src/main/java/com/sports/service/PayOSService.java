@@ -64,8 +64,9 @@ public class PayOSService {
      * "amount={amount}&cancelUrl={cancelUrl}&description={description}&orderCode={orderCode}&returnUrl={returnUrl}"
      */
     public String createSignatureForPaymentLink(Long orderCode, BigDecimal amount, String description) {
+        long exactAmount = VndAmount.requireValid(amount).longValueExact();
         String data = String.format("amount=%d&cancelUrl=%s&description=%s&orderCode=%d&returnUrl=%s",
-                amount.longValue(), cancelUrl, description, orderCode, returnUrl);
+                exactAmount, cancelUrl, description, orderCode, returnUrl);
         return hmacSha256(data, checksumKey);
     }
 

@@ -16,6 +16,10 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.idempotencyKey = :key")
+    Optional<Order> findByUserIdAndIdempotencyKey(@Param("userId") Long userId, @Param("key") String key);
+
     List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     List<Order> findByStatusAndExpiresAtBefore(OrderStatus status, LocalDateTime time);
