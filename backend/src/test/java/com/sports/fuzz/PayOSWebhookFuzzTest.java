@@ -20,6 +20,16 @@ import com.sports.repository.UserRepository;
 import com.sports.service.OrderService;
 import com.sports.service.PayOSService;
 import com.sports.service.VoucherService;
+import com.sports.service.PaymentEvidence;
+import com.sports.service.PaymentLedgerService;
+import com.sports.service.PaymentSettlementService;
+import com.sports.service.PaymentWebhookService;
+import com.sports.entity.PaymentAttempt;
+import com.sports.entity.PaymentEvent;
+import com.sports.entity.PaymentEventConflict;
+import com.sports.repository.PaymentAttemptRepository;
+import com.sports.repository.PaymentEventRepository;
+import com.sports.repository.PaymentEventConflictRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -158,7 +168,8 @@ public class PayOSWebhookFuzzTest {
         PayOSWebhookRequest request = signedRequest(99L, new BigDecimal("229999"), "00", "Thiếu 1");
 
         assertTrue(signatureService().verifyWebhookSignature(request));
-        assertEquals(400, fixture.controller.handlePayOSWebhook(request).getStatusCode().value());
+        assertEquals(200, fixture.controller.handlePayOSWebhook(request).getStatusCode().value());
+        assertEquals(PaymentAttempt.Status.NEEDS_REVIEW, fixture.attempt.getStatus());
 
         fixture.assertUnchanged(OrderStatus.PENDING);
         verifyNoInteractions(fixture.products, fixture.vouchers);
@@ -267,7 +278,7 @@ public class PayOSWebhookFuzzTest {
         if (scenario == 3) request.setSignature("");
         if (scenario == 4) request.setSignature("!" + garbage);
         assertFalse(signatureService().verifyWebhookSignature(request));
-        assertEquals(401, fixture.controller.handlePayOSWebhook(request).getStatusCode().value());
+        assertEquals(scenario <= 2 ? 400 : 401, fixture.controller.handlePayOSWebhook(request).getStatusCode().value());
         fixture.assertUnchanged(OrderStatus.PENDING);
         verifyNoInteractions(fixture.orders);
     }
@@ -294,8 +305,13 @@ public class PayOSWebhookFuzzTest {
 
         int status = fixture.controller.handlePayOSWebhook(request).getStatusCode().value();
 
-        assertEquals(scenario.status, status);
-        if (scenario == PaymentCase.VALID || scenario == PaymentCase.EQUAL_AMOUNT_SCALE) {
+        boolean malformedAmount = request.getData().getAmount() != null
+                && request.getData().getAmount().stripTrailingZeros().scale() > 0;
+        boolean validTotal = amount.stripTrailingZeros().scale() <= 0 && amount.compareTo(com.sports.service.VndAmount.MAX) <= 0;
+        int expected = malformedAmount ? 400 : scenario.status;
+        if (!malformedAmount && !validTotal && scenario == PaymentCase.INSUFFICIENT_RESERVATION) expected = 200;
+        assertEquals(expected, status);
+        if (!malformedAmount && validTotal && (scenario == PaymentCase.VALID || scenario == PaymentCase.EQUAL_AMOUNT_SCALE)) {
             fixture.assertPaidOnce(request);
         } else {
             fixture.assertUnchanged(initialStatus, initialReserved);
@@ -316,8 +332,10 @@ public class PayOSWebhookFuzzTest {
             case EXPIRED -> fixture.order.setExpiresAt(LocalDateTime.now().minusDays(1));
             case NULL_EXPIRY -> fixture.order.setExpiresAt(null);
             case COD -> fixture.order.setPaymentMethod("COD");
-            case MISSING_ORDER -> when(fixture.orders.findByPayosOrderCodeForUpdate(payload.getOrderCode()))
-                    .thenReturn(Optional.empty());
+            case MISSING_ORDER -> {
+                when(fixture.attempts.findByPaymentLinkId(any())).thenReturn(Optional.empty());
+                when(fixture.attempts.findByOrderCode(any())).thenReturn(Optional.empty());
+            }
             case NULL_ORDER_CODE -> payload.setOrderCode(null);
             case INSUFFICIENT_RESERVATION -> fixture.product.setReservedStock(1);
             default -> { }
@@ -328,16 +346,17 @@ public class PayOSWebhookFuzzTest {
     private PayOSWebhookRequest signedRequest(Long orderCode, BigDecimal amount, String code,
                                               String description) throws Exception {
         PayOSWebhookData payload = PayOSWebhookData.builder().orderCode(orderCode).amount(amount)
-                .code(code).description(description).build();
-        return PayOSWebhookRequest.builder().code("00").data(payload).signature(sign(payload)).build();
+                .code(code).description(description).accountNumber("TEST-ONLY").reference("fuzz-reference")
+                .transactionDateTime("2026-10-04 10:00:00").currency("VND").paymentLinkId("fuzz-link").desc("Test").build();
+        return PayOSWebhookRequest.builder().code("00").desc("Success").success(true).data(payload).signature(sign(payload)).build();
     }
 
     private String sign(PayOSWebhookData payload) throws Exception {
         StringJoiner canonical = new StringJoiner("&");
-        addField(canonical, "amount", payload.getAmount());
-        addField(canonical, "code", payload.getCode());
-        addField(canonical, "description", payload.getDescription());
-        addField(canonical, "orderCode", payload.getOrderCode());
+        var node = signatureService().webhookPayload(PayOSWebhookRequest.builder().data(payload).build()).get("data");
+        var fields = new java.util.TreeMap<String, com.fasterxml.jackson.databind.JsonNode>();
+        node.fields().forEachRemaining(e -> fields.put(e.getKey(), e.getValue()));
+        fields.forEach((key, value) -> canonical.add(key + "=" + (value.isNull() ? "" : value.asText())));
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(TEST_KEY.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         return HexFormat.of().formatHex(mac.doFinal(canonical.toString().getBytes(StandardCharsets.UTF_8)));
@@ -388,7 +407,7 @@ public class PayOSWebhookFuzzTest {
             fixture.service.cancelOrder(99L, 1L, false);
             fixture.service.cancelOrder(99L, 1L, false);
         }
-        assertEquals(400, fixture.controller.handlePayOSWebhook(request).getStatusCode().value());
+        assertEquals(200, fixture.controller.handlePayOSWebhook(request).getStatusCode().value());
         assertEquals(OrderStatus.CANCELLED, fixture.order.getStatus());
         assertEquals(8 + quantity, fixture.product.getStock());
         assertEquals(0, fixture.product.getReservedStock());
@@ -397,10 +416,10 @@ public class PayOSWebhookFuzzTest {
     }
 
     private enum PaymentCase {
-        VALID(200), INVALID_SIGNATURE(401), AMOUNT_MISMATCH(400), FAILED_STATUS(200),
-        CANCELLED(400), EXPIRED(400), NULL_AMOUNT(400), NEGATIVE_AMOUNT(400), NULL_STATUS(200),
-        COD(400), MISSING_ORDER(500), NULL_ORDER_CODE(500), NULL_EXPIRY(400),
-        INSUFFICIENT_RESERVATION(400), EQUAL_AMOUNT_SCALE(200);
+        VALID(200), INVALID_SIGNATURE(401), AMOUNT_MISMATCH(200), FAILED_STATUS(200),
+        CANCELLED(200), EXPIRED(200), NULL_AMOUNT(400), NEGATIVE_AMOUNT(200), NULL_STATUS(400),
+        COD(200), MISSING_ORDER(200), NULL_ORDER_CODE(400), NULL_EXPIRY(200),
+        INSUFFICIENT_RESERVATION(500), EQUAL_AMOUNT_SCALE(200);
 
         private final int status;
 
@@ -424,6 +443,11 @@ public class PayOSWebhookFuzzTest {
         private Order order;
         private final OrderService service;
         private final PaymentController controller;
+        private final PaymentAttemptRepository attempts = mock(PaymentAttemptRepository.class);
+        private final PaymentAttempt attempt = new PaymentAttempt();
+        private final PaymentEventRepository events = mock(PaymentEventRepository.class);
+        private final PaymentEventConflictRepository conflicts = mock(PaymentEventConflictRepository.class);
+        private final java.util.Map<String, PaymentEvent> savedEvents = new java.util.HashMap<>();
 
         private PaymentFixture(long orderCode, BigDecimal amount) {
             OrderItem item = OrderItem.builder().product(product).quantity(2).build();
@@ -437,7 +461,37 @@ public class PayOSWebhookFuzzTest {
             PayOSService signatures = signatureService();
             service = new OrderService(orders, products, users,
                     signatures, vouchers, mock(EntityManager.class));
-            controller = new PaymentController(signatures, service, new MockEnvironment());
+            configureLedger(orderCode);
+            var ledger = new PaymentLedgerService(events, conflicts);
+            var settlement = new PaymentSettlementService(attempts, orders, ledger, service, mock(EntityManager.class));
+            controller = new PaymentController(signatures, new PaymentWebhookService(signatures, settlement), new MockEnvironment());
+        }
+
+        private void configureLedger(long code) {
+            attempt.setId(1L);
+            attempt.setOrderCode(code);
+            attempt.setPaymentLinkId("fuzz-link");
+            when(attempts.findByPaymentLinkId("fuzz-link")).thenAnswer(i -> Optional.of(currentAttempt()));
+            when(attempts.findByOrderCode(code)).thenAnswer(i -> Optional.of(currentAttempt()));
+            when(attempts.findById(1L)).thenAnswer(i -> Optional.of(currentAttempt()));
+            when(attempts.findByIdForUpdate(1L)).thenAnswer(i -> Optional.of(currentAttempt()));
+            when(events.findByProviderAndPaymentLinkIdAndReference(any(), any(), any()))
+                    .thenAnswer(i -> Optional.ofNullable(savedEvents.get(i.getArgument(2))));
+            when(events.saveAndFlush(any())).thenAnswer(i -> {
+                PaymentEvent event = i.getArgument(0);
+                event.setId((long) savedEvents.size() + 1);
+                savedEvents.put(event.getReference(), event);
+                return event;
+            });
+            when(events.findByPaymentAttemptId(1L)).thenAnswer(i -> savedEvents.values().stream()
+                    .filter(e -> e.getPaymentAttempt() != null).toList());
+        }
+
+        private PaymentAttempt currentAttempt() {
+            attempt.setOrder(order);
+            attempt.setAmount(order.getTotalAmount());
+            attempt.setExpiresAt(order.getExpiresAt());
+            return attempt;
         }
 
         private void createOrder(int quantity, String method) {

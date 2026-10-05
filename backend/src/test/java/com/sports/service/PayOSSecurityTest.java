@@ -30,16 +30,16 @@ class PayOSSecurityTest {
 
     @Test
     void mockPaymentIsDisabledByDefault() {
-        OrderService orders = mock(OrderService.class);
-        PaymentController controller = new PaymentController(payosService, orders, new MockEnvironment());
+        PaymentSettlementService orders = mock(PaymentSettlementService.class);
+        PaymentController controller = new PaymentController(payosService, new PaymentWebhookService(payosService, orders), new MockEnvironment());
         assertEquals(404, controller.triggerMockWebhook(1L, BigDecimal.TEN).getStatusCode().value());
         verifyNoInteractions(orders);
     }
 
     @Test
     void mockPaymentRequiresDevelopmentProfileEvenWhenEnabled() {
-        OrderService orders = mock(OrderService.class);
-        PaymentController controller = new PaymentController(payosService, orders, new MockEnvironment());
+        PaymentSettlementService orders = mock(PaymentSettlementService.class);
+        PaymentController controller = new PaymentController(payosService, new PaymentWebhookService(payosService, orders), new MockEnvironment());
         ReflectionTestUtils.setField(controller, "mockEnabled", true);
         assertEquals(404, controller.triggerMockWebhook(1L, BigDecimal.TEN).getStatusCode().value());
         verifyNoInteractions(orders);
@@ -47,31 +47,31 @@ class PayOSSecurityTest {
 
     @Test
     void developmentMockCanBeExplicitlyEnabled() {
-        OrderService orders = mock(OrderService.class);
+        PaymentSettlementService orders = mock(PaymentSettlementService.class);
         MockEnvironment environment = new MockEnvironment();
         environment.setActiveProfiles("dev");
-        PaymentController controller = new PaymentController(payosService, orders, environment);
+        PaymentController controller = new PaymentController(payosService, new PaymentWebhookService(payosService, orders), environment);
         ReflectionTestUtils.setField(controller, "mockEnabled", true);
         assertEquals(200, controller.triggerMockWebhook(1L, BigDecimal.TEN).getStatusCode().value());
-        verify(orders).handlePaymentSuccess(1L, BigDecimal.TEN);
+        verify(orders).webhook(argThat(p -> p.successful() && p.orderCode().equals(1L)));
     }
 
     @Test
     void failedPaymentDoesNotMarkOrderPaid() {
         PayOSService signatures = mock(PayOSService.class);
-        OrderService orders = mock(OrderService.class);
+        PaymentSettlementService orders = mock(PaymentSettlementService.class);
         PayOSWebhookRequest request = payosService.generateMockWebhook(1L, BigDecimal.TEN);
         request.getData().setCode("01");
-        when(signatures.verifyWebhookSignature(request)).thenReturn(true);
-        PaymentController controller = new PaymentController(signatures, orders, new MockEnvironment());
+        when(signatures.verifyWebhookPayload(any())).thenReturn(true);
+        PaymentController controller = new PaymentController(payosService, new PaymentWebhookService(signatures, orders), new MockEnvironment());
         assertEquals(200, controller.handlePayOSWebhook(request).getStatusCode().value());
-        verifyNoInteractions(orders);
+        verify(orders).webhook(argThat(p -> !p.successful()));
     }
 
     @Test
     void invalidWebhookNeverUpdatesAnOrder() {
-        OrderService orders = mock(OrderService.class);
-        PaymentController controller = new PaymentController(payosService, orders, new MockEnvironment());
+        PaymentSettlementService orders = mock(PaymentSettlementService.class);
+        PaymentController controller = new PaymentController(payosService, new PaymentWebhookService(payosService, orders), new MockEnvironment());
         PayOSWebhookRequest request = payosService.generateMockWebhook(1L, BigDecimal.TEN);
         request.setSignature("invalid");
         assertEquals(401, controller.handlePayOSWebhook(request).getStatusCode().value());

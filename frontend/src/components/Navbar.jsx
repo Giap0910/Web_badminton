@@ -42,24 +42,24 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 left-0 right-0 z-50 bg-[#0F172A] text-white shadow-header-sticky border-b border-slate-800">
-      <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-between pt-3 pb-2">
+      <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-between pt-2.5 sm:pt-3 pb-2">
         {/* Top Header Row */}
-        <div className="flex items-center justify-between gap-3 sm:gap-6">
+        <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-y-2 gap-x-2 lg:gap-6">
           
           {/* Logo HG Badminton Pro */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-secondary via-red-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-secondary/30 group-hover:scale-105 transition-transform">
+          <Link to="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 group order-1">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-secondary via-red-500 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-secondary/30 group-hover:scale-105 transition-transform shrink-0">
               {/* Badminton Shuttlecock Icon Custom SVG */}
-              <svg className="w-6 h-6 transform -rotate-45" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 transform -rotate-45" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C10.9 2 10 2.9 10 4C10 4.3 10.1 4.6 10.2 4.9L4.9 10.2C4.6 10.1 4.3 10 4 10C2.9 10 2 10.9 2 12C2 12.3 2.1 12.6 2.2 12.9L3 21H11.1C11.4 21.9 12.3 22 12 22C12.3 22 12.6 21.9 12.9 21.8L21 21L21.8 12.9C21.9 12.6 22 12.3 22 12C22 10.9 21.1 10 20 10C19.7 10 19.4 10.1 19.1 10.2L13.8 4.9C13.9 4.6 14 4.3 14 4C14 2.9 13.1 2 12 2ZM12 5.5L16.5 10L14.5 12L12 9.5L9.5 12L7.5 10L12 5.5ZM12 11L14.5 13.5L12 16L9.5 13.5L12 11Z" opacity="0.9" />
               </svg>
             </div>
             <div className="flex flex-col leading-none">
-              <div className="flex items-center gap-1.5">
-                <span className="font-display text-lg sm:text-xl font-extrabold tracking-tight text-white">
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <span className="font-display text-base sm:text-xl font-extrabold tracking-tight text-white whitespace-nowrap">
                   HG <span className="text-secondary font-black">BADMINTON</span>
                 </span>
-                <span className="bg-secondary text-white px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-widest uppercase">
+                <span className="bg-secondary text-white px-1 sm:px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-extrabold tracking-widest uppercase">
                   PRO
                 </span>
               </div>
@@ -69,22 +69,8 @@ const Navbar = () => {
             </div>
           </Link>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-xl mx-2 sm:mx-4">
-            <div className="relative flex items-center w-full">
-              <Search className="absolute left-3.5 text-slate-400 w-4 h-4 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm vợt, giày, phụ kiện Yonex, Lining, Victor..."
-                className="w-full bg-slate-800/80 hover:bg-slate-800 focus:bg-white text-white focus:text-slate-900 placeholder:text-slate-400 text-xs sm:text-sm pl-10 pr-4 py-2 rounded-full border border-slate-700 focus:border-royal focus:outline-none transition-all shadow-inner"
-              />
-            </div>
-          </form>
-
           {/* Top Right Action Items */}
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-4 shrink-0 order-2 lg:order-3">
             {/* Hotline (Desktop) */}
             <div className="hidden xl:flex items-center gap-2 text-white">
               <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-secondary">
@@ -99,7 +85,7 @@ const Navbar = () => {
             {/* Compare Button */}
             <Link
               to="/compare"
-              className="relative flex items-center gap-1.5 text-slate-200 hover:text-white px-2 py-1.5 rounded-lg hover:bg-slate-800/80 transition-colors"
+              className="relative flex items-center gap-1.5 text-slate-200 hover:text-white p-1.5 sm:px-2 sm:py-1.5 rounded-lg hover:bg-slate-800/80 transition-colors"
               title="So sánh vợt (tối đa 3 cây)"
             >
               <div className="relative">
@@ -116,7 +102,7 @@ const Navbar = () => {
             {/* Cart Button */}
             <Link
               to="/cart"
-              className="relative flex items-center gap-1.5 text-slate-200 hover:text-white px-2 py-1.5 rounded-lg hover:bg-slate-800/80 transition-colors"
+              className="relative flex items-center gap-1.5 text-slate-200 hover:text-white p-1.5 sm:px-2 sm:py-1.5 rounded-lg hover:bg-slate-800/80 transition-colors"
               title="Giỏ hàng"
             >
               <div className="relative">
@@ -130,12 +116,12 @@ const Navbar = () => {
 
             {/* Auth / Account Action */}
             {isAuthenticated ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <Link
                   to={isAdmin ? "/admin" : "/profile"}
-                  className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-slate-800/80 text-left transition-colors"
+                  className="flex items-center gap-1.5 sm:gap-2 p-1 sm:px-2 sm:py-1 rounded-lg hover:bg-slate-800/80 text-left transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold text-xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold text-xs">
                     {user?.fullName ? user.fullName.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
                   </div>
                   <div className="hidden lg:flex flex-col leading-tight">
@@ -149,23 +135,23 @@ const Navbar = () => {
                 </Link>
                 <button
                   onClick={logout}
-                  className="p-1.5 text-slate-400 hover:text-secondary rounded-lg hover:bg-slate-800/80 transition-colors"
+                  className="p-1 sm:p-1.5 text-slate-400 hover:text-secondary rounded-lg hover:bg-slate-800/80 transition-colors"
                   title="Đăng xuất"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <Link
                   to="/login"
-                  className="text-xs font-bold px-3 py-1.5 rounded-lg text-slate-200 hover:text-white hover:bg-slate-800/80 transition-colors"
+                  className="text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-slate-200 hover:text-white hover:bg-slate-800/80 transition-colors"
                 >
                   Đăng Nhập
                 </Link>
                 <Link
                   to="/register"
-                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary-container text-white shadow-sm transition-all"
+                  className="text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-secondary hover:bg-secondary-container text-white shadow-sm transition-all"
                 >
                   Đăng Ký
                 </Link>
@@ -181,6 +167,20 @@ const Navbar = () => {
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
+
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="w-full lg:w-auto lg:flex-1 max-w-xl mx-0 lg:mx-4 order-3 lg:order-2 min-w-0">
+            <div className="relative flex items-center w-full">
+              <Search className="absolute left-3.5 text-slate-400 w-4 h-4 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm kiếm vợt, giày, phụ kiện Yonex, Lining, Victor..."
+                className="w-full bg-slate-800/80 hover:bg-slate-800 focus:bg-white text-white focus:text-slate-900 placeholder:text-slate-400 text-xs sm:text-sm pl-10 pr-4 py-2 rounded-full border border-slate-700 focus:border-royal focus:outline-none transition-all shadow-inner"
+              />
+            </div>
+          </form>
         </div>
 
         {/* Secondary Navigation Row (Categories & Hot Promo) */}

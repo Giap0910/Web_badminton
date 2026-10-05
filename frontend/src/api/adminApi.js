@@ -1,4 +1,4 @@
-import axiosClient from './axiosClient';
+import axiosClient from './axiosClient.js';
 
 export const adminApi = {
   // Dashboard Metrics
@@ -30,7 +30,39 @@ export const adminApi = {
   deleteReview: (id) => axiosClient.delete(`/admin/reviews/${id}`),
 
   // Payments & PayOS VietQR
-  getAllPayments: () => axiosClient.get('/admin/payments'),
+  getAllPayments: (params) => axiosClient.get('/admin/payments', { params }),
+  reconcilePayment: (paymentAttemptId, data, idempotencyKey) => {
+    const config = {};
+    if (typeof idempotencyKey === 'string' && idempotencyKey.trim()) {
+      config.headers = { 'Idempotency-Key': idempotencyKey.trim() };
+    } else if (idempotencyKey && typeof idempotencyKey === 'object') {
+      Object.assign(config, idempotencyKey);
+    }
+    config.transformResponse = [
+      ...(Array.isArray(axiosClient.defaults.transformResponse)
+        ? axiosClient.defaults.transformResponse
+        : [
+            (rawData) => {
+              try {
+                return JSON.parse(rawData);
+              } catch {
+                return rawData;
+              }
+            },
+          ]),
+      (parsedData, headers, status) => {
+        if (parsedData && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
+          Object.defineProperty(parsedData, '_httpStatus', {
+            value: status,
+            writable: true,
+            enumerable: false,
+          });
+        }
+        return parsedData;
+      },
+    ];
+    return axiosClient.post(`/admin/payments/${paymentAttemptId}/reconcile`, data, config);
+  },
   triggerMockWebhook: (orderCode, amount) =>
     axiosClient.post('/payment/mock-webhook-trigger', null, {
       params: { orderCode, amount },

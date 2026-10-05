@@ -16,7 +16,11 @@ import {
   getOrCreatePaymentLinkKey,
   getStoredPaymentLinkIntent,
   clearStoredPaymentLinkIntent,
-  PAYMENT_LINK_STORAGE_KEY
+  PAYMENT_LINK_STORAGE_KEY,
+  getOrCreateReconciliationKey,
+  getStoredReconciliationIntent,
+  clearStoredReconciliationIntent,
+  RECONCILIATION_STORAGE_KEY
 } from './idempotency.js';
 
 // Setup mock sessionStorage for Node environment
@@ -441,4 +445,98 @@ test('FIX-002: Payment intent storage is completely separated from checkout idem
   // Clearing payment intent for this order clears it
   clearStoredPaymentLinkIntent(777);
   assert.equal(getStoredPaymentLinkIntent(), null);
+});
+
+// =========================================================================
+// FIX-003: RECONCILIATION IDEMPOTENCY TESTS
+// =========================================================================
+
+test('FIX-003: getOrCreateReconciliationKey produces valid RFC4122 v4 UUID and reuses same key for same paymentAttemptId + same reason', () => {
+  sessionStorage.clear();
+
+  const paymentAttemptId = 55;
+  const reason = 'Khớp giao dịch ngân hàng theo sao kê lúc 15:00';
+  const key1 = getOrCreateReconciliationKey(paymentAttemptId, reason);
+
+  assert.match(key1, uuidRegex, 'Reconciliation key must be a valid RFC4122 v4 UUID');
+
+  // Retry or reload with same paymentAttemptId and same reason: must reuse exact same key
+  const key2 = getOrCreateReconciliationKey(paymentAttemptId, reason);
+  assert.equal(key2, key1, 'Must reuse same reconciliation key for same paymentAttemptId and same reason');
+});
+
+test('FIX-003: getOrCreateReconciliationKey generates new UUID when reason changes', () => {
+  sessionStorage.clear();
+
+  const paymentAttemptId = 55;
+  const key1 = getOrCreateReconciliationKey(paymentAttemptId, 'Lý do 1: Kiểm tra đối soát');
+  const key2 = getOrCreateReconciliationKey(paymentAttemptId, 'Lý do 2: Thay đổi thông tin đối soát');
+
+  assert.notEqual(key1, key2, 'Changed reason must yield a new UUID');
+});
+
+test('FIX-003: Payment A key != Payment B key', () => {
+  sessionStorage.clear();
+
+  const reason = 'Đối soát thủ công';
+  const keyA = getOrCreateReconciliationKey(101, reason);
+  const keyB = getOrCreateReconciliationKey(102, reason);
+
+  assert.notEqual(keyA, keyB, 'Different paymentAttemptId must receive distinct UUIDs');
+});
+
+test('FIX-003: Reconciliation key != payment-link key != order creation key', () => {
+  sessionStorage.clear();
+
+  const payload = buildOrderPayload({
+    customerName: 'Multi-intent test',
+    shippingPhone: '0901234567',
+    addressDetail: '789 District 1',
+    paymentMethod: 'PAYOS_VIETQR',
+    checkoutItems: [{ cartItemId: 'item-sep-3', product: { id: 8 }, quantity: 1 }]
+  });
+
+  const orderKey = getOrCreateIdempotencyKey(payload).key;
+  const paymentLinkKey = getOrCreatePaymentLinkKey(888);
+  const reconcileKey = getOrCreateReconciliationKey(888, 'Lý do kiểm tra');
+
+  assert.notEqual(orderKey, paymentLinkKey);
+  assert.notEqual(orderKey, reconcileKey);
+  assert.notEqual(paymentLinkKey, reconcileKey);
+
+  // Separate storage entries
+  assert.equal(getStoredCheckoutIntent().key, orderKey);
+  assert.equal(getStoredPaymentLinkIntent().key, paymentLinkKey);
+  assert.equal(getStoredReconciliationIntent(888).key, reconcileKey);
+
+  // Clearing reconciliation intent does not touch payment link or checkout intents
+  clearStoredReconciliationIntent(888);
+  assert.equal(getStoredReconciliationIntent(888), null);
+  assert.equal(getStoredPaymentLinkIntent().key, paymentLinkKey);
+  assert.equal(getStoredCheckoutIntent().key, orderKey);
+});
+
+test('FIX-003: Synchronous double-click guard allows exactly one reconciliation dispatch', () => {
+  sessionStorage.clear();
+
+  const paymentAttemptId = 77;
+  const reason = 'Khớp giao dịch đối soát';
+
+  let dispatchCount = 0;
+  let isSubmitting = false;
+  const dispatchedKeys = [];
+
+  const handleReconcileClick = () => {
+    if (isSubmitting) return; // double-click lock
+    isSubmitting = true;
+    dispatchCount++;
+    const key = getOrCreateReconciliationKey(paymentAttemptId, reason);
+    dispatchedKeys.push(key);
+  };
+
+  handleReconcileClick();
+  handleReconcileClick(); // Second rapid click while in-flight
+
+  assert.equal(dispatchCount, 1, 'Double click must only trigger 1 request dispatch');
+  assert.equal(dispatchedKeys.length, 1);
 });

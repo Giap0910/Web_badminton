@@ -1,7 +1,6 @@
 package com.sports.service;
 
 import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.node.*;
 import com.sports.dto.PaymentAttemptResponse;
 import com.sports.exception.PaymentLinkException;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,8 +11,6 @@ import org.springframework.web.client.*;
 import java.math.BigDecimal;
 import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.ZoneId;
 import java.util.*;
 
@@ -31,6 +28,9 @@ public class PayOSPaymentClient {
 
     public record Result(Long orderCode, BigDecimal amount, String paymentLinkId,
             String checkoutUrl, String qrPayload) {}
+    public record Transaction(String reference, BigDecimal amount, String transactionDateTime) {}
+    public record Query(Long orderCode, BigDecimal amount, String paymentLinkId, String status,
+            BigDecimal amountPaid, BigDecimal amountRemaining, List<Transaction> transactions) {}
 
     public PayOSPaymentClient(PayOSService signatures,
             @Value("${payos.connect-timeout-ms:3000}") int connectTimeout,
@@ -69,6 +69,25 @@ public class PayOSPaymentClient {
         return result(data, "id", null, null);
     }
 
+    public Query queryPayment(Long orderCode) {
+        JsonNode data = exchange(HttpMethod.GET, "/v2/payment-requests/" + orderCode, null, true);
+        if (data == null) return null;
+        if (!data.path("transactions").isArray()) throw invalid();
+        List<Transaction> transactions = new ArrayList<>();
+        for (JsonNode row : data.get("transactions")) {
+            transactions.add(new Transaction(requiredText(row, "reference"), integer(row, "amount"),
+                    requiredText(row, "transactionDateTime")));
+        }
+        return new Query(integer(data, "orderCode").longValueExact(), integer(data, "amount"),
+                requiredText(data, "id"), requiredText(data, "status"), integer(data, "amountPaid"),
+                integer(data, "amountRemaining"), List.copyOf(transactions));
+    }
+
+    private BigDecimal integer(JsonNode data, String field) {
+        if (!data.path(field).isIntegralNumber() || !data.get(field).canConvertToLong()) throw invalid();
+        return data.get(field).decimalValue();
+    }
+
     private Result result(JsonNode data, String idField, String checkout, String qr) {
         if (!data.path("orderCode").isIntegralNumber() || !data.path("amount").isIntegralNumber()
                 || !data.get("orderCode").canConvertToLong()) throw invalid();
@@ -87,7 +106,7 @@ public class PayOSPaymentClient {
             return data;
         } catch (HttpStatusCodeException ex) {
             if (query && ex.getStatusCode().value() == 404) return null;
-            int status = ex.getStatusCode().value() == 429 ? 503 : 502;
+            int status = ex.getStatusCode().value() == 429 || ex.getStatusCode().value() == 503 ? 503 : 502;
             throw failure(status);
         } catch (ResourceAccessException ex) {
             Throwable cause = ex;
@@ -107,33 +126,7 @@ public class PayOSPaymentClient {
     }
 
     private void verify(JsonNode data, String signature) {
-        if (data == null || !data.isObject() || !signature.matches("[0-9a-fA-F]{64}")) throw invalid();
-        var values = new TreeMap<String, String>();
-        data.fields().forEachRemaining(e -> values.put(e.getKey(), canonicalValue(e.getValue())));
-        String canonical = String.join("&", values.entrySet().stream()
-                .map(e -> e.getKey() + "=" + e.getValue()).toList());
-        String expected = signatures.hmacSha256(canonical, checksumKey);
-        if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8),
-                signature.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8))) throw invalid();
-    }
-
-    private String canonicalValue(JsonNode value) {
-        if (value.isNull() || value.isTextual() && Set.of("null", "undefined").contains(value.asText())) return "";
-        if (value.isArray()) {
-            ArrayNode sorted = json.createArrayNode();
-            value.forEach(item -> sorted.add(sortObject(item)));
-            return sorted.toString();
-        }
-        return value.isContainerNode() ? value.toString() : value.asText();
-    }
-
-    private JsonNode sortObject(JsonNode value) {
-        if (!value.isObject()) throw invalid();
-        ObjectNode sorted = json.createObjectNode();
-        var fields = new TreeMap<String, JsonNode>();
-        value.fields().forEachRemaining(e -> fields.put(e.getKey(), e.getValue()));
-        fields.forEach(sorted::set);
-        return sorted;
+        if (!signatures.verifyDataSignature(data, signature, checksumKey)) throw invalid();
     }
 
     private String requiredText(JsonNode data, String field) {

@@ -248,3 +248,98 @@ export const getOrCreatePaymentLinkKey = (orderId) => {
   return newKey;
 };
 
+/**
+ * Idempotency utilities for Admin Payment Reconciliation (FIX-003)
+ * Ensures 1 reconciliation intent (paymentAttemptId + reason) = 1 distinct UUID
+ * Reuses the same UUID across retry/timeout/202 for the same intent
+ * Completely separated namespace from order creation and payment link storage
+ */
+export const RECONCILIATION_STORAGE_KEY = 'hg_reconciliation_idempotency';
+
+/**
+ * Safe sessionStorage read for reconciliation intent
+ */
+export const getStoredReconciliationIntent = (paymentAttemptId) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return null;
+    const raw = sessionStorage.getItem(RECONCILIATION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.key === 'string' &&
+      parsed.paymentAttemptId != null &&
+      (paymentAttemptId == null || String(parsed.paymentAttemptId) === String(paymentAttemptId))
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Safe sessionStorage write for reconciliation intent
+ */
+export const saveReconciliationIntent = (paymentAttemptId, reason, key) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    sessionStorage.setItem(
+      RECONCILIATION_STORAGE_KEY,
+      JSON.stringify({
+        paymentAttemptId: String(paymentAttemptId),
+        reason: typeof reason === 'string' ? reason.trim() : '',
+        key,
+      })
+    );
+  } catch {
+    // Ignore storage write errors
+  }
+};
+
+/**
+ * Safe sessionStorage clear for reconciliation intent
+ */
+export const clearStoredReconciliationIntent = (paymentAttemptId) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    if (paymentAttemptId != null) {
+      const stored = getStoredReconciliationIntent();
+      if (stored && String(stored.paymentAttemptId) !== String(paymentAttemptId)) {
+        return; // Preserve intent if for another payment
+      }
+    }
+    sessionStorage.removeItem(RECONCILIATION_STORAGE_KEY);
+  } catch {
+    // Ignore storage remove errors
+  }
+};
+
+/**
+ * Get existing reconciliation key if paymentAttemptId and reason match, or create a new UUID and persist.
+ * Ensures same payment + same reason after timeout/202 reuses the same UUID.
+ * Changed reason or paymentAttemptId generates a new UUID.
+ * @param {string|number} paymentAttemptId - Payment attempt identifier
+ * @param {string} reason - Reconciliation reason
+ * @returns {string} - Idempotency key (UUID)
+ */
+export const getOrCreateReconciliationKey = (paymentAttemptId, reason) => {
+  const strId = String(paymentAttemptId);
+  const normReason = typeof reason === 'string' ? reason.trim() : '';
+  const stored = getStoredReconciliationIntent(strId);
+
+  if (
+    stored &&
+    stored.key &&
+    String(stored.paymentAttemptId) === strId &&
+    stored.reason === normReason
+  ) {
+    return stored.key;
+  }
+
+  const newKey = generateUUID();
+  saveReconciliationIntent(strId, normReason, newKey);
+  return newKey;
+};
+

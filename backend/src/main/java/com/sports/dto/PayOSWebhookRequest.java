@@ -12,6 +12,7 @@ import lombok.*;
 public class PayOSWebhookRequest {
     private String code;
     private String desc;
+    private Boolean success;
     private PayOSWebhookData data;
     private String signature; // HMAC-SHA256 signature generated with checksumKey
 }

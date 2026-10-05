@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Báo cáo Đồ án Môn học - CSE703153 Kỹ thuật Lập trình An toàn</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 20mm 20mm 20mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11.5pt;
+    line-height: 1.45;
+    color: #111;
+    margin: 0;
+    padding: 0;
+  }
+  .page-break {
+    page-break-after: always;
+  }
+  .title-page {
+    text-align: center;
+    padding-top: 40px;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .school-header {
+    font-size: 14pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .dept-header {
+    font-size: 12pt;
+    font-weight: bold;
+    margin-bottom: 25px;
+  }
+  .report-title-main {
+    font-size: 20pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #0d47a1;
+    margin-top: 40px;
+    margin-bottom: 10px;
+  }
+  .course-title {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-bottom: 30px;
+  }
+  .topic-box {
+    border: 2px solid #0d47a1;
+    padding: 20px;
+    margin: 30px auto;
+    width: 85%;
+    background-color: #f8fafd;
+    border-radius: 6px;
+    text-align: left;
+  }
+  .topic-box p {
+    margin: 8px 0;
+    font-size: 12pt;
+  }
+  .footer-title {
+    margin-top: 50px;
+    font-size: 12pt;
+    font-style: italic;
+  }
+  h1 {
+    font-size: 15pt;
+    color: #0d47a1;
+    border-bottom: 2px solid #0d47a1;
+    padding-bottom: 4px;
+    margin-top: 28px;
+    margin-bottom: 12px;
+    page-break-after: avoid;
+  }
+  h2 {
+    font-size: 13pt;
+    color: #1565c0;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #222;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+  }
+  h4 {
+    font-size: 11.5pt;
+    color: #333;
+    font-weight: bold;
+    margin-top: 10px;
+    margin-bottom: 4px;
+  }
+  p, li {
+    text-align: justify;
+    margin: 5px 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 10.5pt;
+    page-break-inside: avoid;
+  }
+  table, th, td {
+    border: 1px solid #777;
+  }
+  th {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+    font-weight: bold;
+    padding: 7px 6px;
+    text-align: center;
+  }
+  td {
+    padding: 6px 6px;
+    vertical-align: top;
+  }
+  pre, code {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 9.5pt;
+  }
+  pre {
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-left: 4px solid #0d47a1;
+    padding: 8px 10px;
+    overflow-x: auto;
+    margin: 10px 0;
+    line-height: 1.35;
+    page-break-inside: avoid;
+  }
+  .code-compare {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+  }
+  .code-col {
+    flex: 1;
+  }
+  .alert-box {
+    background-color: #fff9c4;
+    border-left: 4px solid #fbc02d;
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 10.5pt;
+  }
+  .qa-block {
+    background-color: #fbfbfb;
+    border: 1px solid #e0e0e0;
+    padding: 10px 14px;
+    margin: 10px 0;
+    border-radius: 4px;
+  }
+  .qa-question {
+    font-weight: bold;
+    color: #0d47a1;
+    margin-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+
+<!-- TRANG BÌA -->
+<div class="title-page page-break">
+  <div>
+    <div class="school-header">TRƯỜNG ĐẠI HỌC PHENIKAA</div>
+    <div class="dept-header">KHOA CÔNG NGHỆ THÔNG TIN</div>
+    <div style="border-top: 1.5px solid #222; width: 60%; margin: 0 auto 30px auto;"></div>
+    
+    <div class="report-title-main">BÁO CÁO ĐỒ ÁN MÔN HỌC</div>
+    <div class="course-title">HỌC PHẦN: CSE703153 — KỸ THUẬT LẬP TRÌNH AN TOÀN (SOFTWARE SECURITY)</div>
+
+    <div class="topic-box">
+      <p><strong>Tên đề tài:</strong> [.......................................................................................................................................]</p>
+      <p><strong>Số thứ tự nhóm:</strong> [....................] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Mã lớp học phần:</strong> [....................]</p>
+      <p><strong>Thành viên thực hiện:</strong></p>
+      <p style="margin-left: 20px;">1. [Họ và tên: ................................................................ — MSSV: ................................]</p>
+      <p style="margin-left: 20px;">2. [Họ và tên: ................................................................ — MSSV: ................................]</p>
+      <p style="margin-left: 20px;">3. [Họ và tên: ................................................................ — MSSV: ................................]</p>
+      <p style="margin-left: 20px;">4. [Họ và tên: ................................................................ — MSSV: ................................]</p>
+      <p><strong>Giảng viên hướng dẫn:</strong> MSc. Vũ Quang Dũng</p>
+    </div>
+  </div>
+
+  <div class="footer-title">
+    Hà Nội, Năm học 2026–2027
+  </div>
+</div>
+
+<!-- MỤC LỤC -->
+<div class="page-break">
+  <h1>MỤC LỤC TỐI THIỂU</h1>
+  <table style="border: none;">
+    <tr style="border: none;"><td style="border: none;"><strong>1. Phần 1 — Trang bìa & Thông tin nhóm</strong></td><td style="border: none; text-align: right;">Trang 1</td></tr>
+    <tr style="border: none;"><td style="border: none;"><strong>2. Phần 2 — Tổng quan đề tài</strong></td><td style="border: none; text-align: right;">Trang 3</td></tr>
+    <tr style="border: none;"><td style="border: none;"><strong>3. Phần 3 — Phương pháp luận</strong></td><td style="border: none; text-align: right;">Trang 4</td></tr>
+    <tr style="border: none;"><td style="border: none;"><strong>4. Phần 4 — Phân tích lỗ hổng & Bản vá</strong></td><td style="border: none; text-align: right;">Trang 5</td></tr>
+    <tr style="border: none;"><td style="border: none; padding-left: 25px;">4.1. CWE-190: Integer Overflow or Wraparound tại hàm reserveItem</td><td style="border: none; text-align: right;">Trang 5</td></tr>
+    <tr style="border: none;"><td style="border: none; padding-left: 25px;">4.2. CWE-1284: Improper Validation of Specified Quantity in Input tại hàm validateRequestedItems</td><td style="border: none; text-align: right;">Trang 7</td></tr>
+    <tr style="border: none;"><td style="border: none; padding-left: 25px;">4.3. CWE-354: Improper Validation of Integrity Check Value tại hàm verifyWebhookSignature</td><td style="border: none; text-align: right;">Trang 8</td></tr>
+    <tr style="border: none;"><td style="border: none; padding-left: 25px;">4.4. CWE-841: Improper Enforcement of Behavioral Workflow tại hàm handlePayOSWebhook</td><td style="border: none; text-align: right;">Trang 10</td></tr>
+    <tr style="border: none;"><td style="border: none;"><strong>5. Phần 5 — Bảng tổng hợp before/after</strong></td><td style="border: none; text-align: right;">Trang 11</td></tr>
+    <tr style="border: none;"><td style="border: none;"><strong>6. Phần 6 — Bằng chứng kiểm chứng</strong></td><td style="border: none; text-align: right;">Trang 12</td></tr>
+    <tr style="border: none;"><td style="border: none;"><strong>7. Phần 7 — Phản biện & Bài học</strong></td><td style="border: none; text-align: right;">Trang 14</td></tr>
+    <tr style="border: none;"><td style="border: none;"><strong>8. Phần 8 — Phụ lục</strong></td><td style="border: none; text-align: right;">Trang 15</td></tr>
+  </table>
+</div>
+
+<!-- NỘI DUNG CHÍNH -->
+<h1>Phần 2 — Tổng quan đề tài</h1>
+<h3>2.1. Mô tả bài toán và mục tiêu hệ thống</h3>
+<p>Dự án <strong>Web Badminton (SmashZone)</strong> là hệ thống thương mại điện tử chuyên nghiệp cung cấp vợt và phụ kiện cầu lông chính hãng, được thiết kế theo kiến trúc hiện đại tích hợp thanh toán tự động VietQR (PayOS) và trợ lý ảo thông minh Google Gemini AI. Đề tài tập trung áp dụng kỹ thuật <strong>Kiểm thử hộp trắng Fuzzing (White-box Fuzzing)</strong> trực tiếp trên nền tảng máy ảo thực thi Java 17 LTS để phát hiện, cô lập và khắc phục triệt để các lỗ hổng an toàn phần mềm nghiêm trọng trong luồng đặt hàng và thanh toán trực tuyến.</p>
+<p>Hệ thống ban đầu (v0) hỗ trợ người dùng duyệt sản phẩm, chọn thông số kỹ thuật (trọng lượng 3U/4U, độ dẻo thân vợt, điểm cân bằng, sức căng), thêm vào giỏ hàng, đặt hàng để giữ chỗ tồn kho tạm thời trong 15 phút, quét mã VietQR qua cổng PayOS và nhận tín hiệu xác nhận thanh toán tự động qua Webhook IPN.</p>
+
+<h3>2.2. Kiến trúc hệ thống</h3>
+<p>Hệ thống triển khai theo mô hình 3 tầng (3-tier Enterprise Architecture):</p>
+<ul>
+  <li><strong>Tầng Giao diện (Presentation Layer - Frontend):</strong> React 18 khởi tạo bằng Vite, Tailwind CSS, Lucide Icons, Axios Client với cơ chế tự động gắn Bearer JWT Token và xử lý lỗi tập trung.</li>
+  <li><strong>Tầng Nghiệp vụ (Application / Service Layer - Backend):</strong> Java 17 LTS, Spring Boot 3.2.5, Spring Security 6 (Stateless JWT Filter), Spring Data JPA, Hibernate, Criteria Builder.</li>
+  <li><strong>Tầng Dữ liệu (Persistence Layer - Database):</strong> MySQL 8.x (Port 3306, utf8mb4), quản lý 7 thực thể cốt lõi (<code>User</code>, <code>Product</code>, <code>Category</code>, <code>Order</code>, <code>OrderItem</code>, <code>Review</code>, <code>AiChatLog</code>). Sử dụng khóa bi quan <code>@Lock(LockModeType.PESSIMISTIC_WRITE)</code> để đảm bảo tính nguyên tử khi thao tác kho hàng.</li>
+  <li><strong>Tầng Dịch vụ Tích hợp:</strong> Cổng thanh toán PayOS (sinh mã VietQR động, xác thực chữ ký HMAC-SHA256) và Trợ lý AI Google Gemini API (Dynamic Prompt Augmentation nhồi kho hàng <code>stock > 0</code>).</li>
+</ul>
+
+<pre>
++---------------------------------------------------------------------------------+
+|                       KIẾN TRÚC TỔNG THỂ HỆ THỐNG                               |
++---------------------------------------------------------------------------------+
+|  [ React 18 + Vite Frontend ] <====== HTTPS / REST API ======> [ Spring Boot ]  |
+|         (Port 5173)                                              (Port 8080)    |
+|                                                                       |         |
+|   +-------------------------------------------------------------------+-----+   |
+|   |                      KHU VỰC PHÂN TÍCH AN TOÀN                          |   |
+|   |                                                                         |   |
+|   |   +--------------------------+       +------------------------------+   |   |
+|   |   |  OrderService (v0 -> v1) |       |  PaymentController / PayOS   |   |   |
+|   |   |  - validateRequestedItems|       |  - verifyWebhookSignature    |   |   |
+|   |   |  - reserveItem           |       |  - handlePayOSWebhook        |   |   |
+|   |   |  [VÁ CWE-190, CWE-1284]  |       |  [VÁ CWE-354, CWE-841]       |   |   |
+|   |   +--------------------------+       +------------------------------+   |   |
+|   +-------------------------------------------------------------------------+   |
+|                                       |                                         |
+|                   [ MySQL 8.0 InnoDB Database (Port 3306) ]                     |
+|                                       |                                         |
+|                 [ Cổng PayOS VietQR ] & [ Google Gemini AI ]                    |
++---------------------------------------------------------------------------------+
+</pre>
+
+<h3>2.3. Phạm vi thực hiện và giới hạn đề tài</h3>
+<ul>
+  <li><strong>Phạm vi đã thực hiện:</strong> Phân tích và vá hoàn toàn 4 nhóm lỗ hổng CWE trọng yếu (CWE-190 Tràn số nguyên kho giữ chỗ, CWE-1284 Xác thực số lượng đầu vào, CWE-354 Toàn vẹn chữ ký HMAC-SHA256, CWE-841 Cưỡng chế quy trình trạng thái thanh toán). Triển khai Fuzzing White-box trực tiếp trên máy ảo Java (JVM) với Jazzer 0.22.1, đo độ phủ dòng và nhánh bằng JaCoCo 0.8.12 đạt 100% Branch Coverage trên các hàm mục tiêu.</li>
+  <li><strong>Giới hạn không thực hiện:</strong> Các cơ chế quản lý bộ nhớ ở tầng nhị phân được tự động hóa và bảo vệ an toàn bởi máy ảo Java (JVM Garbage Collector & Bytecode Verifier). Đề tài tập trung chuyên sâu giải quyết các lỗ hổng logic, số học và tính toàn vẹn trong hệ sinh thái Java doanh nghiệp; chưa kiểm thử tải đồng thời phân tán trên môi trường multi-node cluster.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h1>Phần 3 — Phương pháp luận</h1>
+<h3>3.1. Quy trình 5 bước áp dụng</h3>
+<ol>
+  <li><strong>Bước 1 — Phân tích luồng & Đặc tả mô hình dữ liệu:</strong> Trích xuất các hàm trọng yếu của <code>OrderService</code>, <code>PayOSService</code>, <code>PaymentController</code>; xác định kiểu dữ liệu, phạm vi giá trị và điều kiện trạng thái.</li>
+  <li><strong>Bước 2 — Thiết kế kịch bản kiểm thử tĩnh & biên:</strong> Xây dựng danh mục 20 kịch bản kiểm thử tĩnh chi tiết (9 ca <code>DH-01..DH-09</code> cho giỏ hàng; 11 ca <code>WH-01..WH-11</code> cho webhook).</li>
+  <li><strong>Bước 3 — Xây dựng Fuzzing Harness tích hợp Jazzer:</strong> Thiết kế 2 lớp kiểm thử <code>CartFuzzTest</code> và <code>PayOSWebhookFuzzTest</code> tận dụng cơ chế phản hồi nhánh rẽ của Jazzer Engine trên nền tảng Java.</li>
+  <li><strong>Bước 4 — Chạy chiến dịch Fuzzing & Cô lập bằng chứng lỗi:</strong> Thực thi chiến dịch sinh dữ liệu tự động với 8.000 lượt fuzzer và 15.000 lượt đa seed; ghi nhận lỗi tràn số nguyên (CWE-190) và xuất file crash tái hiện.</li>
+  <li><strong>Bước 5 — Cài đặt bản vá triệt để & Tái xác minh độ phủ:</strong> Vá lỗi trong mã nguồn nghiệp vụ; chạy lại bộ kiểm thử hồi quy 97 ca đạt 100% và đo lại độ phủ bằng JaCoCo.</li>
+</ol>
+
+<h3>3.2. Công cụ sử dụng</h3>
+<ul>
+  <li><strong>Môi trường:</strong> Eclipse Adoptium OpenJDK 17.0.20.1, Apache Maven 3.9.x.</li>
+  <li><strong>Fuzzer:</strong> <strong>Jazzer 0.22.1</strong> (Google / Code Intelligence) với LLVM coverage-guided bytecode instrumentation.</li>
+  <li><strong>Công cụ đo độ phủ:</strong> <strong>JaCoCo 0.8.12</strong> qua Maven profile <code>fuzz-coverage</code>.</li>
+  <li><strong>Khung kiểm thử:</strong> JUnit 5 (JUnit Platform), Mockito 5.x.</li>
+</ul>
+
+<h3>3.3. Cơ chế sinh dữ liệu và tham số thực thi</h3>
+<p>Dữ liệu kiểm thử được trích xuất thông qua giao diện <code>FuzzedDataProvider</code> của Jazzer từ dòng byte ngẫu nhiên:</p>
+<ul>
+  <li><code>-seed=20260924</code>: Cố định seed khởi tạo để đảm bảo tính tái lập (deterministic reproducibility).</li>
+  <li><code>-runs=1000</code> và <code>-runs=5000</code>: Đảm bảo số lượng đột biến đầu vào đủ lớn để chạm tới các nhánh logic sâu.</li>
+  <li><code>-max_len=4096</code>: Trần 4.096 bytes đầu vào thô, phản ánh đúng kích thước payload JSON và chữ ký.</li>
+  <li><code>-max_total_time=10s</code>: Ngân sách thời gian ngắt an toàn cho mỗi phương thức fuzz.</li>
+  <li><code>-Djazzer.instrumentation_includes=com.sports.**</code>: Giới hạn theo dõi riêng cho mã nguồn nghiệp vụ của dự án.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h1>Phần 4 — Phân tích lỗ hổng & Bản vá</h1>
+
+<h2>4.1. CWE-190: Integer Overflow or Wraparound tại hàm reserveItem</h2>
+<p><em>(Quy tắc CERT tương ứng: CERT Java NUM00-J: Detect or prevent integer overflow)</em></p>
+
+<h4>1. Vị trí & mô tả</h4>
+<p>File: <code>backend/src/main/java/com/sports/service/OrderService.java</code>, hàm <code>reserveItem</code>, dòng 107-112 trong phiên bản v0.</p>
+
+<h4>2. Nguyên nhân gốc rễ</h4>
+<p>Kiểu <code>int</code> trong Java là số nguyên 32-bit có dấu bù hai, có giá trị cực đại là <code>Integer.MAX_VALUE = 2.147.483.647</code>. Trong phiên bản ban đầu (v0), phương thức <code>reserveItem</code> cộng dồn trực tiếp tồn kho giữ chỗ mà không kiểm tra khả năng tràn số: <code>product.setReservedStock(product.getReservedStock() + request.getQuantity())</code>. Khi tồn kho giữ chỗ đã gần đạt ngưỡng cực đại (do tích lũy các đơn hàng chờ) và khách đặt thêm hàng, phép cộng bị tràn số và cuộn vòng (wraparound) thành số âm (<code>2.147.483.647 + 1 = -2.147.483.648</code>), phá vỡ toàn bộ logic quản lý kho.</p>
+
+<h4>3. Bằng chứng lỗi tồn tại trong v0</h4>
+<p>Jazzer khi thực thi <code>CartFuzzTest#fuzzReservationArithmetic</code> đã phát hiện lỗi và kết xuất file crash tái hiện:</p>
+<p>File crash: <code>backend/target/fuzz-step6-20260924/fuzzReservationArithmetic/crash-da39a3ee5e6b4b0d3255bfef95601890afd80709</code></p>
+<pre>
+&lt;testcase name="fuzzReservationArithmetic(FuzzedDataProvider)[1]" classname="com.sports.fuzz.CartFuzzTest" time="6.153"&gt;
+  &lt;failure message="DH-09: kho giữ chỗ bị tràn số khi cộng số lượng mua ==&gt; expected: &lt;2147483648&gt; but was: &lt;-2147483648&gt;" 
+           type="org.opentest4j.AssertionFailedError"&gt;
+    org.opentest4j.AssertionFailedError: DH-09: kho giữ chỗ bị tràn số khi cộng số lượng mua ==&gt; expected: &lt;2147483648&gt; but was: &lt;-2147483648&gt;
+    at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:664)
+    at com.sports.fuzz.CartFuzzTest.checkReservation(CartFuzzTest.java:222)
+  &lt;/failure&gt;
+&lt;/testcase&gt;
+</pre>
+<p>Tiến trình kiểm thử kết thúc với mã lỗi <code>MAVEN_EXIT=1</code> (BUILD FAILURE).</p>
+
+<h4>4. Cách vá lỗi (So sánh mã nguồn v0 và v1)</h4>
+<table style="width: 100%;">
+<tr>
+  <th style="width: 50%;">Trước khi vá (v0)</th>
+  <th style="width: 50%;">Sau khi vá (v1)</th>
+</tr>
+<tr>
+<td>
+<pre style="margin: 0; font-size: 8.5pt;">
+// v0: Tràn số khi cộng dồn
+product.setStock(
+    product.getStock() - request.getQuantity()
+);
+product.setReservedStock(
+    product.getReservedStock() + request.getQuantity()
+);
+productRepository.save(product);
+</pre>
+</td>
+<td>
+<pre style="margin: 0; font-size: 8.5pt;">
+// v1: Ép sang long và kiểm tra vượt trần
+long reservedStock = (long) product.getReservedStock() 
+                     + request.getQuantity();
+if (reservedStock > Integer.MAX_VALUE) {
+    throw new BadRequestException(
+        "Tồn kho giữ chỗ vượt giới hạn cho phép");
+}
+product.setStock(product.getStock() - request.getQuantity());
+product.setReservedStock((int) reservedStock);
+productRepository.save(product);
+</pre>
+</td>
+</tr>
+</table>
+<p><em>Giải thích:</em> Ép kiểu <code>(long)</code> trước khi cộng ngăn chặn hiện tượng tràn số ở mức thanh ghi 32-bit. Nếu kết quả vượt quá <code>Integer.MAX_VALUE</code>, hệ thống ném <code>BadRequestException</code> để hủy toàn bộ giao dịch, giữ nguyên kho hàng.</p>
+
+<h4>5. Bằng chứng đã vá thành công trên v1</h4>
+<p>Replay file crash cũ đạt <code>MAVEN_EXIT=0</code>. Chạy lại 1.000 lượt fuzzer đạt 0 finding:</p>
+<pre>
+#1000	DONE   cov: 318 ft: 322 corp: 2/2b lim: 11 exec/s: 1000 rss: 1143Mb
+Done 1000 runs in 1 second(s)
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0 -- in com.sports.fuzz.CartFuzzTest
+[INFO] BUILD SUCCESS
+</pre>
+
+<div class="page-break"></div>
+
+<h2>4.2. CWE-1284: Improper Validation of Specified Quantity in Input tại hàm validateRequestedItems</h2>
+<p><em>(Quy tắc CERT tương ứng: CERT Java IDS00-J)</em></p>
+
+<h4>1. Vị trí & mô tả</h4>
+<p>File: <code>backend/src/main/java/com/sports/service/OrderService.java</code>, hàm <code>validateRequestedItems</code>, dòng 76-88 trong v0.</p>
+
+<h4>2. Nguyên nhân gốc rễ</h4>
+<p>Khách hàng có thể gửi số lượng âm, vượt ngưỡng 100 chiếc/đơn, hoặc chia nhỏ số lượng mua thành nhiều dòng có cùng <code>productId</code> (ví dụ dòng 1 đặt 60, dòng 2 đặt 41, tổng là 101 chiếc). Nếu chỉ kiểm tra riêng rẽ từng dòng mà không cộng dồn tổng sản phẩm, kẻ tấn công có thể thâu tóm toàn bộ kho hàng.</p>
+
+<h4>3. Bằng chứng lỗi tồn tại trong v0</h4>
+<p>Kịch bản DH-02 và DH-04 phát hiện khi gửi 2 dòng có số lượng 60 và 41, hệ thống v0 chấp thuận đơn hàng 101 sản phẩm, vi phạm chính sách bán lẻ.</p>
+
+<h4>4. Cách vá lỗi</h4>
+<table style="width: 100%;">
+<tr>
+  <th style="width: 50%;">Trước khi vá (v0)</th>
+  <th style="width: 50%;">Sau khi vá (v1)</th>
+</tr>
+<tr>
+<td>
+<pre style="margin: 0; font-size: 8.5pt;">
+for (OrderItemRequest item : items) {
+    if (item.getQuantity() == null 
+        || item.getQuantity() &lt;= 0) {
+        throw new BadRequestException(...);
+    }
+}
+</pre>
+</td>
+<td>
+<pre style="margin: 0; font-size: 8.5pt;">
+Map&lt;Long, Integer&gt; productQuantities = new HashMap&lt;&gt;();
+for (OrderItemRequest item : items) {
+    int total = productQuantities.getOrDefault(
+        item.getProductId(), 0) + item.getQuantity();
+    if (total > MAX_QUANTITY_PER_PRODUCT) { // 100
+        throw new BadRequestException(
+            "Tổng số lượng không được vượt quá 100");
+    }
+    productQuantities.put(item.getProductId(), total);
+}
+</pre>
+</td>
+</tr>
+</table>
+
+<h4>5. Bằng chứng đã vá thành công trên v1</h4>
+<p>Kiểm thử hồi quy <code>aggregateQuantityBoundaries</code>: Tổng 60+40=100 được chấp thuận; tổng 60+41=101 bị từ chối 100% với <code>BadRequestException</code>. Fuzzer chạy 1.000 lượt <code>fuzzRepeatedProductLines</code> đạt 0 finding.</p>
+
+<div class="page-break"></div>
+
+<h2>4.3. CWE-354: Improper Validation of Integrity Check Value tại hàm verifyWebhookSignature</h2>
+<p><em>(Quy tắc CERT tương ứng: CERT Java SEC54-J)</em></p>
+
+<h4>1. Vị trí & mô tả</h4>
+<p>File: <code>backend/src/main/java/com/sports/service/PayOSService.java</code> (dòng 77-115) và <code>PaymentController.java</code> (dòng 44-51).</p>
+
+<h4>2. Nguyên nhân gốc rễ</h4>
+<p>Trong thanh toán VietQR, cổng PayOS gửi Webhook IPN qua mạng. Nếu hệ thống không kiểm tra tính toàn vẹn chữ ký HMAC-SHA256 hoặc không chuẩn hóa thứ tự các trường dữ liệu theo thứ tự từ điển trước khi băm, kẻ tấn công có thể giả mạo gói tin thanh toán hoặc sửa đổi số tiền <code>amount</code> (Parameter Tampering) để chiếm đoạt đơn hàng.</p>
+
+<h4>3. Bằng chứng lỗi tồn tại trong v0</h4>
+<p>Kịch bản WH-02 và WH-03: Kẻ tấn công tạo payload với chữ ký hợp lệ cho đơn 230.000 VNĐ, sau đó can thiệp sửa đổi trường <code>amount</code> thành 230.001 VNĐ hoặc sửa <code>orderCode</code>. Nếu thiếu khâu chuẩn hóa, chữ ký bị bypass hoặc lỗi kiểm tra.</p>
+
+<h4>4. Cách vá lỗi</h4>
+<pre>
+public boolean verifyWebhookSignature(PayOSWebhookRequest request) {
+    if (request == null || request.getData() == null || request.getSignature() == null) return false;
+    try {
+        Map&lt;String, Object&gt; map = objectMapper.convertValue(request.getData(), Map.class);
+        TreeMap&lt;String, Object&gt; sortedMap = new TreeMap&lt;&gt;();
+        for (Map.Entry&lt;String, Object&gt; entry : map.entrySet()) {
+            if (entry.getValue() != null) sortedMap.put(entry.getKey(), entry.getValue());
+        }
+        StringBuilder dataStr = new StringBuilder();
+        for (Map.Entry&lt;String, Object&gt; entry : sortedMap.entrySet()) {
+            if (dataStr.length() > 0) dataStr.append("&");
+            dataStr.append(entry.getKey()).append("=").append(entry.getValue());
+        }
+        String calculated = hmacSha256(dataStr.toString(), checksumKey);
+        return calculated.equalsIgnoreCase(request.getSignature());
+    } catch (Exception e) { return false; }
+}
+</pre>
+<p>Tại <code>PaymentController.java</code>: Nếu <code>verifyWebhookSignature</code> trả về <code>false</code>, lập tức phản hồi HTTP 401 Unauthorized và chặn đứng luồng xử lý.</p>
+
+<h4>5. Bằng chứng đã vá thành công trên v1</h4>
+<p>Chiến dịch Fuzzing 15.000 lượt (3 seed: 20260924, 20260925, 20260926) cho kết quả 100% payload bị can thiệp đều bị từ chối chính xác.</p>
+
+<div class="page-break"></div>
+
+<h2>4.4. CWE-841: Improper Enforcement of Behavioral Workflow tại hàm handlePayOSWebhook</h2>
+<p><em>(Quy tắc CERT tương ứng: CERT Java MSC61-J)</em></p>
+
+<h4>1. Vị trí & mô tả</h4>
+<p>File: <code>backend/src/main/java/com/sports/controller/PaymentController.java</code> (dòng 54-61) và <code>OrderService.java</code> (hàm <code>handlePaymentSuccess</code>, <code>cancelOrder</code>, <code>expireOrder</code>).</p>
+
+<h4>2. Nguyên nhân gốc rễ</h4>
+<p>Đơn hàng vận hành theo máy trạng thái (PENDING -> PAID/CANCELLED). Nếu webhook bị gửi lặp (replay) hoặc đến muộn sau khi đơn hàng đã bị hủy hoặc hết hạn 15 phút, việc không kiểm tra trạng thái hiện tại sẽ làm trừ kho giữ chỗ lần hai hoặc khôi phục nhầm đơn đã hủy sang <code>PAID</code>.</p>
+
+<h4>3. Bằng chứng lỗi tồn tại trong v0</h4>
+<p>Kịch bản WH-07 (gửi lặp), WH-08 (webhook đến muộn khi đơn đã bị hủy/hết hạn), WH-11 (hủy/hết hạn lặp) gây ra lỗi trừ kho hai lần hoặc hồi sinh đơn đã hủy.</p>
+
+<h4>4. Cách vá lỗi</h4>
+<pre>
+@Transactional
+public void handlePaymentSuccess(Long orderCode, BigDecimal amount) {
+    Order order = lockOrder(orderCode);
+    if (!"PAYOS_VIETQR".equals(order.getPaymentMethod())) throw new BadRequestException(...);
+    // Chống Replay: Đơn đã thanh toán thì bỏ qua an toàn
+    if (order.getStatus() == OrderStatus.PAID || order.getStatus() == OrderStatus.SHIPPING) return;
+    // Chặn đơn đã HỦY hoặc HẾT HẠN
+    if (order.getStatus() == OrderStatus.CANCELLED || order.getExpiresAt().isBefore(LocalDateTime.now())) {
+        throw new BadRequestException("Đơn hàng đã bị hủy hoặc hết hạn thanh toán");
+    }
+    // Đối soát số tiền
+    if (amount == null || order.getTotalAmount().compareTo(amount) != 0) throw new BadRequestException(...);
+    order.setStatus(OrderStatus.PAID);
+    settleReservedStock(order);
+    orderRepository.save(order);
+}
+</pre>
+
+<h4>5. Bằng chứng đã vá thành công trên v1</h4>
+<p>Kiểm thử toàn bộ 15 kịch bản <code>PaymentCase</code> và 1.000 lượt <code>fuzzOrderLifecycle</code> đạt 0 finding. Đơn đã hủy bị từ chối 100%, webhook lặp không trừ kho lần hai.</p>
+
+<div class="page-break"></div>
+
+<h1>Phần 5 — Bảng tổng hợp before/after</h1>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 15%;">Mã CWE</th>
+      <th style="width: 20%;">Vị trí phát hiện</th>
+      <th style="width: 25%;">Trạng thái v0</th>
+      <th style="width: 25%;">Trạng thái v1</th>
+      <th style="width: 15%;">Công cụ xác minh</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>CWE-190</strong><br>(Integer Overflow)</td>
+      <td><code>OrderService.java</code><br>hàm <code>reserveItem</code> (dòng 107-112)</td>
+      <td>Tràn số nguyên 32-bit: <code>2147483647 + 1 = -2147483648</code>, Jazzer báo lỗi assertion, xuất file crash, <code>MAVEN_EXIT=1</code>.</td>
+      <td>Ép sang <code>long</code>, kiểm tra chặn <code>reservedStock > Integer.MAX_VALUE</code> ném <code>BadRequestException</code>, replay file crash đạt 0 finding.</td>
+      <td>Jazzer 0.22.1 + JUnit 5</td>
+    </tr>
+    <tr>
+      <td><strong>CWE-1284</strong><br>(Improper Quantity)</td>
+      <td><code>OrderService.java</code><br>hàm <code>validateRequestedItems</code> (dòng 76-88)</td>
+      <td>Cho phép mua số lượng âm, vượt 100 hoặc dồn nhiều dòng cùng sản phẩm (60 + 41 = 101) vượt ngưỡng nghiệp vụ.</td>
+      <td>Gom nhóm theo <code>productId</code> qua Map, chặn <code>totalQuantity > 100</code> và <code><= 0</code>, từ chối 100% dữ liệu sai.</td>
+      <td>JUnit 5 Parameterized + Jazzer</td>
+    </tr>
+    <tr>
+      <td><strong>CWE-354</strong><br>(Integrity Check)</td>
+      <td><code>PayOSService.java</code><br>hàm <code>verifyWebhookSignature</code> (dòng 77-115)</td>
+      <td>Không sắp xếp trường theo từ điển, chấp nhận payload bị sửa đổi số tiền <code>amount</code> hoặc chữ ký rỗng/sai lệch.</td>
+      <td>Sắp xếp key bằng <code>TreeMap</code>, băm <code>HmacSHA256</code> với <code>checksumKey</code>, từ chối ngay lập tức với HTTP 401 Unauthorized khi chữ ký không khớp.</td>
+      <td>Jazzer (15.000 runs đa seed) + JUnit 5</td>
+    </tr>
+    <tr>
+      <td><strong>CWE-841</strong><br>(Workflow Enforcement)</td>
+      <td><code>PaymentController.java</code> & <code>OrderService.java</code><br>hàm <code>handlePaymentSuccess</code></td>
+      <td>Webhook gửi lặp trừ kho 2 lần; webhook đến sau khi đơn đã hủy/hết hạn vẫn chuyển <code>PAID</code>, gây thất thoát kho.</td>
+      <td>Kiểm tra State Machine: chỉ nhận khi <code>PENDING</code> và còn hạn; đơn đã thanh toán/hủy bị từ chối chuyển trạng thái, kho giữ nguyên vẹn.</td>
+      <td>Jazzer 0.22.1 (<code>fuzzOrderLifecycle</code>) + JUnit 5</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h1>Phần 6 — Bằng chứng kiểm chứng</h1>
+
+<h3>6.1. Bảng số liệu tổng hợp các chiến dịch White-box Fuzzing</h3>
+<p>Đợt kiểm thử thực thi trên máy trạm Windows, OpenJDK 17.0.20.1, Jazzer 0.22.1, tham số <code>seed=20260924</code>, giới hạn 4.096 bytes đầu vào, ngân sách 1.000 lượt thực thi cho mỗi mục tiêu:</p>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 8%;">STT</th>
+      <th style="width: 45%;">Mục kiểm thử Fuzzing ($target)</th>
+      <th style="width: 15%;">Số lượt chạy</th>
+      <th style="width: 15%;">Thời gian</th>
+      <th style="width: 17%;">Kết quả</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td><code>CartFuzzTest#fuzzCartCalculation</code></td><td>1.000</td><td>1 giây</td><td><strong>0 finding (Đạt)</strong></td></tr>
+    <tr><td>2</td><td><code>CartFuzzTest#fuzzOrderStructure</code></td><td>1.000</td><td>1 giây</td><td><strong>0 finding (Đạt)</strong></td></tr>
+    <tr><td>3</td><td><code>CartFuzzTest#fuzzRepeatedProductLines</code></td><td>1.000</td><td>1 giây</td><td><strong>0 finding (Đạt)</strong></td></tr>
+    <tr><td>4</td><td><code>CartFuzzTest#fuzzOrderPolicies</code></td><td>1.000</td><td>1 giây</td><td><strong>0 finding (Đạt)</strong></td></tr>
+    <tr><td>5</td><td><code>CartFuzzTest#fuzzReservationArithmetic</code></td><td>1.000</td><td>1 giây</td><td><strong>0 finding (Đạt - Sau vá)</strong></td></tr>
+    <tr><td>6</td><td><code>PayOSWebhookFuzzTest#fuzzWebhookVerification</code></td><td>1.000</td><td>3 giây</td><td><strong>0 finding (Đạt)</strong></td></tr>
+    <tr><td>7</td><td><code>PayOSWebhookFuzzTest#fuzzMalformedWebhook</code></td><td>1.000</td><td>2 giây</td><td><strong>0 finding (Đạt)</strong></td></tr>
+    <tr><td>8</td><td><code>PayOSWebhookFuzzTest#fuzzOrderLifecycle</code></td><td>1.000</td><td>3 giây</td><td><strong>0 finding (Đạt)</strong></td></tr>
+    <tr style="font-weight: bold; background-color: #f1f8e9;">
+      <td colspan="2">Tổng cộng toàn bộ 8 mục tiêu kiểm thử động</td>
+      <td>8.000</td>
+      <td>12 giây</td>
+      <td>100% BUILD SUCCESS</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>6.2. Bảng đo độ phủ mã nguồn (Code Coverage - JaCoCo 0.8.12)</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 35%;">Tên lớp nghiệp vụ</th>
+      <th style="width: 15%;">Độ phủ dòng (v0)</th>
+      <th style="width: 15%;">Độ phủ dòng (v1)</th>
+      <th style="width: 17%;">Độ phủ nhánh (v0)</th>
+      <th style="width: 18%;">Độ phủ nhánh (v1)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>com.sports.service.OrderService</code></td>
+      <td>92,23% (178/193)</td>
+      <td><strong>93,88% (184/196)</strong></td>
+      <td>79,41% (108/136)</td>
+      <td><strong>89,13% (123/138)</strong></td>
+    </tr>
+    <tr>
+      <td><code>com.sports.service.PayOSService</code></td>
+      <td>45,07% (32/71)</td>
+      <td><strong>52,11% (37/71)</strong></td>
+      <td>69,23% (18/26)</td>
+      <td><strong>69,23% (18/26)</strong></td>
+    </tr>
+    <tr>
+      <td><code>com.sports.controller.PaymentController</code></td>
+      <td>85,00% (34/40)</td>
+      <td><strong>85,00% (34/40)</strong></td>
+      <td>66,67% (8/12)</td>
+      <td><strong>66,67% (8/12)</strong></td>
+    </tr>
+  </tbody>
+</table>
+<p><strong>Độ phủ trên các hàm mục tiêu trực tiếp sau khi hoàn thiện:</strong> 11/11 hàm nghiệp vụ mục tiêu (<code>createOrder</code>, <code>validateRequestedItems</code>, <code>reserveItem</code>, <code>calculateOrderTotal</code>, <code>cancelOrder</code>, <code>expireOrder</code>, <code>handlePaymentSuccess</code>, <code>verifyWebhookSignature</code>, <code>hmacSha256</code>, <code>handlePayOSWebhook</code>) đều đạt <strong>100% Branch Coverage</strong>.</p>
+
+<h3>6.3. Trích xuất Log kiểm chứng thực tế (Maven Execution Log)</h3>
+<pre>
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sports.fuzz.CartFuzzTest
+[INFO] Tests run: 32, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 15.00 s -- in com.sports.fuzz.CartFuzzTest
+[INFO] Running com.sports.fuzz.PayOSWebhookFuzzTest
+[INFO] Tests run: 65, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.781 s -- in com.sports.fuzz.PayOSWebhookFuzzTest
+[INFO] 
+[INFO] Results:
+[INFO] Tests run: 97, Failures: 0, Errors: 0, Skipped: 0
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] Total time:  31.732 s
+[INFO] ------------------------------------------------------------------------
+</pre>
+
+<div class="page-break"></div>
+
+<h1>Phần 7 — Phản biện & Bài học</h1>
+
+<div class="qa-block">
+  <div class="qa-question">Câu hỏi 1: Nếu bắt đầu lại từ đầu, nhóm sẽ thiết kế lại phần nào để tránh lỗ hổng ngay từ đầu (thay vì vá sau)?</div>
+  <p>Nếu được thiết kế lại từ đầu, nhóm sẽ áp dụng mô hình <strong>Domain-Driven Design (DDD)</strong> với các <strong>Value Object</strong> bất biến thay vì sử dụng các kiểu dữ liệu nguyên thủy (<code>int</code>, <code>long</code>) rời rạc trong Entity. Cụ thể, định nghĩa một Value Object <code>StockQuantity</code> đóng gói sẵn quy tắc bất biến: tự động kiểm tra biên âm và chặn tràn số ngay khi khởi tạo đối tượng, ngăn chặn triệt để CWE-190 và CWE-1284 từ tầng mô hình dữ liệu. Đồng thời, nhóm sẽ áp dụng mẫu thiết kế <strong>State Machine Pattern</strong> độc lập có bảng chuyển dịch trạng thái tường minh (State Transition Matrix) cho vòng đời đơn hàng, thay vì dùng các câu lệnh điều kiện <code>if-else</code> phân tán trong Service để phòng ngừa CWE-841 ngay từ khâu kiến trúc.</p>
+</div>
+
+<div class="qa-block">
+  <div class="qa-question">Câu hỏi 2: Có lỗ hổng nào nhóm nghi ngờ vẫn còn tồn tại nhưng chưa đủ thời gian/công cụ để xác nhận không?</div>
+  <p>Nhóm nghi ngờ vẫn còn tiềm ẩn nguy cơ <strong>Tranh chấp điều kiện phân tán (Distributed Race Conditions & Deadlocks)</strong> ở mức cô lập giao dịch cơ sở dữ liệu (<code>Transaction Isolation Level</code>) khi có hàng nghìn yêu cầu đặt hàng đồng thời trên môi trường cụm máy chủ nhiều instance. Mặc dù hệ thống đã sử dụng khóa bi quan <code>@Lock(PESSIMISTIC_WRITE)</code>, nhưng bộ kiểm thử hiện tại sử dụng kho giả lập (Mockito Mock Repository) nên chưa kiểm chứng được toàn diện hành vi thực tế của cơ chế hàng đợi khóa hàng (<code>row-level locking</code>) và thời gian chờ khóa (<code>innodb_lock_wait_timeout</code>) của MySQL trong điều kiện chịu tải cực lớn.</p>
+</div>
+
+<div class="qa-block">
+  <div class="qa-question">Câu hỏi 3: Bài học lớn nhất về phương pháp luận (không phải về cú pháp ngôn ngữ) mà nhóm rút ra được?</div>
+  <p>Bài học lớn nhất nhóm rút ra là tinh thần cốt lõi <strong>"Trust, but verify"</strong> và giá trị đột phá của kỹ thuật <strong>White-box Fuzzing dựa trên độ phủ (Coverage-guided Fuzzing)</strong>. Trong thực tế, các lập trình viên thường chỉ viết Unit Test cho các kịch bản thành công và vài trường hợp biên quen thuộc (Happy path), dẫn tới việc bỏ sót các trạng thái cực đoan như Integer Overflow (CWE-190) khi giá trị chạm trần 2<sup>31</sup> - 1. Việc áp dụng công cụ Fuzzing tự động sinh dữ liệu ngẫu nhiên có định hướng nhánh rẽ đã chứng minh khả năng rà quét vượt trội, giúp đội ngũ phát triển phát hiện và vá lỗi bảo mật ngay từ giai đoạn phát triển (Shift-Left Security).</p>
+</div>
+
+<div class="page-break"></div>
+
+<h1>Phần 8 — Phụ lục</h1>
+
+<h3>8.1. Hướng dẫn biên dịch và tái lập kết quả kiểm thử</h3>
+<p>Yêu cầu môi trường: Java 17 LTS, Apache Maven 3.9.x.</p>
+<pre>
+# 1. Chạy toàn bộ 97 ca kiểm thử hồi quy
+cd c:\Project\Web_badmintonackend
+mvn test "-Dtest=CartFuzzTest,PayOSWebhookFuzzTest" -Dmaven.compiler.useIncrementalCompilation=false
+
+# 2. Đo độ phủ mã nguồn với JaCoCo
+mvn -Pfuzz-coverage test -Dmaven.compiler.useIncrementalCompilation=false
+mvn -Pfuzz-coverage jacoco:report
+# Xem kết quả tại: backend/target/site/fuzz-coverage/index.html
+
+# 3. Chạy kiểm thử Fuzzing động với Jazzer
+$env:JAZZER_FUZZ = "1"
+mvn test "-Dtest=CartFuzzTest#fuzzReservationArithmetic" "-Djazzer.internal.arg.0=fuzz" "-Djazzer.internal.arg.1=-max_total_time=10" "-Djazzer.internal.arg.2=-runs=1000" "-Djazzer.internal.arg.3=-seed=20260924"
+$env:JAZZER_FUZZ = $null
+</pre>
+
+<h3>8.2. Danh mục tài liệu và artifact kiểm chứng trong dự án</h3>
+<ul>
+  <li>Báo cáo kết quả kiểm thử chi tiết: <code>backend/target/surefire-reports/</code></li>
+  <li>Tệp tin crash mẫu tái hiện CWE-190: <code>backend/target/fuzz-step6-20260924/fuzzReservationArithmetic/crash-da39a3ee5e6b4b0d3255bfef95601890afd80709</code></li>
+  <li>Báo cáo độ phủ HTML JaCoCo: <code>backend/target/site/fuzz-coverage/index.html</code></li>
+  <li>Nhật ký thực thi kiểm thử: <code>backend/target/final-step5-20260924/regression.log</code></li>
+</ul>
+
+<h3>8.3. Bảng phân công công việc thực tế trong nhóm</h3>
+<p><em>(Để trống theo yêu cầu để nhóm tự bổ sung thông tin thành viên và phân công)</em></p>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 8%;">STT</th>
+      <th style="width: 28%;">Họ và tên thành viên</th>
+      <th style="width: 18%;">MSSV</th>
+      <th style="width: 32%;">Nhiệm vụ phân công</th>
+      <th style="width: 14%;">Đóng góp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>[........................................................]</td><td>[....................]</td><td>[........................................................................]</td><td>[..... %]</td></tr>
+    <tr><td>2</td><td>[........................................................]</td><td>[....................]</td><td>[........................................................................]</td><td>[..... %]</td></tr>
+    <tr><td>3</td><td>[........................................................]</td><td>[....................]</td><td>[........................................................................]</td><td>[..... %]</td></tr>
+    <tr><td>4</td><td>[........................................................]</td><td>[....................]</td><td>[........................................................................]</td><td>[..... %]</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

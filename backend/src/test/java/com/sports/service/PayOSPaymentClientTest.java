@@ -89,6 +89,58 @@ class PayOSPaymentClientTest {
         assertEquals(502, assertThrows(PaymentLinkException.class, () -> client.create(attempt())).getStatus());
     }
 
+    @Test
+    void verifiedQueryIncludesActualTransactionsNullAndUnknownFieldsWithoutCurrency() {
+        String data = queryData();
+        server.expect(requestTo("https://provider.test/v2/payment-requests/123"))
+                .andExpect(method(HttpMethod.GET)).andExpect(header("x-client-id", "fake-client"))
+                .andExpect(header("x-api-key", "fake-api"))
+                .andRespond(withSuccess(envelope(data, queryCanonical()), MediaType.APPLICATION_JSON));
+        var result = client.queryPayment(123L);
+        assertEquals("PAID", result.status());
+        assertEquals(new BigDecimal("100000"), result.amountPaid());
+        assertEquals(BigDecimal.ZERO, result.amountRemaining());
+        assertEquals("TX-123", result.transactions().get(0).reference());
+        assertEquals("2026-10-04T10:00:00", result.transactions().get(0).transactionDateTime());
+        server.verify();
+    }
+
+    @Test
+    void changedUnknownQueryFieldInvalidatesSignatureBeforeParsing() {
+        String signed = envelope(queryData(), queryCanonical()).replace("\"future\":null", "\"future\":\"changed\"");
+        server.expect(anything()).andRespond(withSuccess(signed, MediaType.APPLICATION_JSON));
+        assertEquals(502, assertThrows(PaymentLinkException.class, () -> client.queryPayment(123L)).getStatus());
+    }
+
+    @Test
+    void signedQueryWithFractionalTransactionIsRejected() {
+        String data = queryData().replace("\"reference\":\"TX-123\",\"amount\":100000", "\"reference\":\"TX-123\",\"amount\":1.5");
+        String canonical = queryCanonical().replace("transactions=[{\"amount\":100000", "transactions=[{\"amount\":1.5");
+        server.expect(anything()).andRespond(withSuccess(envelope(data, canonical), MediaType.APPLICATION_JSON));
+        assertEquals(502, assertThrows(PaymentLinkException.class, () -> client.queryPayment(123L)).getStatus());
+    }
+
+    @Test
+    void queryTimeout503And429AreMappedToRetryableErrors() {
+        for (HttpStatus status : new HttpStatus[]{HttpStatus.SERVICE_UNAVAILABLE, HttpStatus.TOO_MANY_REQUESTS}) {
+            server.reset(); server.expect(anything()).andRespond(withStatus(status));
+            assertEquals(503, assertThrows(PaymentLinkException.class, () -> client.queryPayment(123L)).getStatus());
+        }
+        server.reset(); server.expect(anything()).andRespond(request -> { throw new SocketTimeoutException("test-only"); });
+        assertEquals(504, assertThrows(PaymentLinkException.class, () -> client.queryPayment(123L)).getStatus());
+    }
+
+    private String queryData() {
+        return "{\"id\":\"test-id\",\"orderCode\":123,\"amount\":100000,\"amountPaid\":100000,\"amountRemaining\":0,"
+                + "\"status\":\"PAID\",\"future\":null,\"transactions\":[{\"reference\":\"TX-123\",\"amount\":100000,"
+                + "\"transactionDateTime\":\"2026-10-04T10:00:00\"}]}";
+    }
+
+    private String queryCanonical() {
+        return "amount=100000&amountPaid=100000&amountRemaining=0&future=&id=test-id&orderCode=123&status=PAID"
+                + "&transactions=[{\"amount\":100000,\"reference\":\"TX-123\",\"transactionDateTime\":\"2026-10-04T10:00:00\"}]";
+    }
+
     private String createEnvelope() {
         String data = "{\"amount\":100000,\"currency\":\"VND\",\"orderCode\":123,\"paymentLinkId\":\"test-id\","
                 + "\"status\":\"PENDING\",\"checkoutUrl\":\"https://pay.payos.vn/web/test-id\",\"qrCode\":\"QR-PAYMENT-STRING\"}";

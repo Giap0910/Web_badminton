@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
@@ -17,12 +17,30 @@ import {
   Store,
   ShieldCheck,
   ChevronDown,
-  Activity
+  Activity,
+  Menu,
+  X
 } from 'lucide-react';
 
 const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -48,22 +66,46 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans antialiased flex flex-col md:flex-row">
+      {/* MOBILE BACKDROP */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 md:hidden transition-opacity"
+        />
+      )}
+
       {/* SIDEBAR FIXED (Width 256px / 64) */}
-      <aside className="w-64 bg-[#0F172A] text-white flex flex-col justify-between shrink-0 fixed inset-y-0 left-0 z-50 select-none shadow-xl border-r border-slate-800">
+      <aside
+        id="admin-sidebar"
+        className={`${
+          isMobileMenuOpen ? 'flex' : 'hidden'
+        } md:flex w-64 bg-[#0F172A] text-white flex-col justify-between shrink-0 fixed inset-y-0 left-0 z-50 select-none shadow-xl border-r border-slate-800`}
+      >
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* BRAND HEADER */}
-          <div className="h-16 px-5 flex items-center gap-3 border-b border-slate-800 bg-[#0B1120]">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-secondary to-red-500 flex items-center justify-center font-black text-white text-sm tracking-wider shadow-md shadow-red-600/30">
-              HG
+          <div className="h-16 px-5 flex items-center justify-between border-b border-slate-800 bg-[#0B1120]">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-secondary to-red-500 flex items-center justify-center font-black text-white text-sm tracking-wider shadow-md shadow-red-600/30">
+                HG
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black text-sm tracking-tight text-white uppercase leading-none">
+                  HG <span className="text-secondary">ADMIN</span>
+                </span>
+                <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider mt-1">
+                  Pro Badminton Portal
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="font-black text-sm tracking-tight text-white uppercase leading-none">
-                HG <span className="text-secondary">ADMIN</span>
-              </span>
-              <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider mt-1">
-                Pro Badminton Portal
-              </span>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Đóng menu quản trị"
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* MENU SECTIONS */}
@@ -81,6 +123,7 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
                       key={item.to}
                       to={item.to}
                       end={item.end}
+                      onClick={() => setIsMobileMenuOpen(false)}
                       className={({ isActive }) =>
                         `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                           isActive
@@ -112,6 +155,7 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
                     <NavLink
                       key={item.to}
                       to={item.to}
+                      onClick={() => setIsMobileMenuOpen(false)}
                       className={({ isActive }) =>
                         `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                           isActive
@@ -147,6 +191,7 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
                     <NavLink
                       key={item.to}
                       to={item.to}
+                      onClick={() => setIsMobileMenuOpen(false)}
                       className={({ isActive }) =>
                         `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                           isActive
@@ -203,12 +248,24 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
       </aside>
 
       {/* RIGHT MAIN AREA (Offset by 256px on md+) */}
-      <div className="flex-1 md:pl-64 flex flex-col min-h-screen">
+      <div className="flex-1 md:pl-64 flex flex-col min-h-screen min-w-0 w-full max-w-full">
         {/* TOPBAR HEADER */}
         <header className="fixed top-0 left-0 md:left-64 right-0 h-16 bg-white/95 backdrop-blur-md shadow-xs border-b border-slate-200/80 z-40 px-4 md:px-8 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4 min-w-0">
+            {/* Mobile Menu Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Mở menu quản trị"
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="admin-sidebar"
+              className="md:hidden p-2 -ml-1 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
             {/* Search Input */}
-            <div className="flex items-center w-72 lg:w-96 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200/60 focus-within:border-blue-500 focus-within:bg-white transition-all">
+            <div className="flex items-center w-44 sm:w-72 lg:w-96 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200/60 focus-within:border-blue-500 focus-within:bg-white transition-all min-w-0">
               <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
               <input
                 type="text"
@@ -225,7 +282,7 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
           </div>
 
           {/* Topbar Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
               className="relative p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
@@ -257,7 +314,7 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
         </header>
 
         {/* MAIN BODY CONTENT */}
-        <main className="pt-16 p-4 md:p-8 flex-1 bg-[#F8FAFC]">
+        <main className="pt-16 p-4 md:p-8 flex-1 bg-[#F8FAFC] min-w-0 w-full max-w-full">
           {children}
         </main>
       </div>
