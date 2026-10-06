@@ -126,6 +126,14 @@ function AppContent() {
               }
             />
             <Route
+              path="/orders/cancel"
+              element={
+                <PrivateRoute>
+                  <Navigate to="/my-orders" replace />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/orders/:id"
               element={
                 <PrivateRoute>

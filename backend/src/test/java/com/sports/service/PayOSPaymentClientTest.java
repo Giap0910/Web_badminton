@@ -4,13 +4,21 @@ import com.sports.dto.PaymentAttemptResponse;
 import com.sports.entity.PaymentAttempt;
 import com.sports.exception.PaymentLinkException;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.*;
+import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.core.env.*;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.net.SocketTimeoutException;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
@@ -27,18 +35,20 @@ class PayOSPaymentClientTest {
         ReflectionTestUtils.setField(client, "apiKey", "fake-api");
         ReflectionTestUtils.setField(client, "checksumKey", "fake-checksum");
         ReflectionTestUtils.setField(client, "baseUrl", "https://provider.test");
-        ReflectionTestUtils.setField(client, "returnUrl", "https://shop.test/return");
-        ReflectionTestUtils.setField(client, "cancelUrl", "https://shop.test/cancel");
+        ReflectionTestUtils.setField(client, "returnUrl", "https://shop.test/order-success/{orderId}");
+        ReflectionTestUtils.setField(client, "cancelUrl", "https://shop.test/payment/qr/{orderId}?cancelled=1");
         server = MockRestServiceServer.bindTo((RestTemplate) ReflectionTestUtils.getField(client, "http")).build();
     }
 
     @Test
     void exactCreateRequestAndSignedResponse() {
-        String canonical = "amount=100000&cancelUrl=https://shop.test/cancel&description=BADMINTON"
-                + "&orderCode=123&returnUrl=https://shop.test/return";
+        String canonical = "amount=100000&cancelUrl=https://shop.test/payment/qr/501?cancelled=1&description=BADMINTON"
+                + "&orderCode=123&returnUrl=https://shop.test/order-success/501";
         server.expect(requestTo("https://provider.test/v2/payment-requests"))
                 .andExpect(method(HttpMethod.POST)).andExpect(header("x-api-key", "fake-api"))
                 .andExpect(jsonPath("$.amount").value(100000)).andExpect(jsonPath("$.orderCode").value(123))
+                .andExpect(jsonPath("$.returnUrl").value("https://shop.test/order-success/501"))
+                .andExpect(jsonPath("$.cancelUrl").value("https://shop.test/payment/qr/501?cancelled=1"))
                 .andExpect(jsonPath("$.signature").value(signatures.hmacSha256(canonical, "fake-checksum")))
                 .andRespond(withSuccess(createEnvelope(), MediaType.APPLICATION_JSON));
         var result = client.create(attempt());
@@ -46,6 +56,95 @@ class PayOSPaymentClientTest {
         assertEquals("QR-PAYMENT-STRING", result.qrPayload());
         assertEquals("test-id", result.paymentLinkId());
         server.verify();
+    }
+
+    @ParameterizedTest
+    @MethodSource("redirectOrigins")
+    void redirectTemplatesKeepConfiguredOriginAndUseInternalIdentity(String origin) {
+        ReflectionTestUtils.setField(client, "returnUrl", origin + "/order-success/{orderId}");
+        ReflectionTestUtils.setField(client, "cancelUrl", origin + "/payment/qr/{orderId}?cancelled=1");
+        String canonical = "amount=100000&cancelUrl=" + origin + "/payment/qr/501?cancelled=1"
+                + "&description=BADMINTON&orderCode=123&returnUrl=" + origin + "/order-success/501";
+        server.expect(requestTo("https://provider.test/v2/payment-requests"))
+                .andExpect(jsonPath("$.returnUrl").value(origin + "/order-success/501"))
+                .andExpect(jsonPath("$.cancelUrl").value(origin + "/payment/qr/501?cancelled=1"))
+                .andExpect(jsonPath("$.signature").value(signatures.hmacSha256(canonical, "fake-checksum")))
+                .andRespond(withSuccess(createEnvelope(), MediaType.APPLICATION_JSON));
+        var result = client.create(attempt());
+        assertEquals(123L, result.orderCode());
+        server.verify();
+    }
+
+    @Test
+    void applicationTemplatesResolveForLocalDevelopment() {
+        var environment = configuredEnvironment(Map.of());
+        redirectTemplatesKeepConfiguredOriginAndUseInternalIdentity("http://localhost:5173");
+        assertEquals("http://localhost:5173/order-success/{orderId}", environment.getProperty("payos.return-url"));
+        assertEquals("http://localhost:5173/payment/qr/{orderId}?cancelled=1", environment.getProperty("payos.cancel-url"));
+    }
+
+    @Test
+    void environmentOverridesBothTemplatesWithoutChangingJavaDefaults() {
+        var environment = configuredEnvironment(Map.of(
+                "PAYOS_RETURN_URL", "https://deployment.example/order-success/{orderId}",
+                "PAYOS_CANCEL_URL", "https://deployment.example/payment/qr/{orderId}?cancelled=1"));
+        assertEquals("https://deployment.example/order-success/{orderId}", environment.getProperty("payos.return-url"));
+        assertEquals("https://deployment.example/payment/qr/{orderId}?cancelled=1", environment.getProperty("payos.cancel-url"));
+    }
+
+    private ConfigurableEnvironment configuredEnvironment(Map<String, Object> overrides) {
+        var yaml = new YamlPropertiesFactoryBean();
+        yaml.setResources(new ClassPathResource("application.yml"));
+        var environment = new StandardEnvironment();
+        environment.getPropertySources().addFirst(new PropertiesPropertySource("application", yaml.getObject()));
+        environment.getPropertySources().addFirst(new SystemEnvironmentPropertySource("test-env", overrides));
+        return environment;
+    }
+
+    private static Stream<String> redirectOrigins() {
+        return Stream.of("http://localhost:5173", "http://127.0.0.1:5173", "https://shop.example:8443");
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidOrderIds")
+    void invalidInternalIdentityNeverCallsProvider(Long orderId) {
+        var attempt = new PaymentAttemptResponse(1L, orderId, "PAYOS", 123L, null, new BigDecimal("100000"),
+                "VND", PaymentAttempt.Status.CREATING, null, null, LocalDateTime.now().plusMinutes(15), null, null, null);
+        assertEquals(503, assertThrows(PaymentLinkException.class, () -> client.create(attempt)).getStatus());
+        server.verify();
+    }
+
+    private static Stream<Arguments> invalidOrderIds() {
+        return Stream.of(Arguments.of((Object) null), Arguments.of(0L), Arguments.of(-1L));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidRedirectTemplates")
+    void invalidRedirectConfigurationNeverCallsProvider(String field, String template) {
+        ReflectionTestUtils.setField(client, field, template);
+        var error = assertThrows(PaymentLinkException.class, () -> client.create(attempt()));
+        assertEquals(503, error.getStatus());
+        assertEquals("PAYOS_UNAVAILABLE", error.getCode());
+        server.verify();
+    }
+
+    private static Stream<Arguments> invalidRedirectTemplates() {
+        return Stream.of(
+                Arguments.of("returnUrl", null),
+                Arguments.of("returnUrl", "https://shop.test/orders/success"),
+                Arguments.of("returnUrl", "/order-success/{orderId}"),
+                Arguments.of("returnUrl", "ftp://shop.test/order-success/{orderId}"),
+                Arguments.of("returnUrl", "https://shop test/order-success/{orderId}"),
+                Arguments.of("returnUrl", "https://user:password@shop.test/order-success/{orderId}"),
+                Arguments.of("returnUrl", "https://shop.test//order-success/{orderId}"),
+                Arguments.of("returnUrl", "https://shop.test/order-success/{orderId}#token"),
+                Arguments.of("returnUrl", "https://shop.test/order-success/{orderId}?token=test"),
+                Arguments.of("returnUrl", "https://shop.test/order-success/{orderId}/{orderId}"),
+                Arguments.of("returnUrl", "https://shop.test:99999/order-success/{orderId}"),
+                Arguments.of("cancelUrl", "https://shop.test/orders/cancel"),
+                Arguments.of("cancelUrl", "https://shop.test/payment/qr/{orderId}"),
+                Arguments.of("cancelUrl", "https://shop.test/payment/qr/{orderId}?cancelled=0"),
+                Arguments.of("cancelUrl", "https://shop.test/payment/qr/{orderId}?cancelled=1&token=test"));
     }
 
     @Test
@@ -155,7 +254,7 @@ class PayOSPaymentClientTest {
     }
 
     private PaymentAttemptResponse attempt() {
-        return new PaymentAttemptResponse(1L, 2L, "PAYOS", 123L, null, new BigDecimal("100000"),
+        return new PaymentAttemptResponse(1L, 501L, "PAYOS", 123L, null, new BigDecimal("100000"),
                 "VND", PaymentAttempt.Status.CREATING, null, null, LocalDateTime.now().plusMinutes(15), null, null, null);
     }
 }

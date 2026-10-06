@@ -20,6 +20,7 @@ import {
   XCircle,
   RefreshCw
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const QRPaymentPage = () => {
   const { orderId } = useParams();
@@ -311,7 +312,7 @@ const QRPaymentPage = () => {
   const displayAmount = payment?.amount ?? (order?.totalAmount ?? 0);
 
   if (loading) return <p className="p-8" role="status">Đang tải đơn hàng...</p>;
-  if (!order || (error && !payment && !order?.qrCode) || (order && order.status !== 'PENDING') || secondsRemaining <= 0) {
+  if (!order || (error && !payment && !payment?.qrPayload && !payment?.checkoutUrl) || (order && order.status !== 'PENDING') || secondsRemaining <= 0) {
     return <div className="max-w-2xl mx-auto p-8 space-y-4">
       <h1 className="text-xl font-bold">Thanh toán đơn hàng #{orderId}</h1>
       <p role="alert">{error || (order?.status === 'PENDING'
@@ -414,11 +415,39 @@ const QRPaymentPage = () => {
           {/* Viền màu thương hiệu trang trí trên đỉnh card */}
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-600 via-slate-900 to-red-600"></div>
 
-          {/* Trạng thái "Đang chờ thanh toán" */}
+          {/* Banner thông báo khi người dùng quay lại từ cổng thanh toán (?cancelled=1) */}
+          {new URLSearchParams(location.search).get('cancelled') === '1' && (
+            <div className="w-full bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2.5 rounded-xl text-xs font-semibold mb-4 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>Bạn đã quay lại từ cổng thanh toán. Bạn có thể tiếp tục quét mã VietQR bên dưới hoặc kiểm tra lại thanh toán.</span>
+            </div>
+          )}
+
+          {/* Trạng thái thanh toán */}
           {error ? (
             <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-red-800 mb-5 shadow-sm">
               <AlertCircle className="w-3.5 h-3.5 text-red-600" />
               <span>{error}</span>
+            </div>
+          ) : payment?.status === 'NEEDS_REVIEW' ? (
+            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-800 mb-5 shadow-sm">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+              <span>Giao dịch cần được đối soát bởi quản trị viên</span>
+            </div>
+          ) : payment?.status === 'FAILED' ? (
+            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-red-800 mb-5 shadow-sm">
+              <XCircle className="w-3.5 h-3.5 text-red-600" />
+              <span>Giao dịch thanh toán thất bại</span>
+            </div>
+          ) : payment?.status === 'EXPIRED' ? (
+            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-red-800 mb-5 shadow-sm">
+              <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+              <span>Mã thanh toán đã hết hạn</span>
+            </div>
+          ) : payment?.status === 'CANCELLED' ? (
+            <div className="inline-flex items-center gap-2 bg-slate-100 border border-slate-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-800 mb-5 shadow-sm">
+              <AlertCircle className="w-3.5 h-3.5 text-slate-600" />
+              <span>Giao dịch đã hủy trên cổng thanh toán</span>
             </div>
           ) : payment?.status === 'CREATING' ? (
             <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-800 mb-5 shadow-sm">
@@ -466,16 +495,19 @@ const QRPaymentPage = () => {
             <div className="relative w-56 h-56 sm:w-64 sm:h-64 bg-slate-50 rounded-xl flex items-center justify-center p-2 overflow-hidden border border-slate-100">
               <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent scanner-line z-10 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
 
-              {(order?.qrCode || order?.qrCodeUrl) ? (
-                <img
-                  src={order.qrCode || order.qrCodeUrl}
-                  alt="VietQR Code"
-                  className="w-full h-full object-contain"
-                />
-              ) : payment?.status === 'CREATING' ? (
+              {payment?.status === 'CREATING' ? (
                 <div className="text-center p-4 flex flex-col items-center justify-center">
                   <Loader2 className="w-8 h-8 animate-spin text-amber-600 mb-2" />
                   <p className="text-xs font-medium text-slate-500">Đang chuẩn bị liên kết thanh toán...</p>
+                </div>
+              ) : payment?.qrPayload ? (
+                <div className="flex flex-col items-center justify-center p-1 w-full h-full">
+                  <QRCodeSVG
+                    value={payment.qrPayload}
+                    size={210}
+                    level="M"
+                    className="max-w-full max-h-full aspect-square"
+                  />
                 </div>
               ) : payment?.checkoutUrl ? (
                 <div className="text-center p-4 flex flex-col items-center justify-center gap-2">
@@ -490,7 +522,7 @@ const QRPaymentPage = () => {
                   </a>
                 </div>
               ) : (
-                /* Authentic SVG QR Graphic */
+                /* Authentic QR Status */
                 <p className="text-xs text-slate-500 text-center p-4">
                   {error || 'Chưa có mã QR được xác thực.'}
                 </p>

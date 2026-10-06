@@ -46,12 +46,14 @@ public class PayOSPaymentClient {
     public Result create(PaymentAttemptResponse attempt) {
         var payload = json.createObjectNode();
         long amount = VndAmount.requireValid(attempt.amount()).longValueExact();
+        String resolvedReturn = resolveRedirect(returnUrl, attempt.orderId(), "/order-success/", null);
+        String resolvedCancel = resolveRedirect(cancelUrl, attempt.orderId(), "/payment/qr/", "cancelled=1");
         payload.put("amount", amount).put("orderCode", attempt.orderCode());
-        payload.put("description", "BADMINTON").put("returnUrl", returnUrl).put("cancelUrl", cancelUrl);
+        payload.put("description", "BADMINTON").put("returnUrl", resolvedReturn).put("cancelUrl", resolvedCancel);
         long expires = attempt.expiresAt().atZone(ZoneId.systemDefault()).toEpochSecond();
         payload.put("expiredAt", Math.toIntExact(expires));
-        String canonical = "amount=" + amount + "&cancelUrl=" + cancelUrl
-                + "&description=BADMINTON&orderCode=" + attempt.orderCode() + "&returnUrl=" + returnUrl;
+        String canonical = "amount=" + amount + "&cancelUrl=" + resolvedCancel
+                + "&description=BADMINTON&orderCode=" + attempt.orderCode() + "&returnUrl=" + resolvedReturn;
         payload.put("signature", signatures.hmacSha256(canonical, checksumKey));
         JsonNode data = exchange(HttpMethod.POST, "/v2/payment-requests", payload, false);
         if (!"PENDING".equals(data.path("status").asText()) || !"VND".equals(data.path("currency").asText())) {
@@ -61,6 +63,24 @@ public class PayOSPaymentClient {
         validateCheckout(checkout);
         return result(data, "paymentLinkId", checkout, data.path("qrCode").isTextual()
                 ? data.get("qrCode").asText() : null);
+    }
+
+    private String resolveRedirect(String template, Long orderId, String path, String query) {
+        if (orderId == null || orderId <= 0 || template == null || !template.contains("{orderId}")
+                || template.indexOf("{orderId}") != template.lastIndexOf("{orderId}")) throw failure(503);
+        String resolved = template.replace("{orderId}", orderId.toString());
+        try {
+            URI uri = URI.create(resolved);
+            if (!("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()))
+                    || uri.getHost() == null || uri.getUserInfo() != null || uri.getFragment() != null
+                    || uri.getPort() == 0 || uri.getPort() > 65535
+                    || !(path + orderId).equals(uri.getRawPath()) || !Objects.equals(query, uri.getRawQuery())) {
+                throw failure(503);
+            }
+        } catch (IllegalArgumentException ex) {
+            throw failure(503);
+        }
+        return resolved;
     }
 
     public Result query(Long orderCode) {

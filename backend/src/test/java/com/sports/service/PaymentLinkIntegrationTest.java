@@ -120,6 +120,11 @@ class PaymentLinkIntegrationTest {
         assertEquals(first.attempt().id(), retry.attempt().id());
         assertEquals(PaymentAttempt.Status.PENDING, retry.attempt().status());
         assertEquals("https://pay.payos.vn/test", retry.attempt().checkoutUrl());
+        var persisted = service.read(orderId, userId, false);
+        assertEquals("payment-payload", persisted.qrPayload());
+        assertEquals(retry.attempt().checkoutUrl(), persisted.checkoutUrl());
+        assertEquals(orderId, persisted.orderId());
+        assertNotEquals(orderId, persisted.orderCode());
         assertEquals(OrderStatus.PENDING, orders.findById(orderId).orElseThrow().getStatus());
         verify(client, times(1)).create(any());
         verify(client, never()).query(any());

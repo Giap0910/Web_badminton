@@ -58,6 +58,9 @@ export default function RealAdminAndOrderTestApp() {
     const runAllTests = async () => {
       localStorage.setItem('token', 'mock-token');
       localStorage.setItem('user', JSON.stringify({ id: 1, fullName: 'Admin Tester', role: 'ROLE_ADMIN' }));
+      const initialSearch = window.location.search;
+      const initialParams = new URLSearchParams(initialSearch);
+      const initialReceiverPort = initialParams.get('port') || '5182';
       const container = document.getElementById('test-mount-point');
       const results = [];
 

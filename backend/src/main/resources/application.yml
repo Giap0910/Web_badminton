@@ -38,8 +38,8 @@ payos:
   api-key: ${PAYOS_API_KEY:}
   checksum-key: ${PAYOS_CHECKSUM_KEY:}
   mock-enabled: false
-  return-url: http://localhost:5173/orders/success
-  cancel-url: http://localhost:5173/orders/cancel
+  return-url: http://localhost:5173/order-success/{orderId}
+  cancel-url: http://localhost:5173/payment/qr/{orderId}?cancelled=1
 
 gemini:
   api-key: ${GEMINI_API_KEY:}

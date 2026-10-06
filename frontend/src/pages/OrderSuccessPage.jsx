@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
 import { formatPrice, isOrderPaid, getOrderStatusLabel } from '../utils/formatters';
@@ -25,7 +25,10 @@ import {
   Receipt,
   Zap,
   Store,
-  FileCheck
+  FileCheck,
+  RefreshCw,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 const OrderSuccessPage = () => {
@@ -33,9 +36,25 @@ const OrderSuccessPage = () => {
   const location = useLocation();
 
   const [order, setOrder] = useState(null);
+  const [payment, setPayment] = useState(null);
+  const [paymentLoadStatus, setPaymentLoadStatus] = useState('idle'); // 'idle' | 'loading' | 'loaded' | 'absent' | 'error'
+  const [paymentError, setPaymentError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const currentOrderIdRef = useRef(orderId);
+  currentOrderIdRef.current = orderId;
+  const isMountedRef = useRef(true);
+  const isCheckingRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const displayOrderCode = order?.orderCode || `#HG-${orderId || '89241'}`;
 
@@ -45,20 +64,89 @@ const OrderSuccessPage = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const res = await orderApi.getOrderById(orderId);
-        setOrder(res?.data ?? res);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Không thể xác minh đơn hàng. Vui lòng kiểm tra lại danh sách đơn hàng.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchOrderData = async (targetId, isManualCheck = false) => {
+    if (!targetId) {
+      setError('Thiếu mã đơn hàng, chưa thể xác minh thanh toán.');
+      setLoading(false);
+      return;
+    }
 
-    if (orderId) fetchOrder();
-    else { setError('Thiếu mã đơn hàng, chưa thể xác minh thanh toán.'); setLoading(false); }
+    if (isManualCheck) {
+      if (isCheckingRef.current) return;
+      isCheckingRef.current = true;
+      setIsChecking(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      setError('');
+      const res = await orderApi.getOrderById(targetId);
+      const oData = (res && typeof res === 'object' && 'data' in res) ? res.data : res;
+      if (currentOrderIdRef.current !== targetId || !isMountedRef.current) return;
+      setOrder(oData);
+
+      let pData = null;
+      let pStatus = 'idle';
+      let pErrMessage = '';
+      try {
+        const payRes = await orderApi.getOrderPayment(targetId);
+        pData = (payRes && typeof payRes === 'object' && 'data' in payRes) ? payRes.data : payRes;
+        if (pData && pData.status) {
+          pStatus = 'loaded';
+        } else {
+          // Canonical contract: HTTP 200 with null body confirms no payment attempt
+          pStatus = 'absent';
+          pData = null;
+        }
+      } catch (pErr) {
+        // HTTP 4xx/5xx, timeout, network failure -> PAYMENT LOAD FAILED (never treat as absent)
+        pStatus = 'error';
+        pData = null;
+        const pErrStatus = pErr?.response?.status;
+        if (pErrStatus === 401) {
+          pErrMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để xác minh thanh toán.';
+        } else if (pErrStatus === 403) {
+          pErrMessage = 'Bạn không có quyền truy cập thông tin thanh toán của đơn hàng này.';
+        } else if (pErrStatus === 404) {
+          pErrMessage = 'Không tìm thấy dữ liệu thanh toán cho đơn hàng này.';
+        } else {
+          pErrMessage = 'Chưa thể xác minh trạng thái thanh toán. Vui lòng kiểm tra lại.';
+        }
+      }
+
+      if (currentOrderIdRef.current !== targetId || !isMountedRef.current) return;
+      setPayment(pData);
+      setPaymentLoadStatus(pStatus);
+      setPaymentError(pErrMessage);
+    } catch (err) {
+      if (currentOrderIdRef.current !== targetId || !isMountedRef.current) return;
+      const status = err.response?.status;
+      if (status === 401) {
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else if (status === 403) {
+        setError('Bạn không có quyền truy cập thông tin đơn hàng này.');
+      } else if (status === 404) {
+        setError('Không tìm thấy thông tin đơn hàng.');
+      } else {
+        setError(err.response?.data?.message || 'Không thể xác minh đơn hàng. Vui lòng kiểm tra lại danh sách đơn hàng.');
+      }
+    } finally {
+      if (currentOrderIdRef.current === targetId && isMountedRef.current) {
+        setLoading(false);
+        setIsChecking(false);
+      }
+      isCheckingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    setOrder(null);
+    setPayment(null);
+    setPaymentLoadStatus('idle');
+    setPaymentError('');
+    setError('');
+    fetchOrderData(orderId, false);
   }, [orderId]);
 
   if (loading) {
@@ -70,14 +158,236 @@ const OrderSuccessPage = () => {
     );
   }
 
-  if (error || !order || !isOrderPaid(order)) {
-    return <div className="max-w-2xl mx-auto p-8 space-y-4">
-      <h1 className="text-xl font-bold">Trạng thái đơn hàng</h1>
-      <p role="status">{error || (order?.paymentMethod === 'COD' && order?.status === 'PENDING'
-        ? 'Đơn hàng đã được ghi nhận, chưa thanh toán. Thanh toán khi nhận hàng.'
-        : order ? getOrderStatusLabel(order) : 'Chưa có xác nhận thanh toán thành công cho đơn hàng này.')}</p>
-      <Link className="text-red-600 underline" to="/my-orders">Kiểm tra đơn hàng</Link>
-    </div>;
+  // =========================================================================
+  // PAYMENT ATTEMPT EXCLUSIVE AUTHORITY & ERROR PRIORITY (FIX-004 Round 5)
+  // When PaymentAttempt exists (payment != null), payment.status is the SOLE
+  // authority for payment UI. Order.status must NOT override any payment state.
+  // When payment GET fails (paymentLoadStatus === 'error'), payment verification
+  // error is displayed; order.status MUST NEVER be used as a success fallback.
+  // When payment is confirmed absent (paymentLoadStatus === 'absent'), safe fallback
+  // is derived from order/paymentMethod.
+  // =========================================================================
+  const isPaymentError = paymentLoadStatus === 'error';
+  const isPaid = payment
+    ? payment?.status === 'PAID'
+    : (paymentLoadStatus === 'absent' ? isOrderPaid(order) : false);
+
+  const isNeedsReview = payment?.status === 'NEEDS_REVIEW';
+  const isFailed = payment?.status === 'FAILED';
+  const isExpired = payment?.status === 'EXPIRED';
+  const isPaymentCancelled = payment?.status === 'CANCELLED';
+  const isCancelled = payment?.status === 'CANCELLED' || (!payment && order?.status === 'CANCELLED');
+  const isOrderCancelled = order?.status === 'CANCELLED';
+  const isCreating = payment?.status === 'CREATING';
+
+  // isPending: only for payment PENDING attempt, or fallback for PayOS order when attempt is confirmed absent
+  const isPending = payment
+    ? payment?.status === 'PENDING'
+    : (!isPaid && !isOrderCancelled && order?.paymentMethod === 'PAYOS_VIETQR' && order?.status === 'PENDING' && paymentLoadStatus === 'absent');
+
+  // Derive explicit payment display info based on exclusive precedence:
+  let statusBadgeLabel = 'Thông báo';
+  let statusBadgeClass = 'bg-slate-100 text-slate-800';
+  let statusHeading = 'Trạng thái đơn hàng';
+  let statusDetailMessage = '';
+
+  if (payment) {
+    // When payment attempt exists, PAYMENT UI is derived EXCLUSIVELY from payment.status
+    if (isNeedsReview) {
+      statusBadgeLabel = 'Cần đối soát';
+      statusBadgeClass = 'bg-amber-100 text-amber-800';
+      statusHeading = 'Thanh toán đang chờ đối soát';
+      statusDetailMessage = 'Giao dịch thanh toán cần được đối soát bởi quản trị viên. Vui lòng theo dõi tiến trình trong chi tiết đơn hàng hoặc liên hệ hỗ trợ.';
+    } else if (isFailed) {
+      statusBadgeLabel = 'Thanh toán thất bại';
+      statusBadgeClass = 'bg-red-100 text-red-800';
+      statusHeading = 'Thanh toán thất bại';
+      statusDetailMessage = 'Giao dịch thanh toán không thành công. Bạn có thể quay lại trang thanh toán để thử lại.';
+    } else if (isExpired) {
+      statusBadgeLabel = 'Đã hết hạn';
+      statusBadgeClass = 'bg-red-100 text-red-800';
+      statusHeading = 'Mã thanh toán đã hết hạn';
+      statusDetailMessage = 'Mã thanh toán VietQR đã hết hạn. Vui lòng quay lại đơn hàng để tạo mã thanh toán mới.';
+    } else if (isPaymentCancelled) {
+      statusBadgeLabel = 'Đã hủy';
+      statusBadgeClass = 'bg-red-100 text-red-800';
+      statusHeading = 'Giao dịch thanh toán đã bị hủy';
+      statusDetailMessage = 'Giao dịch thanh toán đã bị hủy trên cổng thanh toán.';
+    } else if (isCreating) {
+      statusBadgeLabel = 'Đang khởi tạo';
+      statusBadgeClass = 'bg-amber-100 text-amber-800';
+      statusHeading = 'Đang chuẩn bị liên kết thanh toán';
+      statusDetailMessage = 'Liên kết thanh toán đang được chuẩn bị. Vui lòng chờ trong giây lát hoặc bấm nút "Kiểm tra lại".';
+    } else if (isPending) {
+      statusBadgeLabel = 'Đang xác nhận thanh toán';
+      statusBadgeClass = 'bg-amber-100 text-amber-800';
+      statusHeading = 'Đang kiểm tra giao dịch';
+      statusDetailMessage = 'Đơn hàng đang chờ cổng thanh toán xác nhận. Nếu bạn vừa hoàn tất chuyển khoản, vui lòng chờ trong giây lát hoặc bấm nút "Kiểm tra lại".';
+    }
+  } else if (isPaymentError) {
+    statusBadgeLabel = 'Lỗi xác minh';
+    statusBadgeClass = 'bg-amber-100 text-amber-800';
+    statusHeading = 'Không thể xác minh trạng thái thanh toán';
+    statusDetailMessage = paymentError || 'Chưa thể xác minh trạng thái thanh toán. Vui lòng kiểm tra lại.';
+  } else {
+    // Safe fallback when payment attempt is confirmed absent
+    if (isOrderCancelled) {
+      statusBadgeLabel = 'Đã hủy';
+      statusBadgeClass = 'bg-red-100 text-red-800';
+      statusHeading = 'Đơn hàng đã bị hủy';
+      statusDetailMessage = 'Đơn hàng này đã bị hủy.';
+    } else if (order?.paymentMethod === 'COD' && order?.status === 'PENDING') {
+      statusBadgeLabel = 'Chờ xử lý COD';
+      statusBadgeClass = 'bg-blue-100 text-blue-800';
+      statusHeading = 'Đơn hàng đã được ghi nhận';
+      statusDetailMessage = 'Đơn hàng đã được ghi nhận, chưa thanh toán. Thanh toán khi nhận hàng.';
+    } else if (order?.paymentMethod === 'PAYOS_VIETQR' && order?.status === 'PENDING') {
+      statusBadgeLabel = 'Đang xác nhận thanh toán';
+      statusBadgeClass = 'bg-amber-100 text-amber-800';
+      statusHeading = 'Đang kiểm tra giao dịch';
+      statusDetailMessage = 'Đơn hàng đang chờ cổng thanh toán xác nhận. Nếu bạn vừa hoàn tất chuyển khoản, vui lòng chờ trong giây lát hoặc bấm nút "Kiểm tra lại".';
+    } else if (order) {
+      statusDetailMessage = getOrderStatusLabel(order);
+    } else {
+      statusDetailMessage = 'Chưa có xác nhận thanh toán thành công cho đơn hàng này.';
+    }
+  }
+
+  if (error || !order || !isPaid) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased pt-6 pb-20">
+        {/* Top Stepper Banner */}
+        <div className="w-full bg-slate-100/70 py-4 mb-8 border-b border-slate-200/60">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="max-w-2xl mx-auto flex items-center justify-between relative">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                  <Check className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-slate-600">1. Giỏ hàng</span>
+              </div>
+              <div className="h-[2px] flex-1 bg-slate-900 mx-3"></div>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                  <Check className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-slate-600">2. Thanh toán QR</span>
+              </div>
+              <div className="h-[2px] flex-1 bg-amber-400 mx-3"></div>
+              <div className="flex items-center gap-2">
+                <div className={`w-7 h-7 rounded-full ${
+                  (isNeedsReview || isPaymentError) ? 'bg-amber-500' : (isPending || isCreating) ? 'bg-amber-500' : (isFailed || isExpired || isPaymentCancelled || (!payment && isOrderCancelled)) ? 'bg-red-600' : 'bg-slate-700'
+                } text-white flex items-center justify-center text-xs font-bold shadow-md`}>
+                  {(isNeedsReview || isPaymentError) ? <AlertCircle className="w-4 h-4" /> : (isPending || isCreating) ? <Clock className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                </div>
+                <span className="text-xs font-extrabold text-slate-700">3. Trạng thái</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto p-6 sm:p-8 bg-white rounded-2xl shadow-md border border-slate-200/80 space-y-5">
+          {/* Separate Order Lifecycle Notice when Order is CANCELLED */}
+          {isOrderCancelled && (payment || isPaymentError) && (
+            <div data-testid="order-lifecycle-notice" className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+              <span>
+                <strong>Thông báo đơn hàng:</strong> Đơn hàng đã bị hủy.
+              </span>
+            </div>
+          )}
+
+          <div data-testid="payment-result-section" className="flex items-center gap-3">
+            {isNeedsReview || isPaymentError ? (
+              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+            ) : (isPending || isCreating) ? (
+              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <Clock className="w-6 h-6 animate-pulse" />
+              </div>
+            ) : (isFailed || isExpired || isPaymentCancelled || (!payment && isOrderCancelled)) ? (
+              <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+                <XCircle className="w-6 h-6" />
+              </div>
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+            )}
+
+            <div>
+              <span data-testid="payment-result-badge" className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${statusBadgeClass}`}>
+                {statusBadgeLabel}
+              </span>
+              <h1 data-testid="payment-result-heading" className="text-xl font-bold text-slate-900 mt-1">
+                {statusHeading}
+              </h1>
+              {orderId && (
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Mã đơn hàng: <strong className="font-semibold text-slate-700">#{order?.orderCode || orderId}</strong>
+                </p>
+              )}
+            </div>
+          </div>
+
+          <p role="status" data-testid="payment-result-detail" className="text-sm text-slate-600 leading-relaxed">
+            {error || statusDetailMessage}
+          </p>
+
+          {/* Preserved Order Details when Order has loaded */}
+          {order && (
+            <div data-testid="order-summary-preserved" className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-2 text-xs text-slate-600">
+              <div className="font-semibold text-slate-800 flex items-center justify-between">
+                <span>Thông tin đơn hàng đã ghi nhận:</span>
+                <span className="font-bold text-slate-900">{formatPrice(order.totalAmount || 0)}</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-slate-500">
+                <span>Phương thức: <strong>{order.paymentMethod === 'PAYOS_VIETQR' ? 'VietQR (PayOS)' : (order.paymentMethod || 'Chưa xác định')}</strong></span>
+                <span>Trạng thái đơn: <strong>{getOrderStatusLabel(order)}</strong></span>
+              </div>
+            </div>
+          )}
+
+          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={isChecking}
+              onClick={() => fetchOrderData(orderId, true)}
+              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition disabled:opacity-50"
+            >
+              {isChecking ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Đang kiểm tra...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Kiểm tra lại</span>
+                </>
+              )}
+            </button>
+
+            {(isPending || isCreating || isFailed || isExpired) && !isOrderCancelled && order?.paymentMethod === 'PAYOS_VIETQR' && !isPaymentError && (
+              <Link
+                to={`/payment/qr/${orderId}`}
+                className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition"
+              >
+                <span>Quay lại trang thanh toán QR</span>
+              </Link>
+            )}
+
+            <Link
+              to="/my-orders"
+              className="inline-flex items-center gap-2 border border-slate-200 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-xl text-xs font-bold transition"
+            >
+              <span>Xem danh sách đơn hàng</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const items = order?.items || [];
@@ -120,6 +430,16 @@ const OrderSuccessPage = () => {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 flex flex-col items-center">
         
+        {/* Separate Order Lifecycle Notice when Order is CANCELLED */}
+        {isOrderCancelled && (
+          <div data-testid="order-lifecycle-notice" className="w-full max-w-xl mb-6 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+            <span>
+              <strong>Thông báo đơn hàng:</strong> Đơn hàng đã bị hủy.
+            </span>
+          </div>
+        )}
+
         {/* Success Header */}
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-24 h-24 rounded-full bg-white shadow-xl flex items-center justify-center mb-4 border border-slate-100">
@@ -127,10 +447,10 @@ const OrderSuccessPage = () => {
               <CheckCircle2 className="w-11 h-11" />
             </div>
           </div>
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-red-600 bg-red-50 px-3.5 py-1 rounded-full mb-2">
+          <span data-testid="payment-result-badge" className="text-[11px] font-extrabold uppercase tracking-wider text-red-600 bg-red-50 px-3.5 py-1 rounded-full mb-2">
             Giao dịch đã xác thực
           </span>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">
+          <h1 data-testid="payment-result-heading" className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">
             Đặt hàng thành công!
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
@@ -189,8 +509,8 @@ const OrderSuccessPage = () => {
                 <p className="text-[11px] text-slate-400">Được phân phối chính thức bởi HG Badminton Center</p>
               </div>
             </div>
-            <span className="text-[10px] font-bold uppercase bg-white/10 text-white px-2.5 py-1 rounded-md tracking-wider">
-              Chuẩn bị hàng
+            <span data-testid="order-lifecycle-badge" className="text-[10px] font-bold uppercase bg-white/10 text-white px-2.5 py-1 rounded-md tracking-wider">
+              {isOrderCancelled ? 'Đã hủy' : (order?.status === 'SHIPPING' ? 'Đang giao hàng' : (order?.status === 'COMPLETED' ? 'Hoàn thành' : 'Chuẩn bị hàng'))}
             </span>
           </div>
 
@@ -333,7 +653,7 @@ const OrderSuccessPage = () => {
         {/* 2 Main Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-xl mb-10">
           <Link
-            to="/user/orders"
+            to="/my-orders"
             className="w-full sm:w-1/2 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-3.5 px-6 rounded-xl text-sm font-bold uppercase tracking-wider shadow-lg shadow-red-500/25 transition-all"
           >
             <FileCheck className="w-4 h-4" />
