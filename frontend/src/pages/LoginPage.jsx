@@ -47,8 +47,26 @@ const LoginPage = () => {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     setErrorMsg('');
     setSuccessMsg('');
+
+    const cleanEmail = registerIdentifier.trim();
+    if (!cleanEmail) {
+      setErrorMsg('Vui lòng nhập địa chỉ email');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      setErrorMsg('Địa chỉ email không đúng định dạng. Vui lòng nhập email hợp lệ.');
+      return;
+    }
+
+    if (registerPassword.length < 6) {
+      setErrorMsg('Mật khẩu phải từ 6 ký tự trở lên');
+      return;
+    }
 
     if (registerPassword !== registerPasswordConfirm) {
       setErrorMsg('Mật khẩu xác nhận không khớp');
@@ -62,18 +80,14 @@ const LoginPage = () => {
 
     setSubmitting(true);
     try {
-      const isEmail = registerIdentifier.includes('@');
-      const generatedUsername = isEmail 
-        ? registerIdentifier.split('@')[0] + Math.floor(Math.random() * 100)
-        : registerIdentifier;
-      const finalEmail = isEmail ? registerIdentifier : `${registerIdentifier}@hgbadminton.vn`;
+      const generatedUsername = cleanEmail.split('@')[0] + Math.floor(Math.random() * 100);
 
       await register({
         username: generatedUsername,
-        email: finalEmail,
+        email: cleanEmail,
         password: registerPassword,
-        fullName: registerFullName,
-        phone: !isEmail ? registerIdentifier : '',
+        fullName: registerFullName.trim(),
+        phone: '',
       });
       setSuccessMsg('Đăng ký tài khoản thành công! Đang chuyển hướng...');
       setTimeout(() => {
@@ -420,10 +434,10 @@ const LoginPage = () => {
                     </div>
                   </div>
 
-                  {/* Email hoặc SĐT Input */}
+                  {/* Email Input */}
                   <div>
                     <label htmlFor="register-identifier" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Email hoặc Số điện thoại <span className="text-red-500">*</span>
+                      Địa chỉ email <span className="text-red-500">*</span>
                     </label>
                     <div className="relative rounded-lg shadow-sm">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -432,12 +446,12 @@ const LoginPage = () => {
                         </svg>
                       </div>
                       <input
-                        type="text"
+                        type="email"
                         id="register-identifier"
                         required
                         value={registerIdentifier}
                         onChange={(e) => setRegisterIdentifier(e.target.value)}
-                        placeholder="Email hoặc số điện thoại kích hoạt"
+                        placeholder="name@example.com"
                         className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800 font-medium"
                       />
                     </div>

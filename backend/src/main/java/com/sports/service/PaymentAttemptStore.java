@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public class PaymentAttemptStore {
     private final OrderRepository orders;
     private final PaymentAttemptRepository attempts;
+    private final PaymentTransitionGuard transitionGuard;
 
     public record Prepared(PaymentAttemptResponse attempt, boolean created) {}
 
@@ -20,6 +21,7 @@ public class PaymentAttemptStore {
     public Prepared prepare(Long orderId, Long userId, String key) {
         Order order = ownedOrder(orderId, userId, false);
         validateEligible(order);
+        transitionGuard.checkLink(order);
         var existing = attempts.findByOrderId(orderId);
         if (existing.isPresent()) return new Prepared(PaymentAttemptResponse.from(existing.get()), false);
         PaymentAttempt attempt = new PaymentAttempt();
@@ -28,6 +30,7 @@ public class PaymentAttemptStore {
         attempt.setAmount(VndAmount.requireValid(order.getTotalAmount()));
         attempt.setExpiresAt(order.getExpiresAt());
         attempt.setIdempotencyKey(key);
+        CheckoutRevision.touch(order);
         return new Prepared(PaymentAttemptResponse.from(attempts.saveAndFlush(attempt)), true);
     }
 
@@ -35,12 +38,16 @@ public class PaymentAttemptStore {
     public PaymentAttemptResponse saveResult(Long orderId, Long userId, PayOSPaymentClient.Result result,
             boolean created) {
         Order order = ownedOrder(orderId, userId, false);
+        transitionGuard.checkLink(order);
         PaymentAttempt attempt = attempts.findByOrderId(orderId).orElseThrow();
         if (attempt.getStatus() == PaymentAttempt.Status.PENDING) return PaymentAttemptResponse.from(attempt);
         if (!attempt.getOrderCode().equals(result.orderCode())
                 || attempt.getAmount().compareTo(result.amount()) != 0
                 || attempt.getPaymentLinkId() != null && !attempt.getPaymentLinkId().equals(result.paymentLinkId())) {
             throw new PaymentLinkException(502, "PAYMENT_IDENTITY_MISMATCH", "Thông tin thanh toán không khớp");
+        }
+        if (!java.util.Objects.equals(attempt.getPaymentLinkId(), result.paymentLinkId()) || created) {
+            CheckoutRevision.touch(order);
         }
         attempt.setPaymentLinkId(result.paymentLinkId());
         if (created) {

@@ -21,6 +21,8 @@ public class PaymentController {
     private final PaymentWebhookService webhooks;
     private final Environment environment;
     @Value("${payos.mock-enabled:false}") private boolean mockEnabled;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.sports.mockpayos.MockPayOSLegacyService legacyMock;
 
     @PostMapping("/payos-webhook")
     public ResponseEntity<Map<String, Object>> handlePayOSWebhook(@RequestBody JsonNode request) {
@@ -53,11 +55,10 @@ public class PaymentController {
         return ResponseEntity.status(status).body(Map.of("error", 1, "message", "Không thể xử lý"));
     }
 
-    @PostMapping("/mock-webhook-trigger") @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> triggerMockWebhook(@RequestParam Long orderCode, @RequestParam BigDecimal amount) {
-        if (!mockEnabled || !environment.acceptsProfiles(Profiles.of("dev"))) {
+        if (!mockEnabled || legacyMock == null || !environment.acceptsProfiles(Profiles.of("dev & mock-payos"))) {
             return ResponseEntity.status(404).body(Map.of("error", 1, "message", "Thanh toán giả lập đã tắt"));
         }
-        return handlePayOSWebhook(payosService.generateMockWebhook(orderCode, amount));
+        return legacyMock.trigger(orderCode, amount);
     }
 }

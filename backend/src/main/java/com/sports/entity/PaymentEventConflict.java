@@ -19,7 +19,7 @@ public class PaymentEventConflict {
     private String fingerprint;
     @Column(nullable = false, updatable = false, columnDefinition = "TEXT")
     private String incomingFacts;
-    @Enumerated(EnumType.STRING) @Column(nullable = false, updatable = false, length = 32)
+    @Enumerated(EnumType.STRING) @Column(nullable = false, updatable = false, columnDefinition = "varchar(32)")
     private PaymentEvent.Source source;
     @Column(nullable = false, updatable = false, length = 64)
     private String reviewReason = "EVENT_IDENTITY_CONFLICT";

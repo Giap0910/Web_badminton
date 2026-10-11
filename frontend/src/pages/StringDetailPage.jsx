@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ShoppingCart, Bolt, ChevronRight, CheckCircle2, Star, ShieldCheck, Truck, Sparkles, Wrench, RefreshCw, Layers, Zap } from 'lucide-react';
+import { ShoppingCart, Bolt, ChevronRight, CheckCircle2, Star, ShieldCheck, Truck, Sparkles, Wrench, RefreshCw, Layers, Zap, AlertCircle } from 'lucide-react';
 import { productApi } from '../api/productApi';
 import { reviewApi } from '../api/reviewApi';
 import { useCart } from '../context/CartContext';
@@ -23,6 +23,7 @@ const StringDetailPage = () => {
   const [stringTension, setStringTension] = useState('11.0 kg (24.2 lbs) - Tiêu chuẩn đấu');
   const [activeTab, setActiveTab] = useState('desc');
   const [addedToast, setAddedToast] = useState(false);
+  const [cartError, setCartError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -88,24 +89,38 @@ const StringDetailPage = () => {
   ];
 
   const handleAdd = () => {
-    addToCart(product, quantity, {
-      color: selectedColor,
-      gauge: selectedGauge,
-      packaging: selectedPackaging,
-      stringing: includeStringing ? stringTension : 'Không căng sẵn'
-    });
-    setAddedToast(true);
-    setTimeout(() => setAddedToast(false), 2500);
-  };
-
-  const handleBuyNow = () => {
+    if (!product) return;
     const cartItemId = addToCart(product, quantity, {
       color: selectedColor,
       gauge: selectedGauge,
       packaging: selectedPackaging,
       stringing: includeStringing ? stringTension : 'Không căng sẵn'
     });
-    navigate('/checkout', { state: { selectedItemIds: cartItemId ? [cartItemId] : undefined } });
+    if (cartItemId) {
+      setCartError('');
+      setAddedToast(true);
+      setTimeout(() => setAddedToast(false), 2500);
+    } else {
+      setAddedToast(false);
+      setCartError('Số lượng yêu cầu vượt quá tồn kho hiện có!');
+      setTimeout(() => setCartError(''), 3000);
+    }
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    const cartItemId = addToCart(product, quantity, {
+      color: selectedColor,
+      gauge: selectedGauge,
+      packaging: selectedPackaging,
+      stringing: includeStringing ? stringTension : 'Không căng sẵn'
+    });
+    if (cartItemId) {
+      navigate('/checkout', { state: { selectedItemIds: [cartItemId] } });
+    } else {
+      setCartError('Số lượng yêu cầu vượt quá tồn kho hiện có!');
+      setTimeout(() => setCartError(''), 3000);
+    }
   };
 
   return (
@@ -344,6 +359,13 @@ const StringDetailPage = () => {
                   <span>Mua ngay</span>
                 </button>
               </div>
+
+              {cartError && (
+                <div className="mt-3 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700 font-semibold">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{cartError}</span>
+                </div>
+              )}
             </div>
           </div>
         </section>

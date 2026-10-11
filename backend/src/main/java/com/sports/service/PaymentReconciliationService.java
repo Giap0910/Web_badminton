@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.*;
 @Service @RequiredArgsConstructor
 public class PaymentReconciliationService {
     private final PaymentReconciliationStore store;
-    private final PayOSPaymentClient client;
+    private final PayOSGateway client;
 
     @Transactional(propagation = Propagation.NEVER)
     public PaymentSettlementService.Outcome reconcile(Long id, Long actor, String key, JsonNode body) {

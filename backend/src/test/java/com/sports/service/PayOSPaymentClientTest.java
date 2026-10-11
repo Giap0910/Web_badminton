@@ -229,6 +229,65 @@ class PayOSPaymentClientTest {
         assertEquals(504, assertThrows(PaymentLinkException.class, () -> client.queryPayment(123L)).getStatus());
     }
 
+
+    @Test
+    void cancellationUsesOfficialEndpointReasonCredentialsAndVerifiedTerminalResponse() {
+        server.expect(requestTo("https://provider.test/v2/payment-requests/123/cancel"))
+                .andExpect(method(HttpMethod.POST)).andExpect(header("x-client-id", "fake-client"))
+                .andExpect(header("x-api-key", "fake-api")).andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.cancellationReason").value("FIX-057: chuyển sang COD"))
+                .andRespond(withSuccess(cancelEnvelope(), MediaType.APPLICATION_JSON));
+        var result = client.cancelPayment(123L);
+        assertEquals(123L, result.orderCode()); assertEquals("test-id", result.paymentLinkId());
+        assertEquals("CANCELLED", result.status()); assertEquals(BigDecimal.ZERO, result.amountPaid());
+        assertTrue(result.transactions().isEmpty()); server.verify();
+    }
+
+    @Test
+    void cancellationTamperedSignedEvidenceIsRejectedBeforeParsing() {
+        server.expect(anything()).andRespond(withSuccess(cancelEnvelope().replace("\"amountPaid\":0", "\"amountPaid\":1"),
+                MediaType.APPLICATION_JSON));
+        assertEquals(502, assertThrows(PaymentLinkException.class, () -> client.cancelPayment(123L)).getStatus());
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"null", "{}", "\"\"", "0"})
+    void malformedSignedTransactionsNeverBecomeAnEmptyReceiptList(String invalid) {
+        String data = "{\"id\":\"test-id\",\"orderCode\":123,\"amount\":100000,\"amountPaid\":0,\"amountRemaining\":100000,"
+                + "\"status\":\"CANCELLED\",\"transactions\":" + invalid + "}";
+        String canonical = "amount=100000&amountPaid=0&amountRemaining=100000&id=test-id&orderCode=123&status=CANCELLED"
+                + "&transactions=" + ("null".equals(invalid) || "\"\"".equals(invalid) ? "" : invalid);
+        server.expect(anything()).andRespond(withSuccess(envelope(data, canonical), MediaType.APPLICATION_JSON));
+        assertEquals(502, assertThrows(PaymentLinkException.class, () -> client.cancelPayment(123L)).getStatus());
+    }
+
+    @Test
+    void cancellationErrorsAndTimeoutAreSanitizedAndNotReportedAsSuccess() {
+        for (HttpStatus status : new HttpStatus[]{HttpStatus.TOO_MANY_REQUESTS, HttpStatus.SERVICE_UNAVAILABLE}) {
+            server.reset(); server.expect(anything()).andRespond(withStatus(status));
+            var error = assertThrows(PaymentLinkException.class, () -> client.cancelPayment(123L));
+            assertEquals(503, error.getStatus());
+        }
+        server.reset(); server.expect(anything()).andRespond(request -> { throw new SocketTimeoutException("fixture-secret"); });
+        var error = assertThrows(PaymentLinkException.class, () -> client.cancelPayment(123L));
+        assertEquals(504, error.getStatus()); assertFalse(error.getMessage().contains("fixture-secret"));
+    }
+
+    @Test
+    void query404StaysUnresolvedAndCancellation404IsNotTerminalProof() {
+        server.expect(anything()).andRespond(withStatus(HttpStatus.NOT_FOUND));
+        assertNull(client.queryPayment(123L));
+        server.reset(); server.expect(anything()).andRespond(withStatus(HttpStatus.NOT_FOUND));
+        assertEquals(502, assertThrows(PaymentLinkException.class, () -> client.cancelPayment(123L)).getStatus());
+    }
+
+    private String cancelEnvelope() {
+        String data = "{\"id\":\"test-id\",\"orderCode\":123,\"amount\":100000,\"amountPaid\":0,\"amountRemaining\":100000,"
+                + "\"status\":\"CANCELLED\",\"transactions\":[]}";
+        String canonical = "amount=100000&amountPaid=0&amountRemaining=100000&id=test-id&orderCode=123&status=CANCELLED&transactions=[]";
+        return envelope(data, canonical);
+    }
+
     private String queryData() {
         return "{\"id\":\"test-id\",\"orderCode\":123,\"amount\":100000,\"amountPaid\":100000,\"amountRemaining\":0,"
                 + "\"status\":\"PAID\",\"future\":null,\"transactions\":[{\"reference\":\"TX-123\",\"amount\":100000,"

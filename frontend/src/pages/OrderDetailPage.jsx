@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getOrderStatusLabel } from '../utils/formatters';
 import UserLayout from '../components/UserLayout';
 import { orderApi } from '../api/orderApi.js';
+import OrderItemOptions from '../components/OrderItemOptions';
 import {
   formatReviewReason,
   getPaymentStatusInfo,
@@ -285,10 +286,11 @@ const OrderDetailPage = () => {
 
               <div className="flex items-center gap-2">
                 <Link
-                  to={`/payment/qr/${order.id}`}
-                  className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/90 text-white font-black text-xs uppercase tracking-wider shadow-sm transition-all"
+                  to={`/checkout?orderId=${order.id}`}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition-all"
+                  title="Thanh toán QR tạm hoãn trong demo. Bấm để đổi sang COD."
                 >
-                  Mở toàn màn hình QR
+                  Đổi sang COD (QR tạm hoãn)
                 </Link>
                 <button
                   type="button"
@@ -336,9 +338,19 @@ const OrderDetailPage = () => {
 
             {/* Cột 3: Chi tiết thanh toán & Đối soát */}
             <div className="p-4 rounded-xl bg-white border border-slate-200/80 space-y-2">
-              <span className="font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
-                <CreditCard className="w-4 h-4 text-emerald-600" /> Chi tiết thanh toán
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                  <CreditCard className="w-4 h-4 text-emerald-600" /> Chi tiết thanh toán
+                </span>
+                {(order.paymentMode === 'MOCK' || payment?.paymentMode === 'MOCK') && (
+                  <span
+                    data-testid="mock-payment-badge"
+                    className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300"
+                  >
+                    MOCK
+                  </span>
+                )}
+              </div>
 
               {paymentLoading ? (
                 <div className="py-4 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
@@ -371,6 +383,12 @@ const OrderDetailPage = () => {
                       {payment?.provider || (order.paymentMethod === 'COD' ? 'Tiền mặt (COD)' : 'PayOS')}
                     </span>
                   </div>
+                  {payment?.mockProviderStatus && (
+                    <div className="flex justify-between">
+                      <span className="text-amber-800 font-semibold">Trạng thái Mock:</span>
+                      <span className="font-bold text-amber-900">{payment.mockProviderStatus}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-start gap-2">
                     <span className="shrink-0">Mã tham chiếu (Ref):</span>
                     <span className="font-mono text-slate-900 font-semibold break-all whitespace-normal [overflow-wrap:anywhere] min-w-0 text-right">
@@ -419,27 +437,7 @@ const OrderDetailPage = () => {
                     <div className="min-w-0 space-y-0.5">
                       <span className="text-[10px] font-black uppercase text-slate-400">{item.productBrand}</span>
                       <h4 className="font-bold text-xs sm:text-sm text-slate-900 truncate">{item.productName}</h4>
-                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                        {(item.selectedWeight || item.weightGrip) && (
-                          <span className="inline-block text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">
-                            {item.selectedWeight || item.weightGrip}
-                          </span>
-                        )}
-                        {item.selectedSize && (
-                          <span className="inline-block text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">
-                            Size: {item.selectedSize}
-                          </span>
-                        )}
-                        {item.stringingService && (
-                          <span className="inline-block text-[11px] bg-red-50 text-secondary border border-red-100 px-2 py-0.5 rounded font-semibold">
-                            {item.stringingService}{item.stringTension ? ` (${item.stringTension})` : ''}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 text-[11px] text-secondary font-medium">
-                        <Gift className="w-3.5 h-3.5 shrink-0" />
-                        <span>Tặng kèm bao vợt nhung + quấn cán chính hãng (0₫)</span>
-                      </div>
+                      <OrderItemOptions item={item} />
                     </div>
                   </div>
 

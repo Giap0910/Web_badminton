@@ -46,6 +46,9 @@ class OrderServiceTest {
     @Mock
     private jakarta.persistence.EntityManager entityManager;
 
+    @Mock
+    private PaymentTransitionGuard transitionGuard;
+
     @InjectMocks
     private OrderService orderService;
 

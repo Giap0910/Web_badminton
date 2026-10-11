@@ -352,7 +352,7 @@ public class CartFuzzTest {
                 return order;
             });
             service = new OrderService(orders, products, users, payments,
-                    vouchers, mock(EntityManager.class));
+                    vouchers, mock(EntityManager.class), mock(com.sports.service.PaymentTransitionGuard.class));
         }
 
         private void assertUnchanged(int stock) {

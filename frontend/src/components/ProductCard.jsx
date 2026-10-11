@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { productImages, productRating, productOptions, productCategory } from '../utils/formatters';
 import { useCart } from '../context/CartContext';
 import { ShoppingCart, Star, Heart } from 'lucide-react';
+import ProductImage from './ProductImage';
 
 const ProductCard = ({ product, onQuickView }) => {
   const { addToCart } = useCart();
@@ -12,7 +13,8 @@ const ProductCard = ({ product, onQuickView }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [addedAnimation, setAddedAnimation] = useState(false);
   const inStock = Number.isInteger(product.stock) && product.stock > 0;
-  const imageUrl = productImages(product)[0];
+  // Use product.imageUrl as primary per Backend Contract Section 1 & 6
+  const imageUrl = product.imageUrl || productImages(product)[0];
 
   // Format VND currency
   const formatPrice = (price) => {
@@ -104,12 +106,12 @@ const ProductCard = ({ product, onQuickView }) => {
       {/* Product Image Stage with Hover Quick-Actions */}
       <div className="relative w-full h-56 bg-[#F2F4F6] rounded-lg overflow-hidden flex items-center justify-center p-3">
         <Link to={productDetailUrl} className="w-full h-full flex items-center justify-center">
-          {imageUrl ? <img 
-            src={imageUrl} 
-            alt={product.name} 
-            className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          /> : <span>Chưa có ảnh sản phẩm</span>}
+          <ProductImage
+            src={imageUrl}
+            alt={product.name}
+            className="w-full h-full"
+            imgClassName="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+          />
         </Link>
 
         {/* Hover Action Bar */}

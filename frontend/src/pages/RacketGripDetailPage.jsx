@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ShoppingCart, Bolt, ChevronRight, CheckCircle2, Star, Heart, ZoomIn, ShieldCheck, Truck, RefreshCw, Layers } from 'lucide-react';
+import { ShoppingCart, Bolt, ChevronRight, CheckCircle2, Star, Heart, ZoomIn, ShieldCheck, Truck, RefreshCw, Layers, AlertCircle } from 'lucide-react';
 import { productApi } from '../api/productApi';
 import { reviewApi } from '../api/reviewApi';
 import { useCart } from '../context/CartContext';
@@ -21,6 +21,7 @@ const RacketGripDetailPage = () => {
   const [selectedTexture, setSelectedTexture] = useState('Ướt / Wet (Tacky)');
   const [activeTab, setActiveTab] = useState('desc');
   const [addedToast, setAddedToast] = useState(false);
+  const [cartError, setCartError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -91,32 +92,34 @@ const RacketGripDetailPage = () => {
   ];
 
   const handleAdd = () => {
-    addToCart(product, quantity, { color: selectedColor, texture: selectedTexture });
-    setAddedToast(true);
-    setTimeout(() => setAddedToast(false), 2500);
+    if (!product) return;
+    const cartItemId = addToCart(product, quantity, { color: selectedColor, texture: selectedTexture });
+    if (cartItemId) {
+      setCartError('');
+      setAddedToast(true);
+      setTimeout(() => setAddedToast(false), 2500);
+    } else {
+      setAddedToast(false);
+      setCartError('Số lượng yêu cầu vượt quá tồn kho hiện có!');
+      setTimeout(() => setCartError(''), 3000);
+    }
   };
 
   const handleBuyNow = () => {
+    if (!product) return;
     const cartItemId = addToCart(product, quantity, { color: selectedColor, texture: selectedTexture });
-    navigate('/checkout', { state: { selectedItemIds: cartItemId ? [cartItemId] : undefined } });
+    if (cartItemId) {
+      navigate('/checkout', { state: { selectedItemIds: [cartItemId] } });
+    } else {
+      setCartError('Số lượng yêu cầu vượt quá tồn kho hiện có!');
+      setTimeout(() => setCartError(''), 3000);
+    }
   };
 
   const handleAddCombo = () => {
-    addToCart(
-      {
-        id: 99901,
-        name: 'Combo Thi Đấu Tiết Kiệm: Vỉ AC102EX + Kéo Bấm Cắt Cán Yonex AC1053',
-        price: 195000,
-        originalPrice: 235000,
-        imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCg5OYCQs4x3ztVT7O4Cq3hOzApdAmkjQK_rmSNvrUAY0mJlE5LVBFjDIJK8jj-Jiwpl-gOIDey1EH4YXo_-4Cg2o8y0Gl3AT-RpLs-MVTbruOVwNTFjmleEsNRo6bHCwg3Q4p87AepWif6qlwDDfJ2dVtpJDQg_h6vSaAHyRYHLaZ9YbMmrMBiJycjfg6_2wezOPgBnG3hehpKWPhadXlsHT91mfdlNmmCJGxo7u5CvVbXhC0X2G0l',
-        brand: 'Yonex',
-        categoryName: 'Phụ kiện pro'
-      },
-      1,
-      { combo: 'Combo Tiết Kiệm 40k' }
-    );
-    setAddedToast(true);
-    setTimeout(() => setAddedToast(false), 2500);
+    // FIX-010: Vô hiệu hóa combo dùng sản phẩm giả, không thêm sản phẩm giả vào Cart
+    setCartError('Combo tạm chưa hỗ trợ trong bản demo.');
+    setTimeout(() => setCartError(''), 3000);
   };
 
   return (
@@ -305,26 +308,37 @@ const RacketGripDetailPage = () => {
                 </button>
               </div>
 
-              {/* Combo Suggestion Box */}
+              {cartError && (
+                <div className="mb-3 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700 font-semibold">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{cartError}</span>
+                </div>
+              )}
+
+              {/* Combo Suggestion Box (FIX-010: Vô hiệu hóa combo giả) */}
               <div className="bg-[#F2F4F6] rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <img
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuCg5OYCQs4x3ztVT7O4Cq3hOzApdAmkjQK_rmSNvrUAY0mJlE5LVBFjDIJK8jj-Jiwpl-gOIDey1EH4YXo_-4Cg2o8y0Gl3AT-RpLs-MVTbruOVwNTFjmleEsNRo6bHCwg3Q4p87AepWif6qlwDDfJ2dVtpJDQg_h6vSaAHyRYHLaZ9YbMmrMBiJycjfg6_2wezOPgBnG3hehpKWPhadXlsHT91mfdlNmmCJGxo7u5CvVbXhC0X2G0l"
                     alt="Combo"
-                    className="w-12 h-12 rounded-lg bg-white object-contain p-1"
+                    className="w-12 h-12 rounded-lg bg-white object-contain p-1 opacity-70"
                   />
                   <div>
-                    <span className="text-[10px] font-bold text-secondary uppercase block">Combo Thi Đấu Tiết Kiệm</span>
-                    <span className="text-xs font-bold text-slate-900 block">Vỉ Quấn AC102EX + Kéo Bấm Cắt Cán AC1053</span>
-                    <span className="text-xs font-bold text-secondary">195.000₫ <span className="line-through text-slate-400 font-normal">235.000₫</span></span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Combo Phụ Kiện</span>
+                      <span className="px-1.5 py-0.2 rounded bg-slate-200 text-slate-600 text-[9px] font-bold">Tạm chưa hỗ trợ</span>
+                    </div>
+                    <span className="text-xs font-bold text-slate-700 block">Vỉ Quấn AC102EX + Kéo Bấm Cắt Cán AC1053</span>
+                    <span className="text-xs font-semibold text-slate-400">195.000₫ (Combo chưa mở bán)</span>
                   </div>
                 </div>
                 <button
                   type="button"
+                  disabled={true}
                   onClick={handleAddCombo}
-                  className="w-full sm:w-auto px-4 py-2 bg-[#0F172A] text-white text-xs font-bold uppercase rounded-lg hover:bg-slate-800 shrink-0"
+                  className="w-full sm:w-auto px-4 py-2 bg-slate-200 text-slate-500 text-xs font-bold uppercase rounded-lg cursor-not-allowed opacity-70 shrink-0"
                 >
-                  Thêm combo
+                  Combo tạm chưa hỗ trợ
                 </button>
               </div>
             </div>

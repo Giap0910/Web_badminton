@@ -3,6 +3,7 @@ import { getOrderStatusLabel, getNextOrderStatuses, isOrderPaid } from '../utils
 import AdminLayout from '../components/AdminLayout';
 import { adminApi } from '../api/adminApi';
 import { orderApi } from '../api/orderApi';
+import OrderItemOptions, { formatOrderItemOptionsText } from '../components/OrderItemOptions';
 import {
   ShoppingBag,
   Search,
@@ -41,12 +42,9 @@ const AdminOrdersPage = () => {
         const list = Array.isArray(res) ? res : res?.data || [];
         if (Array.isArray(list)) {
           const mapped = list.map((item, idx) => {
-            const firstItem = item.items?.[0] || item.orderItems?.[0];
-            const techStr = firstItem?.stringingService
-              ? `${firstItem.stringingService}${firstItem.stringTension ? ` (${firstItem.stringTension})` : ''}`
-              : firstItem?.selectedWeight
-              ? `Phiên bản: ${firstItem.selectedWeight}`
-              : item.stringOption || 'Kỹ thuật viên vào cước BWF';
+            const itemsList = Array.isArray(item.items) ? item.items : (Array.isArray(item.orderItems) ? item.orderItems : []);
+            const firstItem = itemsList[0];
+            const techStr = formatOrderItemOptionsText(firstItem, item.stringOption || 'Kỹ thuật viên vào cước BWF');
 
             const statusLabel = getOrderStatusLabel(item);
 
@@ -60,7 +58,7 @@ const AdminOrdersPage = () => {
               productName: firstItem?.productName || firstItem?.product?.name || 'Vợt Cầu Lông HG',
               productImage: firstItem?.productImageUrl || firstItem?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
               stringReq: techStr,
-              gift: 'Cuốn cán Yonex chính hãng',
+              items: itemsList,
               totalAmount: item.totalAmount || 0,
               rawPaymentMethod: item.paymentMethod,
               nextStatuses: getNextOrderStatuses(item),
@@ -373,12 +371,49 @@ const AdminOrdersPage = () => {
                   <p className="text-slate-600 leading-relaxed mt-0.5">{selectedOrder.customerAddress}</p>
                 </div>
 
-                {/* Yêu cầu đan vợt */}
-                <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold uppercase text-blue-600">Yêu cầu xưởng căng cước BWF</span>
-                  <p className="font-bold text-slate-900">{selectedOrder.productName}</p>
-                  <p className="text-secondary font-bold text-xs mt-0.5">{selectedOrder.stringReq}</p>
-                  <p className="text-slate-500 mt-0.5">{selectedOrder.gift}</p>
+                {/* Danh sách sản phẩm đầy đủ */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <span className="text-[10px] font-bold uppercase text-slate-500">
+                      Danh sách sản phẩm ({selectedOrder.items?.length || 1} mặt hàng)
+                    </span>
+                  </div>
+                  <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                    {(selectedOrder.items && selectedOrder.items.length > 0 ? selectedOrder.items : [{
+                      productName: selectedOrder.productName,
+                      productImageUrl: selectedOrder.productImage,
+                      quantity: 1,
+                      price: selectedOrder.totalAmount,
+                      subtotal: selectedOrder.totalAmount,
+                      selectedWeight: selectedOrder.stringReq
+                    }]).map((it, itIdx) => {
+                      const itemSubtotal = it.subtotal != null ? it.subtotal : (it.price ? it.price * (it.quantity || 1) : 0);
+                      return (
+                        <div key={it.id || itIdx} className="flex items-center justify-between gap-3 p-2.5 bg-white rounded-xl border border-slate-100 shadow-xs">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {it.productImageUrl && (
+                              <img
+                                src={it.productImageUrl}
+                                alt={it.productName || 'Sản phẩm'}
+                                className="w-12 h-12 rounded-lg object-contain bg-slate-50 border border-slate-100 shrink-0 p-1"
+                              />
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-900 truncate">{it.productName || it.product?.name || 'Sản phẩm'}</p>
+                              <OrderItemOptions item={it} />
+                              <p className="text-[11px] text-slate-500 font-semibold mt-0.5">Số lượng: x{it.quantity || 1}</p>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="font-bold text-slate-900">{formatPrice(itemSubtotal)}</span>
+                            {it.quantity > 1 && it.price && (
+                              <span className="block text-[10px] text-slate-400">{formatPrice(it.price)} / cái</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Thanh toán VietQR */}

@@ -42,6 +42,7 @@ public class OrderService {
     private final PayOSService payosService;
     private final VoucherService voucherService;
     private final EntityManager entityManager;
+    private final PaymentTransitionGuard transitionGuard;
 
     private static final int MAX_PENDING_ORDERS_PER_USER = 3;
     private static final int ORDER_TIMEOUT_MINUTES = 15;
@@ -256,6 +257,7 @@ public class OrderService {
             throw new UnauthorizedException("Bạn không có quyền thao tác trên đơn hàng này!");
         }
         if (order.getStatus() == OrderStatus.CANCELLED) return toDto(order);
+        transitionGuard.checkCancel(order);
         cancelPendingOrder(order);
         return toDto(orderRepository.save(order));
     }
@@ -267,6 +269,7 @@ public class OrderService {
         settleReservedStock(order, true);
         voucherService.releaseVoucher(order.getVoucherCode());
         order.setStatus(OrderStatus.CANCELLED);
+        CheckoutRevision.touch(order);
     }
 
     private void settleReservedStock(Order order, boolean restoreAvailable) {
@@ -290,6 +293,7 @@ public class OrderService {
                 || order.getExpiresAt() == null || order.getExpiresAt().isAfter(LocalDateTime.now())) {
             return false;
         }
+        transitionGuard.expired(order);
         cancelPendingOrder(order);
         orderRepository.save(order);
         return true;
@@ -309,6 +313,7 @@ public class OrderService {
         }
         settleReservedStock(order, false);
         order.setStatus(OrderStatus.PAID);
+        CheckoutRevision.touch(order);
         orderRepository.save(order);
     }
 
@@ -355,9 +360,16 @@ public class OrderService {
 
     @Transactional
     public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
+        return updateOrderStatus(orderId, newStatus, null);
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus, PayOSPaymentClient.Query proof) {
         Order order = lockOrder(orderId);
         if (newStatus == order.getStatus()) return toDto(order);
+        transitionGuard.checkDelivery(order, newStatus, proof);
         if (newStatus == OrderStatus.CANCELLED) {
+            transitionGuard.checkCancel(order);
             cancelPendingOrder(order);
         } else if (newStatus == OrderStatus.SHIPPING && canShip(order)) {
             if ("COD".equals(order.getPaymentMethod())) settleReservedStock(order, false);
@@ -367,12 +379,17 @@ public class OrderService {
         } else {
             throw new BadRequestException("Không được chuyển trạng thái đơn hàng theo luồng này");
         }
+        CheckoutRevision.touch(order);
         return toDto(orderRepository.save(order));
     }
 
     private boolean canShip(Order order) {
         return ("COD".equals(order.getPaymentMethod()) && order.getStatus() == OrderStatus.PENDING)
                 || ("PAYOS_VIETQR".equals(order.getPaymentMethod()) && order.getStatus() == OrderStatus.PAID);
+    }
+
+    OrderResponse snapshot(Order order) {
+        return toDto(order);
     }
 
     private OrderResponse toDto(Order order) {

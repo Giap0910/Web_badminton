@@ -284,6 +284,13 @@ describe('FIX-004 — Frontend Implementation & Verification', () => {
       if (specifier.includes('orderApi')) return { orderApi: mockOrderApi };
       if (specifier.includes('formatters')) return mockFormatters;
       if (specifier === 'lucide-react') return mockLucide;
+      if (specifier.includes('OrderItemOptions')) {
+        const MockOpt = () => null;
+        MockOpt.default = MockOpt;
+        MockOpt.OrderItemOptions = MockOpt;
+        MockOpt.__esModule = true;
+        return MockOpt;
+      }
       throw new Error(`Unknown require in test harness: ${specifier}`);
     };
 

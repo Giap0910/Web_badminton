@@ -100,6 +100,8 @@ const AdminPaymentsPage = () => {
             customer: p.customerName || 'Khách hàng HG',
             paymentMethod: p.paymentMethod || 'PAYOS_VIETQR',
             methodLabel: p.paymentMethod?.includes('PAYOS') ? 'VietQR Pro (PayOS)' : p.paymentMethod === 'COD' ? 'COD Đồng kiểm' : 'Chuyển khoản',
+            paymentMode: p.paymentMode || 'REAL',
+            mockProviderStatus: p.mockProviderStatus || null,
           }));
           setTransactions(mapped);
           setHasLoaded(true);
@@ -480,6 +482,11 @@ const AdminPaymentsPage = () => {
                                   <Copy className="w-3 h-3" />
                                 )}
                               </button>
+                              {t.paymentMode === 'MOCK' && (
+                                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                                  MOCK
+                                </span>
+                              )}
                             </div>
                             <span className="text-[11px] text-blue-600 font-bold">Đơn hàng {t.orderCode}</span>
                           </div>
@@ -499,7 +506,13 @@ const AdminPaymentsPage = () => {
                           <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                             <Building className="w-3 h-3 text-slate-400" />
                             {t.provider}
+                            {t.paymentMode === 'MOCK' && ' (Mock)'}
                           </span>
+                          {t.mockProviderStatus && (
+                            <span className="text-[10px] text-amber-800 font-mono block mt-0.5">
+                              Status: {t.mockProviderStatus}
+                            </span>
+                          )}
                         </td>
 
                         {/* Cột 4: Số tiền */}

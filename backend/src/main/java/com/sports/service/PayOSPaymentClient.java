@@ -15,7 +15,8 @@ import java.time.ZoneId;
 import java.util.*;
 
 @Component
-public class PayOSPaymentClient {
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "payos.mode", havingValue = "REAL", matchIfMissing = true)
+public class PayOSPaymentClient implements PayOSGateway {
     private final RestTemplate http;
     private final PayOSService signatures;
     private final ObjectMapper json = new ObjectMapper();
@@ -92,6 +93,15 @@ public class PayOSPaymentClient {
     public Query queryPayment(Long orderCode) {
         JsonNode data = exchange(HttpMethod.GET, "/v2/payment-requests/" + orderCode, null, true);
         if (data == null) return null;
+        return paymentQuery(data);
+    }
+
+    public Query cancelPayment(Long orderCode) {
+        var payload = json.createObjectNode().put("cancellationReason", "FIX-057: chuyển sang COD");
+        return paymentQuery(exchange(HttpMethod.POST, "/v2/payment-requests/" + orderCode + "/cancel", payload, false));
+    }
+
+    private Query paymentQuery(JsonNode data) {
         if (!data.path("transactions").isArray()) throw invalid();
         List<Transaction> transactions = new ArrayList<>();
         for (JsonNode row : data.get("transactions")) {

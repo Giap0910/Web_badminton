@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { 
   ShoppingCart, Bolt, ChevronRight, CheckCircle2, Star, ShieldCheck, 
   RefreshCw, Droplets, Sparkles, Send, HelpCircle, Heart, ZoomIn, 
-  Truck, ArrowRight, Check, PackageCheck
+  Truck, ArrowRight, Check, PackageCheck, Award, AlertCircle
 } from 'lucide-react';
 import { productApi } from '../api/productApi';
 import { reviewApi } from '../api/reviewApi';
@@ -25,6 +25,7 @@ const SweatbandDetailPage = () => {
   const [includeAddon, setIncludeAddon] = useState(false);
   const [activeTab, setActiveTab] = useState('desc');
   const [addedToast, setAddedToast] = useState(false);
+  const [errorToast, setErrorToast] = useState('');
 
   // Review Form state
   const [reviewRating, setReviewRating] = useState(5);
@@ -102,22 +103,36 @@ const SweatbandDetailPage = () => {
   ];
 
   const handleAdd = () => {
-    addToCart({ ...product, price: finalPrice }, quantity, {
-      variant: currentVariant.label,
-      color: selectedColor,
-      addon: includeAddon ? 'Kèm Vỉ Yonex AC102EX (+55k)' : 'Không kèm'
-    });
-    setAddedToast(true);
-    setTimeout(() => setAddedToast(false), 2500);
-  };
-
-  const handleBuyNow = () => {
+    if (!product) return;
     const cartItemId = addToCart({ ...product, price: finalPrice }, quantity, {
       variant: currentVariant.label,
       color: selectedColor,
       addon: includeAddon ? 'Kèm Vỉ Yonex AC102EX (+55k)' : 'Không kèm'
     });
-    navigate('/checkout', { state: { selectedItemIds: cartItemId ? [cartItemId] : undefined } });
+    if (cartItemId) {
+      setErrorToast('');
+      setAddedToast(true);
+      setTimeout(() => setAddedToast(false), 2500);
+    } else {
+      setAddedToast(false);
+      setErrorToast('Số lượng yêu cầu vượt quá tồn kho hiện có!');
+      setTimeout(() => setErrorToast(''), 3000);
+    }
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    const cartItemId = addToCart({ ...product, price: finalPrice }, quantity, {
+      variant: currentVariant.label,
+      color: selectedColor,
+      addon: includeAddon ? 'Kèm Vỉ Yonex AC102EX (+55k)' : 'Không kèm'
+    });
+    if (cartItemId) {
+      navigate('/checkout', { state: { selectedItemIds: [cartItemId] } });
+    } else {
+      setErrorToast('Số lượng yêu cầu vượt quá tồn kho hiện có!');
+      setTimeout(() => setErrorToast(''), 3000);
+    }
   };
 
   const handleReviewSubmit = async (e) => {
@@ -151,6 +166,15 @@ const SweatbandDetailPage = () => {
           <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           <div className="text-xs font-semibold">
             Đã thêm <span className="text-emerald-400 font-bold">{currentVariant.label}</span> vào giỏ hàng!
+          </div>
+        </div>
+      )}
+
+      {errorToast && (
+        <div className="fixed top-20 right-6 z-50 bg-[#0F172A] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-rose-500/50 animate-bounce">
+          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+          <div className="text-xs font-semibold text-rose-200">
+            {errorToast}
           </div>
         </div>
       )}

@@ -5,6 +5,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@org.springframework.boot.autoconfigure.domain.EntityScan("com.sports.entity")
+@org.springframework.data.jpa.repository.config.EnableJpaRepositories("com.sports.repository")
 @EnableScheduling
 public class WebBadmintonApplication {
 

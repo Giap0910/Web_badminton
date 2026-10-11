@@ -35,7 +35,7 @@ public class PaymentEvent {
     private LocalDateTime receivedAt;
     @Column(nullable = false, updatable = false)
     private LocalDateTime verifiedAt;
-    @Enumerated(EnumType.STRING) @Column(nullable = false, updatable = false, length = 32)
+    @Enumerated(EnumType.STRING) @Column(nullable = false, updatable = false, columnDefinition = "varchar(32)")
     private Source source;
     @Column(nullable = false, length = 64)
     private String processingResult;
@@ -50,5 +50,5 @@ public class PaymentEvent {
     @CreationTimestamp @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public enum Source { WEBHOOK, RECONCILE_QUERY }
+    public enum Source { WEBHOOK, RECONCILE_QUERY, PROVIDER_CANCEL }
 }

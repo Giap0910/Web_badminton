@@ -348,9 +348,15 @@ class PaymentLinkIntegrationTest {
         PlatformTransactionManager transactionManager(EntityManagerFactory factory) {
             return new JpaTransactionManager(factory);
         }
+        @Bean PaymentLedgerService ledger(PaymentEventRepository events, PaymentEventConflictRepository conflicts) {
+            return new PaymentLedgerService(events, conflicts);
+        }
+        @Bean PaymentTransitionGuard guard(PaymentMethodTransitionRepository ops, PaymentAttemptRepository attempts, PaymentLedgerService ledger) {
+            return new PaymentTransitionGuard(ops, attempts, ledger);
+        }
         @Bean PayOSPaymentClient client() { return mock(PayOSPaymentClient.class); }
-        @Bean PaymentAttemptStore store(OrderRepository orders, PaymentAttemptRepository attempts) {
-            return new PaymentAttemptStore(orders, attempts);
+        @Bean PaymentAttemptStore store(OrderRepository orders, PaymentAttemptRepository attempts, PaymentTransitionGuard guard) {
+            return new PaymentAttemptStore(orders, attempts, guard);
         }
         @Bean PaymentLinkService service(PaymentAttemptStore store, PayOSPaymentClient client) {
             return new PaymentLinkService(store, client);

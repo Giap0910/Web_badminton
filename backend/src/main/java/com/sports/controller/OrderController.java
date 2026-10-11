@@ -21,6 +21,7 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final com.sports.service.OrderStatusService orderStatusService;
 
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
@@ -72,6 +73,6 @@ public class OrderController {
             @PathVariable Long id,
             @RequestParam OrderStatus status
     ) {
-        return ResponseEntity.ok(orderService.updateOrderStatus(id, status));
+        return ResponseEntity.ok(orderStatusService.update(id, status));
     }
 }

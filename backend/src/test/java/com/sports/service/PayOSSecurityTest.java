@@ -49,11 +49,34 @@ class PayOSSecurityTest {
     void developmentMockCanBeExplicitlyEnabled() {
         PaymentSettlementService orders = mock(PaymentSettlementService.class);
         MockEnvironment environment = new MockEnvironment();
-        environment.setActiveProfiles("dev");
+        environment.setActiveProfiles("dev", "mock-payos");
+        environment.setProperty("payos.mode", "MOCK");
+        environment.setProperty("payos.mock-verified", "true");
+        ReflectionTestUtils.setField(payosService, "paymentMode", "MOCK");
+        ReflectionTestUtils.setField(payosService, "mockSigningKey", "1".repeat(64));
+        var proof = new com.sports.mockpayos.MockPayOSProof(payosService, new com.fasterxml.jackson.databind.ObjectMapper(), "1".repeat(64));
+        var attempts = mock(com.sports.repository.PaymentAttemptRepository.class);
+        var attempt = new com.sports.entity.PaymentAttempt();
+        attempt.setOrder(com.sports.entity.Order.builder().id(1L).build()); attempt.setAmount(BigDecimal.TEN);
+        when(attempts.findByOrderCode(1L)).thenReturn(java.util.Optional.of(attempt));
+        var actions = mock(com.sports.mockpayos.MockPayOSActionService.class);
+        when(actions.submit(any(), any(), any(), any())).thenAnswer(invocation -> {
+            var normalized = payosService.webhookPayload(payosService.generateMockWebhook(1L, BigDecimal.TEN));
+            new PaymentWebhookService(payosService, orders).accept(proof.webhook(normalized)); return null;
+        });
+        var legacy = new com.sports.mockpayos.MockPayOSLegacyService(attempts, actions, proof,
+                new PaymentEnvironmentService(environment), mock(com.sports.mockpayos.MockPayOSActionRepository.class));
         PaymentController controller = new PaymentController(payosService, new PaymentWebhookService(payosService, orders), environment);
         ReflectionTestUtils.setField(controller, "mockEnabled", true);
-        assertEquals(200, controller.triggerMockWebhook(1L, BigDecimal.TEN).getStatusCode().value());
-        verify(orders).webhook(argThat(p -> p.successful() && p.orderCode().equals(1L)));
+        ReflectionTestUtils.setField(controller, "legacyMock", legacy);
+        var principal = new CustomUserDetails(User.builder().id(9L).username("mock-admin").role(Role.ROLE_ADMIN).build());
+        SecurityContextHolder.getContext().setAuthentication(new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities()));
+        try {
+            assertEquals(200, controller.triggerMockWebhook(1L, BigDecimal.TEN).getStatusCode().value());
+            verify(orders).webhook(argThat(p -> p.successful() && p.orderCode().equals(1L)));
+            verify(actions).submit(eq(1L), eq(9L), any(), any());
+        } finally { SecurityContextHolder.clearContext(); }
     }
 
     @Test

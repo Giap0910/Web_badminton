@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
+import ProductImage from '../components/ProductImage';
 import { productCategory } from '../utils/formatters';
 import {
   Filter,
@@ -24,7 +25,8 @@ import {
   Swords,
   Zap,
   Tag,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 
 // Dữ liệu 5 Banner chuyên biệt cho 5 Danh mục chuẩn thiết kế gốc
@@ -88,6 +90,14 @@ const CATEGORY_TABS = [
   { label: 'Phụ Kiện Pro', value: 'ACCESSORIES' },
 ];
 
+const CATEGORY_TO_ID = {
+  RACKET: 1,
+  SHOES: 2,
+  APPAREL: 3,
+  BAG: 4,
+  ACCESSORIES: 5,
+};
+
 const BRANDS = ['Yonex', 'Victor', 'Li-Ning', 'Mizuno', 'Kawasaki', 'Fleet'];
 
 const BALANCE_OPTIONS = [
@@ -130,8 +140,6 @@ const ACCESSORY_TYPES = [
 const normalizeCategory = (cat) => {
   if (!cat) return 'ALL';
   const s = String(cat).trim().toUpperCase();
-  if (/^\d+$/.test(s)) return s;
-  if (/BALO|BAO[- ]V[ỢO]T|T[ÚU]I|BAG|BACKPACK/.test(s)) return 'BAG';
   if (s === 'ALL' || s === 'TAT-CA' || s === 'TẤT CẢ') return 'ALL';
 
   // 1. Vợt Cầu Lông
@@ -155,6 +163,8 @@ const normalizeCategory = (cat) => {
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
@@ -162,7 +172,7 @@ const ProductsPage = () => {
   // URL State Synced
   const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
   const [selectedCategory, setSelectedCategory] = useState(
-    normalizeCategory(searchParams.get('category') || searchParams.get('categoryId'))
+    normalizeCategory(searchParams.get('categoryId') || searchParams.get('category'))
   );
   const [selectedBrand, setSelectedBrand] = useState(searchParams.get('brand') || 'ALL');
   const [selectedBalance, setSelectedBalance] = useState(searchParams.get('balancePoint') || 'ALL');
@@ -183,7 +193,7 @@ const ProductsPage = () => {
 
   // Sync with URL query changes
   useEffect(() => {
-    const rawCat = searchParams.get('category') || searchParams.get('categoryId');
+    const rawCat = searchParams.get('categoryId') || searchParams.get('category');
     const normalizedCat = normalizeCategory(rawCat);
     setSelectedCategory(normalizedCat);
 
@@ -202,82 +212,112 @@ const ProductsPage = () => {
     }
   }, [searchParams]);
 
-  // Load products
+  // Load products from Backend with Server-Side Filter, Sort & Pagination
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setDataError('');
       try {
-        const res = await productApi.getProducts({});
-        const list = Array.isArray(res) ? res : (res?.content || []);
-        setProducts(list);
+        const params = {
+          page: Math.max(0, currentPage - 1),
+          size: ITEMS_PER_PAGE,
+        };
+
+        const catId = CATEGORY_TO_ID[selectedCategory];
+        if (catId) {
+          params.categoryId = catId;
+        }
+
+        if (keyword && keyword.trim()) {
+          params.keyword = keyword.trim();
+        }
+
+        if (selectedBrand && selectedBrand !== 'ALL') {
+          params.brand = selectedBrand.trim();
+        }
+
+        if (selectedPriceRange === '<2m') {
+          params.maxPrice = 2000000;
+        } else if (selectedPriceRange === '2-3.5m') {
+          params.minPrice = 2000000;
+          params.maxPrice = 3500000;
+        } else if (selectedPriceRange === '3.5-5m') {
+          params.minPrice = 3500000;
+          params.maxPrice = 5000000;
+        } else if (selectedPriceRange === '>5m') {
+          params.minPrice = 5000000;
+        }
+
+        // Sort params - Tuân thủ Contract 4.1: Chỉ cho phép id, name, price, brand
+        if (sortBy === 'price-asc') {
+          params.sortBy = 'price';
+          params.sortDir = 'asc';
+        } else if (sortBy === 'price-desc') {
+          params.sortBy = 'price';
+          params.sortDir = 'desc';
+        } else {
+          params.sortBy = 'id';
+          params.sortDir = 'desc';
+        }
+
+        if (selectedBalance && selectedBalance !== 'ALL') {
+          params.balancePoint = selectedBalance;
+        }
+        if (selectedWeight && selectedWeight !== 'ALL') {
+          params.weightGrip = selectedWeight;
+        }
+
+        const res = await productApi.getProducts(params);
+
+        if (res && res.content && Array.isArray(res.content)) {
+          setProducts(res.content);
+          setTotalElements(res.totalElements ?? res.content.length);
+          setTotalPages(res.totalPages || Math.max(1, Math.ceil((res.totalElements || res.content.length) / ITEMS_PER_PAGE)));
+        } else if (Array.isArray(res)) {
+          setProducts(res);
+          setTotalElements(res.length);
+          setTotalPages(Math.max(1, Math.ceil(res.length / ITEMS_PER_PAGE)));
+        } else {
+          setProducts([]);
+          setTotalElements(0);
+          setTotalPages(1);
+        }
       } catch (err) {
+        console.error('Error loading products from server:', err);
         setProducts([]);
-        setDataError('Không tải được danh sách sản phẩm. Vui lòng thử lại.');
+        setTotalElements(0);
+        setTotalPages(1);
+        setDataError('Không tải được danh sách sản phẩm. Vui lòng kiểm tra lại kết nối.');
       } finally {
         setLoading(false);
       }
     };
+
     load();
-  }, []);
+  }, [
+    currentPage,
+    selectedCategory,
+    keyword,
+    selectedBrand,
+    selectedPriceRange,
+    selectedBalance,
+    selectedWeight,
+    sortBy,
+  ]);
 
-  // Helper phân loại sản phẩm chuẩn xác vào 5 danh mục nghiệp vụ
-  const getItemCategory = productCategory;
-
-  // Filter and Sort Logic - So khớp CHÍNH XÁC (Exact Match) trên từng field tương ứng
-  const filteredProducts = products.filter((item) => {
-    // 1. Lọc Danh mục (Category Filter) - Loại trừ tuyệt đối việc match lẫn giữa Vợt, Balo và Phụ kiện
-    if (selectedCategory !== 'ALL') {
-      const itemCat = getItemCategory(item);
-      if (/^\d+$/.test(selectedCategory)) {
-        if (String(item.categoryId) !== selectedCategory) return false;
-      } else if (itemCat !== selectedCategory) return false;
-    }
-
-    // 2. Lọc Từ khóa (Keyword Search) - Tìm kiếm linh hoạt trên tên hoặc thương hiệu
-    if (keyword.trim()) {
-      const kw = keyword.toLowerCase();
-      const match = item.name?.toLowerCase().includes(kw) || item.brand?.toLowerCase().includes(kw);
-      if (!match) return false;
-    }
-
-    // 3. Lọc Thương hiệu (Brand Filter) - SO KHỚP CHÍNH XÁC (EXACT MATCH) TRÊN FIELD BRAND
-    // Tuyệt đối không kiểm tra chuỗi con trên name/description để không dính sản phẩm sai
-    if (selectedBrand !== 'ALL') {
-      const itemBrand = (item.brand || '').trim().toLowerCase();
-      const targetBrand = selectedBrand.trim().toLowerCase();
-      const cleanBrand = (s) => s.replace(/[\s\-_]/g, '');
-      if (itemBrand !== targetBrand && cleanBrand(itemBrand) !== cleanBrand(targetBrand)) {
-        return false;
-      }
-    }
-
-    // 4. Lọc Điểm cân bằng (Chỉ áp dụng khi xem Vợt hoặc ALL)
-    if (selectedBalance !== 'ALL' && (selectedCategory === 'RACKET' || selectedCategory === 'ALL')) {
-      const bal = (item.balancePoint || '').toLowerCase();
-      const targetBal = selectedBalance.toLowerCase();
-      if (!bal.includes(targetBal)) return false;
-    }
-
-    // 5. Lọc Trọng lượng (Chỉ áp dụng khi xem Vợt hoặc ALL)
-    if (selectedWeight !== 'ALL' && (selectedCategory === 'RACKET' || selectedCategory === 'ALL')) {
-      const wGrip = (item.weightGrip || item.weightClass || '').toUpperCase();
-      const targetU = selectedWeight.toUpperCase();
-      const matchU = new RegExp(`(^|[^A-Z0-9])${targetU}([^A-Z0-9]|$)`, 'i');
-      if (!matchU.test(wGrip)) return false;
-    }
-
-    // 6. Lọc Size Giày (Chỉ áp dụng khi xem Giày hoặc ALL)
+  // Client-side sub-filtering cho các thuộc tính phụ chưa có cột trong DB query
+  const displayedProducts = products.filter((item) => {
+    // 1. Lọc Size Giày (Chỉ áp dụng khi xem Giày hoặc ALL)
     if (selectedShoeSize !== 'ALL' && (selectedCategory === 'SHOES' || selectedCategory === 'ALL')) {
       let sizes = [];
       if (Array.isArray(item.sizes)) {
-        sizes = item.sizes.map(s => String(s).trim());
+        sizes = item.sizes.map((s) => String(s).trim());
       } else if (item.availableSizes) {
         try {
           const parsed = typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes;
-          if (Array.isArray(parsed)) sizes = parsed.map(s => String(s).trim());
+          if (Array.isArray(parsed)) sizes = parsed.map((s) => String(s).trim());
         } catch {
-          sizes = String(item.availableSizes).split(/[,;|\s]+/).map(s => s.trim());
+          sizes = String(item.availableSizes).split(/[,;|\s]+/).map((s) => s.trim());
         }
       }
       const targetSize = String(selectedShoeSize).trim();
@@ -289,17 +329,17 @@ const ProductsPage = () => {
       }
     }
 
-    // 7. Lọc Size Quần Áo (Chỉ áp dụng khi xem Quần Áo hoặc ALL)
+    // 2. Lọc Size Quần Áo (Chỉ áp dụng khi xem Quần Áo hoặc ALL)
     if (selectedApparelSize !== 'ALL' && (selectedCategory === 'APPAREL' || selectedCategory === 'ALL')) {
       let sizes = [];
       if (Array.isArray(item.sizes)) {
-        sizes = item.sizes.map(s => String(s).trim().toUpperCase());
+        sizes = item.sizes.map((s) => String(s).trim().toUpperCase());
       } else if (item.availableSizes) {
         try {
           const parsed = typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes;
-          if (Array.isArray(parsed)) sizes = parsed.map(s => String(s).trim().toUpperCase());
+          if (Array.isArray(parsed)) sizes = parsed.map((s) => String(s).trim().toUpperCase());
         } catch {
-          sizes = String(item.availableSizes).split(/[,;|\s]+/).map(s => s.trim().toUpperCase());
+          sizes = String(item.availableSizes).split(/[,;|\s]+/).map((s) => s.trim().toUpperCase());
         }
       }
       const targetSize = selectedApparelSize.trim().toUpperCase();
@@ -311,19 +351,17 @@ const ProductsPage = () => {
       }
     }
 
-    // 8. Lọc Giới tính (Chỉ áp dụng khi xem Quần Áo hoặc ALL)
+    // 3. Lọc Giới tính
     if (selectedGender !== 'ALL' && (selectedCategory === 'APPAREL' || selectedCategory === 'ALL')) {
       const itemGender = (item.gender || '').trim().toLowerCase();
       const targetGender = selectedGender.trim().toLowerCase();
-      if (itemGender === 'unisex') {
-        // Unisex phù hợp cả Nam và Nữ
-      } else if (itemGender !== targetGender) {
+      if (itemGender !== 'unisex' && itemGender !== targetGender) {
         const name = (item.name || '').toLowerCase();
         if (!name.includes(targetGender)) return false;
       }
     }
 
-    // 9. Lọc Dung tích / Loại Balo & Bao vợt (Chỉ áp dụng khi xem Balo hoặc ALL)
+    // 4. Lọc Balo & Sức chứa
     if (selectedBagType !== 'ALL' && (selectedCategory === 'BAG' || selectedCategory === 'ALL')) {
       const bType = (item.bagType || '').toLowerCase();
       const cap = (item.capacity || '').toLowerCase();
@@ -341,7 +379,7 @@ const ProductsPage = () => {
       }
     }
 
-    // 10. Lọc Loại Phụ Kiện (Chỉ áp dụng khi xem Phụ Kiện hoặc ALL)
+    // 5. Lọc Phụ kiện
     if (selectedAccessoryType !== 'ALL' && (selectedCategory === 'ACCESSORIES' || selectedCategory === 'ALL')) {
       const acc = (item.accessoryType || item.accessory_type || item.subcategory || '').toLowerCase();
       const name = (item.name || '').toLowerCase();
@@ -358,38 +396,23 @@ const ProductsPage = () => {
       }
     }
 
-    // 11. Lọc Khoảng giá: So sánh số học chính xác trên item.price
-    if (selectedPriceRange !== 'ALL') {
-      const price = Number(item.price) || 0;
-      if (selectedPriceRange === '<2m' && price >= 2000000) return false;
-      if (selectedPriceRange === '2-3.5m' && (price < 2000000 || price > 3500000)) return false;
-      if (selectedPriceRange === '3.5-5m' && (price < 3500000 || price > 5000000)) return false;
-      if (selectedPriceRange === '>5m' && price <= 5000000) return false;
-    }
-
     return true;
   });
 
-  // Sort
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (sortBy === 'price-asc') return a.price - b.price;
-    if (sortBy === 'price-desc') return b.price - a.price;
-    if (sortBy === 'rating') return (b.averageRating || 0) - (a.averageRating || 0);
-    return (b.id || 0) - (a.id || 0);
-  });
-
-  // Phân trang: 12 sản phẩm mỗi trang theo thiết kế
-  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE) || 1;
-  const validCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const validCurrentPage = Math.min(Math.max(currentPage, 1), Math.max(1, totalPages));
   const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedProducts = sortedProducts.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + products.length, totalElements);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== validCurrentPage) {
       setCurrentPage(newPage);
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('page', newPage);
+        return next;
+      });
       if (productListTopRef.current) {
-        const yOffset = -90; // Khoảng đệm cho sticky header
+        const yOffset = -90;
         const y = productListTopRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
         window.scrollTo({ top: y, behavior: 'smooth' });
       }
@@ -422,7 +445,12 @@ const ProductsPage = () => {
     setSelectedPriceRange('ALL');
     setSortBy('newest');
     setCurrentPage(1);
-    setSearchParams(selectedCategory !== 'ALL' ? { category: selectedCategory } : {});
+    if (selectedCategory !== 'ALL') {
+      const catId = CATEGORY_TO_ID[selectedCategory];
+      setSearchParams(catId ? { categoryId: catId } : { category: selectedCategory });
+    } else {
+      setSearchParams({});
+    }
   };
 
   const currentBanner = CATEGORY_BANNERS[selectedCategory] || CATEGORY_BANNERS.ALL;
@@ -506,7 +534,8 @@ const ProductsPage = () => {
                   if (tab.value === 'ALL') {
                     setSearchParams({});
                   } else {
-                    setSearchParams({ category: tab.value });
+                    const catId = CATEGORY_TO_ID[tab.value];
+                    setSearchParams(catId ? { categoryId: catId } : { category: tab.value });
                   }
                 }}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
@@ -805,7 +834,7 @@ const ProductsPage = () => {
                     {CATEGORY_TABS.find(t => t.value === selectedCategory)?.label || 'Tất cả sản phẩm'}
                   </h2>
                   <span className="text-xs text-slate-500">
-                    Hiển thị <strong className="text-slate-900">{sortedProducts.length === 0 ? 0 : startIndex + 1} - {Math.min(endIndex, sortedProducts.length)}</strong> trong tổng số <strong className="text-slate-900">{sortedProducts.length}</strong> mẫu trang bị cao cấp chuẩn BWF
+                    Hiển thị <strong className="text-slate-900">{totalElements === 0 ? 0 : startIndex + 1} - {Math.min(endIndex, totalElements)}</strong> trong tổng số <strong className="text-slate-900">{totalElements}</strong> mẫu trang bị cao cấp chuẩn BWF
                   </span>
                 </div>
 
@@ -815,11 +844,13 @@ const ProductsPage = () => {
                     <span className="text-slate-500 font-medium">Sắp xếp:</span>
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
+                      onChange={(e) => {
+                        setSortBy(e.target.value);
+                        setCurrentPage(1);
+                      }}
                       className="bg-transparent font-bold text-slate-900 outline-none cursor-pointer"
                     >
                       <option value="newest">Mới nhất</option>
-                      <option value="rating">Đánh giá cao nhất</option>
                       <option value="price-asc">Giá tăng dần</option>
                       <option value="price-desc">Giá giảm dần</option>
                     </select>
@@ -859,7 +890,7 @@ const ProductsPage = () => {
                   {selectedBrand !== 'ALL' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
                       Hãng: {selectedBrand}
-                      <button onClick={() => setSelectedBrand('ALL')} className="hover:text-secondary">
+                      <button onClick={() => { setSelectedBrand('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -868,7 +899,7 @@ const ProductsPage = () => {
                   {selectedBalance !== 'ALL' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
                       Điểm cân bằng: {selectedBalance}
-                      <button onClick={() => setSelectedBalance('ALL')} className="hover:text-secondary">
+                      <button onClick={() => { setSelectedBalance('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -877,7 +908,7 @@ const ProductsPage = () => {
                   {selectedWeight !== 'ALL' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
                       Trọng lượng: {selectedWeight}
-                      <button onClick={() => setSelectedWeight('ALL')} className="hover:text-secondary">
+                      <button onClick={() => { setSelectedWeight('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -886,7 +917,7 @@ const ProductsPage = () => {
                   {selectedShoeSize !== 'ALL' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
                       Size Giày: {selectedShoeSize}
-                      <button onClick={() => setSelectedShoeSize('ALL')} className="hover:text-secondary">
+                      <button onClick={() => { setSelectedShoeSize('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -895,7 +926,7 @@ const ProductsPage = () => {
                   {selectedApparelSize !== 'ALL' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
                       Size Áo/Quần: {selectedApparelSize}
-                      <button onClick={() => setSelectedApparelSize('ALL')} className="hover:text-secondary">
+                      <button onClick={() => { setSelectedApparelSize('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -904,7 +935,7 @@ const ProductsPage = () => {
                   {selectedPriceRange !== 'ALL' && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
                       Giá: {selectedPriceRange}
-                      <button onClick={() => setSelectedPriceRange('ALL')} className="hover:text-secondary">
+                      <button onClick={() => { setSelectedPriceRange('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
                         <X className="w-3 h-3" />
                       </button>
                     </span>
@@ -920,13 +951,23 @@ const ProductsPage = () => {
               )}
             </div>
 
-            {/* Product Grid / List View */}
+            {/* Product Grid / List View / Skeleton Loading */}
             {loading ? (
-              <div className="py-20 flex flex-col items-center justify-center">
-                <div className="w-10 h-10 border-4 border-secondary border-t-transparent rounded-full animate-spin mb-3" />
-                <span className="text-xs text-slate-500 font-bold uppercase">Đang tải danh sách thiết bị...</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden shadow-sm animate-pulse flex flex-col p-4">
+                    <div className="w-full aspect-[4/3] bg-slate-200 rounded-lg mb-4" />
+                    <div className="h-3 bg-slate-200 rounded w-1/3 mb-2" />
+                    <div className="h-4 bg-slate-200 rounded w-3/4 mb-3" />
+                    <div className="h-3 bg-slate-200 rounded w-1/2 mb-4" />
+                    <div className="mt-auto flex justify-between items-center pt-3 border-t border-slate-100">
+                      <div className="h-5 bg-slate-200 rounded w-1/3" />
+                      <div className="h-8 bg-slate-200 rounded w-1/4" />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ) : sortedProducts.length === 0 ? (
+            ) : displayedProducts.length === 0 ? (
               <div className="bg-white rounded-xl p-12 border border-[#E2E8F0] text-center flex flex-col items-center gap-3">
                 <Tag className="w-12 h-12 text-slate-300" />
                 <h3 className="font-display text-base font-bold text-slate-900">Không tìm thấy sản phẩm phù hợp!</h3>
@@ -935,30 +976,30 @@ const ProductsPage = () => {
                 </p>
                 <button
                   onClick={handleResetFilters}
-                  className="mt-2 px-5 py-2 bg-secondary text-white rounded-lg text-xs font-bold hover:bg-secondary-hover transition-colors"
+                  className="mt-2 px-5 py-2 bg-secondary text-white rounded-lg text-xs font-bold hover:bg-secondary-hover transition-colors shadow-sm"
                 >
                   Xóa bộ lọc tìm kiếm
                 </button>
               </div>
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
-                {paginatedProducts.map((product) => (
+                {displayedProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             ) : (
               /* List Mode */
               <div className="flex flex-col gap-4">
-                {paginatedProducts.map((product) => (
+                {displayedProducts.map((product) => (
                   <div
                     key={product.id}
                     className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center gap-5"
                   >
-                    <div className="w-full sm:w-44 h-44 bg-[#F2F4F6] rounded-lg p-2 flex items-center justify-center shrink-0">
-                      <img
+                    <div className="w-full sm:w-44 h-44 bg-[#F2F4F6] rounded-lg p-2 flex items-center justify-center shrink-0 overflow-hidden">
+                      <ProductImage
                         src={product.imageUrl}
                         alt={product.name}
-                        className="max-h-full object-contain mix-blend-multiply"
+                        className="max-h-full w-auto object-contain mix-blend-multiply"
                       />
                     </div>
                     <div className="flex-1 flex flex-col gap-2">
@@ -994,10 +1035,10 @@ const ProductsPage = () => {
             )}
 
             {/* Thanh Phân Trang (Pagination Bar) Chuẩn Design System */}
-            {sortedProducts.length > 0 && (
+            {totalElements > 0 && (
               <div className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
                 <span className="text-xs sm:text-sm text-slate-500">
-                  Hiển thị <strong className="text-slate-900">{startIndex + 1} - {Math.min(endIndex, sortedProducts.length)}</strong> trong tổng số <strong className="text-slate-900">{sortedProducts.length}</strong> sản phẩm
+                  Hiển thị <strong className="text-slate-900">{startIndex + 1} - {Math.min(endIndex, totalElements)}</strong> trong tổng số <strong className="text-slate-900">{totalElements}</strong> sản phẩm
                 </span>
 
                 <div className="flex items-center gap-1.5">

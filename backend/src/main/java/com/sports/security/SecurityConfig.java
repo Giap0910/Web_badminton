@@ -50,8 +50,8 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(errors -> errors
-                .authenticationEntryPoint((request, response, exception) -> writeSecurityError(response, 401))
-                .accessDeniedHandler((request, response, exception) -> writeSecurityError(response, 403)))
+                .authenticationEntryPoint((request, response, exception) -> writeSecurityError(request, response, 401))
+                .accessDeniedHandler((request, response, exception) -> writeSecurityError(request, response, 403)))
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
@@ -61,6 +61,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/ai-chat/**").permitAll()
                 .requestMatchers("/api/payment/payos-webhook").permitAll()
                 .requestMatchers("/api/payment/mock-webhook-trigger").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/dev/mock-payos/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/payment/environment").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/reviews/product/**").permitAll()
 
                 // Admin only
@@ -100,11 +102,40 @@ public class SecurityConfig {
         return source;
     }
 
-    private void writeSecurityError(jakarta.servlet.http.HttpServletResponse response, int status)
+    private void writeCheckoutSecurityError(jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response, int status) throws java.io.IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        var body = java.util.Map.of("timestamp", java.time.OffsetDateTime.now().toString(), "status", status,
+                "code", status == 401 ? "UNAUTHENTICATED" : "NOT_ORDER_OWNER", "message", "Không có quyền truy cập",
+                "path", request.getRequestURI(), "errors", java.util.Map.of());
+        new com.fasterxml.jackson.databind.ObjectMapper().writeValue(response.getWriter(), body);
+    }
+
+    private void writeSecurityError(jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response, int status)
             throws java.io.IOException {
+        if (request.getRequestURI().equals("/api/payment/environment") || request.getRequestURI().startsWith("/api/dev/mock-payos/")) {
+            writeMockSecurityError(request,response,status);
+            return;
+        }
+        if (request.getRequestURI().matches("/api/orders/[^/]+/(checkout-context|payment-method-transitions)")) {
+            writeCheckoutSecurityError(request, response, status);
+            return;
+        }
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
         String message = status == 401 ? "Phiên đăng nhập không hợp lệ" : "Bạn không có quyền truy cập";
         response.getWriter().write("{\"status\":" + status + ",\"message\":\"" + message + "\"}");
+    }
+
+    private void writeMockSecurityError(jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response,int status) throws java.io.IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        new com.fasterxml.jackson.databind.ObjectMapper().writeValue(response.getWriter(), java.util.Map.of(
+                "timestamp", java.time.OffsetDateTime.now().toString(), "status", status,
+                "code", status == 401 ? "UNAUTHENTICATED" : "FORBIDDEN", "message", "Không có quyền truy cập",
+                "path", request.getRequestURI(), "errors", java.util.Map.of()));
     }
 }

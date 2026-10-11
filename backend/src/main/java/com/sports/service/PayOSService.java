@@ -16,6 +16,8 @@ import java.util.*;
 @Service
 public class PayOSService {
     @Value("${payos.checksum-key}") private String checksumKey;
+    @Value("${payos.mode:REAL}") private String paymentMode = "REAL";
+    @Value("${payos.mock-signing-key:}") private String mockSigningKey;
     @Value("${payos.return-url:http://localhost:5173/orders/success}") private String returnUrl;
     @Value("${payos.cancel-url:http://localhost:5173/orders/cancel}") private String cancelUrl;
     private final ObjectMapper json = new ObjectMapper();
@@ -39,7 +41,13 @@ public class PayOSService {
     }
 
     public boolean verifyWebhookPayload(JsonNode request) {
-        return request != null && verifyDataSignature(request.get("data"), request.path("signature").asText(), checksumKey);
+        return request != null && verifyDataSignature(request.get("data"), request.path("signature").asText(), webhookKey());
+    }
+
+    private String webhookKey() {
+        if (!"MOCK".equals(paymentMode)) return checksumKey;
+        if (mockSigningKey == null || !mockSigningKey.matches("[0-9a-f]{64}")) return null;
+        return mockSigningKey;
     }
 
     public boolean verifyDataSignature(JsonNode data, String signature, String key) {

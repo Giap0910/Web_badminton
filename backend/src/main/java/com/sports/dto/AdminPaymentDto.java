@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class AdminPaymentDto {
+    @Builder.Default private String paymentMode = "REAL";
+    private String mockProviderStatus;
     private Long id;
     private Long orderId;
     private String provider;

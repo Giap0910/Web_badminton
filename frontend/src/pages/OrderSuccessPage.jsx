@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
 import { formatPrice, isOrderPaid, getOrderStatusLabel } from '../utils/formatters';
+import OrderItemOptions from '../components/OrderItemOptions';
 import {
   Tag,
   CheckCircle2,
@@ -168,17 +169,23 @@ const OrderSuccessPage = () => {
   // is derived from order/paymentMethod.
   // =========================================================================
   const isPaymentError = paymentLoadStatus === 'error';
+  const isCurrentCod = order?.paymentMethod === 'COD';
+  const isHistoricalRetiredPayOs = isCurrentCod && Boolean(payment && ['CANCELLED', 'EXPIRED', 'FAILED'].includes(payment.status));
+  const isCodPaidConflict = isCurrentCod && Boolean(payment && payment.status === 'PAID');
+  const isMockMode = payment?.paymentMode === 'MOCK' || order?.paymentMode === 'MOCK';
+
   const isPaid = payment
-    ? payment?.status === 'PAID'
+    ? (isCurrentCod ? false : payment?.status === 'PAID')
     : (paymentLoadStatus === 'absent' ? isOrderPaid(order) : false);
 
   const isNeedsReview = payment?.status === 'NEEDS_REVIEW';
   const isFailed = payment?.status === 'FAILED';
   const isExpired = payment?.status === 'EXPIRED';
   const isPaymentCancelled = payment?.status === 'CANCELLED';
-  const isCancelled = payment?.status === 'CANCELLED' || (!payment && order?.status === 'CANCELLED');
   const isOrderCancelled = order?.status === 'CANCELLED';
+  const isCancelled = payment?.status === 'CANCELLED' || (!payment && order?.status === 'CANCELLED');
   const isCreating = payment?.status === 'CREATING';
+  const hasPaymentFailure = !isHistoricalRetiredPayOs && (isFailed || isExpired || isPaymentCancelled);
 
   // isPending: only for payment PENDING attempt, or fallback for PayOS order when attempt is confirmed absent
   const isPending = payment
@@ -191,14 +198,48 @@ const OrderSuccessPage = () => {
   let statusHeading = 'Trạng thái đơn hàng';
   let statusDetailMessage = '';
 
-  if (payment) {
-    // When payment attempt exists, PAYMENT UI is derived EXCLUSIVELY from payment.status
-    if (isNeedsReview) {
-      statusBadgeLabel = 'Cần đối soát';
+  if (isNeedsReview || isCodPaidConflict) {
+    statusBadgeLabel = 'Cần đối soát';
+    statusBadgeClass = 'bg-amber-100 text-amber-800';
+    statusHeading = isCodPaidConflict
+      ? 'Ghi nhận thanh toán cần đối soát'
+      : 'Thanh toán đang chờ đối soát';
+    statusDetailMessage = isCodPaidConflict
+      ? 'Đơn hàng COD ghi nhận đã có giao dịch thanh toán trực tuyến thành công. Quản trị viên sẽ đối soát và cập nhật đơn hàng.'
+      : 'Giao dịch thanh toán cần được đối soát bởi quản trị viên. Vui lòng theo dõi tiến trình trong chi tiết đơn hàng hoặc liên hệ hỗ trợ.';
+  } else if (isCurrentCod) {
+    // Current payment method is COD
+    if (isPaymentError) {
+      statusBadgeLabel = 'Lỗi xác minh';
       statusBadgeClass = 'bg-amber-100 text-amber-800';
-      statusHeading = 'Thanh toán đang chờ đối soát';
-      statusDetailMessage = 'Giao dịch thanh toán cần được đối soát bởi quản trị viên. Vui lòng theo dõi tiến trình trong chi tiết đơn hàng hoặc liên hệ hỗ trợ.';
-    } else if (isFailed) {
+      statusHeading = 'Không thể xác minh trạng thái thanh toán';
+      statusDetailMessage = paymentError || 'Chưa thể xác minh trạng thái thanh toán. Vui lòng kiểm tra lại.';
+    } else if (isOrderCancelled) {
+      statusBadgeLabel = 'Đã hủy';
+      statusBadgeClass = 'bg-red-100 text-red-800';
+      statusHeading = 'Đơn hàng đã bị hủy';
+      statusDetailMessage = 'Đơn hàng này đã bị hủy.';
+    } else if (isCreating) {
+      statusBadgeLabel = 'Đang khởi tạo';
+      statusBadgeClass = 'bg-amber-100 text-amber-800';
+      statusHeading = 'Đang chuẩn bị liên kết thanh toán';
+      statusDetailMessage = 'Liên kết thanh toán đang được chuẩn bị. Vui lòng chờ trong giây lát hoặc bấm nút "Kiểm tra lại".';
+    } else if (isPending) {
+      statusBadgeLabel = 'Đang xác nhận thanh toán';
+      statusBadgeClass = 'bg-amber-100 text-amber-800';
+      statusHeading = 'Đang kiểm tra giao dịch';
+      statusDetailMessage = 'Đơn hàng đang chờ cổng thanh toán xác nhận. Nếu bạn vừa hoàn tất chuyển khoản, vui lòng chờ trong giây lát hoặc bấm nút "Kiểm tra lại".';
+    } else {
+      // Historical PayOS attempt is retired (CANCELLED, EXPIRED, FAILED) or absent:
+      // Render current COD UI
+      statusBadgeLabel = 'Chờ xử lý COD';
+      statusBadgeClass = 'bg-blue-100 text-blue-800';
+      statusHeading = 'Đơn hàng đã được ghi nhận';
+      statusDetailMessage = 'Đơn hàng đã được ghi nhận, chưa thanh toán. Thanh toán khi nhận hàng.';
+    }
+  } else if (payment) {
+    // When payment attempt exists for PayOS, PAYMENT UI is derived EXCLUSIVELY from payment.status (FIX-004)
+    if (isFailed) {
       statusBadgeLabel = 'Thanh toán thất bại';
       statusBadgeClass = 'bg-red-100 text-red-800';
       statusHeading = 'Thanh toán thất bại';
@@ -236,11 +277,6 @@ const OrderSuccessPage = () => {
       statusBadgeClass = 'bg-red-100 text-red-800';
       statusHeading = 'Đơn hàng đã bị hủy';
       statusDetailMessage = 'Đơn hàng này đã bị hủy.';
-    } else if (order?.paymentMethod === 'COD' && order?.status === 'PENDING') {
-      statusBadgeLabel = 'Chờ xử lý COD';
-      statusBadgeClass = 'bg-blue-100 text-blue-800';
-      statusHeading = 'Đơn hàng đã được ghi nhận';
-      statusDetailMessage = 'Đơn hàng đã được ghi nhận, chưa thanh toán. Thanh toán khi nhận hàng.';
     } else if (order?.paymentMethod === 'PAYOS_VIETQR' && order?.status === 'PENDING') {
       statusBadgeLabel = 'Đang xác nhận thanh toán';
       statusBadgeClass = 'bg-amber-100 text-amber-800';
@@ -271,14 +307,16 @@ const OrderSuccessPage = () => {
                 <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shadow-sm">
                   <Check className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-semibold text-slate-600">2. Thanh toán QR</span>
+                <span className="text-xs font-semibold text-slate-600">
+                  {isCurrentCod ? '2. Phương thức COD' : '2. Thanh toán QR'}
+                </span>
               </div>
               <div className="h-[2px] flex-1 bg-amber-400 mx-3"></div>
               <div className="flex items-center gap-2">
                 <div className={`w-7 h-7 rounded-full ${
-                  (isNeedsReview || isPaymentError) ? 'bg-amber-500' : (isPending || isCreating) ? 'bg-amber-500' : (isFailed || isExpired || isPaymentCancelled || (!payment && isOrderCancelled)) ? 'bg-red-600' : 'bg-slate-700'
+                  (isNeedsReview || isPaymentError || isCodPaidConflict) ? 'bg-amber-500' : (isPending || isCreating) ? 'bg-amber-500' : (hasPaymentFailure || isOrderCancelled) ? 'bg-red-600' : (isCurrentCod ? 'bg-blue-600' : 'bg-slate-700')
                 } text-white flex items-center justify-center text-xs font-bold shadow-md`}>
-                  {(isNeedsReview || isPaymentError) ? <AlertCircle className="w-4 h-4" /> : (isPending || isCreating) ? <Clock className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                  {(isNeedsReview || isPaymentError || isCodPaidConflict) ? <AlertCircle className="w-4 h-4" /> : (isPending || isCreating) ? <Clock className="w-4 h-4" /> : (hasPaymentFailure || isOrderCancelled) ? <AlertTriangle className="w-4 h-4" /> : (isCurrentCod ? <Truck className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />)}
                 </div>
                 <span className="text-xs font-extrabold text-slate-700">3. Trạng thái</span>
               </div>
@@ -298,7 +336,7 @@ const OrderSuccessPage = () => {
           )}
 
           <div data-testid="payment-result-section" className="flex items-center gap-3">
-            {isNeedsReview || isPaymentError ? (
+            {isNeedsReview || isPaymentError || isCodPaidConflict ? (
               <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                 <AlertCircle className="w-6 h-6" />
               </div>
@@ -306,9 +344,13 @@ const OrderSuccessPage = () => {
               <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                 <Clock className="w-6 h-6 animate-pulse" />
               </div>
-            ) : (isFailed || isExpired || isPaymentCancelled || (!payment && isOrderCancelled)) ? (
+            ) : (hasPaymentFailure || isOrderCancelled) ? (
               <div className="w-12 h-12 rounded-full bg-red-100 text-red-700 flex items-center justify-center shrink-0">
                 <XCircle className="w-6 h-6" />
+              </div>
+            ) : isCurrentCod ? (
+              <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                <Truck className="w-6 h-6" />
               </div>
             ) : (
               <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
@@ -317,9 +359,21 @@ const OrderSuccessPage = () => {
             )}
 
             <div>
-              <span data-testid="payment-result-badge" className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${statusBadgeClass}`}>
-                {statusBadgeLabel}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span data-testid="payment-result-badge" className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${statusBadgeClass}`}>
+                  {statusBadgeLabel}
+                </span>
+                {isMockMode && (
+                  <span data-testid="mock-mode-badge" className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                    Mô phỏng (MOCK)
+                  </span>
+                )}
+                {isMockMode && payment?.mockProviderStatus && (
+                  <span data-testid="mock-provider-status" className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                    Provider: {payment.mockProviderStatus}
+                  </span>
+                )}
+              </div>
               <h1 data-testid="payment-result-heading" className="text-xl font-bold text-slate-900 mt-1">
                 {statusHeading}
               </h1>
@@ -335,16 +389,98 @@ const OrderSuccessPage = () => {
             {error || statusDetailMessage}
           </p>
 
-          {/* Preserved Order Details when Order has loaded */}
+          {/* FIX-019: Full Snapshot Details for Preserved Order */}
           {order && (
-            <div data-testid="order-summary-preserved" className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-2 text-xs text-slate-600">
-              <div className="font-semibold text-slate-800 flex items-center justify-between">
-                <span>Thông tin đơn hàng đã ghi nhận:</span>
-                <span className="font-bold text-slate-900">{formatPrice(order.totalAmount || 0)}</span>
+            <div data-testid="order-summary-preserved" className="p-4 sm:p-5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-4 text-xs text-slate-600">
+              <div className="font-semibold text-slate-800 flex items-center justify-between pb-2.5 border-b border-slate-200">
+                <span className="text-sm font-bold text-slate-900">Chi tiết đơn hàng đã ghi nhận</span>
+                <span className="font-black text-slate-900 text-sm">{formatPrice(order.totalAmount || 0)}</span>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-slate-500">
-                <span>Phương thức: <strong>{order.paymentMethod === 'PAYOS_VIETQR' ? 'VietQR (PayOS)' : (order.paymentMethod || 'Chưa xác định')}</strong></span>
-                <span>Trạng thái đơn: <strong>{getOrderStatusLabel(order)}</strong></span>
+
+              {/* Delivery Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2.5 border-b border-slate-200 text-slate-700">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">Người nhận hàng</span>
+                  <p className="font-bold text-slate-900">{order.customerName || 'Chưa có thông tin'}</p>
+                  <p className="text-slate-600">Số điện thoại: <strong className="text-slate-800">{order.shippingPhone || 'Chưa có thông tin'}</strong></p>
+                  <p className="text-slate-600">Địa chỉ: {order.shippingAddress || 'Chưa có thông tin'}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">Phương thức & Ghi chú</span>
+                  <p className="text-slate-700">
+                    Phương thức: <strong>{isCurrentCod ? 'Thanh toán khi nhận hàng (COD)' : (order.paymentMethod === 'PAYOS_VIETQR' ? 'VietQR (PayOS)' : (order.paymentMethod || 'Chưa xác định'))}</strong>
+                  </p>
+                  <p className="text-slate-700">Trạng thái: <strong>{getOrderStatusLabel(order)}</strong></p>
+                  {order.note && (
+                    <p className="text-slate-500 italic mt-1">Ghi chú: “{order.note}”</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Order Items List Snapshot */}
+              {Array.isArray(order.items) && order.items.length > 0 && (
+                <div className="space-y-2.5 pb-2.5 border-b border-slate-200">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block">
+                    Danh sách sản phẩm ({order.items.length} mặt hàng)
+                  </span>
+                  <div className="space-y-2 divide-y divide-slate-100">
+                    {order.items.map((item, idx) => (
+                      <div key={item.id || idx} className="pt-2 first:pt-0 flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 shrink-0 flex items-center justify-center overflow-hidden p-0.5">
+                            {(item.productImageUrl || item.imageUrl || item.image) ? (
+                              <img
+                                src={item.productImageUrl || item.imageUrl || item.image}
+                                alt={item.productName || item.name}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <Truck className="w-4 h-4 text-slate-300" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 text-xs truncate">
+                              {item.productName || item.name || `Sản phẩm #${item.productId || idx + 1}`}
+                            </p>
+                            <OrderItemOptions item={item} />
+                            <p className="text-[11px] text-slate-400">
+                              Đơn giá: {formatPrice(item.price || 0)} × {item.quantity || 1}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-bold text-slate-900 text-xs shrink-0">
+                          {formatPrice((item.price || 0) * (item.quantity || 1))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Price Breakdown Snapshot */}
+              <div className="space-y-1.5 pt-1 text-slate-600">
+                <div className="flex justify-between">
+                  <span>Tạm tính:</span>
+                  <span className="font-semibold text-slate-800">
+                    {formatPrice(order.subtotal || (order.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0))}
+                  </span>
+                </div>
+                {(order.discountAmount > 0) && (
+                  <div className="flex justify-between text-red-600 font-semibold">
+                    <span>Giảm giá Voucher:</span>
+                    <span>-{formatPrice(order.discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>Phí vận chuyển:</span>
+                  <span className="font-semibold text-emerald-600">
+                    {(!order.shippingFee || order.shippingFee === 0) ? '0₫ (Miễn phí)' : formatPrice(order.shippingFee)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline pt-1.5 border-t border-slate-200 font-bold text-slate-900">
+                  <span className="text-xs">Tổng thanh toán:</span>
+                  <span className="text-base text-red-600 font-black tracking-tight">{formatPrice(order.totalAmount || 0)}</span>
+                </div>
               </div>
             </div>
           )}
@@ -371,10 +507,10 @@ const OrderSuccessPage = () => {
 
             {(isPending || isCreating || isFailed || isExpired) && !isOrderCancelled && order?.paymentMethod === 'PAYOS_VIETQR' && !isPaymentError && (
               <Link
-                to={`/payment/qr/${orderId}`}
-                className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition"
+                to={`/checkout?orderId=${orderId}`}
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition"
               >
-                <span>Quay lại trang thanh toán QR</span>
+                <span>Đổi sang phương thức COD</span>
               </Link>
             )}
 
@@ -415,7 +551,9 @@ const OrderSuccessPage = () => {
               <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shadow-sm">
                 <Check className="w-4 h-4" />
               </div>
-              <span className="text-xs font-semibold text-slate-600">2. Thanh toán QR</span>
+              <span className="text-xs font-semibold text-slate-600">
+                {isCurrentCod ? '2. Phương thức COD' : '2. Thanh toán QR'}
+              </span>
             </div>
             <div className="h-[2px] flex-1 bg-red-600 mx-3"></div>
             <div className="flex items-center gap-2">
@@ -443,12 +581,22 @@ const OrderSuccessPage = () => {
         {/* Success Header */}
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-24 h-24 rounded-full bg-white shadow-xl flex items-center justify-center mb-4 border border-slate-100">
-            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+              isCurrentCod ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'
+            }`}>
               <CheckCircle2 className="w-11 h-11" />
             </div>
           </div>
-          <span data-testid="payment-result-badge" className="text-[11px] font-extrabold uppercase tracking-wider text-red-600 bg-red-50 px-3.5 py-1 rounded-full mb-2">
-            Giao dịch đã xác thực
+          <span data-testid="payment-result-badge" className={`text-[11px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-full mb-2 ${
+            isCurrentCod
+              ? 'text-blue-700 bg-blue-50 border border-blue-200'
+              : 'text-red-600 bg-red-50'
+          }`}>
+            {isCurrentCod
+              ? 'Đơn hàng đã ghi nhận'
+              : isMockMode
+              ? 'Thanh toán thành công mô phỏng'
+              : 'Giao dịch đã xác thực'}
           </span>
           <h1 data-testid="payment-result-heading" className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">
             Đặt hàng thành công!
@@ -476,8 +624,20 @@ const OrderSuccessPage = () => {
 
             <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col items-start">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trạng thái thanh toán</span>
-              <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md">
-                <ShieldCheck className="w-3.5 h-3.5" /> VietQR Tự động
+              <span className={`mt-1 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md ${
+                isCurrentCod
+                  ? 'text-blue-700 bg-blue-50 border border-blue-200'
+                  : 'text-red-600 bg-red-50'
+              }`}>
+                {isCurrentCod ? (
+                  <>
+                    <Truck className="w-3.5 h-3.5" /> Thanh toán khi nhận hàng (COD)
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-3.5 h-3.5" /> {isMockMode ? 'VietQR Mô phỏng (MOCK)' : 'VietQR Tự động'}
+                  </>
+                )}
               </span>
             </div>
 
@@ -572,8 +732,8 @@ const OrderSuccessPage = () => {
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-16 h-16 rounded-xl bg-white shrink-0 overflow-hidden shadow-sm flex items-center justify-center p-1 border border-slate-200/60">
                       <img
-                        src={item.imageUrl || item.image}
-                        alt={item.name}
+                        src={item.productImageUrl || item.imageUrl || item.image}
+                        alt={item.productName || item.name}
                         className="w-full h-full object-contain"
                       />
                     </div>
@@ -582,28 +742,9 @@ const OrderSuccessPage = () => {
                         Chính hãng phân phối
                       </span>
                       <span className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-1">
-                        {item.name}
+                        {item.productName || item.name}
                       </span>
-                      <div className="flex flex-wrap gap-1.5 text-xs text-slate-500 mt-1">
-                        {item.selectedWeight && (
-                          <span className="bg-slate-200/80 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            {item.selectedWeight}
-                          </span>
-                        )}
-                        {item.selectedSize && (
-                          <span className="bg-slate-200/80 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            Size {item.selectedSize}
-                          </span>
-                        )}
-                        {item.stringingService && (
-                          <span className="bg-slate-200/80 px-2 py-0.5 rounded text-[10px] font-semibold">
-                            {item.stringingService}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
-                        <Gift className="w-3 h-3 text-red-500" /> Tặng 01 Bao vợt nhung + 02 Quấn cán Yonex AC102EX
-                      </span>
+                      <OrderItemOptions item={item} />
                     </div>
                   </div>
 
@@ -625,21 +766,27 @@ const OrderSuccessPage = () => {
                 <span>Tạm tính ({items.length} sản phẩm):</span>
                 <span className="font-bold text-slate-900">{formatPrice(subtotal)}</span>
               </div>
-              <div className="flex justify-between items-center text-xs text-red-600 font-bold">
-                <span className="flex items-center gap-1">
-                  <Tag className="w-3.5 h-3.5" /> Voucher HG (HG100K):
-                </span>
-                <span>-{formatPrice(discountAmount)}</span>
-              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between items-center text-xs text-red-600 font-bold">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5" /> Giảm giá Voucher:
+                  </span>
+                  <span>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center text-xs text-slate-600">
-                <span>Phí vận chuyển hỏa tốc:</span>
-                <span className="font-bold text-emerald-600">0₫ (Miễn phí HG VIP)</span>
+                <span>Phí vận chuyển:</span>
+                <span className="font-bold text-emerald-600">
+                  {shippingFee === 0 ? '0₫ (Miễn phí)' : formatPrice(shippingFee)}
+                </span>
               </div>
               <div className="w-full h-px bg-slate-200 my-1"></div>
               <div className="flex justify-between items-baseline pt-1">
                 <div>
                   <span className="text-sm font-black text-slate-900 block">Tổng thanh toán:</span>
-                  <span className="text-[11px] text-red-600 font-semibold">Máy chủ đã ghi nhận thanh toán</span>
+                  <span className={`text-[11px] font-semibold ${isCurrentCod ? 'text-blue-600' : 'text-red-600'}`}>
+                    {isCurrentCod ? 'Thanh toán tiền mặt khi nhận hàng (COD)' : 'Máy chủ đã ghi nhận thanh toán'}
+                  </span>
                 </div>
                 <span className="text-2xl font-black text-red-600 tracking-tight">
                   {formatPrice(totalAmount)}

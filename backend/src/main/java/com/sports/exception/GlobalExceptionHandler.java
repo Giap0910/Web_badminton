@@ -13,6 +13,16 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler({org.springframework.web.servlet.NoHandlerFoundException.class,
+            org.springframework.web.servlet.resource.NoResourceFoundException.class})
+    public ResponseEntity<Map<String, Object>> handleMissingEndpoint(Exception ex,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "timestamp", java.time.OffsetDateTime.now().toString(), "status", 404,
+                "code", "NOT_FOUND", "message", "Không tìm thấy đường dẫn",
+                "path", request.getRequestURI(), "errors", Map.of()));
+    }
+
     @ExceptionHandler(PaymentLinkException.class)
     public ResponseEntity<Map<String, Object>> handlePaymentLink(PaymentLinkException ex,
             jakarta.servlet.http.HttpServletRequest request) {

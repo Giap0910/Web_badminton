@@ -69,8 +69,8 @@ class OrderIdempotencyTest {
             return saved;
         });
         service = new OrderService(orders, products, users, payment,
-                new VoucherService(vouchers, new MockEnvironment()), mock(EntityManager.class));
-        mvc = MockMvcBuilders.standaloneSetup(new OrderController(service))
+                new VoucherService(vouchers, new MockEnvironment()), mock(EntityManager.class), mock(PaymentTransitionGuard.class));
+        mvc = MockMvcBuilders.standaloneSetup(new OrderController(service, mock(OrderStatusService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(principalResolver()).build();
     }
@@ -257,6 +257,7 @@ class OrderIdempotencyTest {
         context.register(SecurityConfig.class, OrderController.class, GlobalExceptionHandler.class, WebConfig.class);
         context.addBeanFactoryPostProcessor(factory -> {
             factory.registerSingleton("orderService", service);
+            factory.registerSingleton("orderStatusService", mock(OrderStatusService.class));
             factory.registerSingleton("jwtAuthenticationFilter", new JwtAuthenticationFilter(
                     mock(JwtTokenProvider.class), mock(UserDetailsServiceImpl.class)));
         });

@@ -460,10 +460,10 @@ public class PayOSWebhookFuzzTest {
             when(products.findByIdForUpdate(10L)).thenReturn(Optional.of(product));
             PayOSService signatures = signatureService();
             service = new OrderService(orders, products, users,
-                    signatures, vouchers, mock(EntityManager.class));
+                    signatures, vouchers, mock(EntityManager.class), mock(com.sports.service.PaymentTransitionGuard.class));
             configureLedger(orderCode);
             var ledger = new PaymentLedgerService(events, conflicts);
-            var settlement = new PaymentSettlementService(attempts, orders, ledger, service, mock(EntityManager.class));
+            var settlement = new PaymentSettlementService(attempts, orders, ledger, service, mock(EntityManager.class), mock(com.sports.service.PaymentTransitionGuard.class));
             controller = new PaymentController(signatures, new PaymentWebhookService(signatures, settlement), new MockEnvironment());
         }
 

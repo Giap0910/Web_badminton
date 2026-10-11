@@ -164,15 +164,15 @@ class OrderIdempotencyIntegrationTest {
         String key = UUID.randomUUID().toString();
         var first = service.createOrder(userId, request(), key);
         try (var connection = connect(SCHEMA); var statement = connection.prepareStatement(
-                "INSERT INTO orders(user_id,total_amount,status,idempotency_key,request_hash) VALUES(?,?,?,?,?)")) {
+                "INSERT INTO orders(user_id,total_amount,status,idempotency_key,request_hash,checkout_revision) VALUES(?,?,?,?,?,?)")) {
             statement.setLong(1, userId);
             statement.setBigDecimal(2, BigDecimal.ONE);
             statement.setString(3, "PENDING");
             statement.setString(4, key);
             statement.setString(5, "a".repeat(64));
+            statement.setLong(6, 0);
             var failure = assertThrows(SQLException.class, statement::executeUpdate);
-            assertEquals("23000", failure.getSQLState());
-            assertTrue(failure.getMessage().contains("uk_orders_user_idempotency"));
+            assertDuplicateConstraint(failure);
         }
         assertEquals(first.order().getId(), service.createOrder(userId, request(), key).order().getId());
         assertOneMutation();
@@ -191,6 +191,23 @@ class OrderIdempotencyIntegrationTest {
         assertEquals(otherId, second.order().getUserId());
         assertThrows(UnauthorizedException.class, () -> service.getOrderById(first.order().getId(), otherId, false));
         assertEquals(first.order().getId(), service.getOrderById(first.order().getId(), otherId, true).getId());
+    }
+
+    private void assertDuplicateConstraint(SQLException failure) {
+        System.out.println(jdbcDiagnostic(failure));
+        assertEquals(1062, failure.getErrorCode(), jdbcDiagnostic(failure));
+        assertEquals("23000", failure.getSQLState(), jdbcDiagnostic(failure));
+        assertTrue(failure.getMessage().contains("uk_orders_user_idempotency"), jdbcDiagnostic(failure));
+    }
+
+    private String jdbcDiagnostic(SQLException failure) {
+        var details = new StringBuilder("FIX057 JDBC: ");
+        for (var current = failure; current != null; current = current.getNextException()) {
+            details.append(current.getClass().getName()).append(" SQLState=").append(current.getSQLState())
+                    .append(" vendor=").append(current.getErrorCode()).append(" message=").append(current.getMessage());
+            if (current.getCause() != null) details.append(" cause=").append(current.getCause());
+        }
+        return details.toString();
     }
 
     private OrderCreateRequest request() {
@@ -233,6 +250,14 @@ class OrderIdempotencyIntegrationTest {
             return new JpaTransactionManager(factory);
         }
 
+        @Bean PaymentLedgerService ledger(com.sports.repository.PaymentEventRepository events, com.sports.repository.PaymentEventConflictRepository conflicts) {
+            return new PaymentLedgerService(events, conflicts);
+        }
+        @Bean PaymentTransitionGuard guard(com.sports.repository.PaymentMethodTransitionRepository ops,
+                com.sports.repository.PaymentAttemptRepository attempts, PaymentLedgerService ledger) {
+            return new PaymentTransitionGuard(ops, attempts, ledger);
+        }
+
         @Bean
         VoucherService voucherService(VoucherRepository repository) {
             return new VoucherService(repository, new MockEnvironment());
@@ -240,9 +265,9 @@ class OrderIdempotencyIntegrationTest {
 
         @Bean
         OrderService orderService(OrderRepository orders, ProductRepository products, UserRepository users,
-                VoucherService vouchers, EntityManagerFactory factory) {
+                VoucherService vouchers, EntityManagerFactory factory, PaymentTransitionGuard guard) {
             return new OrderService(orders, products, users, mock(PayOSService.class), vouchers,
-                    SharedEntityManagerCreator.createSharedEntityManager(factory));
+                    SharedEntityManagerCreator.createSharedEntityManager(factory), guard);
         }
     }
 }

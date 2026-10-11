@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
+import ProductImage from '../components/ProductImage';
 import { adminApi } from '../api/adminApi';
 import { productApi } from '../api/productApi';
 import {
@@ -358,11 +359,13 @@ const AdminProductsPage = () => {
                         {/* Cột 1: Sản phẩm & SKU */}
                         <td className="py-4 px-6 align-top">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={prod.imageUrl}
-                              alt={prod.name}
-                              className="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-200 shrink-0"
-                            />
+                            <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+                              <ProductImage
+                                src={prod.imageUrl}
+                                alt={prod.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
                             <div className="flex flex-col min-w-0">
                               <span className="font-bold text-slate-900 line-clamp-1">{prod.name}</span>
                               <span className="text-[11px] text-slate-400 font-mono mt-0.5">{prod.sku}</span>

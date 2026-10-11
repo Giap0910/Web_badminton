@@ -7,7 +7,14 @@ import java.time.LocalDateTime;
 public record PaymentAttemptResponse(Long id, Long orderId, String provider, Long orderCode,
         String paymentLinkId, BigDecimal amount, String currency, PaymentAttempt.Status status,
         String checkoutUrl, String qrPayload, LocalDateTime expiresAt, String reference,
-        LocalDateTime paidAt, String reviewReason) {
+        LocalDateTime paidAt, String reviewReason, String paymentMode, String mockProviderStatus) {
+    public PaymentAttemptResponse(Long id, Long orderId, String provider, Long orderCode,
+            String paymentLinkId, BigDecimal amount, String currency, PaymentAttempt.Status status,
+            String checkoutUrl, String qrPayload, LocalDateTime expiresAt, String reference,
+            LocalDateTime paidAt, String reviewReason) {
+        this(id,orderId,provider,orderCode,paymentLinkId,amount,currency,status,checkoutUrl,qrPayload,
+                expiresAt,reference,paidAt,reviewReason,"REAL",null);
+    }
     public static PaymentAttemptResponse from(PaymentAttempt attempt) {
         return new PaymentAttemptResponse(attempt.getId(), attempt.getOrder().getId(), attempt.getProvider(),
                 attempt.getOrderCode(), attempt.getPaymentLinkId(), attempt.getAmount(), attempt.getCurrency(),

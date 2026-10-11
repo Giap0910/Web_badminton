@@ -343,3 +343,196 @@ export const getOrCreateReconciliationKey = (paymentAttemptId, reason) => {
   return newKey;
 };
 
+/**
+ * Idempotency utilities for Payment Method Transition (FIX-057)
+ * Ensures 1 transition intent (orderId + targetMethod + expectedStateVersion) = 1 distinct UUID
+ * Reuses the same UUID across retry/timeout/202 for the same intent
+ * Completely separated namespace from order creation, payment link, and reconciliation storage
+ */
+export const TRANSITION_STORAGE_KEY = 'hg_payment_transition_idempotency';
+
+/**
+ * Safe sessionStorage read for transition intent
+ */
+export const getStoredTransitionIntent = (orderId) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return null;
+    const raw = sessionStorage.getItem(TRANSITION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.key === 'string' &&
+      parsed.orderId != null &&
+      (orderId == null || String(parsed.orderId) === String(orderId))
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Safe sessionStorage write for transition intent
+ */
+export const saveTransitionIntent = (orderId, targetMethod, expectedStateVersion, key) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    sessionStorage.setItem(
+      TRANSITION_STORAGE_KEY,
+      JSON.stringify({
+        orderId: String(orderId),
+        targetMethod: typeof targetMethod === 'string' ? targetMethod.trim() : '',
+        expectedStateVersion: Number(expectedStateVersion),
+        key,
+      })
+    );
+  } catch {
+    // Ignore storage write errors
+  }
+};
+
+/**
+ * Safe sessionStorage clear for transition intent
+ */
+export const clearStoredTransitionIntent = (orderId) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    if (orderId != null) {
+      const stored = getStoredTransitionIntent();
+      if (stored && String(stored.orderId) !== String(orderId)) {
+        return; // Preserve intent if for another order
+      }
+    }
+    sessionStorage.removeItem(TRANSITION_STORAGE_KEY);
+  } catch {
+    // Ignore storage remove errors
+  }
+};
+
+/**
+ * Get existing transition key if orderId, targetMethod, and expectedStateVersion match, or create a new UUID and persist.
+ * Ensures same order + same target + same version after timeout/202 reuses the same UUID.
+ * Changed intent or version generates a new UUID.
+ * @param {string|number} orderId - Order identifier
+ * @param {string} targetMethod - Target payment method (e.g. 'COD')
+ * @param {number} expectedStateVersion - Expected state version from checkout context
+ * @returns {string} - Idempotency key (UUID)
+ */
+export const getOrCreateTransitionKey = (orderId, targetMethod, expectedStateVersion) => {
+  const strId = String(orderId);
+  const normMethod = typeof targetMethod === 'string' ? targetMethod.trim() : '';
+  const numVersion = Number(expectedStateVersion);
+  const stored = getStoredTransitionIntent(strId);
+
+  if (
+    stored &&
+    stored.key &&
+    String(stored.orderId) === strId &&
+    stored.targetMethod === normMethod &&
+    Number(stored.expectedStateVersion) === numVersion
+  ) {
+    return stored.key;
+  }
+
+  const newKey = generateUUID();
+  saveTransitionIntent(strId, normMethod, numVersion, newKey);
+  return newKey;
+};
+
+/**
+ * Idempotency utilities for Mock PayOS Simulation Action (FIX-058)
+ * Ensures 1 simulation intent (orderId + scenario) = 1 distinct UUID
+ * Reuses the same UUID across retry/timeout/202 for the same intent
+ * Completely separated namespace from order creation, payment link, reconciliation, and transition storage
+ */
+export const MOCK_ACTION_STORAGE_KEY = 'hg_mock_action_idempotency';
+
+/**
+ * Safe sessionStorage read for mock action intent
+ */
+export const getStoredMockActionIntent = (orderId) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return null;
+    const raw = sessionStorage.getItem(MOCK_ACTION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.key === 'string' &&
+      parsed.orderId != null &&
+      (orderId == null || String(parsed.orderId) === String(orderId))
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Safe sessionStorage write for mock action intent
+ */
+export const saveMockActionIntent = (orderId, scenario, key) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    sessionStorage.setItem(
+      MOCK_ACTION_STORAGE_KEY,
+      JSON.stringify({
+        orderId: String(orderId),
+        scenario: typeof scenario === 'string' ? scenario.trim() : '',
+        key,
+      })
+    );
+  } catch {
+    // Ignore storage write errors
+  }
+};
+
+/**
+ * Safe sessionStorage clear for mock action intent
+ */
+export const clearStoredMockActionIntent = (orderId) => {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    if (orderId != null) {
+      const stored = getStoredMockActionIntent();
+      if (stored && String(stored.orderId) !== String(orderId)) {
+        return; // Preserve intent if for another order
+      }
+    }
+    sessionStorage.removeItem(MOCK_ACTION_STORAGE_KEY);
+  } catch {
+    // Ignore storage remove errors
+  }
+};
+
+/**
+ * Get existing mock action key if orderId and scenario match, or create a new UUID and persist.
+ * Ensures same order + same scenario after timeout/202 reuses the same UUID.
+ * Changed intent or scenario generates a new UUID.
+ * @param {string|number} orderId - Order identifier
+ * @param {string} scenario - Simulation scenario name (e.g. 'PAYMENT_PAID_WEBHOOK')
+ * @returns {string} - Idempotency key (UUID)
+ */
+export const getOrCreateMockActionKey = (orderId, scenario) => {
+  const strId = String(orderId);
+  const normScenario = typeof scenario === 'string' ? scenario.trim() : '';
+  const stored = getStoredMockActionIntent(strId);
+
+  if (
+    stored &&
+    stored.key &&
+    String(stored.orderId) === strId &&
+    stored.scenario === normScenario
+  ) {
+    return stored.key;
+  }
+
+  const newKey = generateUUID();
+  saveMockActionIntent(strId, normScenario, newKey);
+  return newKey;
+};

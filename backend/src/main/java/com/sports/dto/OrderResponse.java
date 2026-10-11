@@ -12,6 +12,8 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class OrderResponse {
+    @Builder.Default
+    private String paymentMode = "REAL";
     private Long id;
     private Long userId;
     private String customerName;

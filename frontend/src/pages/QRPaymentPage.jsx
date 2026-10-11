@@ -18,21 +18,57 @@ import {
   CheckCircle2,
   Download,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import MockPayOSControls from '../components/MockPayOSControls';
 
-const QRPaymentPage = () => {
+const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
+  const isQRSuspended = typeof propQREnabled === 'boolean'
+    ? !propQREnabled
+    : (typeof window !== 'undefined' && Boolean(window.__PAYOS_ENABLED__) ? false : true);
+
   const { orderId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [order, setOrder] = useState(location.state?.order || null);
-  const [payment, setPayment] = useState(location.state?.payment || null);
-  const [loading, setLoading] = useState(!order && !payment);
+  // Validate initial location.state strictly matches current route orderId
+  const initialOrder =
+    location.state?.order && String(location.state.order.id) === String(orderId)
+      ? location.state.order
+      : null;
+  const initialPayment =
+    location.state?.payment &&
+    initialOrder &&
+    (!location.state.payment.orderId || String(location.state.payment.orderId) === String(orderId))
+      ? location.state.payment
+      : null;
+
+  const [order, setOrder] = useState(initialOrder);
+  const [payment, setPayment] = useState(initialPayment);
+  const [loading, setLoading] = useState(!initialOrder && !initialPayment);
   const [error, setError] = useState(location.state?.paymentError || '');
   const [copiedField, setCopiedField] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [paymentEnv, setPaymentEnv] = useState(null);
+  const [envStatus, setEnvStatus] = useState('LOADING'); // 'LOADING' | 'VERIFIED' | 'ERROR'
+  const [envError, setEnvError] = useState('');
+  const [isRetryingEnv, setIsRetryingEnv] = useState(false);
+  const isEnvCheckingRef = useRef(false);
+  const envGenerationRef = useRef(0);
+  const orderFetchGenerationRef = useRef(0);
+
+  // Synchronous route change guard (React pattern: adjust state during render)
+  // Ensures no stale order/payment data from previous route can ever render on the new route
+  const [activeOrderId, setActiveOrderId] = useState(orderId);
+  if (activeOrderId !== orderId) {
+    setActiveOrderId(orderId);
+    setOrder(null);
+    setPayment(null);
+    setError('');
+    setLoading(true);
+  }
 
   // Request & loop guards
   const isCheckingRef = useRef(false);
@@ -44,12 +80,116 @@ const QRPaymentPage = () => {
   const orderRef = useRef(order);
   orderRef.current = order;
 
+  // Shared Authorization Epoch & Lifecycle Guards (FIX-058 R4 & R5)
+  const authEpochRef = useRef(1);
+  const authRevokedOrderIdRef = useRef(null);
+  const hasNavigatedRef = useRef(false);
+  const pollIntervalRef = useRef(null);
+
+  if (activeOrderId !== orderId) {
+    if (typeof authRevokedOrderIdRef !== 'undefined') {
+      authRevokedOrderIdRef.current = null;
+    }
+    if (typeof authEpochRef !== 'undefined') {
+      authEpochRef.current++;
+    }
+    if (typeof hasNavigatedRef !== 'undefined') {
+      hasNavigatedRef.current = false;
+    }
+    if (typeof pollIntervalRef !== 'undefined' && pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }
+
+  const isRequestValid = (reqEpoch, targetOrderId) => {
+    if (typeof isMountedRef !== 'undefined' && !isMountedRef.current) return false;
+    if (typeof currentOrderIdRef !== 'undefined' && currentOrderIdRef.current !== targetOrderId && String(currentOrderIdRef.current) !== String(targetOrderId)) return false;
+    if (typeof authEpochRef !== 'undefined' && authEpochRef.current !== reqEpoch) return false;
+    if (typeof authRevokedOrderIdRef !== 'undefined' && authRevokedOrderIdRef.current && String(authRevokedOrderIdRef.current) === String(targetOrderId)) return false;
+    return true;
+  };
+
+  const revokeAuthorization = (targetOrderId, errorMsg) => {
+    if (typeof currentOrderIdRef !== 'undefined' && currentOrderIdRef.current !== targetOrderId && String(currentOrderIdRef.current) !== String(targetOrderId)) return;
+    if (typeof pollIntervalRef !== 'undefined' && pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    if (typeof authRevokedOrderIdRef !== 'undefined') {
+      authRevokedOrderIdRef.current = String(targetOrderId);
+    }
+    if (typeof authEpochRef !== 'undefined') {
+      authEpochRef.current++;
+    }
+    setOrder(null);
+    setPayment(null);
+    if (typeof setError === 'function') {
+      setError(errorMsg);
+    }
+    if (typeof setLoading === 'function') {
+      setLoading(false);
+    }
+    if (typeof setIsVerifying === 'function') {
+      setIsVerifying(false);
+    }
+  };
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      if (typeof pollIntervalRef !== 'undefined' && pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
     };
   }, []);
+
+  // Fetch and verify payment environment (FIX-058 Fail-Closed)
+  const fetchPaymentEnvironment = async ({ force = false } = {}) => {
+    if (isEnvCheckingRef.current && !force) return;
+    const currentGen = ++envGenerationRef.current;
+    isEnvCheckingRef.current = true;
+    setIsRetryingEnv(true);
+    try {
+      const res = await orderApi.getPaymentEnvironment();
+      const data = res?.data ?? res;
+      if (!isMountedRef.current || envGenerationRef.current !== currentGen) return;
+
+      // Fail-closed validation: must be an object with valid paymentMode ('MOCK' | 'REAL')
+      if (
+        !data ||
+        typeof data !== 'object' ||
+        !data.paymentMode ||
+        (data.paymentMode !== 'MOCK' && data.paymentMode !== 'REAL')
+      ) {
+        setPaymentEnv(null);
+        setEnvStatus('ERROR');
+        setEnvError('Chưa thể xác minh môi trường thanh toán. Vui lòng thử lại. Đơn hàng của bạn vẫn được giữ nguyên.');
+      } else {
+        setPaymentEnv(data);
+        setEnvStatus('VERIFIED');
+        setEnvError('');
+      }
+    } catch {
+      // Fail-closed fallback: never fallback to REAL. Set UNKNOWN/ERROR
+      if (isMountedRef.current && envGenerationRef.current === currentGen) {
+        setPaymentEnv(null);
+        setEnvStatus('ERROR');
+        setEnvError('Chưa thể xác minh môi trường thanh toán. Vui lòng thử lại. Đơn hàng của bạn vẫn được giữ nguyên.');
+      }
+    } finally {
+      if (isMountedRef.current && envGenerationRef.current === currentGen) {
+        setIsRetryingEnv(false);
+      }
+      isEnvCheckingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchPaymentEnvironment({ force: true });
+  }, [orderId]);
 
   // Time remaining countdown (15 minutes default)
   const [secondsRemaining, setSecondsRemaining] = useState(
@@ -65,17 +205,54 @@ const QRPaymentPage = () => {
   // Fetch order details & latest payment attempt
   const fetchOrder = async () => {
     const targetOrderId = orderId;
+    const fetchGen = typeof orderFetchGenerationRef !== 'undefined' ? ++orderFetchGenerationRef.current : 0;
+    const reqEpoch = typeof authEpochRef !== 'undefined' ? ++authEpochRef.current : 0;
+    if (typeof authRevokedOrderIdRef !== 'undefined') {
+      authRevokedOrderIdRef.current = null;
+    }
+
+    const isStepValid = () => {
+      if (typeof isRequestValid === 'function') {
+        if (!isRequestValid(reqEpoch, targetOrderId)) return false;
+      } else {
+        if (typeof isMountedRef !== 'undefined' && !isMountedRef.current) return false;
+        if (typeof currentOrderIdRef !== 'undefined' && String(currentOrderIdRef.current) !== String(targetOrderId)) return false;
+      }
+      if (typeof orderFetchGenerationRef !== 'undefined' && orderFetchGenerationRef.current !== fetchGen) return false;
+      return true;
+    };
+
+    const triggerRevoke = (msg) => {
+      if (typeof revokeAuthorization === 'function') {
+        revokeAuthorization(targetOrderId, msg);
+      } else {
+        setOrder(null);
+        setPayment(null);
+        if (typeof setError === 'function') setError(msg);
+      }
+    };
+
     try {
       setError('');
       const res = await orderApi.getOrderById(targetOrderId);
       const data = res?.data ?? res;
-      if (currentOrderIdRef.current !== targetOrderId) return;
+      if (!isStepValid()) {
+        return;
+      }
+
+      if (!data || String(data.id) !== String(targetOrderId)) {
+        triggerRevoke('Không tìm thấy đơn hàng.');
+        return;
+      }
+
       setOrder(data);
       if (data && data.timeRemainingSeconds !== undefined) {
         setSecondsRemaining(data.timeRemainingSeconds);
       }
 
       if (isOrderPaid(data)) {
+        if (!isStepValid() || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+        if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
         navigate(`/order-success/${targetOrderId}`, { state: { order: data } });
         return;
       }
@@ -87,36 +264,65 @@ const QRPaymentPage = () => {
         const payRes = await orderApi.getOrderPayment(targetOrderId);
         payData = payRes && 'data' in payRes ? payRes.data : payRes;
       } catch (payErr) {
-        if (payErr.response?.status === 404) {
+        if (!isStepValid()) {
+          return;
+        }
+        const payStatus = payErr.response?.status;
+        if (payStatus === 404) {
           getFailed404 = true;
+        } else if (payStatus === 401 || payStatus === 403) {
+          triggerRevoke(
+            payErr.response?.data?.message || 'Không có quyền truy cập thông tin thanh toán.'
+          );
+          return;
         } else {
           setError(payErr.response?.data?.message || 'Không thể đồng bộ trạng thái thanh toán.');
           return;
         }
       }
 
-      if (currentOrderIdRef.current !== targetOrderId) return;
+      if (!isStepValid()) {
+        return;
+      }
 
       // Handle null (BUG A: 200 with null body) or 404 -> no payment attempt yet
       if (payData == null || getFailed404) {
-        if (!hasInitialRecoveredRef.current && data?.status === 'PENDING') {
+        const isSuspendedInFetch = typeof isQRSuspended !== 'undefined'
+          ? isQRSuspended
+          : ((typeof window !== 'undefined' && window.__PAYOS_ENABLED__) || (typeof globalThis !== 'undefined' && globalThis.__PAYOS_ENABLED__) ? false : true);
+
+        if (!isSuspendedInFetch && !hasInitialRecoveredRef.current && data?.status === 'PENDING') {
           hasInitialRecoveredRef.current = true;
           try {
             const paymentKey = getOrCreatePaymentLinkKey(targetOrderId);
             const createdPayRes = await orderApi.createPaymentLink(targetOrderId, paymentKey);
             const createdPay = createdPayRes && 'data' in createdPayRes ? createdPayRes.data : createdPayRes;
-            if (currentOrderIdRef.current !== targetOrderId) return;
+            if (!isStepValid()) {
+              return;
+            }
             setPayment(createdPay);
             if (createdPay?.status === 'PAID') {
+              if (!isStepValid() || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+              if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
               navigate(`/order-success/${targetOrderId}`, { state: { order: data } });
               return;
             }
           } catch (createErr) {
-            if (currentOrderIdRef.current !== targetOrderId) return;
-            setError(
-              createErr.response?.data?.message ||
-                'Chưa thể chuẩn bị liên kết thanh toán. Vui lòng kiểm tra lại.'
-            );
+            if (!isStepValid()) {
+              return;
+            }
+            const createStatus = createErr.response?.status;
+            if (createStatus === 401 || createStatus === 403) {
+              triggerRevoke(
+                createErr.response?.data?.message || 'Không có quyền tạo liên kết thanh toán.'
+              );
+              return;
+            } else {
+              setError(
+                createErr.response?.data?.message ||
+                  'Chưa thể chuẩn bị liên kết thanh toán. Vui lòng kiểm tra lại.'
+              );
+            }
           }
         } else {
           setPayment(null);
@@ -124,15 +330,42 @@ const QRPaymentPage = () => {
       } else {
         setPayment(payData);
         if (payData.status === 'PAID') {
+          if (!isStepValid() || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+          if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
           navigate(`/order-success/${targetOrderId}`, { state: { order: data } });
           return;
         }
       }
     } catch (err) {
-      if (currentOrderIdRef.current !== targetOrderId) return;
-      setError(err.response?.data?.message || 'Không thể tải đơn hàng để xác minh thanh toán.');
+      if (!isStepValid()) {
+        return;
+      }
+      const status = err.response?.status;
+      if (status === 401 || status === 403 || status === 404) {
+        triggerRevoke(
+          err.response?.data?.message ||
+            (status === 403
+              ? 'Bạn không có quyền truy cập đơn hàng này.'
+              : status === 401
+              ? 'Vui lòng đăng nhập để xem thông tin thanh toán.'
+              : status === 404
+              ? 'Không tìm thấy đơn hàng.'
+              : 'Không thể tải đơn hàng để xác minh thanh toán.')
+        );
+        return;
+      } else {
+        // Transient error: if order state does not match targetOrderId, clear it to prevent bleed
+        if (typeof orderRef !== 'undefined' && orderRef?.current && String(orderRef.current.id) !== String(targetOrderId)) {
+          setOrder(null);
+          setPayment(null);
+        }
+      }
+      setError(
+        err.response?.data?.message ||
+          'Không thể tải đơn hàng để xác minh thanh toán.'
+      );
     } finally {
-      if (currentOrderIdRef.current === targetOrderId) {
+      if (typeof isMountedRef !== 'undefined' && isMountedRef.current && typeof currentOrderIdRef !== 'undefined' && String(currentOrderIdRef.current) === String(targetOrderId)) {
         setLoading(false);
       }
     }
@@ -147,75 +380,190 @@ const QRPaymentPage = () => {
   useEffect(() => {
     let cancelled = false;
     const targetOrderId = orderId;
-    const generation = ++pollGenerationRef.current;
-    let isPolling = false;
+    const generation = typeof pollGenerationRef !== 'undefined' ? ++pollGenerationRef.current : 0;
 
-    const isCurrentActive = () => {
-      if (cancelled) return false;
-      if (isMountedRef?.current === false) return false;
-      if (currentOrderIdRef?.current !== undefined && currentOrderIdRef.current !== targetOrderId) return false;
-      if (pollGenerationRef?.current !== undefined && pollGenerationRef.current !== generation) return false;
+    const stopThisInterval = () => {
+      cancelled = true;
+      clearInterval(interval);
+      if (typeof pollGenerationRef !== 'undefined' && pollGenerationRef.current === generation) {
+        pollGenerationRef.current++;
+      }
+      if (typeof pollIntervalRef !== 'undefined' && pollIntervalRef.current === interval) {
+        pollIntervalRef.current = null;
+      }
+    };
+
+    const isStale = () => {
+      if (cancelled) return true;
+      if (typeof pollGenerationRef !== 'undefined' && pollGenerationRef.current !== generation) {
+        cancelled = true;
+        clearInterval(interval);
+        if (typeof pollIntervalRef !== 'undefined' && pollIntervalRef.current === interval) {
+          pollIntervalRef.current = null;
+        }
+        return true;
+      }
+      return false;
+    };
+
+    const checkValid = (ep) => {
+      if (typeof isRequestValid === 'function') {
+        return isRequestValid(ep, targetOrderId);
+      }
+      if (typeof isMountedRef !== 'undefined' && !isMountedRef.current) return false;
+      if (typeof currentOrderIdRef !== 'undefined' && String(currentOrderIdRef.current) !== String(targetOrderId)) return false;
       return true;
     };
 
+    const triggerRevoke = (msg) => {
+      stopThisInterval();
+      if (typeof revokeAuthorization === 'function') {
+        revokeAuthorization(targetOrderId, msg);
+      } else {
+        setOrder(null);
+        setPayment(null);
+        if (typeof setError === 'function') setError(msg);
+      }
+    };
+
     const interval = setInterval(async () => {
-      const currentOrder = orderRef?.current;
+      if (isStale()) return;
+      if (typeof authRevokedOrderIdRef !== 'undefined' && authRevokedOrderIdRef.current && String(authRevokedOrderIdRef.current) === String(targetOrderId)) {
+        stopThisInterval();
+        return;
+      }
+      const reqEpoch = typeof authEpochRef !== 'undefined' ? authEpochRef.current : 0;
+      if (!checkValid(reqEpoch)) {
+        stopThisInterval();
+        return;
+      }
+      if (isStale()) return;
+
+      const currentOrder = typeof orderRef !== 'undefined' ? orderRef?.current : order;
       if (
         currentOrder &&
         (isOrderPaid(currentOrder) ||
           (currentOrder.status && currentOrder.status !== 'PENDING') ||
           (currentOrder.paymentMethod && currentOrder.paymentMethod !== 'PAYOS_VIETQR'))
       ) {
+        stopThisInterval();
         return;
       }
 
-      if (!isCurrentActive() || isPolling) return;
-      isPolling = true;
-
       try {
         const res = await orderApi.getOrderById(targetOrderId);
-        if (!isCurrentActive()) return;
+        if (isStale()) return;
+        if (!checkValid(reqEpoch)) {
+          stopThisInterval();
+          return;
+        }
 
         const latest = res && 'data' in res ? res.data : res;
+        if (!latest || String(latest.id) !== String(targetOrderId)) {
+          triggerRevoke('Không tìm thấy đơn hàng.');
+          return;
+        }
+
         setOrder(latest);
         if (latest?.timeRemainingSeconds !== undefined) {
           setSecondsRemaining(latest.timeRemainingSeconds);
         }
         if (isOrderPaid(latest)) {
-          clearInterval(interval);
-          if (!isCurrentActive()) return;
+          if (!checkValid(reqEpoch) || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+          if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
+          stopThisInterval();
           navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
+          return;
+        }
+
+        // Terminal status: CANCELLED, FAILED, EXPIRED, or non-VietQR method
+        if (
+          (latest.status && latest.status !== 'PENDING') ||
+          (latest.paymentMethod && latest.paymentMethod !== 'PAYOS_VIETQR')
+        ) {
+          stopThisInterval();
           return;
         }
 
         try {
           const payRes = await orderApi.getOrderPayment(targetOrderId);
-          if (!isCurrentActive()) return;
+          if (isStale()) return;
+          if (!checkValid(reqEpoch)) {
+            stopThisInterval();
+            return;
+          }
 
           const latestPay = payRes && 'data' in payRes ? payRes.data : payRes;
           if (latestPay) {
+            if (latestPay.orderId && String(latestPay.orderId) !== String(targetOrderId)) {
+              return;
+            }
             setPayment(latestPay);
             if (latestPay.status === 'PAID') {
-              clearInterval(interval);
-              if (!isCurrentActive()) return;
+              if (!checkValid(reqEpoch) || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+              if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
+              stopThisInterval();
               navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
               return;
             }
+            // Terminal payment status: CANCELLED, EXPIRED, FAILED
+            if (
+              latestPay.status === 'CANCELLED' ||
+              latestPay.status === 'EXPIRED' ||
+              latestPay.status === 'FAILED'
+            ) {
+              stopThisInterval();
+              return;
+            }
           }
-        } catch {
-          // quiet fallback
+        } catch (pErr) {
+          if (isStale()) return;
+          if (!checkValid(reqEpoch)) {
+            stopThisInterval();
+            return;
+          }
+          const pStatus = pErr.response?.status;
+          if (pStatus === 401 || pStatus === 403) {
+            triggerRevoke(
+              pErr.response?.data?.message || 'Không có quyền truy cập thông tin thanh toán.'
+            );
+            return;
+          } else if (pStatus === 404) {
+            setPayment(null);
+          }
+          // quiet fallback for transient error
         }
       } catch (e) {
-        // quiet fallback
-      } finally {
-        isPolling = false;
+        if (isStale()) return;
+        if (!checkValid(reqEpoch)) {
+          stopThisInterval();
+          return;
+        }
+        const status = e.response?.status;
+        if (status === 401 || status === 403 || status === 404) {
+          triggerRevoke(
+            e.response?.data?.message ||
+              (status === 403
+                ? 'Bạn không có quyền truy cập đơn hàng này.'
+                : status === 401
+                ? 'Vui lòng đăng nhập để xem thông tin thanh toán.'
+                : 'Không tìm thấy đơn hàng.')
+          );
+          return;
+        }
+        // quiet fallback for transient error
       }
     }, 4000);
 
+    if (typeof pollIntervalRef !== 'undefined') {
+      if (pollIntervalRef.current && pollIntervalRef.current !== interval) {
+        clearInterval(pollIntervalRef.current);
+      }
+      pollIntervalRef.current = interval;
+    }
+
     return () => {
-      cancelled = true;
-      pollGenerationRef.current++;
-      clearInterval(interval);
+      stopThisInterval();
     };
   }, [orderId]);
 
@@ -234,6 +582,211 @@ const QRPaymentPage = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const isOrderOwnedByRoute = Boolean(order && String(order.id) === String(orderId));
+  const isPaymentOwnedByRoute = Boolean(
+    payment &&
+    isOrderOwnedByRoute &&
+    (!payment.orderId || String(payment.orderId) === String(orderId))
+  );
+
+  // Polling Session Manager for Reauthorization Recovery (FIX-058 R5, R6 & R7)
+  const startPollingSession = (targetOrderId) => {
+    if (!targetOrderId) return;
+    if (typeof isMountedRef !== 'undefined' && !isMountedRef.current) return;
+    if (typeof currentOrderIdRef !== 'undefined' && String(currentOrderIdRef.current) !== String(targetOrderId)) return;
+    if (typeof authRevokedOrderIdRef !== 'undefined' && authRevokedOrderIdRef.current && String(authRevokedOrderIdRef.current) === String(targetOrderId)) return;
+
+    if (typeof pollIntervalRef !== 'undefined' && pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+
+    let cancelled = false;
+    let myInterval = null;
+    const generation = typeof pollGenerationRef !== 'undefined' ? ++pollGenerationRef.current : 0;
+
+    const stopSession = () => {
+      cancelled = true;
+      if (myInterval) {
+        clearInterval(myInterval);
+      }
+      if (typeof pollIntervalRef !== 'undefined' && pollIntervalRef.current === myInterval) {
+        pollIntervalRef.current = null;
+      }
+      if (typeof pollGenerationRef !== 'undefined' && pollGenerationRef.current === generation) {
+        pollGenerationRef.current++;
+      }
+    };
+
+    const isStale = () => {
+      if (cancelled) return true;
+      if (typeof pollGenerationRef !== 'undefined' && pollGenerationRef.current !== generation) {
+        cancelled = true;
+        if (myInterval) {
+          clearInterval(myInterval);
+        }
+        if (typeof pollIntervalRef !== 'undefined' && pollIntervalRef.current === myInterval) {
+          pollIntervalRef.current = null;
+        }
+        return true;
+      }
+      return false;
+    };
+
+    const checkValid = (ep) => {
+      if (typeof isRequestValid === 'function') {
+        return isRequestValid(ep, targetOrderId);
+      }
+      if (typeof isMountedRef !== 'undefined' && !isMountedRef.current) return false;
+      if (typeof currentOrderIdRef !== 'undefined' && String(currentOrderIdRef.current) !== String(targetOrderId)) return false;
+      return true;
+    };
+
+    const triggerRevoke = (msg) => {
+      stopSession();
+      if (typeof revokeAuthorization === 'function') {
+        revokeAuthorization(targetOrderId, msg);
+      } else {
+        setOrder(null);
+        setPayment(null);
+        if (typeof setError === 'function') setError(msg);
+      }
+    };
+
+    const pollTick = async () => {
+      if (isStale()) return;
+      if (typeof authRevokedOrderIdRef !== 'undefined' && authRevokedOrderIdRef.current && String(authRevokedOrderIdRef.current) === String(targetOrderId)) {
+        stopSession();
+        return;
+      }
+      const reqEpoch = typeof authEpochRef !== 'undefined' ? authEpochRef.current : 0;
+      if (!checkValid(reqEpoch)) {
+        stopSession();
+        return;
+      }
+      if (isStale()) return;
+
+      const currentOrder = typeof orderRef !== 'undefined' ? orderRef?.current : order;
+      if (
+        currentOrder &&
+        (isOrderPaid(currentOrder) ||
+          (currentOrder.status && currentOrder.status !== 'PENDING') ||
+          (currentOrder.paymentMethod && currentOrder.paymentMethod !== 'PAYOS_VIETQR'))
+      ) {
+        stopSession();
+        return;
+      }
+
+      try {
+        const res = await orderApi.getOrderById(targetOrderId);
+        if (isStale()) return;
+        if (!checkValid(reqEpoch)) {
+          stopSession();
+          return;
+        }
+
+        const latest = res && 'data' in res ? res.data : res;
+        if (!latest || String(latest.id) !== String(targetOrderId)) {
+          triggerRevoke('Không tìm thấy đơn hàng.');
+          return;
+        }
+
+        setOrder(latest);
+        if (latest?.timeRemainingSeconds !== undefined) {
+          setSecondsRemaining(latest.timeRemainingSeconds);
+        }
+        if (isOrderPaid(latest)) {
+          if (!checkValid(reqEpoch) || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+          if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
+          stopSession();
+          navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
+          return;
+        }
+
+        // Terminal order status: CANCELLED, FAILED, EXPIRED, or non-VietQR method
+        if (
+          (latest.status && latest.status !== 'PENDING') ||
+          (latest.paymentMethod && latest.paymentMethod !== 'PAYOS_VIETQR')
+        ) {
+          stopSession();
+          return;
+        }
+
+        try {
+          const payRes = await orderApi.getOrderPayment(targetOrderId);
+          if (isStale()) return;
+          if (!checkValid(reqEpoch)) {
+            stopSession();
+            return;
+          }
+
+          const latestPay = payRes && 'data' in payRes ? payRes.data : payRes;
+          if (latestPay) {
+            if (latestPay.orderId && String(latestPay.orderId) !== String(targetOrderId)) {
+              return;
+            }
+            setPayment(latestPay);
+            if (latestPay.status === 'PAID') {
+              if (!checkValid(reqEpoch) || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+              if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
+              stopSession();
+              navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
+              return;
+            }
+            // Terminal payment status: CANCELLED, EXPIRED, FAILED
+            if (
+              latestPay.status === 'CANCELLED' ||
+              latestPay.status === 'EXPIRED' ||
+              latestPay.status === 'FAILED'
+            ) {
+              stopSession();
+              return;
+            }
+          }
+        } catch (pErr) {
+          if (isStale()) return;
+          if (!checkValid(reqEpoch)) {
+            stopSession();
+            return;
+          }
+          const pStatus = pErr.response?.status;
+          if (pStatus === 401 || pStatus === 403) {
+            triggerRevoke(
+              pErr.response?.data?.message || 'Không có quyền truy cập thông tin thanh toán.'
+            );
+            return;
+          } else if (pStatus === 404) {
+            setPayment(null);
+          }
+        }
+      } catch (e) {
+        if (isStale()) return;
+        if (!checkValid(reqEpoch)) {
+          stopSession();
+          return;
+        }
+        const status = e.response?.status;
+        if (status === 401 || status === 403 || status === 404) {
+          triggerRevoke(
+            e.response?.data?.message ||
+              (status === 403
+                ? 'Bạn không có quyền truy cập đơn hàng này.'
+                : status === 401
+                ? 'Vui lòng đăng nhập để xem thông tin thanh toán.'
+                : 'Không tìm thấy đơn hàng.')
+          );
+          return;
+        }
+      }
+    };
+
+    const newInterval = setInterval(pollTick, 4000);
+    myInterval = newInterval;
+    if (typeof pollIntervalRef !== 'undefined') {
+      pollIntervalRef.current = newInterval;
+    }
+  };
+
   // Manual verify check / retry
   const handleCheckPayment = async () => {
     if (isCheckingRef.current || isVerifying) return; // Guard double-click & overlapping requests
@@ -241,14 +794,56 @@ const QRPaymentPage = () => {
     const targetOrderId = orderId;
     isCheckingRef.current = true;
     setIsVerifying(true);
+
+    const reqEpoch = typeof authEpochRef !== 'undefined' ? ++authEpochRef.current : 0;
+
+    const checkValid = () => {
+      if (typeof isMountedRef !== 'undefined' && !isMountedRef.current) return false;
+      if (typeof currentOrderIdRef !== 'undefined' && String(currentOrderIdRef.current) !== String(targetOrderId)) return false;
+      if (typeof authEpochRef !== 'undefined' && authEpochRef.current !== reqEpoch) return false;
+      return true;
+    };
+
+    const triggerRevoke = (msg) => {
+      if (typeof pollIntervalRef !== 'undefined' && pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      if (typeof revokeAuthorization === 'function') {
+        revokeAuthorization(targetOrderId, msg);
+      } else {
+        setOrder(null);
+        setPayment(null);
+        if (typeof setError === 'function') setError(msg);
+      }
+    };
+
+    // FIX-058 R1: If environment is not verified or in error, retry verifying environment as well
+    if (typeof envStatus !== 'undefined' && (envStatus !== 'VERIFIED' || !paymentEnv)) {
+      if (typeof fetchPaymentEnvironment === 'function') {
+        fetchPaymentEnvironment({ force: true });
+      }
+    }
+
     try {
       setError('');
       const res = await orderApi.getOrderById(targetOrderId);
+      if (!checkValid()) return;
+
       const latest = res?.data ?? res;
-      if (currentOrderIdRef.current !== targetOrderId) return;
+      if (!latest || String(latest.id) !== String(targetOrderId)) {
+        triggerRevoke('Không tìm thấy đơn hàng.');
+        return;
+      }
+
       setOrder(latest);
 
       if (isOrderPaid(latest)) {
+        if (typeof authRevokedOrderIdRef !== 'undefined' && authRevokedOrderIdRef.current && String(authRevokedOrderIdRef.current) === String(targetOrderId)) {
+          authRevokedOrderIdRef.current = null;
+        }
+        if (!checkValid() || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+        if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
         navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
         return;
       }
@@ -257,65 +852,163 @@ const QRPaymentPage = () => {
       let getFailed404 = false;
       try {
         const payRes = await orderApi.getOrderPayment(targetOrderId);
+        if (!checkValid()) return;
         payData = payRes && 'data' in payRes ? payRes.data : payRes;
       } catch (pErr) {
-        if (pErr.response?.status === 404) {
+        if (!checkValid()) return;
+        const pStatus = pErr.response?.status;
+        if (pStatus === 404) {
           getFailed404 = true;
+        } else if (pStatus === 401 || pStatus === 403) {
+          triggerRevoke(
+            pErr.response?.data?.message || 'Không có quyền truy cập thông tin thanh toán.'
+          );
+          return;
         } else {
           throw pErr;
         }
       }
 
-      if (currentOrderIdRef.current !== targetOrderId) return;
+      if (!checkValid()) return;
 
       if (payData?.status === 'PAID') {
+        if (typeof authRevokedOrderIdRef !== 'undefined' && authRevokedOrderIdRef.current && String(authRevokedOrderIdRef.current) === String(targetOrderId)) {
+          authRevokedOrderIdRef.current = null;
+        }
         setPayment(payData);
+        if (!checkValid() || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+        if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
         navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
         return;
       }
 
       // If payment is null (200 + null or 404) OR status is CREATING:
-      // Must call POST payment-link with SAME orderId and SAME payment key to trigger creation / provider recovery
+      // In PayOS-enabled mode: Must call POST payment-link with SAME orderId and SAME payment key to trigger creation / provider recovery
+      // In demo COD mode: read-only status check, NO POST payment-link call
       if (payData == null || getFailed404 || payData.status === 'CREATING') {
-        const key = getOrCreatePaymentLinkKey(targetOrderId);
-        const postRes = await orderApi.createPaymentLink(targetOrderId, key);
-        const updatedPayment = postRes && 'data' in postRes ? postRes.data : postRes;
-        if (currentOrderIdRef.current !== targetOrderId) return;
-        setPayment(updatedPayment);
+        const isSuspendedInCheck = typeof isQRSuspended !== 'undefined'
+          ? isQRSuspended
+          : ((typeof window !== 'undefined' && window.__PAYOS_ENABLED__) || (typeof globalThis !== 'undefined' && globalThis.__PAYOS_ENABLED__) ? false : true);
 
-        if (updatedPayment?.status === 'PAID') {
-          navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
-          return;
-        } else if (updatedPayment?.status === 'CREATING') {
-          setError('');
-        } else if (updatedPayment?.status === 'PENDING') {
-          setError('');
+        if (!isSuspendedInCheck) {
+          const key = getOrCreatePaymentLinkKey(targetOrderId);
+          const postRes = await orderApi.createPaymentLink(targetOrderId, key);
+          if (!checkValid()) return;
+          const updatedPayment = postRes && 'data' in postRes ? postRes.data : postRes;
+          setPayment(updatedPayment);
+
+          if (updatedPayment?.status === 'PAID') {
+            if (typeof authRevokedOrderIdRef !== 'undefined' && authRevokedOrderIdRef.current && String(authRevokedOrderIdRef.current) === String(targetOrderId)) {
+              authRevokedOrderIdRef.current = null;
+            }
+            if (!checkValid() || (typeof hasNavigatedRef !== 'undefined' && hasNavigatedRef.current)) return;
+            if (typeof hasNavigatedRef !== 'undefined') hasNavigatedRef.current = true;
+            navigate(`/order-success/${targetOrderId}`, { state: { order: latest } });
+            return;
+          } else if (updatedPayment?.status === 'CREATING') {
+            setError('');
+          } else if (updatedPayment?.status === 'PENDING') {
+            setError('');
+          }
+        } else {
+          // Demo COD mode: read-only status check
+          setPayment(payData);
+          if (payData?.status === 'CREATING') {
+            setError('Thanh toán QR tạm hoãn trong bản demo. Quý khách vui lòng chuyển sang COD.');
+          }
         }
       } else if (payData.status === 'PENDING') {
         setPayment(payData);
-        alert('Chưa có xác nhận thanh toán từ máy chủ. Vui lòng kiểm tra lại trạng thái đơn hàng.');
+        if (typeof alert === 'function') {
+          alert('Chưa có xác nhận thanh toán từ máy chủ. Vui lòng kiểm tra lại trạng thái đơn hàng.');
+        }
       } else {
         setPayment(payData);
       }
+
+      // Commit successful reauthorization session (FIX-058 R5)
+      if (typeof authRevokedOrderIdRef !== 'undefined' && authRevokedOrderIdRef.current && String(authRevokedOrderIdRef.current) === String(targetOrderId)) {
+        authRevokedOrderIdRef.current = null;
+      }
+
+      // Resume polling lifecycle after successful reauthorization for PENDING order
+      if (
+        !isOrderPaid(latest) &&
+        latest.status === 'PENDING' &&
+        (!latest.paymentMethod || latest.paymentMethod === 'PAYOS_VIETQR')
+      ) {
+        if (typeof startPollingSession === 'function') {
+          startPollingSession(targetOrderId);
+        }
+      }
     } catch (err) {
-      if (currentOrderIdRef.current !== targetOrderId) return;
-      setError(err.response?.data?.message || 'Không thể kiểm tra thanh toán. Vui lòng thử lại.');
+      if (!checkValid()) return;
+      const status = err.response?.status;
+      if (status === 401 || status === 403 || status === 404) {
+        triggerRevoke(
+          err.response?.data?.message ||
+            (status === 403
+              ? 'Bạn không có quyền truy cập đơn hàng này.'
+              : status === 401
+              ? 'Vui lòng đăng nhập để xem thông tin thanh toán.'
+              : 'Không tìm thấy đơn hàng.')
+        );
+        return;
+      }
+      if (typeof orderRef !== 'undefined' && orderRef?.current && String(orderRef.current.id) !== String(targetOrderId)) {
+        setOrder(null);
+        setPayment(null);
+      }
+      setError(
+        err.response?.data?.message ||
+          'Không thể kiểm tra thanh toán. Vui lòng thử lại.'
+      );
     } finally {
-      if (currentOrderIdRef.current === targetOrderId) {
+      if (typeof isMountedRef !== 'undefined' && isMountedRef.current && typeof currentOrderIdRef !== 'undefined' && String(currentOrderIdRef.current) === String(targetOrderId)) {
         setIsVerifying(false);
       }
       isCheckingRef.current = false;
     }
   };
 
-  const displayOrderCode = payment?.orderCode ? `#${payment.orderCode}` : (order?.orderCode || `#HG-${orderId || '89241'}`);
-  const displayAmount = payment?.amount ?? (order?.totalAmount ?? 0);
+  const displayOrderCode = (isPaymentOwnedByRoute && payment?.orderCode)
+    ? `#${payment.orderCode}`
+    : (isOrderOwnedByRoute && order?.orderCode)
+    ? order.orderCode
+    : `#HG-${orderId || '89241'}`;
+  const displayAmount = (isPaymentOwnedByRoute && payment?.amount !== undefined)
+    ? payment.amount
+    : (isOrderOwnedByRoute && order?.totalAmount !== undefined)
+    ? order.totalAmount
+    : 0;
+
+  // Derive authoritative payment mode with fail-closed checks (FIX-058 R1)
+  let resolvedPaymentMode = 'UNKNOWN';
+  if (envStatus === 'VERIFIED' && paymentEnv?.paymentMode && isOrderOwnedByRoute) {
+    const envMode = paymentEnv.paymentMode;
+    if (envMode === 'MOCK' || envMode === 'REAL') {
+      const payMode = isPaymentOwnedByRoute ? payment?.paymentMode : null;
+      const ordMode = order?.paymentMode;
+      // If metadata conflicts between environment and order/payment facts -> fail-closed to UNKNOWN
+      const hasConflict = (payMode && payMode !== envMode) || (ordMode && ordMode !== envMode);
+      if (!hasConflict) {
+        resolvedPaymentMode = envMode;
+      }
+    }
+  }
+
+  const isMockMode = resolvedPaymentMode === 'MOCK';
+  const isRealMode = resolvedPaymentMode === 'REAL';
+  const isUnknownMode = resolvedPaymentMode === 'UNKNOWN';
+  const simulationControlsAllowed = Boolean(isMockMode && paymentEnv?.simulationControlsAllowed);
 
   if (loading) return <p className="p-8" role="status">Đang tải đơn hàng...</p>;
-  if (!order || (error && !payment && !payment?.qrPayload && !payment?.checkoutUrl) || (order && order.status !== 'PENDING') || secondsRemaining <= 0) {
+  if (!isOrderOwnedByRoute || error || (order && order.status !== 'PENDING') || secondsRemaining <= 0) {
     return <div className="max-w-2xl mx-auto p-8 space-y-4">
       <h1 className="text-xl font-bold">Thanh toán đơn hàng #{orderId}</h1>
-      <p role="alert">{error || (order?.status === 'PENDING'
+      <p role="alert">{error || (!isOrderOwnedByRoute
+        ? 'Chưa có thông tin đơn hàng được xác thực.'
+        : order?.status === 'PENDING'
         ? 'Chưa có mã thanh toán được xác thực. Vui lòng không chuyển tiền theo thông tin mẫu.'
         : 'Đơn hàng không ở trạng thái chờ thanh toán.')}</p>
       <button className="border rounded px-4 py-2" onClick={handleCheckPayment}>Kiểm tra lại</button>
@@ -399,13 +1092,21 @@ const QRPaymentPage = () => {
 
         {/* Link quay lại & Thông báo */}
         <div className="w-full max-w-[540px] flex items-center justify-between mb-4">
-          <Link
-            to="/checkout"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition group"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-            <span>Đổi phương thức thanh toán</span>
-          </Link>
+          {(!payment || (payment.status !== 'PAID' && payment.status !== 'NEEDS_REVIEW')) && order?.status === 'PENDING' ? (
+            <Link
+              to={`/checkout?orderId=${orderId}`}
+              data-testid="change-payment-method-link"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition group"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+              <span>Đổi phương thức thanh toán</span>
+            </Link>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 cursor-not-allowed">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Không thể đổi phương thức thanh toán</span>
+            </span>
+          )}
           <span className="text-xs text-slate-400 font-medium">Đơn hàng {displayOrderCode}</span>
         </div>
 
@@ -415,6 +1116,17 @@ const QRPaymentPage = () => {
           {/* Viền màu thương hiệu trang trí trên đỉnh card */}
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-600 via-slate-900 to-red-600"></div>
 
+          {/* Banner CHẾ ĐỘ THANH TOÁN MÔ PHỎNG (FIX-058) */}
+          {isMockMode && (
+            <div
+              data-testid="mock-payment-banner"
+              className="w-full bg-amber-100 border-2 border-amber-300 text-amber-900 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold mb-4 flex items-center justify-center gap-2 text-center shadow-xs"
+            >
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>CHẾ ĐỘ THANH TOÁN MÔ PHỎNG — KHÔNG CHUYỂN TIỀN THẬT</span>
+            </div>
+          )}
+
           {/* Banner thông báo khi người dùng quay lại từ cổng thanh toán (?cancelled=1) */}
           {new URLSearchParams(location.search).get('cancelled') === '1' && (
             <div className="w-full bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2.5 rounded-xl text-xs font-semibold mb-4 flex items-center gap-2">
@@ -422,6 +1134,30 @@ const QRPaymentPage = () => {
               <span>Bạn đã quay lại từ cổng thanh toán. Bạn có thể tiếp tục quét mã VietQR bên dưới hoặc kiểm tra lại thanh toán.</span>
             </div>
           )}
+
+          {/* Trạng thái mô phỏng Mock Provider (nếu có) */}
+          {isMockMode && payment?.mockProviderStatus && (
+            <div
+              data-testid="mock-provider-status-badge"
+              className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full text-[11px] font-bold text-amber-800 mb-4"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span>Trạng thái mô phỏng: {payment.mockProviderStatus}</span>
+            </div>
+          )}
+          {/* FIX-048: Thông báo minh bạch bản demo */}
+          <div className="w-full mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Thanh toán QR tạm hoãn trong bản demo. Quý khách có thể quay lại Checkout để chuyển sang COD.</span>
+            </div>
+            <Link
+              to={`/checkout?orderId=${orderId}`}
+              className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg font-bold text-[11px] shrink-0 transition"
+            >
+              Đổi sang COD
+            </Link>
+          </div>
 
           {/* Trạng thái thanh toán */}
           {error ? (
@@ -467,10 +1203,18 @@ const QRPaymentPage = () => {
 
           {/* Tiêu đề phía trên mã QR */}
           <h1 className="text-2xl sm:text-[26px] font-black tracking-tight text-slate-900 text-center mb-1">
-            Quét mã để thanh toán
+            {isUnknownMode
+              ? 'Xác minh thanh toán'
+              : isMockMode
+              ? 'Mô phỏng thanh toán QR'
+              : 'Quét mã để thanh toán'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 text-center mb-6 max-w-sm">
-            Sử dụng ứng dụng ngân hàng hoặc ví điện tử bất kỳ hỗ trợ <strong className="font-bold text-slate-700">VietQR / PayOS</strong>
+            {isUnknownMode
+              ? 'Hệ thống đang kiểm tra và bảo vệ môi trường giao dịch an toàn.'
+              : isMockMode
+              ? 'Giao diện mô phỏng PayOS phục vụ kiểm thử. Vui lòng không quét để chuyển tiền thật.'
+              : 'Sử dụng ứng dụng ngân hàng hoặc ví điện tử bất kỳ hỗ trợ VietQR / PayOS'}
           </p>
 
           {/* Khung Mã QR To Ở Giữa */}
@@ -480,27 +1224,94 @@ const QRPaymentPage = () => {
             <div className="w-full flex items-center justify-between pb-3 mb-2 border-b border-slate-100">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 tracking-wider">
-                  VietQR
+                  {isUnknownMode ? 'BẢO MẬT' : isMockMode ? 'MOCK PAYOS' : 'VietQR'}
                 </span>
                 <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
-                  Napas 247
+                  {isUnknownMode ? 'CHỜ XÁC MINH' : isMockMode ? 'SANDBOX' : 'Napas 247'}
                 </span>
               </div>
-              <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> QR Động
+              <span className={`text-[11px] font-semibold flex items-center gap-1 ${isUnknownMode ? 'text-amber-600' : isMockMode ? 'text-amber-600' : 'text-emerald-600'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isUnknownMode ? 'bg-amber-500' : isMockMode ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                {isUnknownMode ? 'Xác minh an toàn' : isMockMode ? 'Mô phỏng' : 'QR Động'}
               </span>
             </div>
 
             {/* Hình QR & Tia quét scanner animation */}
             <div className="relative w-56 h-56 sm:w-64 sm:h-64 bg-slate-50 rounded-xl flex items-center justify-center p-2 overflow-hidden border border-slate-100">
-              <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent scanner-line z-10 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+              {!isUnknownMode && (
+                <div className="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent scanner-line z-10 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+              )}
 
-              {payment?.status === 'CREATING' ? (
+              {isQRSuspended ? (
+                /* DEMO COD SUSPENDED: Tuyệt đối không hiển thị QR có thể thanh toán hay link mở PayOS */
+                <div
+                  data-testid="suspended-qr-placeholder"
+                  className="flex flex-col items-center justify-center p-4 w-full h-full text-center gap-2"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-200 shadow-xs">
+                    <QrCode className="w-9 h-9" />
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                    TẠM HOÃN THANH TOÁN QR
+                  </span>
+                  <p className="text-[11px] text-slate-500 font-medium max-w-[200px] leading-tight">
+                    Thanh toán QR tạm chưa hỗ trợ trong bản demo. Quý khách vui lòng chuyển sang COD.
+                  </p>
+                </div>
+              ) : isUnknownMode ? (
+                /* FAIL-CLOSED: Environment UNKNOWN -> Tuyệt đối không render QR thật hay PayOS link */
+                <div
+                  data-testid="unknown-env-card"
+                  className="flex flex-col items-center justify-center p-4 w-full h-full text-center gap-2.5"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 shadow-xs">
+                    <AlertCircle className="w-8 h-8 text-amber-600" />
+                  </div>
+                  <p role="alert" className="text-xs text-slate-600 font-semibold max-w-[220px] leading-relaxed">
+                    {envError || 'Chưa thể xác minh môi trường thanh toán. Vui lòng thử lại. Đơn hàng của bạn vẫn được giữ nguyên.'}
+                  </p>
+                  <button
+                    type="button"
+                    data-testid="retry-env-btn"
+                    onClick={() => fetchPaymentEnvironment({ force: true })}
+                    disabled={isRetryingEnv}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition disabled:opacity-50 mt-1 cursor-pointer"
+                  >
+                    {isRetryingEnv ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Đang xác minh...</span>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Thử lại xác minh thanh toán</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : isMockMode ? (
+                /* MOCK MODE: Hiển thị placeholder mô phỏng an toàn, không có QR chuyển tiền thật */
+                <div
+                  data-testid="mock-qr-placeholder"
+                  className="flex flex-col items-center justify-center p-4 w-full h-full text-center gap-2"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-200 shadow-xs">
+                    <QrCode className="w-9 h-9" />
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-200">
+                    MÃ QR MÔ PHỎNG
+                  </span>
+                  <p className="text-[11px] text-slate-500 font-medium max-w-[200px] leading-tight">
+                    Chế độ thử nghiệm hệ thống. Không quét chuyển tiền thật.
+                  </p>
+                </div>
+              ) : payment?.status === 'CREATING' ? (
                 <div className="text-center p-4 flex flex-col items-center justify-center">
                   <Loader2 className="w-8 h-8 animate-spin text-amber-600 mb-2" />
                   <p className="text-xs font-medium text-slate-500">Đang chuẩn bị liên kết thanh toán...</p>
                 </div>
-              ) : payment?.qrPayload ? (
+              ) : isRealMode && payment?.qrPayload ? (
                 <div className="flex flex-col items-center justify-center p-1 w-full h-full">
                   <QRCodeSVG
                     value={payment.qrPayload}
@@ -509,7 +1320,7 @@ const QRPaymentPage = () => {
                     className="max-w-full max-h-full aspect-square"
                   />
                 </div>
-              ) : payment?.checkoutUrl ? (
+              ) : isRealMode && payment?.checkoutUrl ? (
                 <div className="text-center p-4 flex flex-col items-center justify-center gap-2">
                   <QrCode className="w-16 h-16 text-slate-700" />
                   <a
@@ -530,15 +1341,27 @@ const QRPaymentPage = () => {
             </div>
 
             {/* Supported Banks Text */}
-            <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 font-medium">
-              <span className="text-slate-400">Hỗ trợ tự động:</span>
-              <span className="font-bold text-slate-700">Vietcombank</span>
-              <span>•</span>
-              <span className="font-bold text-slate-700">MB Bank</span>
-              <span>•</span>
-              <span className="font-bold text-slate-700">Techcombank</span>
-              <span>•</span>
-              <span className="font-bold text-pink-600">MoMo</span>
+            <div className="flex items-center justify-center gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 font-medium w-full">
+              {isUnknownMode ? (
+                <span className="text-slate-500 font-semibold text-center">
+                  Đang chờ xác minh môi trường thanh toán an toàn
+                </span>
+              ) : isMockMode ? (
+                <span className="text-amber-700 font-semibold text-center">
+                  Chế độ kiểm thử (Sandbox) — Không liên kết tài khoản ngân hàng thực tế
+                </span>
+              ) : (
+                <>
+                  <span className="text-slate-400">Hỗ trợ tự động:</span>
+                  <span className="font-bold text-slate-700">Vietcombank</span>
+                  <span>•</span>
+                  <span className="font-bold text-slate-700">MB Bank</span>
+                  <span>•</span>
+                  <span className="font-bold text-slate-700">Techcombank</span>
+                  <span>•</span>
+                  <span className="font-bold text-pink-600">MoMo</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -589,32 +1412,34 @@ const QRPaymentPage = () => {
             </div>
           </div>
 
-          {/* 3 Bước Đơn Giản */}
-          <div className="w-full mb-6">
-            <div className="text-center text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              3 Bước Đơn Giản
+          {/* 3 Bước Đơn Giản - Chỉ hiển thị khi môi trường đã xác minh */}
+          {!isUnknownMode && (
+            <div className="w-full mb-6">
+              <div className="text-center text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                3 Bước Đơn Giản
+              </div>
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-slate-700 bg-blue-50/60 border border-blue-100 rounded-lg py-2.5 px-3">
+                <span className="flex items-center gap-1 text-slate-900">
+                  <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">1</span>
+                  Mở app ngân hàng
+                </span>
+                <span className="text-slate-300 font-normal">›</span>
+                <span className="flex items-center gap-1 text-blue-600">
+                  <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">2</span>
+                  Quét QR
+                </span>
+                <span className="text-slate-300 font-normal">›</span>
+                <span className="flex items-center gap-1 text-emerald-700">
+                  <span className="w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center font-bold">3</span>
+                  Xác nhận
+                </span>
+              </div>
             </div>
-            <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-slate-700 bg-blue-50/60 border border-blue-100 rounded-lg py-2.5 px-3">
-              <span className="flex items-center gap-1 text-slate-900">
-                <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[10px] flex items-center justify-center font-bold">1</span>
-                Mở app ngân hàng
-              </span>
-              <span className="text-slate-300 font-normal">›</span>
-              <span className="flex items-center gap-1 text-blue-600">
-                <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">2</span>
-                Quét QR
-              </span>
-              <span className="text-slate-300 font-normal">›</span>
-              <span className="flex items-center gap-1 text-emerald-700">
-                <span className="w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center font-bold">3</span>
-                Xác nhận
-              </span>
-            </div>
-          </div>
+          )}
 
           {/* Nút "Tôi đã thanh toán" */}
           <div className="w-full flex flex-col gap-2.5">
-            {payment?.checkoutUrl && (
+            {!isQRSuspended && isRealMode && payment?.checkoutUrl && (
               <a
                 href={payment.checkoutUrl}
                 target="_blank"
@@ -623,6 +1448,14 @@ const QRPaymentPage = () => {
               >
                 <span>Tiếp tục thanh toán qua PayOS</span>
               </a>
+            )}
+            {isQRSuspended && (
+              <div
+                data-testid="payos-suspended-notice"
+                className="w-full py-2.5 px-4 rounded-xl bg-slate-100 text-slate-500 font-medium text-xs text-center border border-slate-200"
+              >
+                Cổng thanh toán PayOS tạm hoãn trong bản demo.
+              </div>
             )}
             <button
               type="button"
@@ -648,28 +1481,42 @@ const QRPaymentPage = () => {
               )}
             </button>
 
-            {/* Thao tác phụ: Tải ảnh QR / Hủy */}
+            {/* Thao tác phụ: Tải ảnh QR / Quay lại checkout */}
             <div className="flex items-center justify-between text-xs text-slate-500 pt-1 px-1">
               <button
                 type="button"
-                onClick={() => alert('Đang lưu mã QR vào thư viện ảnh...')}
-                className="inline-flex items-center gap-1 hover:text-blue-600 transition font-medium"
+                onClick={() => alert('Tính năng tải mã QR tạm chưa hỗ trợ trong bản demo.')}
+                className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-600 transition font-medium"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Tải mã QR về máy</span>
+                <span>Tải mã QR (Chưa hỗ trợ)</span>
               </button>
-              <Link to="/checkout" className="hover:text-red-500 transition font-medium">
-                Hủy giao dịch
+              <Link
+                to={`/checkout?orderId=${orderId}`}
+                data-testid="return-checkout-link"
+                className="hover:text-slate-800 transition font-medium"
+              >
+                Quay lại checkout
               </Link>
             </div>
 
-            {/* Dev Mock Simulation Button for Fast Testing */}
-            <div className="pt-2 border-t border-slate-100 flex justify-center">
-
-            </div>
+            {/* Helper text giải thích rõ nghĩa hành động quay lại checkout */}
+            {payment?.status === 'PENDING' && (
+              <p className="text-[11px] text-slate-400 text-center pt-1" data-testid="checkout-return-note">
+                Quay lại checkout không tự động hủy giao dịch thanh toán hiện tại.
+              </p>
+            )}
           </div>
 
         </div>
+
+        {/* Admin Mock Simulation Panel (FIX-058) */}
+        {simulationControlsAllowed && (
+          <MockPayOSControls
+            orderId={orderId}
+            onActionApplied={() => fetchOrder()}
+          />
+        )}
 
         {/* Hỗ trợ & Thông báo bảo mật chân trang card */}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 text-center">

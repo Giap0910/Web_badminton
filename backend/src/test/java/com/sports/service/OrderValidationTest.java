@@ -62,8 +62,8 @@ class OrderValidationTest {
             return order;
         });
         service = new OrderService(orders, products, users, gateway,
-                new VoucherService(vouchers, new MockEnvironment()), mock(EntityManager.class));
-        mvc = MockMvcBuilders.standaloneSetup(new OrderController(service))
+                new VoucherService(vouchers, new MockEnvironment()), mock(EntityManager.class), mock(PaymentTransitionGuard.class));
+        mvc = MockMvcBuilders.standaloneSetup(new OrderController(service, mock(OrderStatusService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(principalResolver()).build();
     }

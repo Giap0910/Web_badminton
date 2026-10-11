@@ -61,7 +61,7 @@ const HERO_SLIDES = [
     titleGradient: 'TỐI ƯU TỐC ĐỘ BƯỚC DI CHUYỂN',
     description: 'Khả năng hấp thụ chấn động và hoàn trả lực vượt trội giúp bạn làm chủ từng pha bật nhảy cứu cầu góc sân hiểm hóc nhất.',
     ctaPrimary: 'Khám phá giày',
-    ctaPrimaryLink: '/products?category=SHOES',
+    ctaPrimaryLink: '/products?categoryId=2',
     ctaSecondary: 'Xem ưu đãi',
     ctaSecondaryLink: '/products?sale=true',
     slideCode: '03 / 04 SPEED & AGILITY',
@@ -74,7 +74,7 @@ const HERO_SLIDES = [
     titleGradient: 'CHUẨN LỰC ĐẾN TỪNG LBS',
     description: 'Đội ngũ KTV chứng chỉ quốc tế căng vợt điện tử lấy liền sau 20 phút. Bảo hành đứt cước 24H an tâm tuyệt đối trên mọi giải đấu.',
     ctaPrimary: 'Khám phá ngay',
-    ctaPrimaryLink: '/products?category=ACCESSORIES',
+    ctaPrimaryLink: '/products?categoryId=5',
     ctaSecondary: 'Xem loại cước',
     ctaSecondaryLink: '/product/string/string-bg80p',
     slideCode: '04 / 04 STRINGING PRO',
@@ -299,7 +299,7 @@ const HomePage = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-5">
           {/* 1. Vợt cầu lông */}
           <Link 
-            to="/products?category=RACKET"
+            to="/products?categoryId=1"
             className="group relative flex flex-col justify-between p-5 bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 overflow-hidden border border-[#E2E8F0] hover:border-[#CBD5E1]"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-[#F2F4F6] rounded-bl-full transition-all group-hover:bg-secondary/10" />
@@ -327,7 +327,7 @@ const HomePage = () => {
 
           {/* 2. Giày cầu lông */}
           <Link 
-            to="/products?category=SHOES"
+            to="/products?categoryId=2"
             className="group relative flex flex-col justify-between p-5 bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 overflow-hidden border border-[#E2E8F0] hover:border-[#CBD5E1]"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-[#F2F4F6] rounded-bl-full transition-all group-hover:bg-secondary/10" />
@@ -355,7 +355,7 @@ const HomePage = () => {
 
           {/* 3. Balo & Bao vợt */}
           <Link 
-            to="/products?category=BAG"
+            to="/products?categoryId=4"
             className="group relative flex flex-col justify-between p-5 bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 overflow-hidden border border-[#E2E8F0] hover:border-[#CBD5E1]"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-[#F2F4F6] rounded-bl-full transition-all group-hover:bg-secondary/10" />
@@ -383,7 +383,7 @@ const HomePage = () => {
 
           {/* 4. Quần áo đấu */}
           <Link 
-            to="/products?category=APPAREL"
+            to="/products?categoryId=3"
             className="group relative flex flex-col justify-between p-5 bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 overflow-hidden border border-[#E2E8F0] hover:border-[#CBD5E1]"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-[#F2F4F6] rounded-bl-full transition-all group-hover:bg-secondary/10" />
@@ -411,7 +411,7 @@ const HomePage = () => {
 
           {/* 5. Phụ kiện pro */}
           <Link 
-            to="/products?category=ACCESSORIES"
+            to="/products?categoryId=5"
             className="group relative flex flex-col justify-between p-5 bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 overflow-hidden border border-[#E2E8F0] hover:border-[#CBD5E1]"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-[#F2F4F6] rounded-bl-full transition-all group-hover:bg-secondary/10" />

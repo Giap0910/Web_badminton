@@ -774,7 +774,7 @@ class PaymentSettlementIntegrationTest {
     @EnableJpaRepositories(basePackages = "com.sports.repository")
     @Import({SecurityConfig.class, PaymentController.class, AdminPaymentController.class, GlobalExceptionHandler.class,
             PayOSService.class, PaymentSettlementService.class, PaymentWebhookService.class, PaymentReconciliationStore.class,
-            PaymentReconciliationService.class, AdminPaymentService.class})
+            PaymentReconciliationService.class, AdminPaymentService.class, PaymentTransitionGuard.class})
     static class Config {
         @Bean static PropertySourcesPlaceholderConfigurer properties() {
             var config = new PropertySourcesPlaceholderConfigurer();
@@ -803,8 +803,8 @@ class PaymentSettlementIntegrationTest {
         }
         @Bean VoucherService vouchers(VoucherRepository vouchers) { return new VoucherService(vouchers, new MockEnvironment()); }
         @Bean OrderService orderService(OrderRepository orders, ProductRepository products, UserRepository users,
-                PayOSService payos, VoucherService vouchers, EntityManager em) {
-            return spy(new OrderService(orders, products, users, payos, vouchers, em));
+                PayOSService payos, VoucherService vouchers, EntityManager em, PaymentTransitionGuard guard) {
+            return spy(new OrderService(orders, products, users, payos, vouchers, em, guard));
         }
     }
 }

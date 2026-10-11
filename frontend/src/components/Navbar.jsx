@@ -33,11 +33,11 @@ const Navbar = () => {
   };
 
   const navCategories = [
-    { label: 'Vợt Cầu Lông', path: '/products?category=RACKET' },
-    { label: 'Giày Cầu Lông', path: '/products?category=SHOES' },
-    { label: 'Balo & Bao Vợt', path: '/products?category=BAG' },
-    { label: 'Quần Áo Thi Đấu', path: '/products?category=APPAREL' },
-    { label: 'Phụ Kiện Pro', path: '/products?category=ACCESSORIES' },
+    { label: 'Vợt Cầu Lông', path: '/products?categoryId=1' },
+    { label: 'Giày Cầu Lông', path: '/products?categoryId=2' },
+    { label: 'Quần Áo Đấu', path: '/products?categoryId=3' },
+    { label: 'Balo & Bao Vợt', path: '/products?categoryId=4' },
+    { label: 'Phụ Kiện Pro', path: '/products?categoryId=5' },
   ];
 
   return (

@@ -469,6 +469,9 @@ function createProductionPollingRunner(scope) {
   return factory(...values);
 }
 
+// Explicitly set PayOS enabled for baseline remediation tests that verify enabled lifecycle
+globalThis.__PAYOS_ENABLED__ = true;
+
 test('FIX-002 REMEDIATION TEST 8 (BUG A) — handleCheckPayment on GET 200 + null calls createPaymentLink with same orderId and same key', async () => {
   sessionStorage.clear();
 
@@ -1199,4 +1202,150 @@ test('FIX-002 REMEDIATION TEST 20 (LIFECYCLE FIX) — Polling: setOrder(latest) 
   cleanup();
 });
 
+// ======================================================================
+// DEMO COD TESTS: Verifying QR payment suspension (0 POST payment-link calls)
+// ======================================================================
 
+test('DEMO COD REMEDIATION TEST 1 — handleCheckPayment on GET 200 + null calls createPaymentLink ZERO times in demo mode', async () => {
+  sessionStorage.clear();
+  globalThis.__PAYOS_ENABLED__ = false;
+
+  const orderId = 2001;
+  let getOrderCalls = 0;
+  let getPaymentCalls = 0;
+  let createPaymentLinkCalls = 0;
+  let updatedPaymentState = null;
+
+  const mockOrderApi = {
+    getOrderById: async (id) => {
+      getOrderCalls++;
+      return { data: { id, status: 'PENDING', paymentMethod: 'PAYOS_VIETQR' } };
+    },
+    getOrderPayment: async () => {
+      getPaymentCalls++;
+      return { data: null };
+    },
+    createPaymentLink: async () => {
+      createPaymentLinkCalls++;
+      return { data: {} };
+    }
+  };
+
+  const isCheckingRef = { current: false };
+  const currentOrderIdRef = { current: orderId };
+
+  const handleCheckPayment = createProductionCheckPaymentRunner({
+    orderId,
+    orderApi: mockOrderApi,
+    getOrCreatePaymentLinkKey,
+    isCheckingRef,
+    isVerifying: false,
+    setIsVerifying: () => {},
+    setError: () => {},
+    setOrder: () => {},
+    setPayment: (p) => { updatedPaymentState = p; },
+    isOrderPaid: (o) => o?.status === 'PAID',
+    navigate: () => {},
+    currentOrderIdRef
+  });
+
+  await handleCheckPayment();
+
+  assert.equal(getOrderCalls, 1, 'getOrderById called once');
+  assert.equal(getPaymentCalls, 1, 'getOrderPayment called once');
+  assert.equal(createPaymentLinkCalls, 0, 'DEMO REQUIREMENT: createPaymentLink MUST NOT be called in demo mode (0 times)');
+  assert.equal(updatedPaymentState, null, 'Payment remains null, no synthetic payment generated');
+});
+
+test('DEMO COD REMEDIATION TEST 2 — handleCheckPayment on GET CREATING calls createPaymentLink ZERO times in demo mode', async () => {
+  sessionStorage.clear();
+  globalThis.__PAYOS_ENABLED__ = false;
+
+  const orderId = 2002;
+  let getOrderCalls = 0;
+  let getPaymentCalls = 0;
+  let createPaymentLinkCalls = 0;
+  let errorMsg = '';
+
+  const mockOrderApi = {
+    getOrderById: async (id) => {
+      getOrderCalls++;
+      return { data: { id, status: 'PENDING', paymentMethod: 'PAYOS_VIETQR' } };
+    },
+    getOrderPayment: async (id) => {
+      getPaymentCalls++;
+      return { data: { id: 92002, orderId: id, status: 'CREATING', checkoutUrl: null } };
+    },
+    createPaymentLink: async () => {
+      createPaymentLinkCalls++;
+      return { data: {} };
+    }
+  };
+
+  const isCheckingRef = { current: false };
+  const currentOrderIdRef = { current: orderId };
+
+  const handleCheckPayment = createProductionCheckPaymentRunner({
+    orderId,
+    orderApi: mockOrderApi,
+    getOrCreatePaymentLinkKey,
+    isCheckingRef,
+    isVerifying: false,
+    setIsVerifying: () => {},
+    setError: (msg) => { errorMsg = msg; },
+    setOrder: () => {},
+    setPayment: () => {},
+    isOrderPaid: (o) => o?.status === 'PAID',
+    navigate: () => {},
+    currentOrderIdRef
+  });
+
+  await handleCheckPayment();
+
+  assert.equal(getOrderCalls, 1, 'getOrderById called once');
+  assert.equal(getPaymentCalls, 1, 'getOrderPayment called once');
+  assert.equal(createPaymentLinkCalls, 0, 'DEMO REQUIREMENT: createPaymentLink MUST NOT be called on CREATING in demo mode');
+  assert.ok(errorMsg.includes('tạm hoãn'), 'Error message informs user that QR payment is suspended in demo');
+});
+
+test('DEMO COD REMEDIATION TEST 3 — fetchOrder on initial load with GET 200 + null calls createPaymentLink ZERO times in demo mode', async () => {
+  sessionStorage.clear();
+  globalThis.__PAYOS_ENABLED__ = false;
+
+  const orderId = 2003;
+  let createPaymentLinkCalls = 0;
+
+  const mockOrderApi = {
+    getOrderById: async (id) => ({ data: { id, status: 'PENDING', timeRemainingSeconds: 600 } }),
+    getOrderPayment: async () => ({ data: null }),
+    createPaymentLink: async () => {
+      createPaymentLinkCalls++;
+      return { data: {} };
+    }
+  };
+
+  const hasInitialRecoveredRef = { current: false };
+  const currentOrderIdRef = { current: orderId };
+
+  const fetchOrder = createProductionFetchOrderRunner({
+    orderId,
+    orderApi: mockOrderApi,
+    getOrCreatePaymentLinkKey,
+    hasInitialRecoveredRef,
+    currentOrderIdRef,
+    setError: () => {},
+    setOrder: () => {},
+    setSecondsRemaining: () => {},
+    setPayment: () => {},
+    setLoading: () => {},
+    isOrderPaid: () => false,
+    navigate: () => {}
+  });
+
+  await fetchOrder();
+
+  assert.equal(createPaymentLinkCalls, 0, 'DEMO REQUIREMENT: initial fetchOrder MUST NOT call createPaymentLink in demo mode (0 times)');
+
+  // Reset back to enabled for any subsequent tests
+  globalThis.__PAYOS_ENABLED__ = true;
+});

@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useCompare } from '../context/CompareContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
+import ProductImage, { BadmintonPlaceholder } from '../components/ProductImage';
 import {
   ShoppingCart,
   Layers,
@@ -19,6 +20,7 @@ import {
   ZoomIn,
   Home,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   Wrench,
   Gauge,
@@ -77,6 +79,8 @@ const ProductDetailPage = () => {
   const [comment, setComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [cartError, setCartError] = useState('');
 
   // Accordion state for QA
   const [openQa, setOpenQa] = useState({ 0: true });
@@ -115,12 +119,21 @@ const ProductDetailPage = () => {
       setLoading(true);
       setDataError('');
       try {
-        const [prodData, reviewData, allProds] = await Promise.all([
+        const [prodData, reviewData, allProds, galleryApi] = await Promise.all([
           productApi.getProductById(id),
           reviewApi.getProductReviews(id).catch(() => []),
-          productApi.getProducts({}).catch(() => [])
+          productApi.getProducts({ size: 8 }).catch(() => []),
+          productApi.getProductImages(id).catch(() => [])
         ]);
         if (!active) return;
+
+        // Merge gallery from endpoint if imageUrls is missing or empty
+        if (prodData) {
+          const existingGallery = Array.isArray(prodData.imageUrls) ? prodData.imageUrls : [];
+          const extraGallery = Array.isArray(galleryApi) ? galleryApi : [];
+          prodData.imageUrls = [...new Set([...existingGallery, ...extraGallery])];
+        }
+
         setProduct(prodData);
         setReviews(Array.isArray(reviewData) ? reviewData : (reviewData?.items || []));
 
@@ -157,15 +170,29 @@ const ProductDetailPage = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
-    addToCart(product, quantity, getProductOptions());
-    setAddedToast(true);
-    setTimeout(() => setAddedToast(false), 2500);
+    const cartItemId = addToCart(product, quantity, getProductOptions());
+    if (cartItemId) {
+      setCartError('');
+      setAddedToast(true);
+      setTimeout(() => setAddedToast(false), 2500);
+    } else {
+      setAddedToast(false);
+      setCartError('Không thể thêm vào giỏ: Số lượng yêu cầu vượt quá tồn kho hiện có!');
+      setTimeout(() => setCartError(''), 3500);
+    }
   };
 
   const handleBuyNow = () => {
     if (!product) return;
     const cartItemId = addToCart(product, quantity, getProductOptions());
-    navigate('/checkout', { state: { selectedItemIds: cartItemId ? [cartItemId] : undefined } });
+    if (cartItemId) {
+      setCartError('');
+      navigate('/checkout', { state: { selectedItemIds: [cartItemId] } });
+    } else {
+      setAddedToast(false);
+      setCartError('Không thể mua ngay: Số lượng yêu cầu vượt quá tồn kho hiện có!');
+      setTimeout(() => setCartError(''), 3500);
+    }
   };
 
   const handleShare = () => {
@@ -179,30 +206,36 @@ const ProductDetailPage = () => {
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!comment.trim()) return;
+    if (!isAuthenticated) {
+      setReviewError('Vui lòng đăng nhập tài khoản để gửi đánh giá sản phẩm.');
+      setTimeout(() => setReviewError(''), 4000);
+      return;
+    }
     setReviewSubmitting(true);
+    setReviewError('');
     try {
       const newRev = await reviewApi.createReview({
         productId: product.id,
         rating: newRating,
         comment: comment.trim()
       });
-      const nextReviews = [newRev, ...reviews];
-      setReviews(nextReviews);
-      setComment('');
-      setReviewSuccess(true);
-      setTimeout(() => setReviewSuccess(false), 4000);
+      if (newRev && (newRev.id || newRev.productId)) {
+        setReviews(prev => [newRev, ...prev]);
+        setComment('');
+        setReviewSuccess(true);
+        setTimeout(() => setReviewSuccess(false), 4000);
+      }
     } catch (err) {
-      const fallbackRev = {
-        id: Date.now(),
-        rating: newRating,
-        comment: comment.trim(),
-        userFullName: 'Vận động viên',
-        createdAt: new Date().toISOString()
-      };
-      setReviews([fallbackRev, ...reviews]);
-      setComment('');
-      setReviewSuccess(true);
-      setTimeout(() => setReviewSuccess(false), 4000);
+      console.error('Review submission error:', err);
+      setReviewSuccess(false);
+      if (err?.response?.status === 401) {
+        setReviewError('Vui lòng đăng nhập tài khoản để gửi đánh giá sản phẩm.');
+      } else if (err?.response?.status === 403) {
+        setReviewError('Bạn không có quyền thực hiện đánh giá sản phẩm này.');
+      } else {
+        setReviewError(err?.response?.data?.message || 'Chưa thể gửi đánh giá, vui lòng thử lại sau.');
+      }
+      setTimeout(() => setReviewError(''), 4000);
     } finally {
       setReviewSubmitting(false);
     }
@@ -231,40 +264,22 @@ const ProductDetailPage = () => {
     );
   }
 
-  // Authentic gallery assets matching the designs
+  // Lấy danh sách ảnh thực tế từ Backend API (imageUrl làm ảnh chính, imageUrls làm gallery)
   const getGalleryImages = () => {
-    const mainImg = product.imageUrl || '';
-    if (isShoes) {
-      return [
-        mainImg || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDgMtjDcYBPxhIifObhwf-QQ-oo06tv5VdM-m3g4NHHkQaadm3Itj8nkaYHMI3W29C3CRXZIkdfqOvIVG3LoDNyyBd46ZNI3Ip301P4wR7zbr0w2WKpyh_mBmyLSELt0U6SU7Y2_iu9Cva_Pn9ZprBGo28O77F4Z4-iUqqh82hO12N4dYsKxEdRJ5UKJcYHKZZVi0012gCdJsqOUWAP898uBqab6upzsFdIsQzZwTLY45eTqLcAi-1G',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBabIYte4W9Kdm4Pux4fYkP1HlT_DDPE_TAF8IFZwlJIOchrcvgnVQ9wgg9JU6r0D0-t5BY1qP4kopPy04sn9O3AX7W64cYSbFxkVH4BXlJhNcqWQTiw9ykgpRxNHO-ySf45O6wGASoV4sCygG7KJm12hovlNqNQNKvu5INFrmWaoP_dspcTpDsFjU2YnfPbwM3BHoTq5DmRLALfpA0dPVqUnn-URUUWsFUfJpZmHWCGE86PSaRTf-K',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuCLFz_1z5a-7IM8iYwdGMMJuqRo6FY2rMCh9IcFIk7QP7Vi3ozjngIGZl-OsdhqWZUK8WCVnlM0czNrorRiaVV7MfasndXy3CzqTAWkP8uiGEvWYCY4gghGBDSeYvikeoNjowxtMsSI4dNlr8W6ZTA2LwxNIX2WkmcWa3HKitSJ9lPg9i5mX1-QnE0ZA9dSYFey7jIEOD2SqPd0kZ7jIKoiDojZDuKe-kXcduycA2NPw3h5CghR5HgD',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuAi1zinDseoFiTRkzncBruMuyQQ8r0EPQAXnMR0kRZEsXuG9_5WLhMkgM_t1Jy0Pk5Q90IrvDB6mr8nOD2tRX9dgkmUG8E3BczyRUuWcn0Hl464K_g6RSqIpRHaWX1uSvgiQMqdWGCoDW7dmvhMP2yQFlZACK9D1kzUC4LgCBSYplSPAMLuf1WtJEqa5fJi_N4N82Bi9bSeGwa65MFSSt66dBX3Xlu2SeAwq11wjAuPJ2oyNUolVOFd'
-      ];
-    }
-    if (isBag) {
-      return [
-        mainImg || 'https://lh3.googleusercontent.com/aida-public/AB6AXuDnFyo7c57sV_OhnyiVcYHhuO0J6Gp7wY2WbmqnUCLIp2v2kv85clamArsXM64zfw8nch7IxJrseUjVpM4UwWjz21HfKfIaoBcrjVMQeTXK7R1ImMbOFAohGP-NhmLD2PE9xs_aoDD8F8RVMM8guEg9WZFtHr3f_Lk_gtlYlRW_QPr2a1ime9we0AYdul75dz2cOSHTBqQ6HsOsT6IKVKZlNKwjQxOfMlMN938yb9t_XwVMwGbkmEYm',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDXPTrF84DuCWFPCow7eXifPn49_Ijgt8NriPpWzUYMtbigBPWI5nDYS-41oNZDq3bnrtBzdTGwk6v0fQrifgT_IEsGw6gtX9d1IkjP1ui044e5Ocn6Nk4BBwdPqxM99vWaqT-i8A7px7YyzMAx7_MjRu8fio826Wv1vai2TKikweHZ6OPmAA4S003hTr53JCDo65JjTXjB1Mw5vUnr57BUUEP7RBBnW_GDHg-KSEe5shPqvIHNfbpz',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBN0D5kUoNfdbsOTVwyp7kC5jGvpqvEX7xiHLt6xWqPD3TI76NXJs955uEs-7M-5M_YWJo8IHfIda12EYpQ3MqU4GlB6eeOpBHPfJamJcgjYIVC7RFH5wGd-q4mRA9BhYkmE_HVu--puIkG-LLh_IU-51ELcq8h_W-DiL1n7ORf1-gav8aPH7yChlIVWPgDgFNdhVwqfHfJoxG18SC08AQ9n7K-JZ_0v7WtHIcYGWlJgX-h2ptrwnRo',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuB-rFgwLoN6lAYmdXfZb5ssETw5roMpP4wtV_6T1dzwgA9we9zFTCI1FdEy1xP8KIZonpBcWQ77MtU1ct2SJ1VQfSnZw5AtsvBmMukfiCIpsxrSIHS58sqKAWh1Dtj1nmhLwIkK0_ye3WcZ-Zf4Z1YKbuBXrC434oRZpRQl2-FRumUUr6_xHdBdbU8OL0C14DBdQEXkeU3iTnPbdjUHmDbWwzIMrrLRFYEkivmN2yt1MR9tbkGoFQgF'
-      ];
-    }
-    if (isApparel) {
-      return [
-        mainImg || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCOkRXNp6y7K3zlEfL_E-g6XoZYbE5YyBbf3XmQWtvD7PDMraQXRkCnHndtyccJzkmmtaWncZodsYkWzzAMoalGnaHiUKNsHg20GlgAsp00wZvUr95Dq6Ax5xCMkVfMe43nCC7SanuQj6fM-tNEAkDVxbMjMbASehdHoHXT23CQ4CqOR4p49EPRQiYHezSpswPUZrm09ufaIKXgEArvOGaiVxBa-nhNNZTbePufxdYcqWdCWO_bgJue',
-        'https://lh3.googleusercontent.com/aida/AEtjO1W33GfCrAL5kowciyMaLyni5RiJDVqbk2n_EqKL2ZUu8-7l4rJpBYxuOkJAscOJ_MFf4kmeTj_nNXVtrU2sNt89M5cQqE77l2ZvDxbzswmfmfupFgy6AE17krMf3pOsq22S_LGrxzpl9DFzncwlYIY6y_8Aq28C9TFcc4rYV7-_4C158Uker61uSG44C-W2N-OIb-bf52aaCcj0FySI-ujjYKPPiNUqvVwFVusMR4lJvHpu0QsYkKSc-IA',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDLjCF2oOK3Cv6MNQ5C-oiDIM9-ohNXPeNQCOdk-QDYcW0ux_aSpbJvEzs3QlRsuhv0vX1s11s_andciU4EKcMJculQxDk5kJHZbzirvz7m9yvQ--U78KZQnpXQ1GQ2Ckk3G7tcmcDMBd610jaxc97bPS2wDszA5OC3ZPBcKXxhmjODpIqSLkwTRUOf4mXeDArSaeWgtTqkmB5qZI2_sJOV7lQRXMNm_Bdt7mD3EEhdFz2pF61OMlmy',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuD9cxYHPNSmfNU3S6x8vrMTi9REZ_pnSxsWLkRWfaoIzURAvH4mt86jULBGoreiNVkjeAOnFV_-B9saPb87yMgif_mumC8dxL9s5MHfHPNyw-5tAHtuvReaIreWM1C24spgR1LxacFn1rmVon3eeQkIC76EYLdSI7btGhioOFrrOyA5fpPJs6Te9DdW8dhSCSchH6rNdqztaD3bb_9xFhxjuefOvmsEhOIivrSL1zJ2nLrXvJDEjPhN'
-      ];
-    }
-    // Racket & default
-    return [
-      mainImg || 'https://lh3.googleusercontent.com/aida/AEtjO1UG8R7Rrqw2gYxI3b7kO_7Zt2_B9qU1_oEaR6w7fQ',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCFBmenY63wmgZ4wg0GyAKWFdtFDlCP70iFakba_YL55SKkdbmNqPF3jW-EMZiWcwdfScOambxaG39rZ02yb6QKRy-q6cQialcQ9BxDXg8bapNbiUxVle3jjdQtyJIfFz22Umwhgspvzw474dD8x97tF5MfSr5r9Ln_yLMexIuwDDUz7Hx8fpLyohyp1n2mwl__ELun-PtfzqAhmhVC-MwgXFOmDASfd9dNGAV1A7y4HRk6O2V34V-u',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDI8-fLRhjWEOST87SL_dTRubiUU7xFHqkxq07c6U87MUGuzpJPOXELAySggE_TaYAxk8SipyZy6tFuhdoW_9u3LC0Gsnr0qcVEHJ5TmiCF9R6zIkqDVDQjewMnSyFiVSoFT66SKhZtpx6IV8ARv4UpHUrsZFp2Ig6jbdsowq2X1EPXPp05EnoSqVg7O38CrG-X0XUPQZl4jHZEVkxfBJwRxcrVnOaAp0DfSmAu6BEa9n9Fi_PIXGvO',
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuDT6kzmp2Vu8APo3xMFwK6vAHJ6QYM7LPwC1nkeXXeWe2MNtaAwkKZcyd103SShm4Ht72x70aTRg9gOBogxxCJJm9HoBU8c0ls3kWbwSrgtRnCUDXLCmbvduCkWCXj__q0GiDBUbSSsXgOcbYRPs-QYWvIAQTP_22yjegIzospVHXHrBqj1m2LzdghVcByat_a_NeXxuwM7YAOXQqsVPsRDjfZr2UDvDeJZmDwidFEjxom0GQsPHqwe'
-    ];
+    if (!product) return [];
+    const mainImg = typeof product.imageUrl === 'string' && product.imageUrl.trim() ? product.imageUrl.trim() : null;
+    const rawList = Array.isArray(product.imageUrls) ? product.imageUrls : [];
+    const validList = rawList.filter(url => typeof url === 'string' && url.trim());
+
+    // Ảnh chính luôn ở vị trí đầu tiên nếu có; loại bỏ URL trùng lặp
+    const result = [];
+    if (mainImg) result.push(mainImg);
+    validList.forEach(url => {
+      if (!result.includes(url)) {
+        result.push(url);
+      }
+    });
+    return result;
   };
 
   const galleryImages = getGalleryImages();
@@ -299,10 +314,9 @@ const ProductDetailPage = () => {
           <div className="lg:col-span-6 flex flex-col-reverse md:flex-row gap-4">
 
             {/* Vertical Thumbnail Strip */}
-            <div className="flex md:flex-col gap-2.5 shrink-0 overflow-x-auto pb-2 md:pb-0">
-              {galleryImages.map((img, index) => {
-                const label = isShoes ? `0${index + 1}` : isBag ? (['Mặt trước', 'Đệm lưng 3D', 'Ngăn giày & vợt', 'Trên sân đấu'][index] || `0${index + 1}`) : isApparel ? (['Action', 'Front', 'Back', 'Tech'][index] || `0${index + 1}`) : null;
-                return (
+            {galleryImages.length > 1 && (
+              <div className="flex md:flex-col gap-2.5 shrink-0 overflow-x-auto pb-2 md:pb-0 max-h-[540px]">
+                {galleryImages.map((img, index) => (
                   <button
                     key={index}
                     type="button"
@@ -313,16 +327,25 @@ const ProductDetailPage = () => {
                         : 'border-transparent hover:border-slate-300'
                     }`}
                   >
-                    <img src={img} alt="Thumb" className="max-h-full max-w-full object-contain mix-blend-multiply pointer-events-none" />
-                    {label && (
-                      <span className="absolute bottom-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#0F172A] text-white">
-                        {label}
+                    <ProductImage
+                      src={img}
+                      alt={`${product.name} thumb ${index + 1}`}
+                      className="w-full h-full"
+                      imgClassName="max-h-full max-w-full object-contain mix-blend-multiply pointer-events-none"
+                    />
+                    {index === 0 && product.imageUrl ? (
+                      <span className="absolute bottom-1 right-1 text-[8px] font-bold px-1.5 py-0.5 rounded bg-[#0F172A] text-white">
+                        Chính
+                      </span>
+                    ) : (
+                      <span className="absolute bottom-1 right-1 text-[8px] font-bold px-1 py-0.5 rounded bg-slate-700/80 text-white font-mono">
+                        {index + 1}
                       </span>
                     )}
                   </button>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Main Stage Image with Authentic Badges */}
             <div className="flex-1 relative bg-[#F2F4F6] rounded-2xl flex items-center justify-center min-h-[380px] lg:min-h-[540px] p-6 overflow-hidden group">
@@ -390,7 +413,12 @@ const ProductDetailPage = () => {
               </div>
 
               {/* Action Buttons (Top-Right) */}
-              <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+              <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                {galleryImages.length > 1 && (
+                  <span className="px-2.5 py-1 rounded-full bg-slate-900/70 backdrop-blur-sm text-white text-[11px] font-mono font-bold shadow-sm">
+                    {activeImage + 1} / {galleryImages.length}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => setZoomModal(true)}
@@ -408,6 +436,34 @@ const ProductDetailPage = () => {
                   <Heart className={`w-4 h-4 ${isFavorite ? 'fill-secondary text-secondary' : 'hover:text-secondary'}`} />
                 </button>
               </div>
+
+              {/* Carousel Next/Prev Controls on Stage */}
+              {galleryImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveImage((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+                    }}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 z-10"
+                    title="Ảnh trước"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveImage((prev) => (prev + 1) % galleryImages.length);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 z-10"
+                    title="Ảnh kế tiếp"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
 
               {/* Watermarks */}
               {isRacket && (
@@ -450,12 +506,18 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {/* Main Image */}
-              <img
-                src={galleryImages[activeImage] || galleryImages[0]}
-                alt={product.name}
-                className="max-h-[460px] w-auto object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
-              />
+              {/* Main Image Stage */}
+              {galleryImages.length === 0 ? (
+                <BadmintonPlaceholder className="w-full h-full min-h-[360px] rounded-xl" />
+              ) : (
+                <ProductImage
+                  src={galleryImages[activeImage] || galleryImages[0]}
+                  alt={product.name}
+                  className="max-h-[460px] w-full h-full flex items-center justify-center cursor-zoom-in"
+                  imgClassName="max-h-[460px] w-auto object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+                  onClick={() => setZoomModal(true)}
+                />
+              )}
             </div>
 
           </div>
@@ -1006,6 +1068,14 @@ const ProductDetailPage = () => {
                   <span>MUA NGAY (GIAO 2H)</span>
                 </button>
               </div>
+
+              {/* Cart Error Banner if reject */}
+              {cartError && (
+                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700 font-semibold animate-shake">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{cartError}</span>
+                </div>
+              )}
 
               {/* Auxiliary Compare & Share Links */}
               <div className="flex items-center justify-between text-xs text-slate-600 mb-6 pt-1">
@@ -1566,34 +1636,41 @@ const ProductDetailPage = () => {
                       <CheckCircle2 className="w-4 h-4" /> Đánh giá đã được ghi nhận thành công!
                     </span>
                   )}
+                  {reviewError && (
+                    <span className="text-xs text-rose-600 font-bold flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4 shrink-0" /> {reviewError}
+                    </span>
+                  )}
                 </div>
               </form>
 
               {/* Review List */}
               <div className="space-y-4">
-                {(reviews.length > 0 ? reviews : [
-                  { id: 101, userFullName: 'Nguyễn Quốc Tuấn (VĐV Hạng B - Q10)', rating: 5, comment: 'Cảm giác vung vợt thoát gió cực kỳ đã, đường smash cắm sàn hiểm và lực nảy của mặt vợt chuẩn không cần chỉnh. Đóng gói hộp chống sốc chuyên nghiệp.', createdAt: '2026-03-15' },
-                  { id: 102, userFullName: 'Trần Phương Linh', rating: 5, comment: 'Giao hàng hỏa tốc trong 1 tiếng rưỡi tại Cầu Giấy Hà Nội, kiểm tra tem cào QR Sunrise Sports chuẩn 100%. Rất an tâm khi mua thiết bị thi đấu tại shop.', createdAt: '2026-03-12' },
-                  { id: 103, userFullName: 'Hoàng Minh Quân', rating: 5, comment: 'Đã test qua 3 buổi đánh đơn, cổ chân được bảo vệ rất chắc chắn, tiếp đất êm ái. Rất đáng giá từng đồng!', createdAt: '2026-03-10' }
-                ]).map((rev, idx) => (
-                  <div key={rev.id || idx} className="p-4 bg-[#F8FAFC] rounded-2xl border border-slate-100 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <strong className="text-slate-900">{rev.userFullName || 'Khách hàng'}</strong>
-                        <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold">
-                          Đã mua hàng chính hãng
-                        </span>
+                {reviews && reviews.length > 0 ? (
+                  reviews.map((rev, idx) => (
+                    <div key={rev.id || idx} className="p-4 bg-[#F8FAFC] rounded-2xl border border-slate-100 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <strong className="text-slate-900">{rev.userFullName || 'Khách hàng'}</strong>
+                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                            Đã mua hàng chính hãng
+                          </span>
+                        </div>
+                        <span className="text-slate-400 text-[11px]">{rev.createdAt ? String(rev.createdAt).split('T')[0] : 'Vừa xong'}</span>
                       </div>
-                      <span className="text-slate-400 text-[11px]">{rev.createdAt ? String(rev.createdAt).split('T')[0] : 'Vừa xong'}</span>
+                      <div className="flex text-amber-500">
+                        {[...Array(rev.rating || 5)].map((_, s) => (
+                          <Star key={s} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">{rev.comment}</p>
                     </div>
-                    <div className="flex text-amber-500">
-                      {[...Array(rev.rating || 5)].map((_, s) => (
-                        <Star key={s} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                      ))}
-                    </div>
-                    <p className="text-xs text-slate-600 leading-relaxed">{rev.comment}</p>
+                  ))
+                ) : (
+                  <div className="p-8 text-center bg-[#F8FAFC] rounded-2xl border border-slate-100">
+                    <p className="text-xs text-slate-500 font-medium">Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên trải nghiệm và để lại đánh giá!</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
@@ -1739,22 +1816,75 @@ const ProductDetailPage = () => {
         </div>
       )}
 
-      {/* ZOOM IMAGE MODAL */}
+      {/* ZOOM / LIGHTBOX IMAGE MODAL */}
       {zoomModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative max-w-3xl w-full max-h-[90vh] flex items-center justify-center">
-            <button
-              type="button"
-              onClick={() => setZoomModal(false)}
-              className="absolute -top-10 right-0 text-white hover:text-secondary transition-colors"
-            >
-              <X className="w-8 h-8" />
-            </button>
-            <img
-              src={galleryImages[activeImage] || galleryImages[0]}
-              alt="Zoomed product"
-              className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl bg-white p-4"
-            />
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setZoomModal(false)}
+        >
+          <div
+            className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Bar */}
+            <div className="w-full flex items-center justify-between text-white pb-3 px-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-200 truncate max-w-md">
+                  {product.name}
+                </span>
+                {galleryImages.length > 1 && (
+                  <span className="px-2 py-0.5 rounded bg-white/20 text-xs font-mono font-bold shrink-0">
+                    {activeImage + 1} / {galleryImages.length}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setZoomModal(false)}
+                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                title="Đóng"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Stage */}
+            <div className="relative w-full flex items-center justify-center bg-white rounded-2xl p-6 sm:p-10 shadow-2xl overflow-hidden min-h-[350px]">
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImage((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+                  }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10"
+                  title="Ảnh trước"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+
+              <ProductImage
+                src={galleryImages[activeImage] || galleryImages[0]}
+                alt={product.name}
+                className="max-h-[75vh] w-auto max-w-full"
+                imgClassName="max-h-[75vh] w-auto max-w-full object-contain"
+              />
+
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImage((prev) => (prev + 1) % galleryImages.length);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10"
+                  title="Ảnh kế tiếp"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

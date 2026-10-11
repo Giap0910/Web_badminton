@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service @RequiredArgsConstructor
 public class PaymentLinkService {
     private final PaymentAttemptStore store;
-    private final PayOSPaymentClient client;
+    private final PayOSGateway client;
     public record Outcome(int status, PaymentAttemptResponse attempt) {}
 
     @Transactional(propagation = Propagation.NEVER)

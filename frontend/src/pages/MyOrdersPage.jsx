@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getOrderStatusLabel } from '../utils/formatters';
 import UserLayout from '../components/UserLayout';
 import { orderApi } from '../api/orderApi';
+import OrderItemOptions, { formatOrderItemOptionsText } from '../components/OrderItemOptions';
 import {
   Search,
   Download,
@@ -40,12 +41,9 @@ const MyOrdersPage = () => {
         if (Array.isArray(list)) {
           // Merge API fields with design-specific fields
           const formatted = list.map((item, idx) => {
-            const firstItem = item.items?.[0] || item.orderItems?.[0];
-            const techString = firstItem?.stringingService
-              ? `${firstItem.stringingService}${firstItem.stringTension ? ` (Căng ${firstItem.stringTension})` : ''}`
-              : firstItem?.selectedWeight
-              ? `Phiên bản: ${firstItem.selectedWeight}`
-              : item.stringOption || 'Kỹ thuật viên đan tiêu chuẩn BWF';
+            const itemsList = Array.isArray(item.items) ? item.items : (Array.isArray(item.orderItems) ? item.orderItems : []);
+            const firstItem = itemsList[0];
+            const techString = formatOrderItemOptionsText(firstItem, item.stringOption || 'Kỹ thuật viên đan tiêu chuẩn BWF');
 
             return {
               id: item.id || idx + 1,
@@ -55,8 +53,8 @@ const MyOrdersPage = () => {
               productName: firstItem?.productName || firstItem?.product?.name || item.productName || 'Vợt Cầu Lông HG',
               productImage: firstItem?.productImageUrl || firstItem?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
               stringDetail: techString,
-              giftDetail: 'Kèm 01 Cuốn cán Yonex AC102EX',
-              quantitySummary: `Số lượng: ${item.items?.length || item.orderItems?.length || 1} sản phẩm`,
+              items: itemsList,
+              quantitySummary: `Số lượng: ${itemsList.length || 1} sản phẩm`,
               totalPrice: item.totalAmount || item.totalPrice || 0,
               shippingFee: item.shippingFee || 0,
               status: item.status || 'PROCESSING',
@@ -410,21 +408,50 @@ const MyOrdersPage = () => {
                   <p className="text-slate-600 leading-relaxed">{selectedOrder.shippingAddress}</p>
                 </div>
 
-                {/* Thông tin sản phẩm */}
-                <div className="border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3">
-                  <img
-                    src={selectedOrder.productImage}
-                    alt={selectedOrder.productName}
-                    className="w-16 h-16 rounded-xl object-cover bg-slate-100 shrink-0"
-                  />
-                  <div className="flex flex-col flex-1">
-                    <span className="font-bold text-slate-900 text-sm">{selectedOrder.productName}</span>
-                    <span className="text-slate-600 mt-0.5">{selectedOrder.stringDetail}</span>
-                    <span className="text-secondary font-bold mt-0.5">{selectedOrder.giftDetail}</span>
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                      <span className="text-slate-400">{selectedOrder.paymentMethod}</span>
-                      <span className="font-black text-secondary text-sm">{formatPrice(selectedOrder.totalPrice)}</span>
-                    </div>
+                {/* Thông tin danh sách sản phẩm */}
+                <div className="border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-slate-100">
+                    Sản phẩm trong đơn ({selectedOrder.items?.length || 1})
+                  </span>
+                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                    {(selectedOrder.items && selectedOrder.items.length > 0 ? selectedOrder.items : [{
+                      productName: selectedOrder.productName,
+                      productImageUrl: selectedOrder.productImage,
+                      quantity: 1,
+                      price: selectedOrder.totalPrice,
+                      subtotal: selectedOrder.totalPrice,
+                      selectedWeight: selectedOrder.stringDetail
+                    }]).map((it, itIdx) => {
+                      const itemSubtotal = it.subtotal != null ? it.subtotal : (it.price ? it.price * (it.quantity || 1) : 0);
+                      return (
+                        <div key={it.id || itIdx} className="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {it.productImageUrl && (
+                              <img
+                                src={it.productImageUrl}
+                                alt={it.productName || 'Sản phẩm'}
+                                className="w-12 h-12 rounded-lg object-contain bg-white border border-slate-100 shrink-0 p-1"
+                              />
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-900 truncate">{it.productName || it.product?.name || 'Sản phẩm'}</p>
+                              <OrderItemOptions item={it} />
+                              <p className="text-[11px] text-slate-500 font-semibold mt-0.5">Số lượng: x{it.quantity || 1}</p>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="font-bold text-slate-900">{formatPrice(itemSubtotal)}</span>
+                            {it.quantity > 1 && it.price && (
+                              <span className="block text-[10px] text-slate-400">{formatPrice(it.price)} / cái</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                    <span className="text-slate-500">{selectedOrder.paymentMethod}</span>
+                    <span className="font-black text-secondary text-base">{formatPrice(selectedOrder.totalPrice)}</span>
                   </div>
                 </div>
               </div>

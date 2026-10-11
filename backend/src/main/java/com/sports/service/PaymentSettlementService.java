@@ -21,6 +21,7 @@ public class PaymentSettlementService {
     private final PaymentLedgerService ledger;
     private final OrderService orderService;
     private final EntityManager entityManager;
+    private final PaymentTransitionGuard transitionGuard;
     public record Outcome(int status, PaymentAttemptResponse attempt) {}
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -28,6 +29,7 @@ public class PaymentSettlementService {
         var attempt = candidate(proof);
         boolean matched = attempt != null && identityMatches(attempt, proof);
         var receipt = ledger.record(proof, matched ? attempt : null);
+        if (attempt != null && (!receipt.duplicate() || receipt.conflict())) CheckoutRevision.touch(attempt.getOrder());
         if (receipt.conflict()) { review(attempt, List.of(receipt.event()), "EVENT_IDENTITY_CONFLICT"); return; }
         if (receipt.duplicate()) return;
         if (attempt == null) { review(null, List.of(receipt.event()), "UNMATCHED_PROVIDER_EVENT"); return; }
@@ -58,8 +60,7 @@ public class PaymentSettlementService {
     private boolean identityMatches(PaymentAttempt attempt, PaymentEvidence proof) {
         return "PAYOS".equals(attempt.getProvider()) && proof.paymentLinkId().equals(attempt.getPaymentLinkId())
                 && proof.orderCode().equals(attempt.getOrderCode())
-                && attempt.getOrderCode().equals(attempt.getOrder().getPayosOrderCode())
-                && "PAYOS_VIETQR".equals(attempt.getOrder().getPaymentMethod());
+                && attempt.getOrderCode().equals(attempt.getOrder().getPayosOrderCode());
     }
 
     private String webhookReason(PaymentAttempt attempt, PaymentEvidence proof) {
@@ -82,15 +83,25 @@ public class PaymentSettlementService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public Outcome query(Long attemptId, PayOSPaymentClient.Query query) {
+        return query(attemptId, query, PaymentEvent.Source.RECONCILE_QUERY);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public Outcome query(Long attemptId, PayOSPaymentClient.Query query, PaymentEvent.Source source) {
         var attempt = lockAttempt(attemptId);
         if (query == null) return outcome(202, attempt);
-        if (!queryIdentity(attempt, query)) { review(attempt, List.of(), "IDENTITY_MISMATCH"); return outcome(200, attempt); }
-        var proofs = query.transactions().stream().map(t -> evidence(query, t)).toList();
+        var proofs = query.transactions().stream().map(t -> evidence(query, t, source)).toList();
+        if (!queryIdentity(attempt, query)) {
+            var unmatched = proofs.stream().map(p -> ledger.record(p, null).event()).toList();
+            review(attempt, unmatched, "IDENTITY_MISMATCH");
+            return outcome(200, attempt);
+        }
         var receipts = proofs.stream().sorted(Comparator.comparing(PaymentEvidence::reference))
                 .map(p -> ledger.record(p, attempt)).toList();
         if (receipts.stream().anyMatch(PaymentLedgerService.Receipt::conflict)) {
             review(attempt, eventRows(receipts), "EVENT_IDENTITY_CONFLICT"); return outcome(200, attempt);
         }
+        if (receipts.stream().anyMatch(r -> !r.duplicate() || r.conflict())) CheckoutRevision.touch(attempt.getOrder());
         String reason = queryReason(attempt, query, proofs);
         if (reason != null) { review(attempt, eventRows(receipts), reason); return outcome(200, attempt); }
         if (proofs.isEmpty()) return outcome(202, attempt);
@@ -107,15 +118,15 @@ public class PaymentSettlementService {
     }
 
     private boolean queryIdentity(PaymentAttempt attempt, PayOSPaymentClient.Query query) {
-        return "PAYOS".equals(attempt.getProvider()) && "PAYOS_VIETQR".equals(attempt.getOrder().getPaymentMethod())
+        return "PAYOS".equals(attempt.getProvider())
                 && Objects.equals(attempt.getPaymentLinkId(), query.paymentLinkId())
                 && Objects.equals(attempt.getOrderCode(), query.orderCode())
                 && Objects.equals(attempt.getOrder().getPayosOrderCode(), query.orderCode());
     }
 
-    private PaymentEvidence evidence(PayOSPaymentClient.Query query, PayOSPaymentClient.Transaction tx) {
+    private PaymentEvidence evidence(PayOSPaymentClient.Query query, PayOSPaymentClient.Transaction tx, PaymentEvent.Source source) {
         return new PaymentEvidence(query.paymentLinkId(), query.orderCode(), tx.reference(), tx.amount(),
-                "VND", tx.transactionDateTime(), true, PaymentEvent.Source.RECONCILE_QUERY);
+                "VND", tx.transactionDateTime(), true, source);
     }
 
     private String queryReason(PaymentAttempt attempt, PayOSPaymentClient.Query query, List<PaymentEvidence> proofs) {
@@ -156,10 +167,12 @@ public class PaymentSettlementService {
         attempt.setPaidAt(paidAt);
         attempt.setReviewReason(null);
         events.forEach(e -> { e.setProcessingResult("PAID"); e.setReviewReason(null); });
+        transitionGuard.paymentChanged(attempt);
     }
 
     private String eligibilityReason(PaymentAttempt attempt) {
         var order = attempt.getOrder();
+        if (!"PAYOS_VIETQR".equals(order.getPaymentMethod())) return "LATE_PAYMENT_AFTER_METHOD_CHANGE";
         if (order.getStatus() == OrderStatus.CANCELLED) return "LATE_PAYMENT_CANCELLED_ORDER";
         var now = LocalDateTime.now();
         if (order.getExpiresAt() == null || !order.getExpiresAt().isAfter(now) || attempt.getExpiresAt() == null
@@ -186,12 +199,21 @@ public class PaymentSettlementService {
             String previous = attempt.getReviewReason();
             boolean hardBlock = attempt.getStatus() == PaymentAttempt.Status.NEEDS_REVIEW && previous != null
                     && !Set.of("AMOUNT_MISMATCH", "NON_SUCCESS_PROVIDER_EVENT", "PAYMENT_NOT_CONFIRMED").contains(previous);
+            if (attempt.getStatus() != PaymentAttempt.Status.NEEDS_REVIEW || !java.util.Objects.equals(previous, reason)) {
+                CheckoutRevision.touch(attempt.getOrder());
+            }
             attempt.setStatus(PaymentAttempt.Status.NEEDS_REVIEW);
             attempt.setReviewReason(hardBlock ? previous : reason);
             var received = ledger.received(attempt.getId());
             if (!received.isEmpty()) attempt.setReference(received.size() == 1 ? received.get(0).getReference() : null);
         }
         events.forEach(e -> recordReview(e, attempt == null ? "UNMATCHED" : "NEEDS_REVIEW", reason));
+        if (attempt != null) transitionGuard.paymentChanged(attempt);
+    }
+
+    @Transactional
+    public void requireReview(Long attemptId, String reason) {
+        review(lockAttempt(attemptId), List.of(), reason);
     }
 
     private void recordReview(PaymentEvent event, String result, String reason) {
