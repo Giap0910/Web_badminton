@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ShoppingCart, Bolt, ChevronRight, CheckCircle2, Star, Heart, ZoomIn, ShieldCheck, Truck, RefreshCw, Layers, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Bolt, ChevronRight, CheckCircle2, ShieldCheck, Truck, RefreshCw, AlertCircle } from 'lucide-react';
 import { productApi } from '../api/productApi';
 import { reviewApi } from '../api/reviewApi';
 import { useCart } from '../context/CartContext';
-import { formatPrice, productCategory, productImages, productRating } from '../utils/formatters';
+import { formatPrice, productImages } from '../utils/formatters';
+
+import { ProductDescription, ProductSpecifications, ProductSelections, ProductRating, ProductReviewList, ProductDiscount, productCartOptions, productValue, productAccessoryLabel } from '../components/ProductFacts';
 
 const RacketGripDetailPage = () => {
   const { id } = useParams();
@@ -13,12 +15,12 @@ const RacketGripDetailPage = () => {
 
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [reviewsError, setReviewsError] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState('Vàng Chanh Neon (Yellow)');
-  const [selectedTexture, setSelectedTexture] = useState('Ướt / Wet (Tacky)');
+
   const [activeTab, setActiveTab] = useState('desc');
   const [addedToast, setAddedToast] = useState(false);
   const [cartError, setCartError] = useState('');
@@ -27,10 +29,13 @@ const RacketGripDetailPage = () => {
     let active = true;
     const fetchProd = async () => {
       setLoading(true);
+      setProduct(null);
+      setReviews([]);
+      setReviewsError('');
       try {
         const [prodData, revData] = await Promise.all([
           productApi.getProductById(id),
-          reviewApi.getProductReviews(id).catch(() => [])
+          reviewApi.getProductReviews(id).catch(() => { if (active) setReviewsError('Không tải được đánh giá.'); return []; })
         ]);
         if (!active) return;
         setProduct(prodData);
@@ -66,34 +71,15 @@ const RacketGripDetailPage = () => {
     );
   }
 
-  const galleryImages = [
-    product.imageUrl || 'https://lh3.googleusercontent.com/aida/AEtjO1ULqG2pjkYDmyPQ0IN88Bk2nVUMX_hkwGQ5mKuL1wqjriT3HGSdcHn-u2vTs8vCqtWT_TWg-PvESmtOAy8Amg77cPe4mBmVwkEP0hZvdPWYHGy7YRvd9sol_5HD2D2RCOoOWodHNTjZI8M3P0S0cSVE78B6pcYHp82FuGNdNsfeO1zQE3h-BtRxy2RlaP2Id9Pc9DKMSGs0f3NIFkJliOUQKcttpdyS9bXHQdAg9I4PCoLDFvWfnA8W6Po',
-    'https://lh3.googleusercontent.com/aida/AEtjO1UYxkKhvl-V-jTO7Law9SnbZpfkjTBvFFiProbAxnZV0vZhOMFfHCMJvSvZP-HTEDYyaCc1EbnYwb0--C7HXpKfN1d3GY3dk7DgS2UFBtMKaFwfPQkOY3dtGksUkabG83Irdtz0N1sqo0imkwgArDKKbcq_8uVw0r32cKEKUd-t8yPmMelUPg2NaxzKQ3uODONOEJ63VP6ViXa9_7chq4giA_dxV7BtGQOLhrFwgrM-sl6QyKYuHbrr9Xc',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuBo4fI1hHjOQdDvuGtK3DLLtaxrzpVhSkhLlCypUWl_exwH69sO0TmcZ9VtHb-96yaLpMp59wbhMJSVOgLMe6mJAJw1mGKgkkNLD4YN42kCyDcBp3lmTMeT849sNb2lOI7DbMjEO5vc3XQQvgqWQ4vA8ExwfEztKA6taqZNteTQwpUa7kHv3g-DxAwMw3hhEKNF3mVS-74cHcyP5wsy8CmSbb5eU-bN8qHdM1CXhLPzFsbtpoBdX1Yn',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuCsLoDf0K8mIIcqd79U7deE4HdtPAb0CTbfacxXKR27CltLdOvIlHJo-TjcRFM73DXy1xTNqrsUsreRZdeG1TXeoXZAJgdgI_qxGcIc2ExZPH9rJGPwKb53OxKytOyzveLTYfhqRFjnGbNCegRX2RO8x7_j0bJhhEFMNuUuV3uwyM9EFbPv13V1YVfE54WAgOO22T1jX9iEAP9q_RSuUH9PpNKN43YGdDiso44zbp6cj17Oi7of6fKJ'
-  ];
+  const galleryImages = productImages(product);
 
   const thumbLabels = ['Vỉ 3 Cuộn', 'Cận cảnh PU', 'Lên vợt', 'Tem Sunrise'];
 
-  const colors = [
-    { name: 'Vàng Chanh Neon (Yellow)', bg: 'bg-[#facc15]' },
-    { name: 'Trắng Tinh Khiết (White)', bg: 'bg-white' },
-    { name: 'Đen Matte (Black)', bg: 'bg-[#18181b]' },
-    { name: 'Đỏ Kurenai (Deep Red)', bg: 'bg-[#dc2626]' },
-    { name: 'Xanh Hoàng Gia (Royal Blue)', bg: 'bg-[#2563eb]' },
-    { name: 'Cam Sáng (Neon Orange)', bg: 'bg-[#f97316]' },
-    { name: 'Hồng Phấn (Pastel Pink)', bg: 'bg-[#f472b6]' }
-  ];
 
-  const textures = [
-    { label: 'Ướt / Wet (Tacky)', desc: 'Độ bám dính cực cao, không trơn trượt' },
-    { label: 'Khô / Dry (Absorbent)', desc: 'Siêu hút ẩm mồ hôi cho bàn tay nhiều mồ hôi' },
-    { label: 'Lưới / Mesh (Perforated)', desc: 'Đục lỗ thoát khí thoáng mát nhanh' }
-  ];
 
   const handleAdd = () => {
     if (!product) return;
-    const cartItemId = addToCart(product, quantity, { color: selectedColor, texture: selectedTexture });
+    const cartItemId = addToCart(product, quantity, productCartOptions(product));
     if (cartItemId) {
       setCartError('');
       setAddedToast(true);
@@ -107,7 +93,7 @@ const RacketGripDetailPage = () => {
 
   const handleBuyNow = () => {
     if (!product) return;
-    const cartItemId = addToCart(product, quantity, { color: selectedColor, texture: selectedTexture });
+    const cartItemId = addToCart(product, quantity, productCartOptions(product));
     if (cartItemId) {
       navigate('/checkout', { state: { selectedItemIds: [cartItemId] } });
     } else {
@@ -136,9 +122,7 @@ const RacketGripDetailPage = () => {
             <span className="text-slate-900 font-bold">{product.name}</span>
           </nav>
           <span className="hidden lg:flex items-center gap-2 text-slate-600 font-semibold text-xs">
-            <span className="w-2 h-2 rounded-full bg-secondary" />
-            Phân phối chính thức độc quyền Sunrise Sports Việt Nam
-          </span>
+            <span className="w-2 h-2 rounded-full bg-secondary" />{productValue(product.brand)}</span>
         </div>
 
         {/* Product Hero */}
@@ -148,11 +132,8 @@ const RacketGripDetailPage = () => {
             <div className="relative w-full aspect-square bg-[#F2F4F6] rounded-2xl shadow-sm overflow-hidden flex items-center justify-center p-6 group">
               <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5">
                 <span className="bg-secondary text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 100% Chính Hãng
-                </span>
-                <span className="bg-[#0F172A] text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                  Top 1 Bán Chạy Toàn Cầu
-                </span>
+                  <CheckCircle2 className="w-3.5 h-3.5" />{productValue(product.brand)}</span>
+                <span className="bg-[#0F172A] text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">{productValue(product.brand)}</span>
               </div>
               <img
                 src={galleryImages[activeImage]}
@@ -184,13 +165,13 @@ const RacketGripDetailPage = () => {
             <div className="bg-[#F2F4F6] rounded-2xl p-4 flex flex-col gap-2.5 text-xs text-slate-700">
               <div className="flex items-center gap-2 font-bold text-slate-900 uppercase">
                 <ShieldCheck className="w-4 h-4 text-secondary" />
-                <span>Tiêu chuẩn thi đấu BWF Tournament</span>
+                <span>{productAccessoryLabel(product.accessoryType)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-                <div className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-secondary" /> Tem cào QR Sunrise</div>
-                <div className="flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5 text-secondary" /> Đổi mới 7 ngày</div>
-                <div className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-secondary" /> Giao hỏa tốc 2H</div>
-                <div className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-secondary" /> Nhập khẩu Nhật Bản</div>
+                <div className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-secondary" />{productValue(product.brand)}</div>
+                <div className="flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5 text-secondary" />{productValue(product.quantityPerPack)}</div>
+                <div className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-secondary" />{productValue(product.categoryName)}</div>
+                <div className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-secondary" />{productValue(product.origin)}</div>
               </div>
             </div>
           </div>
@@ -200,27 +181,17 @@ const RacketGripDetailPage = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-sm uppercase tracking-widest text-[#0F172A]">{product.brand || 'YONEX'}</span>
-                  <span className="px-2 py-0.5 bg-[#0F172A] text-white rounded text-[10px] font-bold uppercase">BWF APPROVED</span>
+                  <span className="font-extrabold text-sm uppercase tracking-widest text-[#0F172A]">{productValue(product.brand)}</span>
+                  <span className="px-2 py-0.5 bg-[#0F172A] text-white rounded text-[10px] font-bold uppercase">{productValue(product.categoryName)}</span>
                 </div>
-                <span className="text-xs text-slate-400 font-mono">Mã SP: {product.sku || 'AC102EX-3IN1'}</span>
+                <span className="text-xs text-slate-400 font-mono">Mã SP: {productValue(product.sku)}</span>
               </div>
 
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug">
                 {product.name}
               </h1>
 
-              <div className="flex items-center gap-3 text-xs text-slate-500 pb-3 border-b border-slate-100">
-                <div className="flex text-amber-500 items-center gap-1">
-                  <Star className="w-4 h-4 fill-amber-500" />
-                  <span className="font-bold text-slate-900">4.9</span>
-                </div>
-                <span>(1.240 đánh giá)</span>
-                <span>•</span>
-                <span>Đã bán: <strong className="text-slate-900">14.8k vỉ</strong></span>
-                <span>•</span>
-                <span className="text-emerald-700 font-semibold">Còn hàng (Kho sẵn)</span>
-              </div>
+              <ProductRating product={product} />
 
               {/* Price Box */}
               <div className="bg-[#F2F4F6] rounded-xl p-4 flex items-center justify-between">
@@ -229,59 +200,13 @@ const RacketGripDetailPage = () => {
                   {product.originalPrice && product.originalPrice > product.price && (
                     <span className="text-sm text-slate-400 line-through">{formatPrice(product.originalPrice)}</span>
                   )}
-                  <span className="bg-secondary text-white text-[11px] font-bold px-2 py-0.5 rounded-full uppercase">-21%</span>
+                  <ProductDiscount product={product} />
                 </div>
-                <div className="text-xs text-slate-700 bg-white px-3 py-1.5 rounded-lg shadow-sm font-semibold">
-                  Tích luỹ <strong className="text-secondary">+950 HGClub</strong>
-                </div>
-              </div>
-
-              {/* Color Swatches */}
-              <div>
-                <div className="flex items-center justify-between mb-2 text-xs">
-                  <span className="font-bold text-slate-900">Màu sắc lựa chọn: <strong className="text-secondary">{selectedColor}</strong></span>
-                  <span className="text-slate-400">Quy cách: Vỉ 3 cuộn cùng màu</span>
-                </div>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  {colors.map(c => (
-                    <button
-                      key={c.name}
-                      type="button"
-                      onClick={() => setSelectedColor(c.name)}
-                      className={`w-9 h-9 rounded-full ${c.bg} border border-slate-300 flex items-center justify-center transition-all ${
-                        selectedColor === c.name ? 'ring-2 ring-offset-2 ring-[#0F172A] scale-110 shadow-md' : 'hover:scale-105'
-                      }`}
-                      title={c.name}
-                    >
-                      {selectedColor === c.name && <CheckCircle2 className="w-4 h-4 text-[#0F172A]" />}
-                    </button>
-                  ))}
+                <div className="text-xs text-slate-700 bg-white px-3 py-1.5 rounded-lg shadow-sm font-semibold">Tồn kho:<strong className="text-secondary">{productValue(product.brand)}</strong>
                 </div>
               </div>
 
-              {/* Texture Pills */}
-              <div>
-                <span className="block text-xs font-bold text-slate-900 mb-2">Đặc tính tiếp xúc bề mặt:</span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                  {textures.map(t => (
-                    <button
-                      key={t.label}
-                      type="button"
-                      onClick={() => setSelectedTexture(t.label)}
-                      className={`p-3 rounded-xl text-left border transition-all ${
-                        selectedTexture === t.label
-                          ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-sm'
-                          : 'bg-[#F2F4F6] border-transparent hover:border-slate-300 text-slate-800'
-                      }`}
-                    >
-                      <span className="font-bold block">{t.label}</span>
-                      <span className={`text-[11px] block mt-0.5 ${selectedTexture === t.label ? 'text-slate-300' : 'text-slate-500'}`}>
-                        {t.desc}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ProductSelections product={product} />
 
               {/* Actions Cluster */}
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
@@ -318,18 +243,14 @@ const RacketGripDetailPage = () => {
               {/* Combo Suggestion Box (FIX-010: Vô hiệu hóa combo giả) */}
               <div className="bg-[#F2F4F6] rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <img
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCg5OYCQs4x3ztVT7O4Cq3hOzApdAmkjQK_rmSNvrUAY0mJlE5LVBFjDIJK8jj-Jiwpl-gOIDey1EH4YXo_-4Cg2o8y0Gl3AT-RpLs-MVTbruOVwNTFjmleEsNRo6bHCwg3Q4p87AepWif6qlwDDfJ2dVtpJDQg_h6vSaAHyRYHLaZ9YbMmrMBiJycjfg6_2wezOPgBnG3hehpKWPhadXlsHT91mfdlNmmCJGxo7u5CvVbXhC0X2G0l"
-                    alt="Combo"
-                    className="w-12 h-12 rounded-lg bg-white object-contain p-1 opacity-70"
-                  />
+                  <ShoppingCart className="w-12 h-12 text-slate-400" aria-hidden="true" />
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] font-bold text-slate-500 uppercase block">Combo Phụ Kiện</span>
                       <span className="px-1.5 py-0.2 rounded bg-slate-200 text-slate-600 text-[9px] font-bold">Tạm chưa hỗ trợ</span>
                     </div>
-                    <span className="text-xs font-bold text-slate-700 block">Vỉ Quấn AC102EX + Kéo Bấm Cắt Cán AC1053</span>
-                    <span className="text-xs font-semibold text-slate-400">195.000₫ (Combo chưa mở bán)</span>
+                    <span className="text-xs font-bold text-slate-700 block">Chưa có dữ liệu combo</span>
+                    <span className="text-xs font-semibold text-slate-400">Giá: Chưa có thông tin</span>
                   </div>
                 </div>
                 <button
@@ -351,7 +272,7 @@ const RacketGripDetailPage = () => {
             {[
               { key: 'desc', label: 'Mô tả chi tiết & Hướng dẫn' },
               { key: 'specs', label: 'Thông số kỹ thuật chuẩn' },
-              { key: 'reviews', label: `Đánh giá & Nhận xét (${reviews.length > 0 ? reviews.length : 1240})` }
+              { key: 'reviews', label: `Đánh giá & Nhận xét (${product.reviewCount ?? 0})` }
             ].map(t => (
               <button
                 key={t.key}
@@ -366,71 +287,11 @@ const RacketGripDetailPage = () => {
             ))}
           </div>
 
-          {activeTab === 'desc' && (
-            <div className="max-w-4xl space-y-4 text-xs text-slate-600 leading-relaxed">
-              <h3 className="text-base font-bold text-slate-900">Quấn Cán Vợt Cầu Lông Yonex Super Grap AC102EX</h3>
-              <p>
-                Ra mắt lần đầu vào năm 1987, Yonex Super Grap AC102EX là loại quấn cán bán chạy nhất mọi thời đại với hơn 200 triệu cuộn được bán ra trên toàn cầu. Đạt độ bám dính tối ưu ngay cả khi đổ nhiều mồ hôi, giúp người chơi kiểm soát hoàn hảo từng cú vung vợt và đập cầu smash.
-              </p>
-              <h4 className="font-bold text-slate-900 pt-2">Hướng dẫn quấn cán đúng chuẩn:</h4>
-              <ol className="list-decimal pl-5 space-y-1">
-                <li>Bóc lớp nilon trong suốt bảo vệ bề mặt quấn cán.</li>
-                <li>Bắt đầu dán từ đáy cán vợt, quấn đè chéo khoảng 1/3 bề rộng dải quấn.</li>
-                <li>Giữ lực căng vừa phải khi quấn lên đến nắp chụp cán vợt.</li>
-                <li>Dùng kéo cắt vát chéo phần thừa và cố định chắc chắn bằng dải băng dính đen Yonex đi kèm.</li>
-              </ol>
-            </div>
-          )}
+          {activeTab === 'desc' && <ProductDescription product={product} />}
 
-          {activeTab === 'specs' && (
-            <div className="max-w-2xl space-y-2 text-xs">
-              {[
-                ['Thương hiệu', product.brand || 'Yonex (Nhật Bản)'],
-                ['Mã sản phẩm', product.sku || 'AC102EX'],
-                ['Quy cách đóng gói', product.quantityPerPack || 'Vỉ 3 cuộn'],
-                ['Chất liệu', product.fabricType || 'Polyurethane (PU) cao cấp'],
-                ['Bề rộng', '25 mm'],
-                ['Độ dày', '0.6 mm'],
-                ['Chiều dài', '1.200 mm (Quấn đủ cho mọi cán vợt)'],
-                ['Xuất xứ', 'Made in Indonesia / Japan']
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between py-2.5 px-4 bg-[#F2F4F6] rounded-xl">
-                  <span className="text-slate-500 font-medium">{k}</span>
-                  <span className="text-slate-900 font-bold">{v}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          {activeTab === 'specs' && <ProductSpecifications product={product} />}
 
-          {activeTab === 'reviews' && (
-            <div className="max-w-3xl space-y-4">
-              <div className="p-4 bg-[#F2F4F6] rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl font-black text-slate-900">4.9</span>
-                  <div className="flex text-amber-500">
-                    {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-500" />)}
-                  </div>
-                  <span className="text-xs text-slate-500 font-medium">100% đánh giá mua hàng thực tế</span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {[
-                  { name: 'Vũ Hải Long', comment: 'Quấn bám tay kinh khủng, đánh 2 tiếng mồ hôi ướt sũng mà không trượt chút nào.' },
-                  { name: 'Nguyễn Văn Đức', comment: 'Chuẩn hàng Sunrise có tem QR, màu vàng chanh lên vợt rất nổi.' }
-                ].map((r, i) => (
-                  <div key={i} className="p-3.5 bg-[#F8FAFC] rounded-xl border border-slate-100 text-xs">
-                    <div className="flex items-center justify-between mb-1">
-                      <strong className="text-slate-900">{r.name}</strong>
-                      <div className="flex text-amber-500">
-                        {[...Array(5)].map((_, s) => <Star key={s} className="w-3 h-3 fill-amber-500" />)}
-                      </div>
-                    </div>
-                    <p className="text-slate-600">{r.comment}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {activeTab === 'reviews' && <ProductReviewList product={product} reviews={reviews} error={reviewsError} />}
         </section>
 
       </div>

@@ -82,6 +82,12 @@ public class Order {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "cash_collected_at")
+    private LocalDateTime cashCollectedAt;
+
+    @Column(name = "cash_collected_by")
+    private Long cashCollectedBy;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();

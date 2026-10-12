@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { adminApi } from '../api/adminApi';
+import { normalizeCustomer, normalizeSearch } from '../utils/adminCustomers.jsx';
 import {
   Users,
   Search,
@@ -22,14 +23,14 @@ import {
 const AdminCustomersPage = () => {
   const [dataError, setDataError] = useState('');
   const [customers, setCustomers] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('search') || '');
   const [selectedTier, setSelectedTier] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [toastMessage, setToastMessage] = useState('');
   const [viewCustomer, setViewCustomer] = useState(null);
 
   const formatPrice = (p) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
+    p == null ? 'Chưa có thông tin' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
   const fetchUsers = async () => {
     try {
@@ -37,19 +38,7 @@ const AdminCustomersPage = () => {
         const res = await adminApi.getAllUsers();
         const list = Array.isArray(res) ? res : res?.data || [];
         if (Array.isArray(list)) {
-          const mapped = list.map((u, idx) => ({
-            id: u.id || idx + 1,
-            code: `KH-${1000 + (u.id || idx)}`,
-            fullName: u.fullName || u.username || 'Khách hàng',
-            email: u.email || 'N/A',
-            phone: u.phone || 'Chưa cập nhật',
-            tier: u.role === 'ROLE_ADMIN' ? 'DIAMOND' : 'GOLD',
-            totalSpent: u.totalSpent ?? 0,
-            orderCount: u.totalOrders ?? 0,
-            lastActive: 'Gần đây',
-            status: u.isActive === true ? 'ACTIVE' : 'LOCKED',
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
-          }));
+          const mapped = list.filter(user => user.role !== 'ROLE_ADMIN').map(normalizeCustomer);
           setCustomers(mapped);
         }
       }
@@ -87,9 +76,7 @@ const AdminCustomersPage = () => {
 
   const filteredCustomers = customers.filter((c) => {
     const matchesSearch =
-      c.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery);
+      normalizeSearch([c.fullName, c.email, c.phone, c.code].join(' ')).includes(normalizeSearch(searchQuery));
 
     const matchesTier = selectedTier === 'ALL' ? true : c.tier === selectedTier;
     const matchesStatus = selectedStatus === 'ALL' ? true : c.status === selectedStatus;
@@ -113,7 +100,7 @@ const AdminCustomersPage = () => {
                   Khách hàng & Hội viên
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-black">
-                  Chưa có dữ liệu
+                  {customers.length} khách hàng
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -135,7 +122,7 @@ const AdminCustomersPage = () => {
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tổng khách hàng</span>
-              <span className="text-2xl font-black text-slate-900 mt-1">Chưa có dữ liệu</span>
+              <span className="text-2xl font-black text-slate-900 mt-1">{customers.length}</span>
               <span className="text-[11px] text-emerald-600 font-bold mt-1">Chưa có dữ liệu</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -237,11 +224,7 @@ const AdminCustomersPage = () => {
                         {/* Cột 1: Avatar, Tên & Cấp bậc */}
                         <td className="py-4 px-6 align-top">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={c.avatar}
-                              alt=""
-                              className="w-10 h-10 rounded-full object-cover bg-slate-100 border border-slate-200 shrink-0"
-                            />
+                            <span className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 shrink-0">{c.fullName.charAt(0)}</span>
                             <div className="flex flex-col min-w-0">
                               <span className="font-bold text-slate-900 line-clamp-1">{c.fullName}</span>
                               <div className="flex items-center gap-1.5 mt-0.5">
@@ -278,12 +261,12 @@ const AdminCustomersPage = () => {
 
                         {/* Cột 3: Điểm HGClub */}
                         <td className="py-4 px-4 align-top">
-                          <span className="font-black text-slate-900">{c.points.toLocaleString()} pts</span>
+                          <span className="font-black text-slate-900">{c.points == null ? 'Chưa có thông tin' : `${c.points.toLocaleString('vi-VN')} pts`}</span>
                         </td>
 
                         {/* Cột 4: Đơn hàng */}
                         <td className="py-4 px-4 align-top">
-                          <span className="font-bold text-slate-800">{c.totalOrders} đơn</span>
+                          <span className="font-bold text-slate-800">{c.totalOrders == null ? 'Chưa có thông tin' : `${c.totalOrders} đơn`}</span>
                         </td>
 
                         {/* Cột 5: Tổng chi tiêu */}
@@ -356,22 +339,18 @@ const AdminCustomersPage = () => {
               </div>
 
               <div className="flex flex-col items-center text-center gap-2">
-                <img
-                  src={viewCustomer.avatar}
-                  alt=""
-                  className="w-20 h-20 rounded-full object-cover ring-4 ring-slate-100 shadow-md"
-                />
+                <span className="w-20 h-20 rounded-full flex items-center justify-center bg-slate-100 text-2xl">{viewCustomer.fullName.charAt(0)}</span>
                 <h4 className="font-black text-base text-slate-900">{viewCustomer.fullName}</h4>
                 <p className="text-xs text-slate-500">{viewCustomer.email} • {viewCustomer.phone}</p>
                 <span className="px-3 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-black">
-                  {viewCustomer.tierLabel} (Tích lũy {viewCustomer.points} pts)
+                  {viewCustomer.tierLabel}
                 </span>
               </div>
 
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <span className="text-slate-400 block text-[11px]">Tổng số đơn:</span>
-                  <span className="font-bold text-slate-900 text-sm">{viewCustomer.totalOrders} đơn</span>
+                  <span className="font-bold text-slate-900 text-sm">{viewCustomer.totalOrders ?? 'Chưa có thông tin'}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[11px]">Tổng chi tiêu:</span>
@@ -383,7 +362,7 @@ const AdminCustomersPage = () => {
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[11px]">Đặc quyền:</span>
-                  <span className="font-bold text-blue-600">Miễn phí cân cước BWF</span>
+                  <span className="font-bold text-blue-600">Chưa có thông tin</span>
                 </div>
               </div>
 

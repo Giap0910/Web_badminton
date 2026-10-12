@@ -19,4 +19,14 @@ public class UserProfileUpdateRequest {
     private String phone;
 
     private String address;
+    @jakarta.validation.constraints.PastOrPresent(message = "Ngày sinh không được ở tương lai")
+    private java.time.LocalDate dob;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private boolean dobProvided;
+    @com.fasterxml.jackson.annotation.JsonSetter("dob")
+    public void setDob(java.time.LocalDate dob) { this.dob = dob; this.dobProvided = true; }
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @jakarta.validation.constraints.AssertTrue(message = "Năm sinh phải từ 1000 trở đi")
+    public boolean isDobSupported() { return dob == null || dob.getYear() >= 1000; }
+
 }

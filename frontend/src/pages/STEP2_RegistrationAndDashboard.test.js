@@ -284,6 +284,7 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
           };
         }
         if (id.includes('adminApi')) return { adminApi: mockAdminApi };
+        if (id.includes('AdminReportControls')) return () => React.createElement('button', null, 'Xuất báo cáo');
         if (id.includes('AdminLayout')) {
           return ({ children }) => React.createElement('div', { 'data-testid': 'admin-layout' }, children);
         }
@@ -311,7 +312,7 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
       // 1. Verify Card Labels & Captions
       assert.ok(html.includes('Tổng doanh thu ghi nhận'), 'Must have label "Tổng doanh thu ghi nhận"');
       assert.ok(
-        html.includes('Theo trạng thái đơn hàng được backend ghi nhận; chưa đối soát thu tiền COD riêng.'),
+        html.includes('Chỉ ghi nhận tiền PayOS đã xác nhận và tiền mặt/COD đã xác nhận thu.'),
         'Must have truthful revenue caption explaining backend recognition and no separate COD cash reconciliation'
       );
       assert.ok(!html.includes('Đơn hàng thanh toán thành công'), 'Must not claim orders are all successfully paid');
@@ -327,14 +328,14 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
 
       // 2. Verify Revenue Chart subtitle
       assert.ok(
-        html.includes('Doanh thu ghi nhận theo ngày tạo đơn trong 7 ngày qua.'),
+        html.includes('Doanh thu theo ngày nhận tiền'),
         'Chart subtitle must specify revenue is by order creation date in the last 7 days'
       );
       assert.ok(!html.includes('Dữ liệu ghi nhận từ các đơn thanh toán thành công theo ngày'), 'Must not claim chart is by payment success date');
 
       // 3. Verify Time Filter is disabled and explained
-      assert.ok(html.includes('disabled'), 'Time range select must be disabled');
-      assert.ok(html.includes('Toàn thời gian (Chưa hỗ trợ lọc)'), 'Time filter option must state it is not supported');
+      assert.ok(html.includes('Xuất báo cáo'), 'Report controls must render');
+      assert.ok(!html.includes('Chưa hỗ trợ lọc'), 'Date range filtering is now supported');
 
       // 3. Verify Top Products is transparent about no API support
       assert.ok(html.includes('Chưa hỗ trợ'), 'Top products must state Chưa hỗ trợ');
@@ -386,6 +387,7 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
           };
         }
         if (id.includes('adminApi')) return { adminApi: mockAdminApi };
+        if (id.includes('AdminReportControls')) return () => React.createElement('button', null, 'Xuất báo cáo');
         if (id.includes('AdminLayout')) {
           return ({ children }) => React.createElement('div', { 'data-testid': 'admin-layout' }, children);
         }
@@ -449,6 +451,7 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
           };
         }
         if (id.includes('adminApi')) return { adminApi: mockAdminApi };
+        if (id.includes('AdminReportControls')) return () => React.createElement('button', null, 'Xuất báo cáo');
         if (id.includes('AdminLayout')) {
           return ({ children }) => React.createElement('div', { 'data-testid': 'admin-layout' }, children);
         }

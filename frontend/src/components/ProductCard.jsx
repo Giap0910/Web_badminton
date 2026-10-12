@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { productImages, productRating, productOptions, productCategory } from '../utils/formatters';
+import { productImages, productOptions, productCategory } from '../utils/formatters';
 import { useCart } from '../context/CartContext';
-import { ShoppingCart, Star, Heart } from 'lucide-react';
+import { ShoppingCart, Heart } from 'lucide-react';
 import ProductImage from './ProductImage';
+import { ProductRating, productSpecSummary, productValue, productCartOptions } from './ProductFacts';
 
 const ProductCard = ({ product, onQuickView }) => {
   const { addToCart } = useCart();
@@ -50,7 +51,7 @@ const ProductCard = ({ product, onQuickView }) => {
       navigate(productDetailUrl);
       return;
     }
-    if (!inStock || !addToCart(product, 1)) {
+    if (!inStock || !addToCart(product, 1, productCartOptions(product))) {
       alert('Không đủ tồn kho để thêm sản phẩm.');
       return;
     }
@@ -75,7 +76,7 @@ const ProductCard = ({ product, onQuickView }) => {
   const badgeLabel = product.badge || (discountPercent ? `-${discountPercent}%` : (isNew ? 'Mới' : ''));
 
   // Specs pill label
-  const specLabel = product.weightGrip || product.specification || 'Chưa có thông số';
+  const specLabel = productSpecSummary(product);
 
   return (
     <div className="group relative flex flex-col bg-white rounded-xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 border border-[#E2E8F0] hover:border-[#CBD5E1]">
@@ -138,9 +139,9 @@ const ProductCard = ({ product, onQuickView }) => {
           {/* Brand & Specification Tag */}
           <div className="flex items-center justify-between text-slate-600 text-xs mb-1">
             <span className="font-bold text-slate-900 uppercase">
-              {product.brand || 'HG PRO'}
+              {productValue(product.brand)}
             </span>
-            <span className="bg-[#ECEEF0] text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-mono">
+            <span className="max-w-[65%] min-w-0 truncate bg-[#ECEEF0] text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-mono">
               {specLabel}
             </span>
           </div>
@@ -153,19 +154,7 @@ const ProductCard = ({ product, onQuickView }) => {
           </Link>
 
           {/* Rating */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 my-1">
-            <div className="flex text-amber-500">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className={`w-3.5 h-3.5 ${product.reviewCount > 0 && i < Math.round(product.averageRating || 0) ? 'fill-amber-500 text-amber-500' : 'text-slate-300'}`} />
-              ))}
-            </div>
-            <span className="font-bold text-slate-900">
-              {productRating(product)}
-            </span>
-            <span className="text-slate-400 text-[11px]">
-              ({product.reviewCount ?? 0} đánh giá)
-            </span>
-          </div>
+          <ProductRating product={product} />
         </div>
 
         {/* Price Row */}

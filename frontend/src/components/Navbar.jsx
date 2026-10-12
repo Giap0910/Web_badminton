@@ -1,8 +1,10 @@
+import AccountAvatar from './AccountAvatar';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useCompare } from '../context/CompareContext';
+import ProductSearch from './ProductSearch';
 import { 
   Search, 
   ShoppingCart, 
@@ -17,20 +19,12 @@ import {
 } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { profile, user, isAuthenticated, isAdmin, logout } = useAuth();
   const { cartCount } = useCart();
   const { selectedRackets } = useCompare();
-  const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/products?keyword=${encodeURIComponent(searchQuery.trim())}`);
-      setMobileMenuOpen(false);
-    }
-  };
 
   const navCategories = [
     { label: 'Vợt Cầu Lông', path: '/products?categoryId=1' },
@@ -121,12 +115,12 @@ const Navbar = () => {
                   to={isAdmin ? "/admin" : "/profile"}
                   className="flex items-center gap-1.5 sm:gap-2 p-1 sm:px-2 sm:py-1 rounded-lg hover:bg-slate-800/80 text-left transition-colors"
                 >
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold text-xs">
-                    {user?.fullName ? user.fullName.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center text-white font-bold text-xs">
+                    <AccountAvatar url={profile?.avatarUrl} name={profile?.fullName || user?.fullName || user?.username} />
                   </div>
                   <div className="hidden lg:flex flex-col leading-tight">
                     <span className="text-xs font-bold text-white line-clamp-1 max-w-[100px]">
-                      {user?.fullName || user?.username}
+                      {profile?.fullName || user?.fullName || user?.username}
                     </span>
                     <span className="text-[10px] text-emerald-400 font-semibold">
                       {isAdmin ? 'Quản Trị Viên' : 'Tài Khoản'}
@@ -169,18 +163,7 @@ const Navbar = () => {
           </div>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="w-full lg:w-auto lg:flex-1 max-w-xl mx-0 lg:mx-4 order-3 lg:order-2 min-w-0">
-            <div className="relative flex items-center w-full">
-              <Search className="absolute left-3.5 text-slate-400 w-4 h-4 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm vợt, giày, phụ kiện Yonex, Lining, Victor..."
-                className="w-full bg-slate-800/80 hover:bg-slate-800 focus:bg-white text-white focus:text-slate-900 placeholder:text-slate-400 text-xs sm:text-sm pl-10 pr-4 py-2 rounded-full border border-slate-700 focus:border-royal focus:outline-none transition-all shadow-inner"
-              />
-            </div>
-          </form>
+          <ProductSearch onNavigate={() => setMobileMenuOpen(false)} />
         </div>
 
         {/* Secondary Navigation Row (Categories & Hot Promo) */}

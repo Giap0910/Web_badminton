@@ -15,10 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminDashboardController {
 
-    private final AdminDashboardService adminDashboardService;
+    private final com.sports.service.AdminReportService reports;
 
     @GetMapping
-    public ResponseEntity<DashboardStatsResponse> getDashboardStats() {
-        return ResponseEntity.ok(adminDashboardService.getDashboardStats());
+    public ResponseEntity<DashboardStatsResponse> getDashboardStats(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to) {
+        return ResponseEntity.ok(reports.report(from, to).stats());
     }
 }

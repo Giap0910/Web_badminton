@@ -1,11 +1,15 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { userApi } from '../api/userApi';
 import { authApi } from '../api/authApi';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(null);
+  const currentUser = useRef(null);
+  const setUser = data => { currentUser.current = data; setUserState(data); };
   const [token, setToken] = useState(null);
+  const [profile, setProfileState] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,7 +19,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setToken(null);
-      setUser(null);
+      setUser(null); setProfileState(null);
     };
     window.addEventListener('auth:expired', clearSession);
     if (savedToken) {
@@ -44,6 +48,14 @@ export const AuthProvider = ({ children }) => {
     } catch {
       window.dispatchEvent(new Event('auth:expired'));
     }
+  }, [token]);
+
+  useEffect(() => {
+    setProfileState(null);
+    if (!token) return;
+    let active = true;
+    userApi.getProfile().then(data => { if (active && currentUser.current && data?.id === currentUser.current.id) setProfileState(data); }).catch(() => {});
+    return () => { active = false; };
   }, [token]);
 
   const login = async (username, password) => {
@@ -82,11 +94,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);
-    setUser(null);
+    setUser(null); setProfileState(null);
   };
 
   const value = {
     user,
+    profile,
+    setProfile: data => { if (currentUser.current && data?.id === currentUser.current.id) setProfileState(data); },
     token,
     loading,
     isAuthenticated: !!token,

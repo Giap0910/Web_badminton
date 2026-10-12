@@ -1,30 +1,12 @@
+import useBannerCarousel from '../hooks/useBannerCarousel';
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { productApi } from '../api/productApi';
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
-import { 
-  Flame, 
-  ArrowRight, 
-  ChevronRight, 
-  ChevronLeft, 
-  Star, 
-  CheckCircle2, 
-  Wrench, 
-  ArrowUpRight,
-  Footprints,
-  Backpack,
-  Shirt,
-  Trophy,
-  Swords,
-  X,
-  ShoppingCart, 
-  Check,
-  ShieldCheck,
-  Truck,
-  Shield,
-  Headphones
-} from 'lucide-react';
+import { ProductRating, productSpecSummary, productValue, productCartOptions } from '../components/ProductFacts';
+import { productCategory } from '../utils/formatters';
+import { Flame, ArrowRight, ChevronRight, ArrowUpRight, Footprints, Backpack, Shirt, Trophy, Swords, X, ShoppingCart, Check, ShieldCheck, Truck, Shield, Headphones } from 'lucide-react';
 
 // Danh sách Hero Slides theo đúng chuẩn thi đấu HG BWF
 const HERO_SLIDES = [
@@ -87,7 +69,7 @@ const HERO_SLIDES = [
 // 4 Sản phẩm mới về (New Arrivals 2024)
 
 const HomePage = () => {
-  const [activeSlide, setActiveSlide] = useState(0);
+  const { activeSlide, dragging, offset, handlers } = useBannerCarousel(HERO_SLIDES.length);
   const [activeTab, setActiveTab] = useState('all');
   const [products, setProducts] = useState([]);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
@@ -95,16 +77,9 @@ const HomePage = () => {
   const [addedSuccess, setAddedSuccess] = useState(false);
 
   const { addToCart } = useCart();
+  const navigate = useNavigate();
 
-  // Auto-slide 6s
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Fetch products from API (fallback to MOCK_BESTSELLERS)
+  // Danh sách công khai từ API.
   useEffect(() => {
     const loadProducts = async () => {
       try {
@@ -121,21 +96,9 @@ const HomePage = () => {
   }, []);
 
   // Filter products by tab
-  const filteredProducts = products.filter((item) => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'racket') {
-      return item.categoryId === 1 || item.category === 'racket' || item.categoryName?.toLowerCase().includes('vợt') || item.name?.toLowerCase().includes('vợt');
-    }
-    if (activeTab === 'shoes') {
-      return item.categoryId === 2 || item.category === 'shoes' || item.categoryName?.toLowerCase().includes('giày') || item.name?.toLowerCase().includes('giày');
-    }
-    if (activeTab === 'bag') {
-      return item.categoryId === 4 || item.category === 'bag' || item.categoryName?.toLowerCase().includes('bao') || item.categoryName?.toLowerCase().includes('balo') || item.name?.toLowerCase().includes('bao') || item.name?.toLowerCase().includes('balo');
-    }
-    if (activeTab === 'accessory') {
-      return item.categoryId === 5 || item.category === 'ACCESSORIES' || item.categoryName?.toLowerCase().includes('phụ kiện') || item.name?.toLowerCase().includes('cước') || item.name?.toLowerCase().includes('quấn cán') || item.name?.toLowerCase().includes('cầu') || item.name?.toLowerCase().includes('băng');
-    }
-    return true;
+  const filteredProducts = products.filter(item => {
+    const categories = { racket: 'RACKET', shoes: 'SHOES', bag: 'BAG', accessory: 'ACCESSORIES' };
+    return activeTab === 'all' || productCategory(item) === categories[activeTab];
   });
 
   const currentHero = HERO_SLIDES[activeSlide];
@@ -152,7 +115,7 @@ const HomePage = () => {
 
   const handleQuickAdd = () => {
     if (quickViewProduct) {
-      if (!addToCart(quickViewProduct, quickViewQty)) {
+      if (!addToCart(quickViewProduct, quickViewQty, productCartOptions(quickViewProduct))) {
         alert('Không đủ tồn kho hoặc số lượng không hợp lệ.');
         return;
       }
@@ -173,7 +136,8 @@ const HomePage = () => {
     <div className="w-full flex flex-col bg-[#F8FAFC]">
       
       {/* 1. HERO BANNER SLIDER (Full-bleed sports smash energy) */}
-      <section className="relative w-full overflow-hidden bg-[#131B2E] text-white py-14 lg:py-24">
+      <section role="region" aria-label="Banner quảng cáo" tabIndex={0} {...handlers}
+        style={{ touchAction: 'pan-y' }} className="relative w-full overflow-hidden bg-[#131B2E] text-white py-14 lg:py-24 select-none cursor-grab active:cursor-grabbing">
         {/* Background Image & Layered Lighting */}
         <div 
           className="absolute inset-0 z-0 opacity-40 mix-blend-luminosity bg-cover bg-center transition-all duration-700"
@@ -183,7 +147,8 @@ const HomePage = () => {
         <div className="absolute -right-32 -bottom-32 w-[550px] h-[550px] rounded-full bg-secondary/15 blur-[120px] pointer-events-none" />
         <div className="absolute right-1/4 top-0 w-[400px] h-[400px] rounded-full bg-[#497CFF]/10 blur-[100px] pointer-events-none" />
 
-        <div className="relative z-10 max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8"
+          style={{ transform: 'translateX(' + offset * 0.18 + 'px)', transition: dragging ? 'none' : 'transform 180ms ease' }}>
           <div className="max-w-2xl flex flex-col items-start gap-5">
             
             {/* Trust/Tournament Badges */}
@@ -204,7 +169,7 @@ const HomePage = () => {
               <span className="text-xs uppercase tracking-widest text-secondary font-extrabold">
                 {currentHero.tagline}
               </span>
-              <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold uppercase tracking-tight text-white leading-[1.08] drop-shadow-sm">
+              <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-extrabold uppercase tracking-normal text-white leading-[1.18] drop-shadow-sm">
                 {currentHero.titleLine1} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400">
                   {currentHero.titleGradient}
@@ -233,40 +198,6 @@ const HomePage = () => {
               </Link>
             </div>
 
-            {/* Slider Controls / Pagination Indicators */}
-            <div className="flex items-center gap-4 pt-6">
-              <div className="flex items-center gap-1.5">
-                {HERO_SLIDES.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveSlide(idx)}
-                    className={`h-1.5 rounded-full transition-all ${
-                      activeSlide === idx ? 'w-8 bg-secondary' : 'w-2.5 bg-white/30 hover:bg-white/50'
-                    }`}
-                    aria-label={`Slide ${idx + 1}`}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center gap-1 text-white">
-                <button 
-                  onClick={() => setActiveSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-secondary transition-colors flex items-center justify-center"
-                  aria-label="Slide trước"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button 
-                  onClick={() => setActiveSlide((prev) => (prev + 1) % HERO_SLIDES.length)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-secondary transition-colors flex items-center justify-center"
-                  aria-label="Slide sau"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-              <span className="text-xs text-[#7C839B] font-mono tracking-widest pl-2">
-                {currentHero.slideCode}
-              </span>
-            </div>
 
           </div>
         </div>
@@ -308,7 +239,7 @@ const HomePage = () => {
                 <Swords className="w-6 h-6" />
               </div>
               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#E6E8EA] text-slate-700 group-hover:bg-secondary group-hover:text-white transition-colors">
-                48+ mẫu
+                20+
               </span>
             </div>
             <div className="relative z-10 pt-8 flex flex-col">
@@ -336,7 +267,7 @@ const HomePage = () => {
                 <Footprints className="w-6 h-6" />
               </div>
               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#E6E8EA] text-slate-700 group-hover:bg-secondary group-hover:text-white transition-colors">
-                32+ mẫu
+                20+
               </span>
             </div>
             <div className="relative z-10 pt-8 flex flex-col">
@@ -344,7 +275,7 @@ const HomePage = () => {
                 Giày cầu lông
               </h3>
               <p className="text-xs text-slate-500 line-clamp-2 mt-1">
-                Power Cushion, All-Court Grip, Shock Cushion
+                Chọn kích cỡ và xem công nghệ của từng mẫu giày
               </p>
               <div className="flex items-center gap-1 pt-3 text-secondary text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                 <span>Khám phá ngay</span>
@@ -364,7 +295,7 @@ const HomePage = () => {
                 <Backpack className="w-6 h-6" />
               </div>
               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#E6E8EA] text-slate-700 group-hover:bg-secondary group-hover:text-white transition-colors">
-                26+ mẫu
+                20+
               </span>
             </div>
             <div className="relative z-10 pt-8 flex flex-col">
@@ -372,7 +303,7 @@ const HomePage = () => {
                 Balo & Bao vợt
               </h3>
               <p className="text-xs text-slate-500 line-clamp-2 mt-1">
-                Thermo Guard, Chống nước IPX4, 6-9 Rackets
+                Xem dung tích và sức chứa vợt theo từng mẫu
               </p>
               <div className="flex items-center gap-1 pt-3 text-secondary text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                 <span>Khám phá ngay</span>
@@ -392,7 +323,7 @@ const HomePage = () => {
                 <Shirt className="w-6 h-6" />
               </div>
               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#E6E8EA] text-slate-700 group-hover:bg-secondary group-hover:text-white transition-colors">
-                65+ mẫu
+                20+
               </span>
             </div>
             <div className="relative z-10 pt-8 flex flex-col">
@@ -400,7 +331,7 @@ const HomePage = () => {
                 Quần áo đấu
               </h3>
               <p className="text-xs text-slate-500 line-clamp-2 mt-1">
-                Dry-Fit, CoolMax -3°C, Co giãn 4 chiều
+                Chọn kích cỡ và chất liệu vải theo từng mẫu
               </p>
               <div className="flex items-center gap-1 pt-3 text-secondary text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
                 <span>Khám phá ngay</span>
@@ -420,7 +351,7 @@ const HomePage = () => {
                 <Trophy className="w-6 h-6" />
               </div>
               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-[#E6E8EA] text-slate-700 group-hover:bg-secondary group-hover:text-white transition-colors">
-                80+ mẫu
+                20+
               </span>
             </div>
             <div className="relative z-10 pt-8 flex flex-col">
@@ -625,92 +556,16 @@ const HomePage = () => {
       {/* 6. SECTION: ĐÁNH GIÁ KHÁCH HÀNG (Customer Reviews - 3 Cards) */}
       <section className="w-full bg-[#F2F4F6] py-14 lg:py-20 border-y border-[#E2E8F0]">
         <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center text-center gap-1 mb-10">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-secondary"></span>
-              <span className="text-xs uppercase tracking-wider text-secondary font-bold"># CỘNG ĐỒNG CẦU LÔNG HG</span>
-            </div>
-            <h2 className="font-display text-2xl sm:text-3xl font-extrabold uppercase text-slate-900">
-              VẬN ĐỘNG VIÊN & KHÁCH HÀNG NÓI GÌ
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-xl">
-              Lắng nghe trọn vẹn từ các vận động viên và huấn luyện viên thi đấu hàng đầu tại các giải phong trào và chuyên nghiệp
-            </p>
+          <div className="text-center mb-10 space-y-2">
+            <h2 className="font-display text-2xl sm:text-3xl font-extrabold uppercase text-slate-900">ĐÁNH GIÁ SẢN PHẨM</h2>
+            <p className="text-xs sm:text-sm text-slate-500">Điểm và số đánh giá được lấy từ dữ liệu của từng sản phẩm.</p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Review Card 1 */}
-            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-sm hover:shadow-md border border-[#E2E8F0] transition-all flex flex-col justify-between gap-6">
-              <div className="flex flex-col gap-3">
-                <div className="flex text-amber-500">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-500 text-amber-500" />
-                  ))}
-                </div>
-                <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                  “Dịch vụ căng cước chuẩn giải đấu ở nơi tôi rất tâm đắc. Vợt Astrox 100ZZ đập cầu rất đầm tay, nổ thanh và sắc nét. Cảm giác thi đấu chuẩn xác!”
-                </p>
-              </div>
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center shrink-0">
-                  <img 
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_cxfC-dn1wqXllHhYFHouXayo_-kURboSYsY34LCDiJ3vNHEV2X166PICRlaZqWQLykBoShqIdv0J6hmMCZMYI5SNWdbH3yHOutiz7Y_IGw0kjAD3t0LjiTZKHxVw29gpXlmAjAmPd5_v5l4yQzcUpO54gO4Fes2IvbcohK5THiJ7Wtu13Mufn4vdAwPS0nVSe3yI8EGxsVxgDrLst2z-mt-QnWK3YjFlHOlRq0hnqS1hQsmscSA_" 
-                    alt="Nguyễn Hoàng Nam" 
-                    className="w-full h-full object-cover" 
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-sm font-bold text-slate-900">Nguyễn Hoàng Nam</span>
-                  <span className="text-[11px] text-slate-500 font-medium">Vận Động Viên Tuyển Trẻ</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Review Card 2 */}
-            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-sm hover:shadow-md border border-[#E2E8F0] transition-all flex flex-col justify-between gap-6">
-              <div className="flex flex-col gap-3">
-                <div className="flex text-amber-500">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-500 text-amber-500" />
-                  ))}
-                </div>
-                <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                  “Giày Yonex 65Z3 đi êm chân và bám thảm tuyệt vời, đệm power cushion giảm chấn tối đa cho khớp gối. Hàng chính hãng 100% có tem bảo hành.”
-                </p>
-              </div>
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-[#131b2e] flex items-center justify-center shrink-0 text-white">
-                  <Trophy className="w-6 h-6 text-amber-400" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-sm font-bold text-slate-900">Ngô Tiến Trường</span>
-                  <span className="text-[11px] text-slate-500 font-medium">HLV CLB Cầu Lông Ba Đình</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Review Card 3 */}
-            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-sm hover:shadow-md border border-[#E2E8F0] transition-all flex flex-col justify-between gap-6">
-              <div className="flex flex-col gap-3">
-                <div className="flex text-amber-500">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-500 text-amber-500" />
-                  ))}
-                </div>
-                <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                  “Balo HG Pro 35L chứa được nhiều vợt và đồ, có ngăn giày riêng thoáng khí không có mùi cao su. Rất hài lòng với dịch vụ tư vấn kỹ thuật.”
-                </p>
-              </div>
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-secondary/15 flex items-center justify-center shrink-0 text-secondary">
-                  <Swords className="w-6 h-6" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-sm font-bold text-slate-900">Astrid Henriksen</span>
-                  <span className="text-[11px] text-slate-500 font-medium">VĐV Phong Trào Hạng Nhất</span>
-                </div>
-              </div>
-            </div>
+            {products.slice(0, 3).map(product => <div key={product.id} className="bg-white p-6 sm:p-8 rounded-xl shadow-sm hover:shadow-md border border-[#E2E8F0] transition-all flex flex-col justify-between gap-6">
+              <h3 className="font-display text-sm font-bold text-slate-900">{product.name}</h3>
+              <ProductRating product={product} />
+              <Link to={`/products/${product.id}`} className="text-xs text-secondary font-bold">Xem đánh giá sản phẩm</Link>
+            </div>)}
           </div>
         </div>
       </section>
@@ -774,7 +629,7 @@ const HomePage = () => {
                 className="max-h-64 object-contain mix-blend-multiply"
               />
               <span className="absolute top-4 left-4 px-2.5 py-0.5 rounded-full bg-secondary text-white text-xs font-bold uppercase tracking-wider">
-                {quickViewProduct.badge || 'Bán chạy'}
+                {productValue(quickViewProduct.categoryName)}
               </span>
             </div>
 
@@ -783,10 +638,10 @@ const HomePage = () => {
               <div>
                 <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
                   <span className="font-bold text-slate-900 uppercase">
-                    {quickViewProduct.brand}
+                    {productValue(quickViewProduct.brand)}
                   </span>
                   <span className="bg-[#ECEEF0] text-slate-700 px-2 py-0.5 rounded font-mono text-[11px]">
-                    {quickViewProduct.weightGrip || 'Chính hãng'}
+                    {productSpecSummary(quickViewProduct)}
                   </span>
                 </div>
 
@@ -795,24 +650,14 @@ const HomePage = () => {
                 </h3>
 
                 {/* Rating */}
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 my-2">
-                  <div className="flex text-amber-500">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                    ))}
-                  </div>
-                  <span className="font-bold text-slate-900">
-                    {quickViewProduct.averageRating || 'Chưa có'}
-                  </span>
-                  <span>({quickViewProduct.reviewCount ?? 0} đánh giá)</span>
-                </div>
+                <ProductRating product={quickViewProduct} />
 
                 {/* Price */}
                 <div className="flex items-baseline gap-2 my-3">
                   <span className="font-display text-2xl font-black text-secondary">
                     {formatPrice(quickViewProduct.price)}
                   </span>
-                  {quickViewProduct.originalPrice && (
+                  {quickViewProduct.originalPrice > quickViewProduct.price && (
                     <span className="text-sm text-slate-400 line-through">
                       {formatPrice(quickViewProduct.originalPrice)}
                     </span>
@@ -821,18 +666,9 @@ const HomePage = () => {
 
                 {/* Tech Highlights */}
                 <div className="border-t border-slate-100 pt-3 my-3 text-xs text-slate-600 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>Cam kết 100% chính hãng BWF Approved</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>Miễn phí tư vấn căng cước điện tử 4 nút</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>Bảo hành 1 đổi 1 trong 7 ngày</span>
-                  </div>
+                  <p>Mã sản phẩm: {productValue(quickViewProduct.sku)}</p>
+                  <p>Danh mục: {productValue(quickViewProduct.categoryName)}</p>
+                  <p className="line-clamp-3">{productValue(quickViewProduct.description)}</p>
                 </div>
               </div>
 
@@ -878,7 +714,7 @@ const HomePage = () => {
                     ) : (
                       <>
                         <ShoppingCart className="w-4 h-4" />
-                        <span>Thêm vào giỏ hàng</span>
+                        <span>{['SHOES', 'APPAREL'].includes(productCategory(quickViewProduct)) ? 'Chọn kích cỡ' : 'Thêm vào giỏ hàng'}</span>
                       </>
                     )}
                   </button>

@@ -12,6 +12,9 @@ import java.util.List;
 @Builder
 public class AiChatResponse {
     private String reply;
+    private String provider;
+    private String model;
+    private boolean fallback;
     @Builder.Default
     private List<Long> recommendedProductIds = new ArrayList<>();
     @Builder.Default

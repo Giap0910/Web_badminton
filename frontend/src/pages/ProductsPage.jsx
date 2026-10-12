@@ -3,81 +3,60 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
 import ProductImage from '../components/ProductImage';
-import { productCategory } from '../utils/formatters';
-import {
-  Filter,
-  Search,
-  SlidersHorizontal,
-  Home,
-  ChevronLeft,
-  ChevronRight,
-  ShieldCheck,
-  CheckCircle2,
-  Wrench,
-  Gauge,
-  LayoutGrid,
-  List,
-  X,
-  Footprints,
-  Backpack,
-  Shirt,
-  Trophy,
-  Swords,
-  Zap,
-  Tag,
-  Eye,
-  RefreshCw
-} from 'lucide-react';
+import { productSpecSummary } from '../components/ProductFacts';
+import { readCatalogQuery, updateCatalogQuery, buildCatalogParams, readCatalogPage, catalogDisplayRange, catalogFilterChips } from '../utils/productCatalogQuery.jsx';
+
+import { SlidersHorizontal, Home, ChevronLeft, ChevronRight, ShieldCheck, CheckCircle2, LayoutGrid, List, X, Tag } from 'lucide-react';
 
 // Dữ liệu 5 Banner chuyên biệt cho 5 Danh mục chuẩn thiết kế gốc
 const CATEGORY_BANNERS = {
   RACKET: {
     title: 'VỢT CẦU LÔNG CHÍNH HÃNG',
     gradientText: 'SỨC MẠNH TRONG TỪNG CÚ ĐÁNH',
-    badge: 'OFFICIAL BWF TOURNAMENT RACKETS',
-    description: 'Khám phá bộ sưu tập vợt thi đấu đỉnh cao từ Yonex, Victor, Li-Ning & Mizuno. Đầy đủ tem cào chống giả, hỗ trợ đo thông số swing weight và miễn phí dịch vụ căng cước 4 mối gút chuẩn BWF.',
+    badge: "VỢT CẦU LÔNG",
+    description: "Xem trọng lượng, độ cứng, sức căng và vật liệu của từng mẫu vợt.",
     bgImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCyZXdxJpoFOlwmtmeFFODdaKMjWEGX2OyWaSaX_Nvho97g9G2jdBvtbw6G-jedPZbN32CxgmEkgRM3S-HegblDFAiod0n2Gjju2TfcNgFCii_3MP2QTxgImjoE-EMDMz6DzpghRiVk84mNGTCq0VlQNL1kz8U66lFDhXa23U3u2XwIzUacKys-q-Bc_tXkQxsol67tQfYIxOVssAac6PCMfc2Iuw1t2zRoQH1i6yEmZ8_xDLFh4U1b',
-    perks: ['100% Chính Ngạch', 'Căng Cước 4 Mối Gút', 'Đo Swing Weight Pro', 'Bảo Hành Khung 90 Ngày']
+    perks: ["Trọng lượng","Độ cứng","Sức căng","Vật liệu"]
   },
   SHOES: {
     title: 'GIÀY CẦU LÔNG CHUYÊN NGHIỆP',
     gradientText: 'BỨT TỐC & TIẾP ĐẤT HOÀN HẢO',
-    badge: 'TOP CÔNG NGHỆ BẢO VỆ CỔ CHÂN & KHỚP GỐI',
-    description: 'Hệ thống giày thi đấu chính hãng tích hợp đệm Power Cushion+, đế cao su Radial Blade bám sân tuyệt đối, tấm Carbon 3D chống lật cổ chân từ Yonex, Victor, Lining, Mizuno.',
+    badge: "GIÀY CẦU LÔNG",
+    description: "Xem kích cỡ, loại đế, công nghệ đệm và chất liệu của từng mẫu giày.",
     bgImage: 'https://lh3.googleusercontent.com/aida/AEtjO1Wn2o8ScP8jjmX0LuN3xMttSNjH6JSYW7AymRR785owkRwdGoywlzZHDUM1pyPmG_yiMGAU3IVHKwxjw2Eh7DD4vn6Y0S--ejVbrHHEnUwS7NqcdaJxK-xf9ttcOK1yEy1jgmkrHFpyWUM01kYgJI8AZXqWjsR-3HczLz5sBfNgTXG3IVxK8KK8niMRkmR8_FjXl1NJ7RuUTpJJw9c35hxfQL-fWcCfETFyokX_buRjYQH9MGw-BuQrng',
-    perks: ['Đệm Power Cushion+', 'Đế Radial Blade Sole', 'Tấm Carbon 3D chống lật', 'Double Russel Mesh']
+    perks: ["Kích cỡ","Loại đế","Công nghệ đệm","Chất liệu"]
   },
   BAG: {
     title: 'BALO & BAO VỢT THI ĐẤU',
     gradientText: 'BẢO VỆ VỢT TIÊU CHUẨN TOUR',
-    badge: 'THIẾT KẾ CHUYÊN NGHIỆP BWF TOURNAMENT',
-    description: 'Bao vợt cách nhiệt Thermo Guard cao cấp, balo ngăn giày riêng biệt khử mùi, chất liệu chống thấm nước IPX4 đồng hành cùng bạn trên mọi chuyến du đấu.',
+    badge: "BALO VÀ BAO VỢT",
+    description: "Xem loại túi, dung tích, sức chứa vợt và khả năng chống nước theo dữ liệu từng mẫu.",
     bgImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBWD-k6lHEcXn9J84Xjd7_QcDz680mSkQcdsp8iBVkfdo5VODDUCsbC5FIZgIkRB3AvM3qHiNmI7l-Tjl7XD_b7pGrQMyiKqDKO4Lro8vi6lg7Z3e2LQBTYwSztI6AR8B_n7O8cfTp_XTHq4fNYPFrmYBow03iYqCuH-I7GTXjuZaers7BI85NotMTjPFTN4dm9MMs-ZbMyunfH9yNam-wBmtZy_aW7ik6iIQ1oVi7DYorDbLbWGkpL',
-    perks: ['Lớp Nhiệt Thermo Guard', 'Ngăn Giày Khử Mùi', 'Chống Nước IPX4', 'Quai Đeo Công Thái Học']
+    perks: ["Loại túi","Dung tích","Sức chứa vợt","Chống nước"]
   },
   APPAREL: {
-    title: 'TRANG PHỤC THI ĐẤU DRY-FIT',
+    title: 'TRANG PHỤC CẦU LÔNG',
     gradientText: 'SIÊU THOÁNG MÁT & BỨT PHÁ TỐC ĐỘ',
-    badge: 'CÔNG NGHỆ LÀM MÁT COOLMAX HẠ NHIỆT -3°C',
-    description: 'Bộ sưu tập áo đấu, quần short và váy thi đấu chính hãng Yonex, Victor, Lining. Sợi vải công nghệ cao thấm hút mồ hôi cực nhanh và co giãn 4 chiều.',
+    badge: "TRANG PHỤC CẦU LÔNG",
+    description: "Xem kích cỡ, giới tính và chất liệu vải của từng mẫu trang phục.",
     bgImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9IEUCgLlL3GW5QIfUXCh_OdodRH7_6SUEKaSHWhU2Rq7VfJrxtbjPPayQDVW8hFirkY66GGyXt4mapHlXYaz5SC0f97d_1FG2RYqn-9sLHN1UsBdfzolgv4YaHRJjIUyrDoWE6q-W0rItCRvyHVaCEhY4dwLJ6tKRyNPX90TiUNrWJtKtelXtDOssE73al0GyFMYTUUitzmd0XenPGkYPuqF1-dgHtMIg-zx0QBbQRbc2COOA9jMP',
-    perks: ['Hạ Nhiệt CoolMax -3°C', 'Thấm Hút Dry-Fit Siêu Tốc', 'Co Giãn 4 Chiều Linh Hoạt', 'Chống Tia UV 50+']
+    perks: ["Kích cỡ","Giới tính","Chất liệu","Mô tả sản phẩm"]
   },
   ACCESSORIES: {
     title: 'PHỤ KIỆN CẦU LÔNG PRO',
     gradientText: 'ĐẦY ĐỦ TINH HOA CHO TỪNG TRẬN ĐẤU',
-    badge: 'DỤNG CỤ THI ĐẤU CHUẨN QUỐC TẾ BWF',
-    description: 'Cước BG65Ti, BG80, Aerobite; quấn cán Yonex AC102EX chống trượt; quả cầu thi đấu tiêu chuẩn BWF và dụng cụ bảo hộ thể thao cao cấp.',
+    badge: "PHỤ KIỆN CẦU LÔNG",
+    description: "Xem loại phụ kiện và quy cách đóng gói của từng sản phẩm.",
     bgImage: 'https://lh3.googleusercontent.com/aida/AEtjO1Vi9OaVFBPd6y0h2lY1ChhCbZUxacPh47LeL-4-CqofIOg6PE0CkZFT4JTWaUEof84EMDCWgJBLhyg-rcznbAd0uWPkOi-mxEf83c6JB8z4pkwtbLGfpZWjz4s4mHde4DQEdPY2QevLbZ4tmfyl1c7Qi19ysYkscofFnYdTuKhBIl8p2XLG9UIFDb6AJ11Re3DD02bGTBRd1bAUUcZiLuZFstUxq2Ygr3qz8pcGdzUamC0Lrc_Tw2bDsIA',
-    perks: ['Cước Căng BWF Approved', 'Quấn Cán Super Grap', 'Cầu Lông Tiêu Chuẩn', 'Băng Khớp & Phục Hồi']
+    perks: ["Loại phụ kiện","Quy cách đóng gói","Thương hiệu","Mã sản phẩm"]
   },
   ALL: {
     title: 'TẤT CẢ TRANG BỊ CẦU LÔNG',
     gradientText: 'CHÍNH HÃNG HG BADMINTON PRO',
-    badge: 'TOURNAMENT EQUIPMENT & STRINGING',
-    description: 'Trải nghiệm hệ sinh thái dụng cụ cầu lông đỉnh cao từ các thương hiệu số 1 thế giới với chế độ bảo hành chính hãng và dịch vụ căng cước chuẩn BWF.',
+    badge: "TRANG BỊ CẦU LÔNG",
+    description: "Khám phá sản phẩm và xem thông tin của từng mẫu trước khi lựa chọn.",
     bgImage: 'https://lh3.googleusercontent.com/aida/AEtjO1WnCri4_js0e8_-uBsfS2jif7zSpzBPOHaHnHP0kIUHp3v5h6_D5sR-XfIHJytBPt3KgbcRUEHT6PMS9K52OI_DaS-Ro61enM8us2nebGYymeA-IrL3Bzt_a_Q5BwTJj2Hjp2WaCT_yDorE3D9Zr2YfwifheyDXtK4J3AfimAlwfYF-c29Yv-Dj7ydJVciQMv6RwTtr9zmzgTew16-rgAneEdC0a9lpAb99jsq4WApfao2LO-yx73JDa2I',
-    perks: ['100% Chính Ngạch', 'Căng Cước Điện Tử 4 Nút', 'Giao Hỏa Tốc 2H', 'Bảo Hành 1 Đổi 1']
+    perks: ["Thương hiệu","Danh mục","Thông số","Mã sản phẩm"]
   }
 };
 
@@ -125,292 +104,78 @@ const GENDER_OPTIONS = [
 const BAG_TYPES = [
   { label: 'Bao Vợt 6 Cây', value: '6-racket' },
   { label: 'Bao Vợt 9 Cây', value: '9-racket' },
-  { label: 'Balo Du Đấu 30L', value: 'backpack' },
-  { label: 'Túi Holdall 45L', value: 'holdall' },
+  { label: 'Balo', value: 'backpack' },
+  { label: 'Túi Holdall', value: 'holdall' },
 ];
 
 const ACCESSORY_TYPES = [
-  { label: 'Cước Cầu Lông', value: 'string' },
-  { label: 'Quấn Cán Vợt', value: 'grip' },
-  { label: 'Ống Cầu Lông', value: 'shuttlecock' },
-  { label: 'Băng Chặn Mồ Hôi', value: 'sweatband' },
+  { label: 'Cước Cầu Lông', value: 'day_cuoc' },
+  { label: 'Quấn Cán Vợt', value: 'quan_can' },
+  { label: 'Quả / Ống Cầu Lông', value: 'qua_cau' },
+  { label: 'Băng Chặn Mồ Hôi', value: 'bang_do' },
 ];
-
-// Helper chuẩn hóa category từ URL param linh hoạt mọi biến thể
-const normalizeCategory = (cat) => {
-  if (!cat) return 'ALL';
-  const s = String(cat).trim().toUpperCase();
-  if (s === 'ALL' || s === 'TAT-CA' || s === 'TẤT CẢ') return 'ALL';
-
-  // 1. Vợt Cầu Lông
-  if (s === '1' || s === 'RACKET' || s === 'VOT-CAU-LONG' || s.includes('VOT') || s.includes('VỢT')) return 'RACKET';
-
-  // 2. Giày Cầu Lông
-  if (s === '2' || s === 'SHOES' || s === 'SHOE' || s === 'GIAY-CAU-LONG' || s.includes('GIAY') || s.includes('GIÀY') || s.includes('FOOTWEAR')) return 'SHOES';
-
-  // 3. Quần Áo Thi Đấu
-  if (s === '3' || s === 'APPAREL' || s === 'QUAN-AO' || s === 'QUAN-AO-THI-DAU' || s === 'QUAN-AO-DAU' || s.includes('QUẦN') || s.includes('ÁO') || s.includes('CLOTHING') || s.includes('TRANG PHỤC')) return 'APPAREL';
-
-  // 4. Balo & Bao Vợt
-  if (s === '4' || s === 'BAG' || s === 'BALO-VA-BAO-VOT' || s === 'BALO' || s === 'BAO-VOT' || s.includes('BALO') || s.includes('BAO VỢT') || s.includes('TUI') || s.includes('TÚI') || s.includes('BACKPACK')) return 'BAG';
-
-  // 5. Phụ Kiện Pro
-  if (s === '5' || s === 'ACCESSORIES' || s === 'ACCESSORY' || s === 'PHU-KIEN' || s === 'PHU-KIEN-PRO' || s.includes('PHU-KIEN') || s.includes('PHỤ KIỆN') || s.includes('CUOC') || s.includes('CƯỚC') || s.includes('GRIP')) return 'ACCESSORIES';
-
-  return s;
-};
 
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState('');
+  const [reloadVersion, setReloadVersion] = useState(0);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
-  // URL State Synced
-  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '');
-  const [selectedCategory, setSelectedCategory] = useState(
-    normalizeCategory(searchParams.get('categoryId') || searchParams.get('category'))
-  );
-  const [selectedBrand, setSelectedBrand] = useState(searchParams.get('brand') || 'ALL');
-  const [selectedBalance, setSelectedBalance] = useState(searchParams.get('balancePoint') || 'ALL');
-  const [selectedWeight, setSelectedWeight] = useState(searchParams.get('weightGrip') || 'ALL');
-  const [selectedShoeSize, setSelectedShoeSize] = useState('ALL');
-  const [selectedApparelSize, setSelectedApparelSize] = useState('ALL');
-  const [selectedGender, setSelectedGender] = useState(searchParams.get('gender') || 'ALL');
-  const [selectedBagType, setSelectedBagType] = useState('ALL');
-  const [selectedAccessoryType, setSelectedAccessoryType] = useState('ALL');
-  const [selectedPriceRange, setSelectedPriceRange] = useState('ALL');
-
-  // Sorting & Pagination
-  const [sortBy, setSortBy] = useState('newest');
-  const [currentPage, setCurrentPage] = useState(1);
+  const queryKey = searchParams.toString();
+  const query = readCatalogQuery(searchParams);
+  const activeFilters = catalogFilterChips(query);
+  const { keyword, selectedCategory, selectedBrand, selectedBalance, selectedWeight,
+    selectedShoeSize, selectedApparelSize, selectedGender, selectedBagType, selectedAccessoryType,
+    selectedPriceRange, sortBy, currentPage } = query;
+  const setFilter = patch => setSearchParams(previous => updateCatalogQuery(previous, patch));
+  const setSelectedBrand = value => setFilter({ brand: value });
+  const setSelectedBalance = value => setFilter({ balancePoint: value });
+  const setSelectedWeight = value => setFilter({ weightGrip: value });
+  const setSelectedShoeSize = value => setFilter({ productSize: value });
+  const setSelectedApparelSize = value => setFilter({ productSize: value });
+  const setSelectedGender = value => setFilter({ gender: value });
+  const setSelectedBagType = value => setFilter({ bagFilter: value });
+  const setSelectedAccessoryType = value => setFilter({ accessoryType: value });
+  const setSelectedPriceRange = value => setFilter({ priceRange: value });
+  const setSortBy = value => setFilter({ sort: value });
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const productListTopRef = useRef(null);
   const ITEMS_PER_PAGE = 12;
 
-  // Sync with URL query changes
   useEffect(() => {
-    const rawCat = searchParams.get('categoryId') || searchParams.get('category');
-    const normalizedCat = normalizeCategory(rawCat);
-    setSelectedCategory(normalizedCat);
-
-    const kw = searchParams.get('keyword');
-    setKeyword(kw || '');
-    const br = searchParams.get('brand');
-    setSelectedBrand(br || 'ALL');
-    const gen = searchParams.get('gender');
-    setSelectedGender(gen || 'ALL');
-
-    const pageParam = parseInt(searchParams.get('page'), 10);
-    if (!isNaN(pageParam) && pageParam > 0) {
-      setCurrentPage(pageParam);
-    } else {
-      setCurrentPage(1);
-    }
-  }, [searchParams]);
-
-  // Load products from Backend with Server-Side Filter, Sort & Pagination
-  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setDataError('');
     const load = async () => {
-      setLoading(true);
-      setDataError('');
       try {
-        const params = {
-          page: Math.max(0, currentPage - 1),
-          size: ITEMS_PER_PAGE,
-        };
-
-        const catId = CATEGORY_TO_ID[selectedCategory];
-        if (catId) {
-          params.categoryId = catId;
-        }
-
-        if (keyword && keyword.trim()) {
-          params.keyword = keyword.trim();
-        }
-
-        if (selectedBrand && selectedBrand !== 'ALL') {
-          params.brand = selectedBrand.trim();
-        }
-
-        if (selectedPriceRange === '<2m') {
-          params.maxPrice = 2000000;
-        } else if (selectedPriceRange === '2-3.5m') {
-          params.minPrice = 2000000;
-          params.maxPrice = 3500000;
-        } else if (selectedPriceRange === '3.5-5m') {
-          params.minPrice = 3500000;
-          params.maxPrice = 5000000;
-        } else if (selectedPriceRange === '>5m') {
-          params.minPrice = 5000000;
-        }
-
-        // Sort params - Tuân thủ Contract 4.1: Chỉ cho phép id, name, price, brand
-        if (sortBy === 'price-asc') {
-          params.sortBy = 'price';
-          params.sortDir = 'asc';
-        } else if (sortBy === 'price-desc') {
-          params.sortBy = 'price';
-          params.sortDir = 'desc';
-        } else {
-          params.sortBy = 'id';
-          params.sortDir = 'desc';
-        }
-
-        if (selectedBalance && selectedBalance !== 'ALL') {
-          params.balancePoint = selectedBalance;
-        }
-        if (selectedWeight && selectedWeight !== 'ALL') {
-          params.weightGrip = selectedWeight;
-        }
-
-        const res = await productApi.getProducts(params);
-
-        if (res && res.content && Array.isArray(res.content)) {
-          setProducts(res.content);
-          setTotalElements(res.totalElements ?? res.content.length);
-          setTotalPages(res.totalPages || Math.max(1, Math.ceil((res.totalElements || res.content.length) / ITEMS_PER_PAGE)));
-        } else if (Array.isArray(res)) {
-          setProducts(res);
-          setTotalElements(res.length);
-          setTotalPages(Math.max(1, Math.ceil(res.length / ITEMS_PER_PAGE)));
-        } else {
-          setProducts([]);
-          setTotalElements(0);
-          setTotalPages(1);
-        }
-      } catch (err) {
-        console.error('Error loading products from server:', err);
-        setProducts([]);
-        setTotalElements(0);
-        setTotalPages(1);
-        setDataError('Không tải được danh sách sản phẩm. Vui lòng kiểm tra lại kết nối.');
-      } finally {
-        setLoading(false);
-      }
+        const page = readCatalogPage(await productApi.getProducts(buildCatalogParams(query), { signal: controller.signal }));
+        if (controller.signal.aborted) return;
+        setProducts(page.content);
+        setTotalElements(page.totalElements);
+        setTotalPages(page.totalPages);
+        const lastPage = Math.max(1, page.totalPages);
+        if (currentPage > lastPage) setSearchParams(previous => updateCatalogQuery(previous, { page: lastPage }), { replace: true });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setProducts([]); setTotalElements(0); setTotalPages(0);
+        setDataError(error.response?.data?.message || (error.message?.startsWith('Danh mục') || error.message?.startsWith('API không trả') || error.message?.startsWith('Giá')
+          ? error.message : error.response?.status === 400 ? 'Bộ lọc không hợp lệ. Vui lòng đặt lại bộ lọc.' : 'Không tải được danh sách sản phẩm. Vui lòng thử lại sau.'));
+      } finally { if (!controller.signal.aborted) setLoading(false); }
     };
-
     load();
-  }, [
-    currentPage,
-    selectedCategory,
-    keyword,
-    selectedBrand,
-    selectedPriceRange,
-    selectedBalance,
-    selectedWeight,
-    sortBy,
-  ]);
+    return () => controller.abort();
+  }, [queryKey, reloadVersion]);
 
-  // Client-side sub-filtering cho các thuộc tính phụ chưa có cột trong DB query
-  const displayedProducts = products.filter((item) => {
-    // 1. Lọc Size Giày (Chỉ áp dụng khi xem Giày hoặc ALL)
-    if (selectedShoeSize !== 'ALL' && (selectedCategory === 'SHOES' || selectedCategory === 'ALL')) {
-      let sizes = [];
-      if (Array.isArray(item.sizes)) {
-        sizes = item.sizes.map((s) => String(s).trim());
-      } else if (item.availableSizes) {
-        try {
-          const parsed = typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes;
-          if (Array.isArray(parsed)) sizes = parsed.map((s) => String(s).trim());
-        } catch {
-          sizes = String(item.availableSizes).split(/[,;|\s]+/).map((s) => s.trim());
-        }
-      }
-      const targetSize = String(selectedShoeSize).trim();
-      if (sizes.length > 0) {
-        if (!sizes.includes(targetSize)) return false;
-      } else {
-        const sizeRegex = new RegExp(`(?:size\\s*[:\\-]?\\s*|eu\\s*|\\b)(${targetSize})(?:\\b|\\s*eu|\\s*[,\\/])`, 'i');
-        if (!sizeRegex.test(item.availableSizes || item.name || '')) return false;
-      }
-    }
-
-    // 2. Lọc Size Quần Áo (Chỉ áp dụng khi xem Quần Áo hoặc ALL)
-    if (selectedApparelSize !== 'ALL' && (selectedCategory === 'APPAREL' || selectedCategory === 'ALL')) {
-      let sizes = [];
-      if (Array.isArray(item.sizes)) {
-        sizes = item.sizes.map((s) => String(s).trim().toUpperCase());
-      } else if (item.availableSizes) {
-        try {
-          const parsed = typeof item.availableSizes === 'string' ? JSON.parse(item.availableSizes) : item.availableSizes;
-          if (Array.isArray(parsed)) sizes = parsed.map((s) => String(s).trim().toUpperCase());
-        } catch {
-          sizes = String(item.availableSizes).split(/[,;|\s]+/).map((s) => s.trim().toUpperCase());
-        }
-      }
-      const targetSize = selectedApparelSize.trim().toUpperCase();
-      if (sizes.length > 0) {
-        if (!sizes.includes(targetSize)) return false;
-      } else {
-        const sizeRegex = new RegExp(`(?:size\\s*[:\\-]?\\s*|\\b)(${targetSize})(?:\\b|\\s*[,\\/])`, 'i');
-        if (!sizeRegex.test(item.availableSizes || item.name || '')) return false;
-      }
-    }
-
-    // 3. Lọc Giới tính
-    if (selectedGender !== 'ALL' && (selectedCategory === 'APPAREL' || selectedCategory === 'ALL')) {
-      const itemGender = (item.gender || '').trim().toLowerCase();
-      const targetGender = selectedGender.trim().toLowerCase();
-      if (itemGender !== 'unisex' && itemGender !== targetGender) {
-        const name = (item.name || '').toLowerCase();
-        if (!name.includes(targetGender)) return false;
-      }
-    }
-
-    // 4. Lọc Balo & Sức chứa
-    if (selectedBagType !== 'ALL' && (selectedCategory === 'BAG' || selectedCategory === 'ALL')) {
-      const bType = (item.bagType || '').toLowerCase();
-      const cap = (item.capacity || '').toLowerCase();
-      const name = (item.name || '').toLowerCase();
-      const target = selectedBagType.toLowerCase();
-
-      if (target === 'backpack') {
-        if (!bType.includes('balo') && !bType.includes('backpack') && !name.includes('balo')) return false;
-      } else if (target === '6-racket') {
-        if (item.racketCapacity !== 6 && !name.includes('6 cây') && !bType.includes('6-racket')) return false;
-      } else if (target === '9-racket') {
-        if (item.racketCapacity !== 9 && !name.includes('9 cây') && !bType.includes('9-racket')) return false;
-      } else if (target === 'holdall') {
-        if (!bType.includes('holdall') && !cap.includes('45l') && !name.includes('holdall') && !name.includes('túi du đấu')) return false;
-      }
-    }
-
-    // 5. Lọc Phụ kiện
-    if (selectedAccessoryType !== 'ALL' && (selectedCategory === 'ACCESSORIES' || selectedCategory === 'ALL')) {
-      const acc = (item.accessoryType || item.accessory_type || item.subcategory || '').toLowerCase();
-      const name = (item.name || '').toLowerCase();
-      const target = selectedAccessoryType.toLowerCase();
-
-      if (target === 'string') {
-        if (!acc.includes('string') && !acc.includes('cuoc') && !acc.includes('day_cuoc') && !name.includes('cước')) return false;
-      } else if (target === 'grip') {
-        if (!acc.includes('grip') && !acc.includes('quan_can') && !name.includes('quấn cán')) return false;
-      } else if (target === 'shuttlecock') {
-        if (!acc.includes('shuttlecock') && !acc.includes('cau') && !acc.includes('qua_cau') && !name.includes('cầu') && !name.includes('hộp cầu') && !name.includes('ống cầu')) return false;
-      } else if (target === 'sweatband' || target === 'support') {
-        if (!acc.includes('sweatband') && !acc.includes('bang_do') && !acc.includes('bang_chan_mo_hoi') && !acc.includes('support') && !name.includes('băng') && !name.includes('mồ hôi')) return false;
-      }
-    }
-
-    return true;
-  });
-
+  const displayedProducts = products;
   const validCurrentPage = Math.min(Math.max(currentPage, 1), Math.max(1, totalPages));
-  const startIndex = (validCurrentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + products.length, totalElements);
-
+  const [rangeStart, rangeEnd] = catalogDisplayRange(validCurrentPage, products.length, totalElements, ITEMS_PER_PAGE);
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== validCurrentPage) {
-      setCurrentPage(newPage);
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('page', newPage);
-        return next;
-      });
+      setFilter({ page: newPage });
       if (productListTopRef.current) {
         const yOffset = -90;
         const y = productListTopRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
@@ -433,31 +198,18 @@ const ProductsPage = () => {
   };
 
   const handleResetFilters = () => {
-    setKeyword('');
-    setSelectedBrand('ALL');
-    setSelectedBalance('ALL');
-    setSelectedWeight('ALL');
-    setSelectedShoeSize('ALL');
-    setSelectedApparelSize('ALL');
-    setSelectedGender('ALL');
-    setSelectedBagType('ALL');
-    setSelectedAccessoryType('ALL');
-    setSelectedPriceRange('ALL');
-    setSortBy('newest');
-    setCurrentPage(1);
-    if (selectedCategory !== 'ALL') {
-      const catId = CATEGORY_TO_ID[selectedCategory];
-      setSearchParams(catId ? { categoryId: catId } : { category: selectedCategory });
-    } else {
-      setSearchParams({});
-    }
+    const categoryId = CATEGORY_TO_ID[selectedCategory];
+    setSearchParams(categoryId ? { categoryId: String(categoryId) } : {});
   };
 
   const currentBanner = CATEGORY_BANNERS[selectedCategory] || CATEGORY_BANNERS.ALL;
 
   return (
     <div className="w-full flex flex-col bg-[#F8FAFC]">
-      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50">{dataError}</p>}
+      {dataError && <div role="alert" className="p-4 text-red-700 bg-red-50 flex items-center justify-between gap-3">
+        <p>{dataError}</p><button type="button" onClick={() => setReloadVersion(value => value + 1)}
+          className="rounded-lg border border-red-200 px-3 py-2 font-bold text-xs focus-visible:ring-2 focus-visible:ring-secondary">Thử lại</button>
+      </div>}
 
       {/* 1. TOP PANORAMIC CATEGORY HERO BANNER */}
       <section className="relative w-full overflow-hidden bg-[#131B2E] text-white">
@@ -520,24 +272,7 @@ const ProductsPage = () => {
             {CATEGORY_TABS.map((tab) => (
               <button
                 key={tab.value}
-                onClick={() => {
-                  setSelectedCategory(tab.value);
-                  setCurrentPage(1);
-                  // Reset các bộ lọc con đặc thù khi chuyển danh mục chính
-                  setSelectedBalance('ALL');
-                  setSelectedWeight('ALL');
-                  setSelectedShoeSize('ALL');
-                  setSelectedApparelSize('ALL');
-                  setSelectedGender('ALL');
-                  setSelectedBagType('ALL');
-                  setSelectedAccessoryType('ALL');
-                  if (tab.value === 'ALL') {
-                    setSearchParams({});
-                  } else {
-                    const catId = CATEGORY_TO_ID[tab.value];
-                    setSearchParams(catId ? { categoryId: catId } : { category: tab.value });
-                  }
-                }}
+                onClick={() => setFilter({ categoryId: CATEGORY_TO_ID[tab.value] || null })}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                   selectedCategory === tab.value
                     ? 'bg-secondary text-white shadow-sm'
@@ -698,8 +433,8 @@ const ProductsPage = () => {
             {selectedCategory === 'SHOES' && (
               <div className="flex flex-col gap-2 pt-2 border-t border-[#E2E8F0]">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Size Giày (EU)</span>
-                  <span className="text-[11px] text-secondary font-bold">Chuẩn form BWF</span>
+                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Kích cỡ giày</span>
+                  <span className="text-[11px] text-secondary font-bold">Xem kích cỡ từng mẫu</span>
                 </div>
                 <div className="grid grid-cols-5 gap-1.5 text-xs">
                   {SHOE_SIZES.map((sz) => (
@@ -834,7 +569,7 @@ const ProductsPage = () => {
                     {CATEGORY_TABS.find(t => t.value === selectedCategory)?.label || 'Tất cả sản phẩm'}
                   </h2>
                   <span className="text-xs text-slate-500">
-                    Hiển thị <strong className="text-slate-900">{totalElements === 0 ? 0 : startIndex + 1} - {Math.min(endIndex, totalElements)}</strong> trong tổng số <strong className="text-slate-900">{totalElements}</strong> mẫu trang bị cao cấp chuẩn BWF
+                    Hiển thị <strong className="text-slate-900">{rangeStart} - {rangeEnd}</strong> trong tổng số <strong className="text-slate-900">{totalElements}</strong> sản phẩm
                   </span>
                 </div>
 
@@ -844,10 +579,7 @@ const ProductsPage = () => {
                     <span className="text-slate-500 font-medium">Sắp xếp:</span>
                     <select
                       value={sortBy}
-                      onChange={(e) => {
-                        setSortBy(e.target.value);
-                        setCurrentPage(1);
-                      }}
+                      onChange={(event) => setSortBy(event.target.value)}
                       className="bg-transparent font-bold text-slate-900 outline-none cursor-pointer"
                     >
                       <option value="newest">Mới nhất</option>
@@ -883,72 +615,15 @@ const ProductsPage = () => {
               </div>
 
               {/* Active Filter Chips */}
-              {(selectedBrand !== 'ALL' || selectedBalance !== 'ALL' || selectedWeight !== 'ALL' || selectedShoeSize !== 'ALL' || selectedApparelSize !== 'ALL' || selectedPriceRange !== 'ALL') && (
-                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
+              {activeFilters.length > 0 && <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
                   <span className="text-slate-500 font-bold uppercase text-[11px]">Đang lọc:</span>
-
-                  {selectedBrand !== 'ALL' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
-                      Hãng: {selectedBrand}
-                      <button onClick={() => { setSelectedBrand('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-
-                  {selectedBalance !== 'ALL' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
-                      Điểm cân bằng: {selectedBalance}
-                      <button onClick={() => { setSelectedBalance('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-
-                  {selectedWeight !== 'ALL' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
-                      Trọng lượng: {selectedWeight}
-                      <button onClick={() => { setSelectedWeight('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-
-                  {selectedShoeSize !== 'ALL' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
-                      Size Giày: {selectedShoeSize}
-                      <button onClick={() => { setSelectedShoeSize('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-
-                  {selectedApparelSize !== 'ALL' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
-                      Size Áo/Quần: {selectedApparelSize}
-                      <button onClick={() => { setSelectedApparelSize('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-
-                  {selectedPriceRange !== 'ALL' && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
-                      Giá: {selectedPriceRange}
-                      <button onClick={() => { setSelectedPriceRange('ALL'); setCurrentPage(1); }} className="hover:text-secondary">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-
-                  <button
-                    onClick={handleResetFilters}
-                    className="text-secondary hover:underline font-bold text-xs ml-1"
-                  >
-                    Xóa tất cả lọc
-                  </button>
-                </div>
-              )}
+                  {activeFilters.map(filter => <span key={filter.key} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#ECEEF0] text-slate-900 font-medium">
+                    {filter.label}: {filter.value}
+                    <button type="button" aria-label={`Bỏ lọc ${filter.label}`} onClick={() => setFilter(filter.patch)} className="hover:text-secondary focus-visible:ring-2 focus-visible:ring-secondary rounded">
+                      <X className="w-3 h-3" aria-hidden="true" />
+                    </button>
+                  </span>)}
+                </div>}
             </div>
 
             {/* Product Grid / List View / Skeleton Loading */}
@@ -1006,7 +681,7 @@ const ProductsPage = () => {
                       <div className="flex items-center justify-between text-xs text-slate-500">
                         <span className="font-bold text-slate-900 uppercase">{product.brand}</span>
                         <span className="bg-[#ECEEF0] text-slate-700 px-2 py-0.5 rounded font-mono text-[11px]">
-                          {product.weightGrip || 'Chưa có thông số'}
+                          {productSpecSummary(product)}
                         </span>
                       </div>
                       <Link to={`/products/${product.id}`}>
@@ -1038,7 +713,7 @@ const ProductsPage = () => {
             {totalElements > 0 && (
               <div className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
                 <span className="text-xs sm:text-sm text-slate-500">
-                  Hiển thị <strong className="text-slate-900">{startIndex + 1} - {Math.min(endIndex, totalElements)}</strong> trong tổng số <strong className="text-slate-900">{totalElements}</strong> sản phẩm
+                  Hiển thị <strong className="text-slate-900">{rangeStart} - {rangeEnd}</strong> trong tổng số <strong className="text-slate-900">{totalElements}</strong> sản phẩm
                 </span>
 
                 <div className="flex items-center gap-1.5">

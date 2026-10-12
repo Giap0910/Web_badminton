@@ -1,3 +1,4 @@
+import AdministrativeAddressFields from '../components/AdministrativeAddressFields';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
@@ -547,8 +548,9 @@ const CheckoutPage = () => {
   const [shippingPhone, setShippingPhone] = useState(user?.phone || '');
   const [email, setEmail] = useState(user?.email || '');
   const [province, setProvince] = useState('');
-  const [district, setDistrict] = useState('');
   const [ward, setWard] = useState('');
+  const [provinceCode, setProvinceCode] = useState(''), [wardCode, setWardCode] = useState('');
+  const chooseAddress = value => { setProvinceCode(value.provinceCode); setWardCode(value.wardCode); setProvince(value.province); setWard(value.ward); };
   const [addressDetail, setAddressDetail] = useState(user?.address || '');
   const [note, setNote] = useState('');
   const [saveInfo, setSaveInfo] = useState(true);
@@ -584,9 +586,10 @@ const CheckoutPage = () => {
           if (defaultAddr.fullName) setCustomerName(defaultAddr.fullName);
           if (defaultAddr.phone) setShippingPhone(defaultAddr.phone);
           if (defaultAddr.province) setProvince(defaultAddr.province);
-          if (defaultAddr.district) setDistrict(defaultAddr.district);
           if (defaultAddr.ward) setWard(defaultAddr.ward);
-          if (defaultAddr.address) setAddressDetail(defaultAddr.address);
+          setProvinceCode(defaultAddr.provinceCode || ''); setWardCode(defaultAddr.wardCode || '');
+          if (defaultAddr.address) setAddressDetail(defaultAddr.addressDetail || defaultAddr.address);
+          if (!defaultAddr.addressDetail) { setProvince(''); setWard(''); }
         }
       } catch (err) {
         // quiet fallback
@@ -620,7 +623,6 @@ const CheckoutPage = () => {
     customerName,
     addressDetail,
     ward,
-    district,
     province,
     shippingPhone,
     paymentMethod,
@@ -673,7 +675,7 @@ const CheckoutPage = () => {
       setErrorMsg('Vui lòng áp dụng lại mã giảm giá hoặc xóa mã trước khi đặt hàng.');
       return;
     }
-    if (!customerName || !shippingPhone || !addressDetail) {
+    if (!customerName || !shippingPhone || !addressDetail || !provinceCode || !wardCode) {
       setErrorMsg('Vui lòng điền đầy đủ Họ tên, Số điện thoại và Địa chỉ giao hàng.');
       return;
     }
@@ -1406,60 +1408,8 @@ const CheckoutPage = () => {
                   </div>
                 </div>
 
-                {/* Region dropdowns (3-cols grid) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Tỉnh / Thành phố <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={province}
-                      onChange={(e) => setProvince(e.target.value)}
-                      className="w-full bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <option value="Hà Nội">Hà Nội</option>
-                      <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                      <option value="Đà Nẵng">Đà Nẵng</option>
-                      <option value="Hải Phòng">Hải Phòng</option>
-                      <option value="Cần Thơ">Cần Thơ</option>
-                      <option value="Bắc Ninh">Bắc Ninh</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Quận / Huyện <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={district}
-                      onChange={(e) => setDistrict(e.target.value)}
-                      className="w-full bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <option value="Quận Đống Đa">Quận Đống Đa</option>
-                      <option value="Quận Ba Đình">Quận Ba Đình</option>
-                      <option value="Quận Cầu Giấy">Quận Cầu Giấy</option>
-                      <option value="Quận Hoàn Kiếm">Quận Hoàn Kiếm</option>
-                      <option value="Quận Thanh Xuân">Quận Thanh Xuân</option>
-                      <option value="Quận 1">Quận 1</option>
-                      <option value="Quận 3">Quận 3</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Phường / Xã <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={ward}
-                      onChange={(e) => setWard(e.target.value)}
-                      className="w-full bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <option value="Phường Khâm Thiên">Phường Khâm Thiên</option>
-                      <option value="Phường Văn Chương">Phường Văn Chương</option>
-                      <option value="Phường Ô Chợ Dừa">Phường Ô Chợ Dừa</option>
-                      <option value="Phường Hàng Bột">Phường Hàng Bột</option>
-                      <option value="Phường Bến Nghé">Phường Bến Nghé</option>
-                    </select>
-                  </div>
-                </div>
+                <AdministrativeAddressFields {...{ provinceCode, wardCode }} onChange={chooseAddress} />
+                {selectedAddressId && !savedAddresses.find(a => a.id === selectedAddressId)?.addressDetail && <p className="text-xs text-amber-700">Địa chỉ cũ vẫn được giữ. Hãy chọn tỉnh và phường/xã hiện hành, kiểm tra địa chỉ chi tiết trước khi đặt đơn mới.</p>}
 
                 {/* Detailed Address */}
                 <div>

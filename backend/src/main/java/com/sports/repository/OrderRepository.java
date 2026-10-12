@@ -44,9 +44,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByStatus(OrderStatus status);
 
-    @Query("SELECT o FROM Order o WHERE o.status IN (com.sports.entity.OrderStatus.PAID, "
-            + "com.sports.entity.OrderStatus.COMPLETED) OR (o.status = com.sports.entity.OrderStatus.SHIPPING "
-            + "AND o.paymentMethod = 'PAYOS_VIETQR')")
+    @Query("SELECT o FROM Order o WHERE (o.paymentMethod = 'PAYOS_VIETQR' AND o.status IN "
+            + "(com.sports.entity.OrderStatus.PAID, com.sports.entity.OrderStatus.SHIPPING, com.sports.entity.OrderStatus.COMPLETED) "
+            + "AND EXISTS (SELECT p.id FROM PaymentAttempt p WHERE p.order = o AND p.status = com.sports.entity.PaymentAttempt$Status.PAID "
+            + "AND p.paidAt IS NOT NULL AND p.amount = o.totalAmount)) "
+            + "OR (o.paymentMethod = 'COD' AND o.cashCollectedAt IS NOT NULL)")
     List<Order> findRecognizedPaymentOrders();
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT o FROM Order o WHERE o.id = :id")

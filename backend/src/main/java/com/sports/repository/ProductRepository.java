@@ -21,6 +21,12 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     List<Product> findByCategoryId(Long categoryId);
 
+    @Query("SELECT COUNT(i) FROM OrderItem i WHERE i.product.id = :id")
+    long countOrderReferences(@Param("id") Long id);
+
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.product.id = :id")
+    long countReviewReferences(@Param("id") Long id);
+
     List<Product> findByBrandIgnoreCase(String brand);
 
     @Query("SELECT p FROM Product p WHERE p.stock > 0 ORDER BY p.id DESC")

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AdminSearch from './AdminSearch';
 import {
   LayoutDashboard,
   Package,
@@ -265,14 +266,7 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
             </button>
 
             {/* Search Input */}
-            <div className="flex items-center w-44 sm:w-72 lg:w-96 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200/60 focus-within:border-blue-500 focus-within:bg-white transition-all min-w-0">
-              <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm đơn hàng, sản phẩm, khách hàng (Ctrl+K)..."
-                className="w-full bg-transparent border-none outline-none text-xs text-slate-800 placeholder:text-slate-400"
-              />
-            </div>
+            <AdminSearch />
 
             {/* Live System Indicator */}
             <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60">
@@ -314,7 +308,7 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
         </header>
 
         {/* MAIN BODY CONTENT */}
-        <main className="pt-16 p-4 md:p-8 flex-1 bg-[#F8FAFC] min-w-0 w-full max-w-full">
+        <main className="pt-20 md:pt-24 px-4 md:px-8 pb-4 md:pb-8 flex-1 bg-[#F8FAFC] min-w-0 w-full max-w-full">
           {children}
         </main>
       </div>

@@ -13,6 +13,25 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleUploadSize(Exception ex, jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(Map.of("status", 413, "message", request.getRequestURI().endsWith("/profile/avatar")
+                          ? "Ảnh đại diện tối đa 5MB" : "File vượt giới hạn tải lên; mẫu sản phẩm tối đa 1 MB"));
+    }
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingParameter(Exception ex) {
+        return handleBadRequest(new BadRequestException("Thiếu tham số bắt buộc của yêu cầu"));
+    }
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleQueryType(Exception ex) {
+        return handleBadRequest(new BadRequestException("Tham số ngày, số hoặc trạng thái không hợp lệ"));
+    }
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleStatus(org.springframework.web.server.ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode()).body(Map.of("status", ex.getStatusCode().value(),
+                "message", ex.getReason() == null ? "Không thể thực hiện thao tác" : ex.getReason()));
+    }
     @ExceptionHandler({org.springframework.web.servlet.NoHandlerFoundException.class,
             org.springframework.web.servlet.resource.NoResourceFoundException.class})
     public ResponseEntity<Map<String, Object>> handleMissingEndpoint(Exception ex,

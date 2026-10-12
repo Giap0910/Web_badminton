@@ -16,6 +16,8 @@ public class ProductDto {
     private String name;
     @NotBlank @Size(max = 50)
     private String brand;
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private Boolean catalogVisible;
     @NotNull @DecimalMin(value = "0", inclusive = false)
     @DecimalMax("9999999999") @Digits(integer = 10, fraction = 0)
     private BigDecimal price;
@@ -30,28 +32,28 @@ public class ProductDto {
     private String description;
     @Size(max = 50)
     private String sku;
-    private String weightGrip;
-    private String weightClass;
-    private String stiffness;
-    private String balancePoint;
+    @Size(max = 50) private String weightGrip;
+    @Size(max = 50) private String weightClass;
+    @Size(max = 50) private String stiffness;
+    @Size(max = 50) private String balancePoint;
     @Size(max = 50)
     private String maxTension;
-    private String playStyle;
-    private String frameMaterial;
-    private String shaftMaterial;
+    @Size(max = 100) private String playStyle;
+    @Size(max = 150) private String frameMaterial;
+    @Size(max = 150) private String shaftMaterial;
     private String availableSizes;
-    private String soleType;
-    private String cushionTechnology;
-    private String upperMaterial;
-    private String gender;
-    private String fabricType;
-    private String bagType;
-    private String capacity;
-    private Integer racketCapacity;
-    private String waterproof;
-    private String accessoryType;
-    private String quantityPerPack;
-    private String origin;
+    @Size(max = 100) private String soleType;
+    @Size(max = 150) private String cushionTechnology;
+    @Size(max = 150) private String upperMaterial;
+    @Size(max = 30) private String gender;
+    @Size(max = 150) private String fabricType;
+    @Size(max = 50) private String bagType;
+    @Size(max = 50) private String capacity;
+    @Min(0) private Integer racketCapacity;
+    @Size(max = 50) private String waterproof;
+    @Size(max = 50) private String accessoryType;
+    @Size(max = 50) private String quantityPerPack;
+    @Size(max = 100) private String origin;
     @Positive
     private Long categoryId;
     private String categoryName;

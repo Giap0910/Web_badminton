@@ -175,6 +175,9 @@ public class OrderService {
     }
 
     private void validateProductForOrder(Product product, int quantity) {
+        if (!Boolean.TRUE.equals(product.getCatalogVisible())) {
+            throw new BadRequestException("Sản phẩm '" + product.getName() + "' đã được ẩn khỏi cửa hàng");
+        }
         if (product.getStock() < quantity) {
             throw new InsufficientStockException("Sản phẩm '" + product.getName() + "' không đủ tồn kho");
         }
@@ -375,6 +378,9 @@ public class OrderService {
             if ("COD".equals(order.getPaymentMethod())) settleReservedStock(order, false);
             order.setStatus(newStatus);
         } else if (newStatus == OrderStatus.COMPLETED && order.getStatus() == OrderStatus.SHIPPING) {
+            if ("COD".equals(order.getPaymentMethod()) && order.getCashCollectedAt() == null) {
+                throw new BadRequestException("Cần xác nhận đã thu tiền mặt/COD trước khi hoàn tất đơn");
+            }
             order.setStatus(newStatus);
         } else {
             throw new BadRequestException("Không được chuyển trạng thái đơn hàng theo luồng này");
@@ -439,6 +445,9 @@ public class OrderService {
                 .expiresAt(order.getExpiresAt())
                 .timeRemainingSeconds(secondsRemaining)
                 .createdAt(order.getCreatedAt())
+                .cashCollected(order.getCashCollectedAt() != null)
+                .cashCollectedAt(order.getCashCollectedAt())
+                .cashCollectedBy(order.getCashCollectedBy())
                 .items(itemResponses)
                 .build();
     }

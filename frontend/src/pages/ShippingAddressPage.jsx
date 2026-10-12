@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import AdministrativeAddressFields from '../components/AdministrativeAddressFields';
 import UserLayout from '../components/UserLayout';
 import { shippingAddressApi } from '../api/shippingAddressApi';
 import {
@@ -30,9 +31,10 @@ const ShippingAddressPage = () => {
   // Form Fields
   const [formName, setFormName] = useState('');
   const [formPhone, setFormPhone] = useState('');
-  const [formCity, setFormCity] = useState('TP. Hồ Chí Minh');
-  const [formDistrict, setFormDistrict] = useState('Quận Bình Thạnh');
-  const [formWard, setFormWard] = useState('Phường 22');
+  const [formCity, setFormCity] = useState('');
+  const [formWard, setFormWard] = useState('');
+  const [provinceCode, setProvinceCode] = useState(''), [wardCode, setWardCode] = useState('');
+  const chooseAddress = value => { setProvinceCode(value.provinceCode); setWardCode(value.wardCode); setFormCity(value.province); setFormWard(value.ward); };
   const [formDetail, setFormDetail] = useState('');
   const [formNote, setFormNote] = useState('');
   const [formIsDefault, setFormIsDefault] = useState(false);
@@ -63,9 +65,7 @@ const ShippingAddressPage = () => {
     setEditingId(null);
     setFormName('');
     setFormPhone('');
-    setFormCity('TP. Hồ Chí Minh');
-    setFormDistrict('Quận Bình Thạnh');
-    setFormWard('Phường 22');
+    setFormCity(''); setFormWard(''); setProvinceCode(''); setWardCode('');
     setFormDetail('');
     setFormNote('');
     setFormTag('Nhà riêng');
@@ -77,7 +77,9 @@ const ShippingAddressPage = () => {
     setEditingId(addr.id);
     setFormName(addr.fullName || '');
     setFormPhone(addr.phone || '');
-    setFormDetail(addr.address || '');
+    setFormDetail(addr.addressDetail || addr.address || '');
+    setFormCity(addr.province || ''); setFormWard(addr.ward || '');
+    setProvinceCode(addr.provinceCode || ''); setWardCode(addr.wardCode || '');
     setFormNote(addr.note || '');
     setFormIsDefault(addr.isDefault || false);
     setFormTag(addr.tag || 'Nhà riêng');
@@ -111,12 +113,12 @@ const ShippingAddressPage = () => {
     e.preventDefault();
     setSaving(true);
 
-    const fullAddrString = `${formDetail}, ${formWard}, ${formDistrict}, ${formCity}`;
+    const fullAddrString = [formDetail, formWard, formCity].filter(Boolean).join(', ');
     const payload = {
       fullName: formName,
       phone: formPhone,
       address: fullAddrString,
-      province: formCity,
+      province: formCity, provinceCode, wardCode, ward: formWard, addressDetail: formDetail,
       isDefault: formIsDefault
     };
 
@@ -305,58 +307,8 @@ const ShippingAddressPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-900">
-                    Tỉnh / Thành phố <span className="text-secondary">*</span>
-                  </label>
-                  <select
-                    value={formCity}
-                    onChange={(e) => setFormCity(e.target.value)}
-                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
-                  >
-                    <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                    <option value="TP. Hà Nội">TP. Hà Nội</option>
-                    <option value="TP. Đà Nẵng">TP. Đà Nẵng</option>
-                    <option value="Bình Dương">Bình Dương</option>
-                    <option value="Cần Thơ">Cần Thơ</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-900">
-                    Quận / Huyện <span className="text-secondary">*</span>
-                  </label>
-                  <select
-                    value={formDistrict}
-                    onChange={(e) => setFormDistrict(e.target.value)}
-                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
-                  >
-                    <option value="Quận Bình Thạnh">Quận Bình Thạnh</option>
-                    <option value="Quận 1">Quận 1</option>
-                    <option value="Quận 3">Quận 3</option>
-                    <option value="Quận 10">Quận 10</option>
-                    <option value="Quận Hai Bà Trưng">Quận Hai Bà Trưng</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-900">
-                    Phường / Xã <span className="text-secondary">*</span>
-                  </label>
-                  <select
-                    value={formWard}
-                    onChange={(e) => setFormWard(e.target.value)}
-                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
-                  >
-                    <option value="Phường 22">Phường 22</option>
-                    <option value="Phường 19">Phường 19</option>
-                    <option value="Phường 25">Phường 25</option>
-                    <option value="Phường 12">Phường 12</option>
-                    <option value="Phường Nguyễn Du">Phường Nguyễn Du</option>
-                  </select>
-                </div>
-              </div>
+              <AdministrativeAddressFields {...{ provinceCode, wardCode }} onChange={chooseAddress} />
+              {editingId && !addresses.find(a => a.id === editingId)?.addressDetail && <p className="text-xs text-amber-700">Địa chỉ cũ chưa tách tỉnh và phường/xã. Hãy chọn lại và kiểm tra ô địa chỉ chi tiết trước khi lưu.</p>}
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-900">

@@ -30,6 +30,12 @@ public class ShippingAddressDto {
 
     private String province;
 
+    private String provinceCode;
+    private String wardCode;
+    private String ward;
+    private String addressDetail;
+
+
     private Boolean isDefault;
 
     private LocalDateTime createdAt;

@@ -35,6 +35,16 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUserProfile(userDetails.getId(), request));
     }
 
+    @PostMapping(value = "/profile/avatar", consumes = "multipart/form-data")
+    public UserProfileResponse uploadAvatar(@AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        return userService.uploadAvatar(user.getId(), file);
+    }
+    @DeleteMapping("/profile/avatar")
+    public UserProfileResponse deleteAvatar(@AuthenticationPrincipal CustomUserDetails user) {
+        return userService.deleteAvatar(user.getId());
+    }
+
     @PutMapping("/change-password")
     public ResponseEntity<?> changePassword(
             @AuthenticationPrincipal CustomUserDetails userDetails,

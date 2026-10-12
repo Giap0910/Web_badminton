@@ -24,6 +24,10 @@ public class Product {
     @Column(nullable = false, length = 50)
     private String brand; // Yonex, Victor, Lining, Mizuno, etc.
 
+    @Column(name = "catalog_visible", nullable = false)
+    @Builder.Default
+    private Boolean catalogVisible = true;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getOrderStatusLabel, getNextOrderStatuses, isOrderPaid } from '../utils/formatters';
 import AdminLayout from '../components/AdminLayout';
 import { adminApi } from '../api/adminApi';
 import { orderApi } from '../api/orderApi';
+import { normalizeSearch } from '../utils/adminCustomers.jsx';
 import OrderItemOptions, { formatOrderItemOptionsText } from '../components/OrderItemOptions';
 import {
   ShoppingBag,
@@ -30,15 +31,19 @@ const AdminOrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('search') || '');
   const [copiedCode, setCopiedCode] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const actionLock = useRef(false), requestId = useRef(0);
 
   const fetchOrders = async () => {
+    const request = ++requestId.current;
     try {
       if (adminApi?.getOrders) {
         const res = await adminApi.getOrders();
+        if (request !== requestId.current) return;
         const list = Array.isArray(res) ? res : res?.data || [];
         if (Array.isArray(list)) {
           const mapped = list.map((item, idx) => {
@@ -65,22 +70,28 @@ const AdminOrdersPage = () => {
               paymentMethod: item.paymentMethod?.includes('PAYOS') ? 'VietQR Pro' : 'COD',
               paymentRef: item.payosOrderCode ? `PAYOS-${item.payosOrderCode}` : `REF-${item.id || 999}`,
               isPaid: isOrderPaid(item),
+              cashCollected: item.cashCollected,
+              cashCollectedAt: item.cashCollectedAt,
               status: item.status || 'PENDING',
               statusLabel: statusLabel
             };
           });
           setOrders(mapped);
+          setDataError('');
+          setSelectedOrder(previous => previous ? mapped.find(order => order.id === previous.id) || null : null);
         }
       }
     } catch (e) {
-      setDataError(e.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
+      if (request === requestId.current) setDataError(e.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     } finally {
-      setLoading(false);
+      if (request === requestId.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchOrders();
+    const timer = setInterval(() => { if (!actionLock.current && document.visibilityState === 'visible') fetchOrders(); }, 15000);
+    return () => { clearInterval(timer); requestId.current++; };
   }, []);
 
   const formatPrice = (p) =>
@@ -93,6 +104,8 @@ const AdminOrdersPage = () => {
   };
 
   const handleUpdateStatus = async (orderId, newStatus) => {
+    if (actionLock.current) return;
+    actionLock.current = true; setBusy(true);
     let label = 'Đang xử lý';
     if (newStatus === 'STRINGING') label = 'Đang vào cước';
     if (newStatus === 'SHIPPING') label = 'Đang giao hỏa tốc';
@@ -109,13 +122,18 @@ const AdminOrdersPage = () => {
       setToastMessage(`Đã cập nhật trạng thái đơn sang: "${label}"`);
     } catch (err) {
       setToastMessage(err.response?.data?.message || 'Không thể cập nhật trạng thái đơn hàng.');
-    }
+    } finally { actionLock.current = false; setBusy(false); }
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  const handleReconcileQR = () => {
-    setToastMessage('Chức năng đối soát PayOS chưa được tích hợp. Chưa có kết quả xác minh.');
-    setTimeout(() => setToastMessage(''), 4000);
+  const handleReconcileQR = () => { window.location.assign('/admin/payments'); };
+
+  const confirmCash = async order => {
+    if (actionLock.current || !window.confirm(`Xác nhận đã nhận đủ ${formatPrice(order.totalAmount)} tiền mặt/COD cho ${order.code}? Chỉ xác nhận khi thực tế đã thu tiền.`)) return;
+    actionLock.current = true; setBusy(true);
+    try { await adminApi.confirmCash(order.id, order.totalAmount); await fetchOrders(); setToastMessage('Đã ghi nhận thu tiền mặt/COD.'); }
+    catch (error) { setToastMessage(error.response?.data?.message || 'Không xác nhận được thu tiền.'); }
+    finally { actionLock.current = false; setBusy(false); }
   };
 
   const tabs = [
@@ -130,10 +148,7 @@ const AdminOrdersPage = () => {
   const filteredOrders = orders.filter((o) => {
     const matchesTab = activeTab === 'ALL' ? true : o.status === activeTab;
     const matchesSearch =
-      o.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.customerPhone.includes(searchQuery) ||
-      o.productName.toLowerCase().includes(searchQuery.toLowerCase());
+      normalizeSearch([o.code, o.customerName, o.customerPhone, ...o.items.map(item => item.productName)].join(' ')).includes(normalizeSearch(searchQuery));
 
     return matchesTab && matchesSearch;
   });
@@ -306,8 +321,10 @@ const AdminOrdersPage = () => {
                           <span className="text-[10px] text-slate-400 font-mono mt-0.5">Ref: {order.paymentRef}</span>
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 mt-1">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            {order.isPaid ? 'Đã ghi nhận thanh toán' : 'Chưa thu tiền'}
+                            {order.isPaid ? 'Đã ghi nhận thanh toán' : 'Chưa xác nhận thu tiền'}
                           </span>
+                          {order.rawPaymentMethod === 'COD' && !order.isPaid && ['SHIPPING', 'COMPLETED'].includes(order.status) &&
+                            <button disabled={busy} onClick={() => confirmCash(order)} className="mt-2 text-xs underline text-blue-600">Xác nhận đã thu tiền</button>}
                         </div>
                       </td>
 
@@ -315,6 +332,7 @@ const AdminOrdersPage = () => {
                       <td className="py-4 px-4 align-top">
                         <select
                           value={order.status}
+                          disabled={busy}
                           onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
                           className="text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer outline-none transition-colors"
                         >

@@ -37,6 +37,12 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String address;
 
+    @Column(name = "avatar_key", length = 40)
+    private String avatarKey;
+
+    @Column(name = "dob")
+    private java.time.LocalDate dob;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

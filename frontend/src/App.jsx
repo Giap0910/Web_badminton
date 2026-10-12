@@ -5,6 +5,7 @@ import { CartProvider } from './context/CartContext';
 import { CompareProvider } from './context/CompareContext';
 
 import Navbar from './components/Navbar';
+import AdminPageBoundary from './components/AdminPageBoundary';
 import Footer from './components/Footer';
 import RacketComparisonBar from './components/RacketComparisonBar';
 import AiChatbotWidget from './components/AiChatbotWidget';
@@ -54,11 +55,12 @@ const PageFallbackLoader = () => (
 // Protected Route Guard for Admin
 const AdminRoute = ({ children }) => {
   const { user, isAdmin, loading } = useAuth();
+  const location = useLocation();
   if (loading) return null;
   if (!user || !isAdmin) {
     return <Navigate to="/login" replace />;
   }
-  return children;
+  return <AdminPageBoundary key={location.pathname + location.search}>{children}</AdminPageBoundary>;
 };
 
 // Protected Route Guard for Authenticated Users

@@ -30,6 +30,9 @@ public class OrderResponse {
     private LocalDateTime expiresAt;
     private Long timeRemainingSeconds;
     private LocalDateTime createdAt;
+    private Boolean cashCollected;
+    private LocalDateTime cashCollectedAt;
+    private Long cashCollectedBy;
     private List<OrderItemResponse> items;
 
     // VietQR / PayOS Payment Link details

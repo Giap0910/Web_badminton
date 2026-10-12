@@ -20,4 +20,6 @@ public class DashboardStatsResponse {
     private Long paidOrders;
     private List<OrderResponse> recentOrders;
     private Map<String, BigDecimal> dailyRevenue;
+    private Long unverifiedPaidOrders;
+    private String revenueBasis;
 }

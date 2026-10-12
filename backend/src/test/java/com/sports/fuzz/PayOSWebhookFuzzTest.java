@@ -255,6 +255,7 @@ public class PayOSWebhookFuzzTest {
 
         fixture.service.updateOrderStatus(99L, OrderStatus.SHIPPING);
         fixture.service.updateOrderStatus(99L, OrderStatus.SHIPPING);
+        fixture.order.setCashCollectedAt(java.time.LocalDateTime.now());
         fixture.service.updateOrderStatus(99L, OrderStatus.COMPLETED);
 
         assertEquals(OrderStatus.COMPLETED, fixture.order.getStatus());

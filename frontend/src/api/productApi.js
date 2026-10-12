@@ -1,8 +1,8 @@
 import axiosClient from './axiosClient';
 
 export const productApi = {
-  getProducts: (params) => axiosClient.get('/products', { params }),
-  getProductById: (id) => axiosClient.get(`/products/${id}`),
+  getProducts: (params, options = {}) => axiosClient.get('/products', { ...options, params }),
+  getProductById: (id, params) => axiosClient.get(`/products/${id}`, { params }),
   getProductImages: (id) => axiosClient.get(`/products/${id}/images`),
   getCategories: () => axiosClient.get('/categories'),
   compareRackets: (ids) => axiosClient.get(`/comparison?ids=${ids.join(',')}`),

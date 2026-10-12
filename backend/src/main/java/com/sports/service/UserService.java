@@ -18,12 +18,20 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.sports.repository.OrderRepository orderRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private AvatarStorageService avatarStorage;
 
+    @Transactional(readOnly = true)
     public UserProfileResponse getUserProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
 
-        return toProfileResponse(user);
+        var orders = orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        var paidIds = orderRepository.findRecognizedPaymentOrders().stream()
+                .filter(order -> order.getUser().getId().equals(userId)).map(com.sports.entity.Order::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        return customerProfile(user, orders, paidIds);
     }
 
     @Transactional
@@ -37,11 +45,13 @@ public class UserService {
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone().trim());
         }
+        if (request.isDobProvided()) user.setDob(request.getDob());
         if (request.getAddress() != null) {
             user.setAddress(request.getAddress().trim());
         }
 
-        return toProfileResponse(userRepository.save(user));
+        userRepository.save(user);
+        return getUserProfile(userId);
     }
 
     @Transactional
@@ -59,9 +69,28 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public java.util.List<UserProfileResponse> getAllUsers() {
+        var orders = orderRepository.findAll();
+        var paidIds = orderRepository.findRecognizedPaymentOrders().stream().map(com.sports.entity.Order::getId)
+                .collect(java.util.stream.Collectors.toSet());
         return userRepository.findAll().stream()
-                .map(this::toProfileResponse)
+                .map(user -> customerProfile(user, orders, paidIds))
                 .collect(java.util.stream.Collectors.toList());
+    }
+
+    private UserProfileResponse customerProfile(User user, java.util.List<com.sports.entity.Order> orders, java.util.Set<Long> paidIds) {
+        var profile = toProfileResponse(user);
+        var customerOrders = orders.stream().filter(order -> order.getUser().getId().equals(user.getId())).toList();
+        profile.setTotalOrders(customerOrders.size());
+        profile.setTotalSpent(customerOrders.stream().filter(order -> paidIds.contains(order.getId()))
+                .map(com.sports.entity.Order::getTotalAmount).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
+        var netPaid = customerOrders.stream().filter(order -> paidIds.contains(order.getId()))
+                .filter(order -> order.getStatus() != com.sports.entity.OrderStatus.CANCELLED)
+                .map(order -> order.getTotalAmount().subtract(order.getShippingFee() == null
+                        ? java.math.BigDecimal.ZERO : order.getShippingFee()).max(java.math.BigDecimal.ZERO))
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        profile.setPaidProductAmount(netPaid);
+        profile.setLoyaltyPoints(netPaid.divideToIntegralValue(new java.math.BigDecimal("10000")).longValue());
+        return profile;
     }
 
     @Transactional
@@ -72,6 +101,23 @@ public class UserService {
         return toProfileResponse(userRepository.save(user));
     }
 
+    @Transactional
+    public UserProfileResponse uploadAvatar(Long userId, org.springframework.web.multipart.MultipartFile file) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        user.setAvatarKey(avatarStorage.store(file));
+        userRepository.save(user);
+        return getUserProfile(userId);
+    }
+    @Transactional
+    public UserProfileResponse deleteAvatar(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        user.setAvatarKey(null);
+        userRepository.save(user);
+        return getUserProfile(userId);
+    }
+
     private UserProfileResponse toProfileResponse(User user) {
         return UserProfileResponse.builder()
                 .id(user.getId())
@@ -80,6 +126,8 @@ public class UserService {
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .address(user.getAddress())
+                .dob(user.getDob())
+                .avatarUrl(user.getAvatarKey() == null ? null : "/api/media/avatars/" + user.getAvatarKey())
                 .role(user.getRole().name())
                 .isActive(user.getIsActive() != null ? user.getIsActive() : true)
                 .createdAt(user.getCreatedAt())

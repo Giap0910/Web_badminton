@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AdminLayout from '../components/AdminLayout';
+import AdminPaymentLog from '../components/AdminPaymentLog';
+import { saveAdminFile } from '../components/AdminProductImport';
 import { adminApi } from '../api/adminApi.js';
 import {
   getOrCreateReconciliationKey,
@@ -121,6 +123,10 @@ const AdminPaymentsPage = () => {
 
   useEffect(() => {
     fetchPayments();
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible' && reconcileInFlightRef.current.size === 0) fetchPayments();
+    }, 15000);
+    return () => { clearInterval(timer); activeRequestIdRef.current++; };
   }, []);
 
   const copyToClipboard = (text) => {
@@ -311,17 +317,11 @@ const AdminPaymentsPage = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <AdminPaymentLog />
             <button
               type="button"
-              onClick={handleVerifyWebhook}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all active:scale-95 cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
-              <span>Kiểm tra Webhook Log</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => alert('Xuất sổ đối soát chưa được tích hợp, chưa tạo tệp.')}
+              disabled={!hasLoaded || !!dataError}
+              onClick={() => exportPayments(filteredTransactions)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#131b2e] hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
@@ -673,3 +673,10 @@ const AdminPaymentsPage = () => {
 };
 
 export default AdminPaymentsPage;
+
+function exportPayments(rows) {
+  const headers = ['Mã giao dịch', 'Mã đơn', 'Khách hàng', 'Số tiền', 'Trạng thái', 'Phương thức', 'Ngày thanh toán', 'Lý do đối soát'];
+  const cell = value => { let text = String(value ?? ''); if (/^[=+@-]/.test(text.trimStart())) text = "'" + text; return '"' + text.replaceAll('"', '""') + '"'; };
+  const values = [headers, ...rows.map(row => [row.id, row.orderCode, row.customer, row.amount, row.status, row.paymentMethod, row.paidAt, row.reviewReason])];
+  saveAdminFile(new Blob(['\ufeff' + values.map(row => row.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), 'payment-reconciliation.csv');
+}

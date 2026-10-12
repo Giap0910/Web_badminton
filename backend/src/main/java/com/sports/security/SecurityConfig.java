@@ -57,6 +57,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/administrative-units/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/media/avatars/**").permitAll()
                 .requestMatchers("/api/comparison/**").permitAll()
                 .requestMatchers("/api/ai-chat/**").permitAll()
                 .requestMatchers("/api/payment/payos-webhook").permitAll()

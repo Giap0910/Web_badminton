@@ -69,7 +69,7 @@ export const buildOrderPayload = ({
   note,
   checkoutItems,
 }) => {
-  const fullShippingAddress = `${addressDetail || ''}, ${ward || ''}, ${district || ''}, ${province || ''}`;
+  const fullShippingAddress = [addressDetail, ward, district, province].filter(Boolean).join(', ');
   return {
     customerName: customerName || '',
     shippingAddress: fullShippingAddress,

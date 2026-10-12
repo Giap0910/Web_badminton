@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import AdminReportControls from '../components/AdminReportControls';
 import { adminApi } from '../api/adminApi';
 import { getOrderStatusLabel } from '../utils/formatters';
 import {
@@ -27,6 +28,9 @@ const AdminDashboardPage = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [recentOrders, setRecentOrders] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const [range, setRange] = useState({ from: '', to: '' });
+  const [unverified, setUnverified] = useState(0);
+  const requestId = useRef(0);
   const [stats, setStats] = useState({
     totalRevenue: 'Chưa tải',
     totalOrders: 'Chưa tải',
@@ -38,13 +42,16 @@ const AdminDashboardPage = () => {
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p || 0);
 
   const handleRefresh = async () => {
+    const request = ++requestId.current;
     setIsRefreshing(true);
     setDataError('');
     try {
       if (adminApi?.getDashboardStats) {
-        const res = await adminApi.getDashboardStats();
+        const res = await adminApi.getDashboardStats({ from: range.from || undefined, to: range.to || undefined });
+        if (request !== requestId.current) return;
         const data = res?.data ?? res;
         if (data) {
+          setUnverified(data.unverifiedPaidOrders || 0);
           const revVal = data.totalRevenue != null ? Number(data.totalRevenue) : 0;
           const ordVal = data.totalOrders != null ? Number(data.totalOrders) : 0;
           const custVal = data.totalCustomers != null ? Number(data.totalCustomers) : 0;
@@ -96,15 +103,17 @@ const AdminDashboardPage = () => {
         }
       }
     } catch (err) {
-      setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
+      if (request === requestId.current) setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     } finally {
-      setTimeout(() => setIsRefreshing(false), 300);
+      if (request === requestId.current) setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     handleRefresh();
-  }, []);
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') handleRefresh(); }, 15000);
+    return () => { clearInterval(timer); requestId.current++; };
+  }, [range.from, range.to]);
 
   return (
     <AdminLayout title="Dashboard" subtitle="Báo cáo tổng quan hoạt động">
@@ -130,16 +139,7 @@ const AdminDashboardPage = () => {
 
           {/* CONTROLS */}
           <div className="flex flex-wrap items-center gap-2.5">
-            <div className="relative group">
-              <select
-                disabled
-                value="all_time"
-                className="bg-slate-100 text-slate-400 text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-200 cursor-not-allowed opacity-75"
-                title="Chưa hỗ trợ lọc thời gian từ API backend"
-              >
-                <option value="all_time">Toàn thời gian (Chưa hỗ trợ lọc)</option>
-              </select>
-            </div>
+            <AdminReportControls range={range} onRangeChange={setRange} />
 
             <button
               type="button"
@@ -150,15 +150,6 @@ const AdminDashboardPage = () => {
               <span>Làm mới</span>
             </button>
 
-            <button
-              type="button"
-              disabled
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-200 text-slate-400 text-xs font-bold cursor-not-allowed shadow-none"
-              title="Tính năng xuất báo cáo chưa hỗ trợ"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Xuất báo cáo (Chưa hỗ trợ)</span>
-            </button>
           </div>
         </div>
 
@@ -181,7 +172,7 @@ const AdminDashboardPage = () => {
               </div>
             </div>
             <div className="mt-4 pt-2 flex items-center gap-2 border-t border-slate-100">
-              <span className="text-[11px] text-slate-500">Theo trạng thái đơn hàng được backend ghi nhận; chưa đối soát thu tiền COD riêng.</span>
+              <span className="text-[11px] text-slate-500">Chỉ ghi nhận tiền PayOS đã xác nhận và tiền mặt/COD đã xác nhận thu. {unverified > 0 && `${unverified} đơn cũ chưa có bằng chứng thu tiền.`}</span>
             </div>
           </div>
 
@@ -208,7 +199,7 @@ const AdminDashboardPage = () => {
             </div>
             <div className="mt-4 pt-2 flex items-center gap-1.5 border-t border-slate-100">
               <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-              <span className="text-[11px] text-slate-600 font-bold">Toàn bộ đơn trong hệ thống</span>
+              <span className="text-[11px] text-slate-600 font-bold">{range.from ? 'Đơn tạo hoặc thu tiền trong kỳ' : 'Toàn bộ đơn trong hệ thống'}</span>
             </div>
           </div>
 
@@ -271,16 +262,16 @@ const AdminDashboardPage = () => {
           <div className="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col gap-5">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-black text-slate-900">Biểu đồ doanh thu 7 ngày qua</h3>
-                <p className="text-xs text-slate-500">Doanh thu ghi nhận theo ngày tạo đơn trong 7 ngày qua.</p>
+                <h3 className="text-base font-black text-slate-900">Doanh thu theo ngày nhận tiền</h3>
+                <p className="text-xs text-slate-500">Theo khoảng báo cáo đã chọn; đơn gồm ngày tạo hoặc ngày thu tiền trong kỳ.</p>
               </div>
             </div>
 
             {/* CHART BARS */}
             {chartData.length > 0 ? (
-              <div className="h-56 flex items-end justify-between gap-3 pt-6 px-2 border-b border-slate-100">
+              <div className="h-56 flex items-end gap-3 pt-6 px-2 border-b border-slate-100 overflow-x-auto">
                 {chartData.map((item, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-2 group relative">
+                  <div key={idx} className="flex-1 min-w-16 flex flex-col items-center gap-2 group relative">
                     {/* Tooltip on hover */}
                     <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] font-bold py-1 px-2 rounded-lg whitespace-nowrap pointer-events-none z-10 shadow-md">
                       {formatPrice(item.revenue)}
@@ -307,10 +298,10 @@ const AdminDashboardPage = () => {
 
             <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded bg-blue-600"></span> 6 ngày trước
+                <span className="w-3 h-3 rounded bg-blue-600"></span> Ngày nhận tiền trong báo cáo
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded bg-secondary"></span> Hôm nay
+                <span className="w-3 h-3 rounded bg-secondary"></span> Ngày cuối trên biểu đồ
               </span>
             </div>
           </div>

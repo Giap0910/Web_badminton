@@ -19,6 +19,8 @@ public class ShippingAddressService {
 
     private final ShippingAddressRepository shippingAddressRepository;
     private final UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private AdministrativeUnitService administrativeUnits;
 
     public List<ShippingAddressDto> getUserAddresses(Long userId) {
         return shippingAddressRepository.findByUserIdOrderByIsDefaultDescCreatedAtDesc(userId).stream()
@@ -53,6 +55,7 @@ public class ShippingAddressService {
                 .isDefault(shouldBeDefault)
                 .build();
 
+        applyStructuredAddress(address, dto);
         return toDto(shippingAddressRepository.save(address));
     }
 
@@ -71,6 +74,7 @@ public class ShippingAddressService {
         address.setAddress(dto.getAddress());
         address.setProvince(dto.getProvince());
 
+        applyStructuredAddress(address, dto);
         return toDto(shippingAddressRepository.save(address));
     }
 
@@ -103,6 +107,22 @@ public class ShippingAddressService {
         }
     }
 
+    private void applyStructuredAddress(ShippingAddress address, ShippingAddressDto dto) {
+        if (dto.getProvinceCode() == null && dto.getWardCode() == null) {
+            address.setProvinceCode(null); address.setWardCode(null);
+            address.setWard(null); address.setAddressDetail(null);
+            return;
+        }
+        if (dto.getAddressDetail() == null || dto.getAddressDetail().isBlank())
+            throw new com.sports.exception.BadRequestException("Địa chỉ chi tiết không được để trống");
+        var province = administrativeUnits.province(dto.getProvinceCode());
+        var ward = administrativeUnits.ward(dto.getProvinceCode(), dto.getWardCode());
+        address.setProvinceCode(province.code()); address.setWardCode(ward.code());
+        address.setProvince(province.name()); address.setWard(ward.name());
+        address.setAddressDetail(dto.getAddressDetail().trim());
+        address.setAddress(dto.getAddressDetail().trim() + ", " + ward.name() + ", " + province.name());
+    }
+
     private ShippingAddressDto toDto(ShippingAddress address) {
         return ShippingAddressDto.builder()
                 .id(address.getId())
@@ -110,6 +130,8 @@ public class ShippingAddressService {
                 .phone(address.getPhone())
                 .address(address.getAddress())
                 .province(address.getProvince())
+                .provinceCode(address.getProvinceCode()).wardCode(address.getWardCode())
+                .ward(address.getWard()).addressDetail(address.getAddressDetail())
                 .isDefault(address.getIsDefault())
                 .createdAt(address.getCreatedAt())
                 .build();

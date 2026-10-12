@@ -1046,6 +1046,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     const mockLucide = new Proxy({}, { get: (t, p) => (props) => React.createElement('span', { 'data-icon': p, ...props }) });
 
     const customRequire = (specifier) => {
+      if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;
       if (specifier.includes('CartContext')) return mockCart;
@@ -1274,6 +1275,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     const mockLucide = new Proxy({}, { get: (t, p) => (props) => React.createElement('span', { 'data-icon': p, ...props }) });
 
     const customRequire = (specifier) => {
+      if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;
       if (specifier.includes('orderApi')) return mockOrderApi;
@@ -1369,7 +1371,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     const { finalMarkup } = await harness.renderWithLifecycle();
 
     assert.ok(finalMarkup.includes('Tỉnh / Thành phố'), 'NEW_CHECKOUT must render Province input');
-    assert.ok(finalMarkup.includes('Quận / Huyện'), 'NEW_CHECKOUT must render District input');
+    assert.ok(!finalMarkup.includes('Quận / Huyện'), 'NEW_CHECKOUT must use the current two-level address form');
     assert.ok(finalMarkup.includes('Phường / Xã'), 'NEW_CHECKOUT must render Ward input');
     assert.ok(finalMarkup.includes('Địa chỉ cụ thể'), 'NEW_CHECKOUT must render AddressDetail input');
     assert.ok(!finalMarkup.includes('Đơn hàng cần thanh toán'), 'NEW_CHECKOUT must not render resume banner');

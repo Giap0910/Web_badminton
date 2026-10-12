@@ -193,6 +193,35 @@ class OrderServiceTest {
     }
 
     @Test
+    void hiddenProductCannotCreateNewOrderOrReserveStock() {
+        OrderCreateRequest request = prepareOrder("500000");
+        mockProduct.setCatalogVisible(false);
+        int stock = mockProduct.getStock();
+        int reserved = mockProduct.getReservedStock();
+        var error = assertThrows(BadRequestException.class, () -> orderService.createOrder(
+                1L, request, java.util.UUID.randomUUID().toString()));
+        assertTrue(error.getMessage().contains("đã được ẩn"));
+        assertEquals(stock, mockProduct.getStock());
+        assertEquals(reserved, mockProduct.getReservedStock());
+        verify(orderRepository, never()).save(any());
+        verify(orderRepository, never()).saveAndFlush(any());
+        verify(productRepository, never()).save(any());
+        verifyNoInteractions(payosService);
+    }
+
+    @Test
+    void hiddenProductInExistingOrderStillCancelsAndRestoresReservations() {
+        Order order = pendingOrder("COD");
+        mockProduct.setCatalogVisible(false);
+        lockExisting(order); allowStockUpdate(); allowOrderSave(false);
+        var response = orderService.cancelOrder(99L, 1L, false);
+        assertEquals("CANCELLED", response.getStatus());
+        assertEquals(5, mockProduct.getStock());
+        assertEquals(0, mockProduct.getReservedStock());
+        assertFalse(mockProduct.getCatalogVisible());
+    }
+
+    @Test
     void repeatedCancellationRestoresStockAndVoucherOnce() {
         Order order = pendingOrder("COD");
         lockExisting(order);
@@ -237,6 +266,7 @@ class OrderServiceTest {
         allowOrderSave(false);
         orderService.updateOrderStatus(99L, OrderStatus.SHIPPING);
         orderService.updateOrderStatus(99L, OrderStatus.SHIPPING);
+        order.setCashCollectedAt(java.time.LocalDateTime.now());
         orderService.updateOrderStatus(99L, OrderStatus.COMPLETED);
         assertEquals(3, mockProduct.getStock());
         assertEquals(0, mockProduct.getReservedStock());

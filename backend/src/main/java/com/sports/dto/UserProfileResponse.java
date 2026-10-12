@@ -18,7 +18,13 @@ public class UserProfileResponse {
     private String fullName;
     private String phone;
     private String address;
+    private String avatarUrl;
+    private java.time.LocalDate dob;
+    private Long loyaltyPoints;
+    private java.math.BigDecimal paidProductAmount;
     private String role;
     private Boolean isActive;
     private LocalDateTime createdAt;
+    private Integer totalOrders;
+    private java.math.BigDecimal totalSpent;
 }

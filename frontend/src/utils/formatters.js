@@ -45,13 +45,16 @@ export const formatTimer = (totalSeconds) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-export const isOrderPaid = (order) => !!order && (
+export const isOrderPaid = (order) => !!order && (order.paymentMethod === 'COD' && order.cashCollected != null ? order.cashCollected : (
   order.status === 'PAID' ||
   (order.paymentMethod === 'PAYOS_VIETQR' && order.status === 'SHIPPING') ||
   order.status === 'COMPLETED'
-);
+));
 
 export const getOrderStatusLabel = (order) => {
+  if (order.status === 'COMPLETED' && order.paymentMethod === 'COD' && order.cashCollected === false) {
+    return 'Đã giao, chưa xác nhận thu COD';
+  }
   if (order.status === 'PENDING') {
     return order.paymentMethod === 'COD' ? 'Chờ xử lý COD' : 'Chờ thanh toán PayOS';
   }
@@ -64,7 +67,7 @@ export const getNextOrderStatuses = (order) => {
     return order.paymentMethod === 'COD' ? ['SHIPPING', 'CANCELLED'] : ['CANCELLED'];
   }
   if (order.status === 'PAID' && order.paymentMethod === 'PAYOS_VIETQR') return ['SHIPPING'];
-  if (order.status === 'SHIPPING') return ['COMPLETED'];
+  if (order.status === 'SHIPPING') return order.paymentMethod === 'COD' && order.cashCollected === false ? [] : ['COMPLETED'];
   return [];
 };
 
@@ -80,6 +83,8 @@ export const productOptions = (value) => {
 };
 
 export const productCategory = (product) => {
+  const byId = { 1: 'RACKET', 2: 'SHOES', 3: 'APPAREL', 4: 'BAG', 5: 'ACCESSORIES' };
+  if (byId[product?.categoryId]) return byId[product.categoryId];
   const category = String(product?.categoryName || product?.category?.name || '').toUpperCase();
   const name = String(product?.name || '').toUpperCase();
   const classify = (text) => {
@@ -99,4 +104,5 @@ export const productImages = (product) => [...new Set([
 
 export const productRating = (product) => Number(product?.reviewCount) > 0
   && product?.averageRating != null && Number.isFinite(Number(product.averageRating))
+  && Number(product.averageRating) >= 0 && Number(product.averageRating) <= 5
   ? Number(product.averageRating).toFixed(1) : 'Chưa có đánh giá';

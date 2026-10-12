@@ -2,7 +2,9 @@ import axiosClient from './axiosClient.js';
 
 export const adminApi = {
   // Dashboard Metrics
-  getDashboardStats: () => axiosClient.get('/admin/dashboard'),
+  getDashboardStats: params => axiosClient.get('/admin/dashboard', { params }),
+  exportReport: params => axiosClient.get('/admin/reports', { params, responseType: 'blob' }),
+  confirmCash: (id, amount) => axiosClient.post(`/admin/orders/${id}/cash-collection`, { amount }),
 
   // User Management
   getAllUsers: () => axiosClient.get('/admin/users'),
@@ -10,13 +12,23 @@ export const adminApi = {
     axiosClient.put(`/admin/users/${userId}/status`, null, { params: { active } }),
 
   // Order Management
-  getOrders: () => axiosClient.get('/orders/all'),
+  getOrders: options => axiosClient.get('/orders/all', options),
   updateOrderStatus: (id, status) =>
     axiosClient.put(`/orders/${id}/status`, null, { params: { status } }),
 
   // Product Management
+  productTemplate: () => axiosClient.get('/admin/products/template', { responseType: 'blob' }),
+  previewProducts: file => {
+    const body = new FormData(); body.append('file', file);
+    return axiosClient.post('/admin/products/import/preview', body, { headers: { 'Content-Type': undefined } });
+  },
+  importProducts: (file, sha256) => {
+    const body = new FormData(); body.append('file', file); body.append('sha256', sha256);
+    return axiosClient.post('/admin/products/import/commit', body, { headers: { 'Content-Type': undefined }, timeout: 120000 });
+  },
   createProduct: (data) => axiosClient.post('/products', data),
   updateProduct: (id, data) => axiosClient.put(`/products/${id}`, data),
+  updateProductVisibility: (id, catalogVisible) => axiosClient.patch(`/products/${id}/visibility`, { catalogVisible }),
   deleteProduct: (id) => axiosClient.delete(`/products/${id}`),
 
   // Voucher Management
@@ -31,6 +43,7 @@ export const adminApi = {
 
   // Payments & PayOS VietQR
   getAllPayments: (params) => axiosClient.get('/admin/payments', { params }),
+  paymentEvents: () => axiosClient.get('/admin/payment-events'),
   reconcilePayment: (paymentAttemptId, data, idempotencyKey) => {
     const config = {};
     if (typeof idempotencyKey === 'string' && idempotencyKey.trim()) {

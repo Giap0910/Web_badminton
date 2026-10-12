@@ -26,12 +26,13 @@ const AiChatbotWidget = () => {
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
-      text: 'Xin chào! Tôi là Chuyên gia Tư vấn Thiết bị Cầu Lông AI của SmashZone. Bạn đang tìm kiếm cây vợt theo lối chơi nào (tấn công, phản tạt, công thủ toàn diện) hay phân khúc giá bao nhiêu? Hãy chia sẻ với tôi nhé!',
+      text: 'Xin chào! Tôi là Chuyên gia Tư vấn Thiết bị Cầu Lông AI của HG Badminton. Bạn đang tìm kiếm cây vợt theo lối chơi nào (tấn công, phản tạt, công thủ toàn diện) hay phân khúc giá bao nhiêu? Hãy chia sẻ với tôi nhé!',
       products: []
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [advisorStatus, setAdvisorStatus] = useState('Chưa kết nối AI');
   const messagesEndRef = useRef(null);
   const { addToCart } = useCart();
 
@@ -56,7 +57,9 @@ const AiChatbotWidget = () => {
     setLoading(true);
 
     try {
-      const res = await aiApi.chat(query);
+      const history = messages.slice(1).slice(-6).map(message => ({ role: message.sender === 'user' ? 'user' : 'model', text: message.text.slice(0, 2000) }));
+      const res = await aiApi.chat(query, history);
+      setAdvisorStatus(res.provider === 'GEMINI' ? res.model : 'Tư vấn cơ bản');
       setMessages([
         ...newMessages,
         {
@@ -97,7 +100,7 @@ const AiChatbotWidget = () => {
           </div>
           <div className="text-left">
             <div className="text-xs font-black tracking-wide flex items-center gap-1">
-              AI TƯ VẤN VỢT <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded">Gemini</span>
+              AI TƯ VẤN VỢT <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded">{advisorStatus}</span>
             </div>
             <div className="text-[10px] text-emerald-100 font-medium">Bắt đúng lối chơi • Chuẩn kho hàng</div>
           </div>
@@ -120,7 +123,7 @@ const AiChatbotWidget = () => {
                   <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
                 </div>
                 <div className="text-[11px] text-emerald-100 font-medium">
-                  RAG Augmented • Live Inventory Connected
+                  {advisorStatus} • Dữ liệu cửa hàng
                 </div>
               </div>
             </div>

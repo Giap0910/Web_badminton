@@ -1,3 +1,4 @@
+import AccountAvatar from './AccountAvatar';
 import React from 'react';
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -24,7 +25,8 @@ const UserLayout = ({
   breadcrumbs = [],
   counts = {}
 }) => {
-  const { user, logout } = useAuth();
+  const { user: sessionUser, logout, profile } = useAuth();
+  const user = profile || sessionUser;
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -50,7 +52,7 @@ const UserLayout = ({
       name: 'Lịch sử đơn hàng',
       path: '/my-orders',
       icon: ShoppingBag,
-      badge: counts.orders ?? null,
+      badge: counts.orders ?? profile?.totalOrders ?? null,
       badgeClass: 'bg-secondary text-white'
     },
     {
@@ -110,7 +112,7 @@ const UserLayout = ({
               <div className="flex flex-col leading-none">
                 <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Điểm tích lũy</span>
                 <span className="text-base font-black text-slate-900 mt-0.5">
-                  Chưa có dữ liệu <span className="text-xs font-normal text-slate-400">pts</span>
+                  {profile?.loyaltyPoints ?? "Đang tải"} <span className="text-xs font-normal text-slate-400">pts</span>
                 </span>
               </div>
             </div>
@@ -122,7 +124,7 @@ const UserLayout = ({
               <div className="flex flex-col leading-none">
                 <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Tổng đơn hàng</span>
                 <span className="text-base font-black text-slate-900 mt-0.5">
-                  {counts.orders ?? 'Chưa tải'} <span className="text-xs font-normal text-slate-400">đơn</span>
+                  {counts.orders ?? profile?.totalOrders ?? 'Đang tải'} <span className="text-xs font-normal text-slate-400">đơn</span>
                 </span>
               </div>
             </div>
@@ -139,15 +141,7 @@ const UserLayout = ({
               
               <div className="relative mt-2 mb-3">
                 <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 font-black text-2xl overflow-hidden shadow-inner ring-4 ring-slate-100">
-                  <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
-                    alt="User Avatar"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                  <span className="fallback">{(user?.fullName || user?.username || 'A')[0].toUpperCase()}</span>
+                  <AccountAvatar url={profile?.avatarUrl} name={user?.fullName || user?.username} />
                 </div>
                 <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-secondary text-white flex items-center justify-center shadow-md border-2 border-white">
                   <BadgeCheck className="w-3.5 h-3.5" />
@@ -163,13 +157,10 @@ const UserLayout = ({
               <div className="w-full mt-4 pt-3 bg-slate-50 rounded-xl p-3 flex flex-col gap-2 text-left border border-slate-100">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-800">HG VIP Club</span>
-                  <span className="text-secondary font-black">Chưa xếp hạng</span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-secondary rounded-full transition-all duration-500" style={{ width: '72%' }}></div>
+                  <span className="text-secondary font-black">{profile?.loyaltyPoints ?? "Đang tải"} điểm</span>
                 </div>
                 <span className="text-[11px] text-slate-500 leading-tight">
-                  Chương trình tích điểm chưa được tích hợp.
+                  Mỗi 10.000đ tiền hàng đã thanh toán = 1 điểm. Không tính phí giao hàng.
                 </span>
               </div>
             </div>

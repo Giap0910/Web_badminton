@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import AccountAvatar from '../components/AccountAvatar';
+import React, { useState, useEffect, useRef } from 'react';
 import UserLayout from '../components/UserLayout';
 import { userApi } from '../api/userApi';
 import { useAuth } from '../context/AuthContext';
@@ -19,7 +20,9 @@ import {
 } from 'lucide-react';
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, setProfile } = useAuth();
+  const avatarInput = useRef(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
 
   // Profile Form State
   const [fullName, setFullName] = useState('');
@@ -27,10 +30,9 @@ const ProfilePage = () => {
   const [email, setEmail] = useState('');
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('nam');
-  const [avatarUrl, setAvatarUrl] = useState(
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
-  );
+  const [avatarUrl, setAvatarUrl] = useState('');
 
+  const [profileReady, setProfileReady] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [updatingProfile, setUpdatingProfile] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState('');
@@ -48,38 +50,70 @@ const ProfilePage = () => {
   const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
+    let active = true;
     const fetchProfile = async () => {
       try {
         const res = await userApi.getProfile();
         const data = res?.data ?? res;
+        if (!active) return;
         if (data) {
+          setProfileReady(true);
+          setProfile?.(data); setAvatarUrl(data.avatarUrl || '');
           setFullName(data.fullName || user?.fullName || '');
           setPhone(data.phone || '');
           setEmail(data.email || user?.email || '');
           if (data.gender) setGender(data.gender);
-          if (data.dob) setDob(data.dob);
+          setDob(data.dob || '');
         }
       } catch (err) {
-        console.error('Lỗi tải hồ sơ:', err);
+        if (!active) return;
+        setProfileReady(false);
+        setProfileError('Không tải được hồ sơ. Vui lòng tải lại trang trước khi chỉnh sửa.');
         setFullName(user?.fullName || '');
         setPhone('');
         setEmail(user?.email || '');
       } finally {
-        setLoadingProfile(false);
+        if (active) setLoadingProfile(false);
       }
     };
     fetchProfile();
+    return () => { active = false; };
   }, [user]);
+
+  const changeAvatar = async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setProfileError('Chỉ nhận ảnh JPG, PNG tối đa 5MB.'); event.target.value = ''; return;
+    }
+    setAvatarBusy(true); setProfileError('');
+    try {
+      const data = await userApi.uploadAvatar(file);
+      setAvatarUrl(data.avatarUrl || ''); setProfile?.(data);
+      setProfileSuccess('Đã lưu ảnh đại diện.');
+    } catch (error) { setProfileError(error.response?.data?.message || 'Không tải được ảnh đại diện.'); }
+    finally { setAvatarBusy(false); event.target.value = ''; }
+  };
+  const removeAvatar = async () => {
+    setAvatarBusy(true); setProfileError('');
+    try {
+      const data = await userApi.deleteAvatar();
+      setAvatarUrl(''); setProfile?.(data); setProfileSuccess('Đã xóa ảnh đại diện.');
+    } catch (error) { setProfileError(error.response?.data?.message || 'Không xóa được ảnh đại diện.'); }
+    finally { setAvatarBusy(false); }
+  };
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    if (!profileReady || avatarBusy || updatingProfile) return;
     setUpdatingProfile(true);
     setProfileSuccess('');
     setProfileError('');
 
     try {
-      await userApi.updateProfile({ fullName, phone });
-      setProfileSuccess('Đã lưu họ tên và số điện thoại. Các trường khác chưa hỗ trợ cập nhật.');
+      const updated = await userApi.updateProfile({ fullName, phone, dob: dob || null });
+      setProfile?.(updated);
+      setProfileSuccess('Đã lưu họ tên, số điện thoại và ngày sinh.');
     } catch (err) {
       setProfileError(err.response?.data?.message || 'Không thể cập nhật thông tin cá nhân. Vui lòng thử lại.');
     } finally {
@@ -147,24 +181,19 @@ const ProfilePage = () => {
             </div>
           )}
 
+          <input ref={avatarInput} type="file" accept="image/jpeg,image/png" onChange={changeAvatar} className="hidden" aria-label="Chọn ảnh đại diện" />
+          {avatarBusy && <p role="status" className="text-xs text-slate-500">Đang cập nhật ảnh đại diện...</p>}
           {/* AVATAR UPLOAD SECTION */}
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="relative shrink-0">
               <div className="w-24 h-24 rounded-full overflow-hidden shadow-inner bg-slate-100 border-2 border-slate-200">
-                <img
-                  src={avatarUrl}
-                  alt="Ảnh đại diện"
-                  className="w-full h-full object-cover"
-                />
+                <AccountAvatar url={avatarUrl} name={fullName || user?.username} />
               </div>
               <button
                 type="button"
                 className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-secondary text-white flex items-center justify-center shadow-md hover:bg-secondary/90 transition-colors"
                 title="Đổi ảnh đại diện"
-                onClick={() => {
-                  const url = prompt('Nhập đường dẫn ảnh mới:', avatarUrl);
-                  if (url) setAvatarUrl(url);
-                }}
+                disabled={avatarBusy || loadingProfile || !profileReady || updatingProfile || avatarBusy} onClick={() => avatarInput.current?.click()}
               >
                 <Camera className="w-4 h-4" />
               </button>
@@ -178,22 +207,19 @@ const ProfilePage = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 max-w-md leading-relaxed">
-                Định dạng JPG, PNG tối đa 5MB. Tỉ lệ khuyến nghị 1:1 để hiển thị tối ưu trên bảng xếp hạng HG Club.
+                Định dạng JPG, PNG tối đa 5MB và 4096 × 4096px. Tỉ lệ khuyến nghị 1:1 để hiển thị tối ưu trên bảng xếp hạng HG Club.
               </p>
               <div className="flex items-center gap-3 mt-1.5 justify-center sm:justify-start">
                 <button
                   type="button"
-                  onClick={() => {
-                    const url = prompt('Dán link ảnh đại diện:', avatarUrl);
-                    if (url) setAvatarUrl(url);
-                  }}
+                  disabled={avatarBusy || loadingProfile || !profileReady || updatingProfile || avatarBusy} onClick={() => avatarInput.current?.click()}
                   className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors"
                 >
                   Tải ảnh mới
                 </button>
                 <button
                   type="button"
-                  onClick={() => setAvatarUrl('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80')}
+                  disabled={avatarBusy || loadingProfile || !profileReady || updatingProfile || !avatarUrl} onClick={removeAvatar}
                   className="text-xs text-slate-400 hover:text-secondary transition-colors underline"
                 >
                   Xóa ảnh
@@ -213,6 +239,7 @@ const ProfilePage = () => {
                 <input
                   type="text"
                   value={fullName}
+                  disabled={loadingProfile || !profileReady || updatingProfile || avatarBusy}
                   onChange={(e) => setFullName(e.target.value)}
                   required
                   placeholder="Nhập họ và tên đầy đủ"
@@ -234,6 +261,7 @@ const ProfilePage = () => {
                 <input
                   type="tel"
                   value={phone}
+                  disabled={loadingProfile || !profileReady || updatingProfile || avatarBusy}
                   onChange={(e) => setPhone(e.target.value)}
                   required
                   placeholder="0988 123 456"
@@ -266,7 +294,8 @@ const ProfilePage = () => {
                 <input
                   type="date"
                   value={dob}
-                  onChange={(e) => setDob(e.target.value)}
+                  aria-label="Ngày sinh" disabled={loadingProfile || !profileReady || updatingProfile || avatarBusy} min="1000-01-01" max={new Date().toLocaleDateString("en-CA")}
+                  onInput={(e) => setDob(e.target.value)} onChange={(e) => setDob(e.target.value)}
                   className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                 />
               </div>
@@ -315,7 +344,7 @@ const ProfilePage = () => {
             <div className="flex items-center justify-end pt-3 border-t border-slate-100">
               <button
                 type="submit"
-                disabled={updatingProfile}
+                disabled={updatingProfile || loadingProfile || !profileReady || avatarBusy}
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-secondary text-white hover:bg-secondary/90 text-xs font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50"
               >
                 {updatingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}

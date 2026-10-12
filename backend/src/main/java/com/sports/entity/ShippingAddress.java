@@ -35,6 +35,16 @@ public class ShippingAddress {
     @Column(length = 100)
     private String province;
 
+    @Column(name = "province_code", length = 2)
+    private String provinceCode;
+    @Column(name = "ward_code", length = 5)
+    private String wardCode;
+    @Column(length = 100)
+    private String ward;
+    @Column(name = "address_detail", columnDefinition = "TEXT")
+    private String addressDetail;
+
+
     @Column(name = "is_default", nullable = false)
     @Builder.Default
     private Boolean isDefault = false;
