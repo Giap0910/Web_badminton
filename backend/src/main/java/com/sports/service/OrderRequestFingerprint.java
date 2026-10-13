@@ -43,6 +43,7 @@ public final class OrderRequestFingerprint {
         fields.put("voucherCode", blank(request.getVoucherCode()) ? null : request.getVoucherCode().trim().toUpperCase(Locale.ROOT));
         fields.put("shippingFee", request.getShippingFee() == null ? null : request.getShippingFee().stripTrailingZeros());
         fields.put("items", canonicalItems(request.getItems()));
+        if (request.getRedeemPoints() != null && request.getRedeemPoints() != 0) fields.put("redeemPoints",request.getRedeemPoints());
         return fields;
     }
 
@@ -57,6 +58,7 @@ public final class OrderRequestFingerprint {
         if (item == null) return null;
         Map<String, Object> fields = new TreeMap<>();
         fields.put("productId", item.getProductId());
+        if (item.getVariantId() != null) fields.put("variantId", item.getVariantId());
         fields.put("quantity", item.getQuantity());
         fields.put("selectedSize", item.getSelectedSize());
         fields.put("selectedColor", item.getSelectedColor());

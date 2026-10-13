@@ -9,11 +9,11 @@ import { ProductRating, productSpecSummary, productValue, productCartOptions } f
 const ProductCard = ({ product, onQuickView }) => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
-  const needsSelection = ['SHOES', 'APPAREL'].includes(productCategory(product))
+  const needsSelection = product.variants?.length > 1 || ['SHOES', 'APPAREL'].includes(productCategory(product))
     || productOptions(product.weightGrip || product.weightClass).length > 0;
   const [isFavorite, setIsFavorite] = useState(false);
   const [addedAnimation, setAddedAnimation] = useState(false);
-  const inStock = Number.isInteger(product.stock) && product.stock > 0;
+  const inStock = product.inStock ?? (Number.isInteger(product.stock) && product.stock > 0);
   // Use product.imageUrl as primary per Backend Contract Section 1 & 6
   const imageUrl = product.imageUrl || productImages(product)[0];
 
@@ -72,8 +72,8 @@ const ProductCard = ({ product, onQuickView }) => {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null;
 
-  const isNew = product.badge === 'MỚI 2024' || product.badge === 'Mới' || product.isNew;
-  const badgeLabel = product.badge || (discountPercent ? `-${discountPercent}%` : (isNew ? 'Mới' : ''));
+  const isNew = product.isNew === true;
+  const badgeLabel = isNew ? 'NEW' : discountPercent ? `-${discountPercent}%` : '';
 
   // Specs pill label
   const specLabel = productSpecSummary(product);

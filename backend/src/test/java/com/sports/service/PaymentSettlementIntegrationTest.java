@@ -148,6 +148,26 @@ class PaymentSettlementIntegrationTest {
         verify(orderService, times(1)).handlePaymentSuccess(code, new BigDecimal("100000"));
     }
 
+    @Test
+    void paidWebhookConsumesChosenVariantReservationOnlyOnce() {
+        Long variantId = tx.execute(s -> {
+            var product = context.getBean(ProductRepository.class).findById(productId).orElseThrow();
+            var variant = ProductVariant.builder().product(product).sku("HG-RACKET-TEST-" + productId)
+                    .weightGrip("4U-G5").stock(9).reservedStock(1).build();
+            var savedVariant = context.getBean(ProductVariantRepository.class).saveAndFlush(variant);
+            product.getVariants().add(savedVariant);
+            orders.findById(orderId).orElseThrow().getItems().get(0).setVariant(savedVariant);
+            return savedVariant.getId();
+        });
+        webhooks.accept(payload("VARIANT-PAID"));
+        webhooks.accept(payload("VARIANT-PAID"));
+        assertPaid(1);
+        var variant = context.getBean(ProductVariantRepository.class).findById(variantId).orElseThrow();
+        assertEquals(9, variant.getStock());
+        assertEquals(0, variant.getReservedStock());
+        verify(orderService, times(1)).handlePaymentSuccess(code, new BigDecimal("100000"));
+    }
+
     @ParameterizedTest
     @EnumSource(value = OrderStatus.class, names = {"PAID", "SHIPPING", "COMPLETED"})
     void settledPaymentKeepsPaidAfterSignedNonSuccessInFulfillmentState(OrderStatus state) throws Exception {

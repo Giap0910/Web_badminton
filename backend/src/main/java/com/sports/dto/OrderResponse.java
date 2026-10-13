@@ -23,6 +23,8 @@ public class OrderResponse {
     private BigDecimal shippingFee;
     private String voucherCode;
     private BigDecimal discountAmount;
+    private Integer pointsUsed;
+    private BigDecimal pointsDiscount;
     private String note;
     private String status;
     private String paymentMethod;

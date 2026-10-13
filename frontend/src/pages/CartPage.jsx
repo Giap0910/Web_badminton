@@ -31,7 +31,7 @@ const CartPage = () => {
   const navigate = useNavigate();
 
   // Coupon state
-  const [couponCode, setCouponCode] = useState('');
+  const [couponCode, setCouponCode] = useState(() => sessionStorage.getItem('hg_voucher_code') || '');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [couponError, setCouponError] = useState('');
@@ -115,6 +115,7 @@ const CartPage = () => {
       if (vData && vData.valid) {
         setCouponDiscount(vData.discountAmount || 0);
         setAppliedVoucher(vData);
+        sessionStorage.setItem('hg_voucher_code', vData.code);
         setCouponSuccess(`Áp dụng thành công mã ${vData.code}! Giảm ${formatPrice(vData.discountAmount)}`);
       } else {
         setCouponDiscount(0);
@@ -132,6 +133,7 @@ const CartPage = () => {
   };
 
   const handleRemoveCoupon = () => {
+    sessionStorage.removeItem('hg_voucher_code');
     setCouponCode('');
     setCouponDiscount(0);
     setAppliedVoucher(null);
@@ -404,13 +406,7 @@ const CartPage = () => {
                         </div>
                       </div>
 
-                      {/* Free Gift Strip */}
-                      <div className="ml-7 sm:ml-9 flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-600">
-                        <Gift className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                        <span>
-                          <strong className="font-semibold text-slate-900">Tặng kèm:</strong> 01 Bao vợt nhung Yonex chính hãng + 02 Quấn cán AC102EX (0đ)
-                        </span>
-                      </div>
+
                     </div>
                   );
                 })}
@@ -544,15 +540,7 @@ const CartPage = () => {
                   <span>Giảm giá coupon ({appliedVoucher?.code || 'None'})</span>
                   <span className="text-red-600 font-bold">-{formatPrice(effectiveDiscount)}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1">
-                    Quà tặng độc quyền
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  </span>
-                  <span className="text-slate-900 font-bold">
-                    0₫ <span className="font-normal text-slate-400 line-through text-[11px]">(450.000₫)</span>
-                  </span>
-                </div>
+
                 <div className="flex items-center justify-between">
                   <span>Phí vận chuyển</span>
                   <span className="text-emerald-600 font-bold">

@@ -268,7 +268,7 @@ class ProductCatalogIntegrationTest {
 
     @Test
     void httpBindsOptionalFiltersValidatesInputAndKeepsScopeSecurity() throws Exception {
-        var mvc = standaloneSetup(new ProductController(service)).setControllerAdvice(new GlobalExceptionHandler()).build();
+        var mvc = standaloneSetup(new ProductController(service, mock(ProductVariantService.class))).setControllerAdvice(new GlobalExceptionHandler()).build();
         mvc.perform(get("/api/products").param("page", "0").param("size", "1").param("accessoryType", "qua_cau"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2))
                 .andExpect(jsonPath("$.content[0].accessoryType").value("qua_cau"));

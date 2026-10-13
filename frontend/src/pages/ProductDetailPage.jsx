@@ -7,8 +7,9 @@ import { useCompare } from '../context/CompareContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
 import { productCategory } from '../utils/formatters';
-import { ProductDescription, ProductSpecifications, ProductSelections, ProductRating, ReviewSummary, productCartOptions, availableProductSizes, productValue } from '../components/ProductFacts';
+import { ProductBenefits, ProductDescription, ProductSpecifications, ProductSelections, ProductRating, ReviewSummary, productCartOptions, availableProductSizes, productVariants, productValue } from '../components/ProductFacts';
 import ProductImage, { BadmintonPlaceholder } from '../components/ProductImage';
+import ProductGallery, { productGallerySlots } from '../components/ProductGallery';
 import { ShoppingCart, Layers, Star, CheckCircle2, Heart, ZoomIn, Home, ChevronRight, ChevronLeft, Bolt, Share2, AlertCircle, X } from 'lucide-react';
 
 const ProductDetailPage = () => {
@@ -31,6 +32,7 @@ const ProductDetailPage = () => {
   // Variant selections
   const [selectedShoeSize, setSelectedShoeSize] = useState('');
   const [selectedApparelSize, setSelectedApparelSize] = useState('');
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
 
   // Review form
   const [newRating, setNewRating] = useState(5);
@@ -60,8 +62,9 @@ const ProductDetailPage = () => {
     setSelectedShoeSize(sizes[0] || '');
     setSelectedApparelSize(sizes[0] || '');
     setActiveImage(0);
+    setSelectedVariantId(productVariants(product).find(v => v.inStock)?.id ?? null);
     setQuantity(1);
-    setActiveTab(isShoes || isApparel ? 'specs' : 'description');
+    setActiveTab('description');
   }, [product?.id, isShoes, isApparel, isBag, isAccessories]);
 
   useEffect(() => {
@@ -108,7 +111,7 @@ const ProductDetailPage = () => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
-  const getProductOptions = () => productCartOptions(product, isShoes ? selectedShoeSize : selectedApparelSize);
+  const getProductOptions = () => productCartOptions(product, isShoes ? selectedShoeSize : selectedApparelSize, selectedVariantId);
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -207,25 +210,7 @@ const ProductDetailPage = () => {
     );
   }
 
-  // Lấy danh sách ảnh thực tế từ Backend API (imageUrl làm ảnh chính, imageUrls làm gallery)
-  const getGalleryImages = () => {
-    if (!product) return [];
-    const mainImg = typeof product.imageUrl === 'string' && product.imageUrl.trim() ? product.imageUrl.trim() : null;
-    const rawList = Array.isArray(product.imageUrls) ? product.imageUrls : [];
-    const validList = rawList.filter(url => typeof url === 'string' && url.trim());
-
-    // Ảnh chính luôn ở vị trí đầu tiên nếu có; loại bỏ URL trùng lặp
-    const result = [];
-    if (mainImg) result.push(mainImg);
-    validList.forEach(url => {
-      if (!result.includes(url)) {
-        result.push(url);
-      }
-    });
-    return result;
-  };
-
-  const galleryImages = getGalleryImages();
+  const galleryImages = productGallerySlots(product).map(slot => slot.url);
   const discountPercent = product.originalPrice && product.originalPrice > product.price
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : null;
@@ -253,120 +238,8 @@ const ProductDetailPage = () => {
         {/* ========================================================================= */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-[#E2E8F0] mb-12">
 
-          {/* LEFT COLUMN: PRECISION GALLERY (6 cols) */}
-          <div className="lg:col-span-6 flex flex-col-reverse md:flex-row gap-4">
-
-            {/* Vertical Thumbnail Strip */}
-            {galleryImages.length > 1 && (
-              <div className="flex md:flex-col gap-2.5 shrink-0 overflow-x-auto pb-2 md:pb-0 max-h-[540px]">
-                {galleryImages.map((img, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => setActiveImage(index)}
-                    className={`relative w-16 h-20 md:w-20 md:h-24 rounded-xl bg-[#F2F4F6] p-1.5 flex items-center justify-center transition-all border ${
-                      activeImage === index
-                        ? 'border-secondary shadow-sm ring-2 ring-secondary/30'
-                        : 'border-transparent hover:border-slate-300'
-                    }`}
-                  >
-                    <ProductImage
-                      src={img}
-                      alt={`${product.name} thumb ${index + 1}`}
-                      className="w-full h-full"
-                      imgClassName="max-h-full max-w-full object-contain mix-blend-multiply pointer-events-none"
-                    />
-                    {index === 0 && product.imageUrl ? (
-                      <span className="absolute bottom-1 right-1 text-[8px] font-bold px-1.5 py-0.5 rounded bg-[#0F172A] text-white">
-                        Chính
-                      </span>
-                    ) : (
-                      <span className="absolute bottom-1 right-1 text-[8px] font-bold px-1 py-0.5 rounded bg-slate-700/80 text-white font-mono">
-                        {index + 1}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Main Stage Image with Authentic Badges */}
-            <div className="flex-1 relative bg-[#F2F4F6] rounded-2xl flex items-center justify-center min-h-[380px] lg:min-h-[540px] p-6 overflow-hidden group">
-
-              <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                <span className="px-3 py-1 bg-[#0F172A] text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm">
-                  {productValue(product.brand)}
-                </span>
-              </div>
-
-              {/* Action Buttons (Top-Right) */}
-              <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
-                {galleryImages.length > 1 && (
-                  <span className="px-2.5 py-1 rounded-full bg-slate-900/70 backdrop-blur-sm text-white text-[11px] font-mono font-bold shadow-sm">
-                    {activeImage + 1} / {galleryImages.length}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setZoomModal(true)}
-                  className="w-10 h-10 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-md flex items-center justify-center transition-transform hover:scale-105"
-                  title="Phóng to ảnh"
-                >
-                  <ZoomIn className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsFavorite(!isFavorite)}
-                  className="w-10 h-10 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-md flex items-center justify-center transition-colors"
-                  title="Lưu yêu thích"
-                >
-                  <Heart className={`w-4 h-4 ${isFavorite ? 'fill-secondary text-secondary' : 'hover:text-secondary'}`} />
-                </button>
-              </div>
-
-              {/* Carousel Next/Prev Controls on Stage */}
-              {galleryImages.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveImage((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
-                    }}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 z-10"
-                    title="Ảnh trước"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveImage((prev) => (prev + 1) % galleryImages.length);
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-slate-800 flex items-center justify-center shadow-md transition-all opacity-0 group-hover:opacity-100 z-10"
-                    title="Ảnh kế tiếp"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </>
-              )}
-
-              {/* Main Image Stage */}
-              {galleryImages.length === 0 ? (
-                <BadmintonPlaceholder className="w-full h-full min-h-[360px] rounded-xl" />
-              ) : (
-                <ProductImage
-                  src={galleryImages[activeImage] || galleryImages[0]}
-                  alt={product.name}
-                  className="max-h-[460px] w-full h-full flex items-center justify-center cursor-zoom-in"
-                  imgClassName="max-h-[460px] w-auto object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
-                  onClick={() => setZoomModal(true)}
-                />
-              )}
-            </div>
-
-          </div>
+          <ProductGallery product={product} activeIndex={activeImage} onChange={setActiveImage}
+            onZoom={() => setZoomModal(true)} favorite={isFavorite} onFavorite={() => setIsFavorite(!isFavorite)} />
 
           {/* RIGHT COLUMN: SPECS & PURCHASING ARCHITECTURE (6 cols) */}
           <div className="lg:col-span-6 flex flex-col justify-between">
@@ -412,13 +285,14 @@ const ProductDetailPage = () => {
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-slate-800 font-bold">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{product.stock > 0 ? `Còn hàng: ${product.stock} sản phẩm` : 'Hết hàng'}</span>
+                  <span>{product.inStock ? 'Còn hàng' : 'Hết hàng'}</span>
                 </div>
               </div>
 
-              <ProductSelections product={product}
+              <ProductSelections product={product} selectedVariantId={selectedVariantId} onVariantChange={setSelectedVariantId}
                 selectedSize={isShoes ? selectedShoeSize : selectedApparelSize}
                 onSizeChange={isShoes ? setSelectedShoeSize : setSelectedApparelSize} />
+              <ProductBenefits product={product} />
 
               {/* QUANTITY COUNTER & ACTION BUTTONS CLUSTER */}
               <div className="flex flex-col sm:flex-row items-center gap-3 mb-5 pt-2">
@@ -446,7 +320,7 @@ const ProductDetailPage = () => {
                 {/* Add to Cart */}
                 <button
                   type="button"
-                  onClick={handleAddToCart}
+                  onClick={handleAddToCart} disabled={!product.inStock || !selectedVariantId}
                   className="flex-1 w-full sm:w-auto py-3.5 px-5 rounded-xl bg-white border-2 border-[#0F172A] text-[#0F172A] hover:bg-[#0F172A] hover:text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
                 >
                   <ShoppingCart className="w-4 h-4" />
@@ -456,7 +330,7 @@ const ProductDetailPage = () => {
                 {/* Buy Now Crimson */}
                 <button
                   type="button"
-                  onClick={handleBuyNow}
+                  onClick={handleBuyNow} disabled={!product.inStock || !selectedVariantId}
                   className="flex-1 w-full sm:w-auto py-3.5 px-6 rounded-xl bg-secondary hover:bg-secondary-hover text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-secondary/25 active:scale-95"
                 >
                   <Bolt className="w-4 h-4" />
@@ -518,10 +392,9 @@ const ProductDetailPage = () => {
           {/* Tab Navigation */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-100 mb-6">
             {[
-              { key: 'description', label: 'Mô tả chi tiết & Công nghệ' },
+              { key: 'description', label: 'Mô tả chi tiết' },
               { key: 'specs', label: 'Thông số kỹ thuật' },
-              { key: 'reviews', label: `Đánh giá & Nhận xét (${product.reviewCount ?? 0})` },
-              { key: 'qa', label: 'Hỏi đáp chuyên gia Pro' }
+              { key: 'reviews', label: `Đánh giá & Nhận xét (${product.reviewCount ?? 0})` }
             ].map(tab => (
               <button
                 key={tab.key}
@@ -627,7 +500,6 @@ const ProductDetailPage = () => {
           )}
 
           {/* TAB 4: HỎI ĐÁP CHUYÊN GIA BWF */}
-          {activeTab === 'qa' && <p className="text-sm text-slate-600">Liên hệ cửa hàng để xác nhận thông tin còn thiếu của sản phẩm.</p>}
 
         </section>
 

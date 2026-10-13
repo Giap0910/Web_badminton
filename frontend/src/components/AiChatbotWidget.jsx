@@ -59,7 +59,7 @@ const AiChatbotWidget = () => {
     try {
       const history = messages.slice(1).slice(-6).map(message => ({ role: message.sender === 'user' ? 'user' : 'model', text: message.text.slice(0, 2000) }));
       const res = await aiApi.chat(query, history);
-      setAdvisorStatus(res.provider === 'GEMINI' ? res.model : 'Tư vấn cơ bản');
+      setAdvisorStatus(!res.fallback && res.model ? res.model : 'Tư vấn cơ bản');
       setMessages([
         ...newMessages,
         {

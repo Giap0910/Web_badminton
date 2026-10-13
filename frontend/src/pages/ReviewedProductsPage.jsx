@@ -47,10 +47,11 @@ const ReviewedProductsPage = () => {
           // Merge API data
           const merged = list.map((item, idx) => ({
             id: item.id || idx + 1,
-            productId: item.productId || 1,
-            productName: item.productName || 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai',
-            productBrand: item.productBrand || 'YONEX',
-            productImage: item.productImageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
+            productId: item.productId ?? null,
+            productDeleted: item.productDeleted === true,
+            productName: item.productName || 'Sản phẩm đã ngừng bán',
+            productBrand: item.productBrand || 'Chưa có thông tin',
+            productImage: item.productImageUrl || null,
             purchasedSpec: item.purchasedSpec || '',
             rating: item.rating || 5,
             createdAt: item.createdAt || '24/10/2024',
@@ -263,12 +264,12 @@ const ReviewedProductsPage = () => {
                         <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
                           {rev.productBrand}
                         </span>
-                        <Link
+                        {rev.productDeleted ? <span className="font-bold text-sm text-slate-900 block">{rev.productName} <small className="text-slate-500">(Đã ngừng bán)</small></span> : <Link
                           to={`/products/${rev.productId}`}
                           className="font-bold text-sm text-slate-900 hover:text-secondary transition-colors truncate block"
                         >
                           {rev.productName}
-                        </Link>
+                        </Link>}
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600 font-medium">
                             {rev.purchasedSpec}

@@ -22,6 +22,10 @@ public class ProductImage {
 
     @Column(name = "image_url", nullable = false, length = 500)
     private String imageUrl;
+    @Column(name = "rights_approved", nullable = false) @Builder.Default
+    private Boolean rightsApproved = false;
+    @Column(name = "model_verified", nullable = false) @Builder.Default
+    private Boolean modelVerified = false;
 
     @Column(name = "display_order", nullable = false)
     @Builder.Default

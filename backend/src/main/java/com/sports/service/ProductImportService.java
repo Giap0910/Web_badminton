@@ -23,7 +23,8 @@ public class ProductImportService {
     @Transactional(readOnly = true)
     public Result preview(byte[] bytes) {
         var rows = excel.read(bytes);
-        var existing = repository.findAll().stream().map(p -> p.getSku() == null ? "" : p.getSku().toLowerCase(Locale.ROOT))
+        var existing = repository.findAll().stream().flatMap(p -> java.util.stream.Stream.of(p.getSku(),p.getLegacySku()))
+                .filter(Objects::nonNull).map(s -> s.toLowerCase(Locale.ROOT))
                 .collect(java.util.stream.Collectors.toSet());
         Set<String> assigned = new HashSet<>();
         var checked = rows.stream().map(row -> validate(row, existing, assigned)).toList();
@@ -57,7 +58,23 @@ public class ProductImportService {
         if (product.getOriginalPrice() != null && product.getPrice() != null && product.getOriginalPrice().compareTo(product.getPrice()) < 0) errors.add("originalPrice: không được nhỏ hơn giá bán");
         if (product.getStock() == null || product.getStock() < 0) errors.add("stock: phải có tồn không âm");
         validateSpecifications(product, errors);
+        validateVariants(product, errors);
         return new ProductExcelService.Input(row.sheet(), row.row(), product, errors);
+    }
+
+    private void validateVariants(ProductDto product,List<String> errors) {
+        if (product.getVariants() == null) return;
+        Set<String> combinations=new HashSet<>();
+        for (var variant : product.getVariants()) {
+            String combination=String.join("|",Objects.toString(variant.getColor(),""),Objects.toString(variant.getSize(),""),
+                    Objects.toString(variant.getWeightGrip(),""),Objects.toString(variant.getPackaging(),""));
+            if (!combinations.add(combination)) errors.add("Biến thể màu/size/trọng lượng/quy cách bị trùng");
+            if (variant.getStock()==null || variant.getStock()<0) errors.add("variantStock: tồn phải không âm");
+            if (product.getCategoryId()==2 && (variant.getSize()==null || !variant.getSize().matches("(?:3[5-9]|4[0-2])(?:\\.5)?")
+                    || Double.parseDouble(variant.getSize())>42)) errors.add("variantSize: size giày chỉ từ 35 đến 42");
+            if (product.getCategoryId()==3 && (variant.getSize()==null || variant.getSize().isBlank())) errors.add("variantSize: quần áo cần kích cỡ");
+            if (product.getCategoryId()==1 && (variant.getWeightGrip()==null || variant.getWeightGrip().isBlank())) errors.add("variantWeightGrip: vợt cần trọng lượng/cỡ cán");
+        }
     }
 
     private void validateSpecifications(ProductDto product, List<String> errors) {

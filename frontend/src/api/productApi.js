@@ -1,6 +1,8 @@
 import axiosClient from './axiosClient';
 
 export const productApi = {
+  updateVariant: (id, variantId, data) => axiosClient.patch(`/products/${id}/variants/${variantId}`, data),
+  getSuggestions: (keyword, options = {}) => axiosClient.get('/products/suggestions', { ...options, params: { keyword } }),
   getProducts: (params, options = {}) => axiosClient.get('/products', { ...options, params }),
   getProductById: (id, params) => axiosClient.get(`/products/${id}`, { params }),
   getProductImages: (id) => axiosClient.get(`/products/${id}/images`),

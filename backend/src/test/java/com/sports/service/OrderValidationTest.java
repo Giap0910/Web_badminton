@@ -330,7 +330,7 @@ class OrderValidationTest {
                 r -> r.setShippingPhone("abc"), r -> r.setNote("N".repeat(2001)),
                 r -> r.setVoucherCode("V".repeat(51)), r -> r.setPaymentMethod("X".repeat(51)),
                 r -> r.getItems().get(0).setSelectedSize("S".repeat(51)),
-                r -> r.getItems().get(0).setSelectedColor("C".repeat(51)),
+                r -> r.getItems().get(0).setSelectedColor("C".repeat(201)),
                 r -> r.getItems().get(0).setSelectedWeight("W".repeat(51)),
                 r -> r.getItems().get(0).setStringTension("T".repeat(51)),
                 r -> r.getItems().get(0).setStringingService("S".repeat(101)),

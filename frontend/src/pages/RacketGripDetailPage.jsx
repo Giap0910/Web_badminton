@@ -270,7 +270,7 @@ const RacketGripDetailPage = () => {
         <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-[#E2E8F0] mb-12">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-100 mb-6">
             {[
-              { key: 'desc', label: 'Mô tả chi tiết & Hướng dẫn' },
+              { key: 'desc', label: 'Mô tả chi tiết' },
               { key: 'specs', label: 'Thông số kỹ thuật chuẩn' },
               { key: 'reviews', label: `Đánh giá & Nhận xét (${product.reviewCount ?? 0})` }
             ].map(t => (

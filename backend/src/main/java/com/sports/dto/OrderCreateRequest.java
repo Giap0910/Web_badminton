@@ -41,6 +41,8 @@ public class OrderCreateRequest {
 
     @Size(max = 50)
     private String voucherCode;
+    @jakarta.validation.constraints.Min(0) @jakarta.validation.constraints.Max(1000000)
+    private Integer redeemPoints;
 
     @DecimalMin("0") @DecimalMax("9999999999") @Digits(integer = 10, fraction = 0)
     private BigDecimal shippingFee;

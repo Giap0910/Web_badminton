@@ -129,11 +129,7 @@ public class PayOSPaymentClient implements PayOSGateway {
     private JsonNode exchange(HttpMethod method, String path, JsonNode body, boolean query) {
         try {
             var response = http.exchange(baseUrl + path, method, new HttpEntity<>(body, headers()), JsonNode.class);
-            JsonNode envelope = response.getBody();
-            if (envelope == null || !"00".equals(envelope.path("code").asText())) throw invalid();
-            JsonNode data = envelope.get("data");
-            verify(data, envelope.path("signature").asText());
-            return data;
+            return verifiedData(response.getBody());
         } catch (HttpStatusCodeException ex) {
             if (query && ex.getStatusCode().value() == 404) return null;
             int status = ex.getStatusCode().value() == 429 || ex.getStatusCode().value() == 503 ? 503 : 502;
@@ -150,9 +146,23 @@ public class PayOSPaymentClient implements PayOSGateway {
     private HttpHeaders headers() {
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        headers.set(HttpHeaders.USER_AGENT, "HG-Badminton/1.0 (PayOS integration)");
         headers.set("x-client-id", clientId);
         headers.set("x-api-key", apiKey);
         return headers;
+    }
+
+    private JsonNode verifiedData(JsonNode envelope) {
+        if (envelope == null) throw invalid();
+        if ("214".equals(envelope.path("code").asText())) {
+            throw new PaymentLinkException(503, "PAYOS_CHANNEL_UNAVAILABLE",
+                    "Thanh toán QR chưa sẵn sàng; vui lòng chọn COD hoặc liên hệ cửa hàng.");
+        }
+        if (!"00".equals(envelope.path("code").asText())) throw invalid();
+        JsonNode data = envelope.get("data");
+        verify(data, envelope.path("signature").asText());
+        return data;
     }
 
     private void verify(JsonNode data, String signature) {

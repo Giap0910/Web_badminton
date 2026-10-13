@@ -237,7 +237,7 @@ const StringDetailPage = () => {
         <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-[#E2E8F0] mb-12">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-100 mb-6">
             {[
-              { key: 'desc', label: 'Mô tả chi tiết & Cấu trúc sợi' },
+              { key: 'desc', label: 'Mô tả chi tiết' },
               { key: 'specs', label: 'Thông số kỹ thuật' },
               { key: 'reviews', label: `Đánh giá khách hàng (${product.reviewCount ?? 0})` }
             ].map(t => (

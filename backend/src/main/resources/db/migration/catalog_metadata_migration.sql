@@ -1,0 +1,5 @@
+ALTER TABLE products ADD COLUMN manufacturer_code VARCHAR(100) NULL;
+ALTER TABLE products ADD COLUMN color_name VARCHAR(200) NULL;
+ALTER TABLE products ADD COLUMN edition VARCHAR(100) NULL;
+ALTER TABLE products ADD COLUMN arrived_at DATETIME(6) NULL;
+ALTER TABLE products ADD COLUMN specification_source VARCHAR(1000) NULL;

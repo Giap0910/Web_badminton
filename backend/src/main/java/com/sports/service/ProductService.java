@@ -38,6 +38,41 @@ public class ProductService {
     private final ReviewService reviewService;
     private final com.sports.repository.ProductImageRepository productImageRepository;
 
+    public List<ProductDto> getSuggestions(String keyword) {
+        String term = keyword == null ? "" : keyword.trim().toLowerCase(java.util.Locale.ROOT);
+        if (term.length() < 2 || term.length() > 200) return List.of();
+        return productRepository.findAll(ProductSpecification.shopCatalog()).stream()
+                .filter(p -> suggestionRank(p, term) < 5)
+                .sorted(java.util.Comparator.<Product>comparingInt(p -> suggestionRank(p, term))
+                        .thenComparing(p -> suggestionModel(p, term))
+                        .thenComparing(Product::getId, java.util.Comparator.reverseOrder()))
+                .limit(6).map(this::toDto).toList();
+    }
+
+    private String suggestionModel(Product product, String term) {
+        if (!term.matches("[0-9]+")) return "";
+        var matcher = java.util.regex.Pattern.compile("[0-9]+[\\p{L}\\p{N}]*")
+                .matcher(product.getName().toLowerCase(java.util.Locale.ROOT));
+        String model = "~";
+        while (matcher.find()) {
+            String token = matcher.group();
+            if (token.startsWith(term) && token.compareTo(model) < 0) model = token;
+        }
+        return model;
+    }
+
+    private int suggestionRank(Product product, String term) {
+        String name = product.getName().toLowerCase(java.util.Locale.ROOT);
+        if (name.equals(term)) return 0;
+        String boundary = term.matches("[0-9]+") ? "(?:^|[^0-9])" : "(?:^|[^\\p{L}\\p{N}])";
+        if (java.util.regex.Pattern.compile(boundary + java.util.regex.Pattern.quote(term)).matcher(name).find()) return 1;
+        if (name.contains(term)) return 2;
+        if (product.getSku() != null && product.getSku().toLowerCase(java.util.Locale.ROOT).contains(term)) return 3;
+        String brand = ProductBrand.canonicalName(term);
+        return product.getBrand().toLowerCase(java.util.Locale.ROOT).contains(term)
+                || brand != null && brand.equals(ProductBrand.canonicalName(product.getBrand())) ? 4 : 5;
+    }
+
     public List<ProductDto> getProducts(String keyword, String brand, String weightGrip,
             String balancePoint, String stiffness, String playStyle, BigDecimal minPrice,
             BigDecimal maxPrice, Long categoryId) {
@@ -160,13 +195,29 @@ public class ProductService {
     public ProductDto createProduct(ProductDto dto) {
         validateStockAndPrice(dto);
         Product product = Product.builder().name(dto.getName()).brand(ProductBrand.canonicalName(dto.getBrand()))
-                .sku(dto.getSku()).price(dto.getPrice())
+                .sku(dto.getSku()).price(dto.getPrice()).arrivedAt(java.time.LocalDateTime.now())
                 .originalPrice(dto.getOriginalPrice() != null ? dto.getOriginalPrice() : dto.getPrice())
                 .stock(dto.getStock() != null ? dto.getStock() : 0).reservedStock(0)
                 .imageUrl(dto.getImageUrl()).description(dto.getDescription()).build();
         applyCategory(product, dto);
         applySpecifications(product, dto);
-        return toDto(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        assignSku(saved, dto.getSku());
+        ProductVariantService.initialize(saved, dto);
+        productRepository.saveAndFlush(saved);
+        return toDto(saved);
+    }
+
+    private void assignSku(Product product, String supplied) {
+        String category = switch (product.getCategory() == null ? 0 : product.getCategory().getId().intValue()) {
+            case 1 -> "RACKET"; case 2 -> "SHOE"; case 3 -> "APPAREL"; case 4 -> "BAG"; case 5 -> "ACCESSORY"; default -> "PRODUCT";
+        };
+        String prefix="HG-"+category+"-";
+        if (supplied != null && supplied.toUpperCase(java.util.Locale.ROOT).startsWith(prefix)) {
+            product.setSku(supplied.toUpperCase(java.util.Locale.ROOT));return;
+        }
+        if (supplied != null && !supplied.isBlank() && product.getLegacySku() == null) product.setLegacySku(supplied);
+        product.setSku(prefix+String.format(java.util.Locale.ROOT,"%03d",product.getId()));
     }
 
     @Transactional
@@ -188,7 +239,7 @@ public class ProductService {
     }
 
     private void applyDetails(Product product, ProductDto dto) {
-        if (dto.getSku() != null) product.setSku(dto.getSku());
+        if (dto.getSku() != null) assignSku(product, dto.getSku());
         if (dto.getName() != null) product.setName(dto.getName());
         if (dto.getBrand() != null) product.setBrand(ProductBrand.canonicalName(dto.getBrand()));
         product.setPrice(dto.getPrice());
@@ -199,9 +250,31 @@ public class ProductService {
     }
 
     private void applySpecifications(Product product, ProductDto dto) {
+        applyPresentation(product, dto);
         applyRacketSpecifications(product, dto);
         applyClothingSpecifications(product, dto);
         applyBagAndAccessorySpecifications(product, dto);
+    }
+
+    private void applyPresentation(Product product, ProductDto dto) {
+        if (dto.getManufacturerCode() != null) product.setManufacturerCode(dto.getManufacturerCode());
+        if (dto.getColorName() != null) product.setColorName(dto.getColorName());
+        if (dto.getEdition() != null) product.setEdition(dto.getEdition());
+        if (dto.getArrivedAt() != null) product.setArrivedAt(dto.getArrivedAt());
+        if (dto.getSpecificationSource() != null) product.setSpecificationSource(dto.getSpecificationSource());
+    }
+
+    static boolean recentlyArrived(java.time.LocalDateTime arrivedAt, java.time.LocalDateTime now) {
+        return arrivedAt != null && !arrivedAt.isAfter(now) && arrivedAt.plusDays(14).isAfter(now);
+    }
+
+    static List<String> benefits(Long categoryId) {
+        if (categoryId == null || categoryId == 5) return List.of();
+        var offers = new java.util.ArrayList<String>();
+        if (categoryId == 1) offers.addAll(List.of("Tặng quấn cán vợt cầu lông", "Tặng bao nhung bảo vệ vợt"));
+        offers.add("Bảo hành 1 đổi 1 trong 90 ngày theo chính sách cửa hàng");
+        offers.add("Tích điểm theo số tiền đã thanh toán; 1 điểm đổi 100 đồng cho đơn tiếp theo");
+        return List.copyOf(offers);
     }
 
     private void applyRacketSpecifications(Product product, ProductDto dto) {
@@ -256,6 +329,9 @@ public class ProductService {
 
     private void validateStockSnapshot(Product product, ProductDto dto) {
         if (dto.getStock() == null) return;
+        if (!product.getVariants().isEmpty() && !dto.getStock().equals(product.getStock())) {
+            throw new BadRequestException("Hãy cập nhật tồn kho theo từng biến thể, không sửa tổng tồn trực tiếp");
+        }
         if (dto.getExpectedStock() == null || !dto.getExpectedStock().equals(product.getStock())) {
             throw new BadRequestException("Tồn kho đã thay đổi hoặc thiếu số liệu gốc. Vui lòng tải lại sản phẩm trước khi lưu");
         }
@@ -303,11 +379,13 @@ public class ProductService {
         requireAdministrator();
         Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id));
-        if (product.getReservedStock() > 0 || productRepository.countOrderReferences(id) > 0
-                || productRepository.countReviewReferences(id) > 0) {
+        if (product.getReservedStock() > 0 || productRepository.countActiveOrderReferences(id) > 0
+                || productRepository.countActiveReturns(id) > 0) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
-                    "Sản phẩm có lịch sử đơn hàng/đánh giá hoặc tồn giữ chỗ. Vui lòng dùng Ẩn sản phẩm.");
+                    "Sản phẩm đang có đơn chưa hoàn tất, yêu cầu đổi trả đang xử lý hoặc hàng giữ chỗ. Chỉ được xóa sau khi hoàn tất.");
         }
+        productRepository.detachOrderHistory(id);
+        productRepository.detachReviewHistory(id);
         productImageRepository.deleteByProductId(id);
         productRepository.delete(product);
     }
@@ -324,10 +402,7 @@ public class ProductService {
             }
             return List.of();
         }
-        List<String> images = productImageRepository.findByProductIdOrderByDisplayOrderAsc(productId).stream()
-                .map(com.sports.entity.ProductImage::getImageUrl).toList();
-        if (images.isEmpty() && product.get().getImageUrl() != null) return List.of(product.get().getImageUrl());
-        return images;
+        return approvedImages(productImageRepository.findByProductIdOrderByDisplayOrderAsc(productId));
     }
 
     public ProductDto toDto(Product product) {
@@ -335,11 +410,24 @@ public class ProductService {
         addRacketDto(builder, product);
         addClothingDto(builder, product);
         addBagAndAccessoryDto(builder, product);
-        List<String> images = productImageRepository.findByProductIdOrderByDisplayOrderAsc(product.getId()).stream()
-                .map(com.sports.entity.ProductImage::getImageUrl).toList();
-        if (images.isEmpty() && product.getImageUrl() != null) images = List.of(product.getImageUrl());
-        return builder.imageUrls(images).averageRating(reviewService.getAverageRating(product.getId()))
+        List<String> images = new java.util.ArrayList<>(approvedImages(productImageRepository.findByProductIdOrderByDisplayOrderAsc(product.getId())));
+        if (images.remove(product.getImageUrl())) images.add(0,product.getImageUrl());
+        return builder.imageUrl(images.isEmpty() ? null : images.get(0)).imageUrls(images).imageSlots(gallerySlots(images))
+                .averageRating(reviewService.getAverageRating(product.getId()))
+                .variants(ProductVariantService.describe(product)).inStock(product.getStock() != null && product.getStock() > 0)
                 .reviewCount(reviewService.getReviewCount(product.getId())).build();
+    }
+
+    static List<String> approvedImages(List<com.sports.entity.ProductImage> images) {
+        return images.stream().filter(i -> Boolean.TRUE.equals(i.getRightsApproved()) && Boolean.TRUE.equals(i.getModelVerified()))
+                .map(com.sports.entity.ProductImage::getImageUrl).filter(ProductService::internalImage).distinct().limit(4).toList();
+    }
+    static boolean internalImage(String url) {
+        return url != null && url.matches("/api/media/products/[0-9]+/[a-zA-Z0-9-]+\\.(jpg|png|webp)");
+    }
+    static List<com.sports.dto.ProductGallerySlotDto> gallerySlots(List<String> images) {
+        return java.util.stream.IntStream.range(0,4).mapToObj(index -> new com.sports.dto.ProductGallerySlotDto(index+1,
+                index<images.size() ? images.get(index) : null,index<images.size() ? "READY" : "UPDATING")).toList();
     }
 
     private ProductDto.ProductDtoBuilder productDetails(Product product) {
@@ -348,6 +436,11 @@ public class ProductService {
                 .price(product.getPrice()).originalPrice(product.getOriginalPrice()).stock(product.getStock())
                 .reservedStock(product.getReservedStock()).imageUrl(product.getImageUrl())
                 .description(product.getDescription()).sku(product.getSku())
+                .manufacturerCode(product.getManufacturerCode()).colorName(product.getColorName())
+                .edition(product.getEdition()).arrivedAt(product.getArrivedAt())
+                .specificationSource(product.getSpecificationSource())
+                .isNew(recentlyArrived(product.getArrivedAt(), java.time.LocalDateTime.now()))
+                .benefits(benefits(product.getCategory() == null ? null : product.getCategory().getId()))
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
                 .categoryName(product.getCategory() != null ? product.getCategory().getName() : null);
     }

@@ -46,6 +46,8 @@ class PayOSPaymentClientTest {
                 + "&orderCode=123&returnUrl=https://shop.test/order-success/501";
         server.expect(requestTo("https://provider.test/v2/payment-requests"))
                 .andExpect(method(HttpMethod.POST)).andExpect(header("x-api-key", "fake-api"))
+                .andExpect(header(HttpHeaders.ACCEPT, "application/json"))
+                .andExpect(header(HttpHeaders.USER_AGENT, "HG-Badminton/1.0 (PayOS integration)"))
                 .andExpect(jsonPath("$.amount").value(100000)).andExpect(jsonPath("$.orderCode").value(123))
                 .andExpect(jsonPath("$.returnUrl").value("https://shop.test/order-success/501"))
                 .andExpect(jsonPath("$.cancelUrl").value("https://shop.test/payment/qr/501?cancelled=1"))
@@ -305,6 +307,16 @@ class PayOSPaymentClientTest {
         String canonical = "amount=100000&checkoutUrl=https://pay.payos.vn/web/test-id&currency=VND"
                 + "&orderCode=123&paymentLinkId=test-id&qrCode=QR-PAYMENT-STRING&status=PENDING";
         return envelope(data, canonical);
+    }
+
+    @Test
+    void inactiveMerchantChannelIsUnavailableAndNeverAValidPayment() {
+        server.expect(anything()).andRespond(withSuccess("{\"code\":\"214\",\"desc\":\"channel paused\",\"data\":null}", MediaType.APPLICATION_JSON));
+        var error = assertThrows(PaymentLinkException.class, () -> client.create(attempt()));
+        assertEquals(503, error.getStatus());
+        assertEquals("PAYOS_CHANNEL_UNAVAILABLE", error.getCode());
+        assertFalse(error.getMessage().contains("fake-api"));
+        server.verify();
     }
 
     private String envelope(String data, String canonical) {

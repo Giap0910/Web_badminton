@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderApi } from '../api/orderApi';
 import OrderItemOptions from '../components/OrderItemOptions';
-import { voucherApi } from '../api/voucherApi';
+import useCheckoutVoucher from '../components/useCheckoutVoucher';
 import { shippingAddressApi } from '../api/shippingAddressApi';
 import { formatPrice } from '../utils/formatters';
 import {
@@ -143,7 +143,8 @@ export const calculateOrderSnapshotSubtotal = (order) => {
 
 const CheckoutPage = () => {
   const { cart, removeFromCart } = useCart();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const [requestedPoints, setRequestedPoints] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -555,15 +556,12 @@ const CheckoutPage = () => {
   const [note, setNote] = useState('');
   const [saveInfo, setSaveInfo] = useState(true);
 
-  // Payment Method: FIX-048 defaults to 'COD' for new demo orders
+  // COD remains the default; customers can choose dynamic PayOS QR.
   const [paymentMethod, setPaymentMethod] = useState('COD');
 
   // Voucher state
-  const [voucherCode, setVoucherCode] = useState(locationState.voucherCode || '');
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [voucherError, setVoucherError] = useState('');
-  const [voucherSuccess, setVoucherSuccess] = useState('');
-  const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
+  const [voucherCode, setVoucherCode] = useState(locationState.voucherCode || sessionStorage.getItem('hg_voucher_code') || '');
+
 
   // Loading & error
   const [loading, setLoading] = useState(false);
@@ -605,18 +603,13 @@ const CheckoutPage = () => {
   );
   const isFreeShipping = subtotal >= 1000000;
   const shippingFee = subtotal === 0 || isFreeShipping ? 0 : 30000;
-  const voucherKey = JSON.stringify([voucherCode, checkoutItems.map((item) =>
-    [item.cartItemId, item.quantity, item.product.price])]);
-  const voucherKeyRef = useRef(voucherKey);
-  voucherKeyRef.current = voucherKey;
-  useEffect(() => {
-    setDiscountAmount(0);
-    setVoucherSuccess('');
-    setVoucherError('');
-    setIsValidatingVoucher(false);
-  }, [voucherKey]);
+  const voucher = useCheckoutVoucher(voucherCode, subtotal, JSON.stringify(checkoutItems.map(item => [item.cartItemId, item.quantity, item.product.price])));
+  const { discountAmount, error: voucherError, success: voucherSuccess, validating: isValidatingVoucher, apply: handleApplyVoucher } = voucher;
   const effectiveDiscount = subtotal > 0 ? Math.min(subtotal, discountAmount) : 0;
-  const finalTotal = Math.max(0, subtotal - effectiveDiscount + shippingFee);
+  const maximumPoints = Math.min(Number(profile?.loyaltyPoints) || 0, Math.floor((subtotal - effectiveDiscount) / 1000));
+  const redeemPoints = Math.min(Math.max(0, requestedPoints), maximumPoints);
+  const pointsDiscount = redeemPoints * 100;
+  const finalTotal = Math.max(0, subtotal - effectiveDiscount - pointsDiscount + shippingFee);
 
   // Live order payload and canonical fingerprint (continuously updated on every render)
   const currentPayload = buildOrderPayload({
@@ -629,46 +622,16 @@ const CheckoutPage = () => {
     voucherCode,
     note,
     checkoutItems,
+    redeemPoints,
   });
   const currentFingerprint = canonicalStringify(currentPayload);
   const currentFingerprintRef = useRef(currentFingerprint);
   currentFingerprintRef.current = currentFingerprint;
 
-  const handleApplyVoucher = async (e) => {
-    e.preventDefault();
-    if (!voucherCode.trim()) return;
-
-    const requestKey = voucherKey;
-    setDiscountAmount(0);
-    setIsValidatingVoucher(true);
-    setVoucherError('');
-    setVoucherSuccess('');
-
-    try {
-      const res = await voucherApi.validateVoucher(voucherCode.trim(), subtotal);
-      if (voucherKeyRef.current !== requestKey) return;
-      const vData = res?.data ?? res;
-      if (vData && vData.valid) {
-        setDiscountAmount(vData.discountAmount || 0);
-        setVoucherSuccess(`Áp dụng mã ${vData.code} thành công! Giảm ${formatPrice(vData.discountAmount)}`);
-      } else {
-        setDiscountAmount(0);
-        setVoucherError('Mã giảm giá không hợp lệ.');
-      }
-    } catch (err) {
-      if (voucherKeyRef.current !== requestKey) return;
-      setDiscountAmount(0);
-      setVoucherError(err.response?.data?.message || 'Không thể xác thực mã giảm giá.');
-    } finally {
-      if (voucherKeyRef.current === requestKey) setIsValidatingVoucher(false);
-    }
-  };
-
   const handleSubmitOrder = async () => {
     if (isSubmittingRef.current || loading || isValidatingVoucher) return;
-    // FIX-048: Enforce COD payment method for new checkout demo orders
-    if (paymentMethod !== 'COD') {
-      setErrorMsg('Thanh toán QR tạm chưa hỗ trợ trong bản demo. Vui lòng chọn phương thức Thanh toán khi nhận hàng (COD).');
+    if (!['COD', 'PAYOS_VIETQR'].includes(paymentMethod)) {
+      setErrorMsg('Vui lòng chọn thanh toán COD hoặc QR PayOS/VietQR.');
       return;
     }
     if (voucherCode.trim() && !voucherSuccess) {
@@ -719,6 +682,7 @@ const CheckoutPage = () => {
       // Clear persisted idempotency intent so subsequent orders don't reuse this key
       clearStoredCheckoutIntent();
 
+      sessionStorage.removeItem('hg_voucher_code');
       checkoutItems.forEach((item) => removeFromCart(item.cartItemId));
 
       // Route based on payment method
@@ -1015,16 +979,17 @@ const CheckoutPage = () => {
                             )}
                           </div>
 
-                          {/* Link back to QR Page if order is payable (Disabled in Demo COD) */}
+                          {/* Resume payment on the existing order. */}
                           {resumeContext.order?.status === 'PENDING' && resumeContext.payment?.status !== 'PAID' && (
                             <div className="pt-2 flex items-center justify-between border-t border-blue-100">
-                              <span className="text-xs text-slate-500">Thanh toán QR tạm hoãn trong bản demo</span>
-                              <span
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-400 text-xs font-semibold rounded-lg cursor-not-allowed"
-                                title="Thanh toán QR tạm hoãn trong bản demo"
+                              <span className="text-xs text-slate-500">Tiếp tục thanh toán đơn hàng này</span>
+                              <Link
+                                to={`/payment/qr/${resumeOrderId}`}
+                                state={{ order: resumeContext.order, payment: resumeContext.payment }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700"
                               >
-                                <span>VietQR (Tạm hoãn)</span>
-                              </span>
+                                <span>Thanh toán VietQR</span>
+                              </Link>
                             </div>
                           )}
                         </div>
@@ -1222,7 +1187,16 @@ const CheckoutPage = () => {
                       })}
                     </div>
 
-                    {/* Cost Breakdown */}
+                    <div className="rounded-xl border border-slate-200 p-3 text-xs space-y-2">
+                <label htmlFor="redeem-points" className="font-bold text-slate-900">Dùng điểm tích lũy</label>
+                <p>Khả dụng: {profile?.loyaltyPoints ?? 0} điểm. 1 điểm = 100 đồng; tối đa 10% tiền hàng sau voucher.</p>
+                <input id="redeem-points" type="number" min="0" max={maximumPoints} step="1" value={redeemPoints}
+                  disabled={maximumPoints === 0 || isValidatingVoucher}
+                  onChange={event => setRequestedPoints(Math.min(maximumPoints, Math.max(0, Math.trunc(Number(event.target.value) || 0))))}
+                  className="w-full rounded-lg border p-2" />
+              </div>
+
+              {/* Cost Breakdown */}
                     {(() => {
                       const resumedSubtotal = calculateOrderSnapshotSubtotal(resumeContext.order);
                       return (
@@ -1247,7 +1221,8 @@ const CheckoutPage = () => {
                                 : formatPrice(resumeContext.order?.shippingFee)}
                             </span>
                           </div>
-                          <div className="h-px bg-slate-200 my-1"></div>
+                          <div className="flex justify-between text-red-600"><span>Đổi {redeemPoints} điểm</span><span>-{formatPrice(pointsDiscount)}</span></div>
+                <div className="h-px bg-slate-200 my-1"></div>
                           <div className="flex justify-between items-baseline pt-1">
                             <span className="text-sm font-black text-slate-900">Tổng thanh toán</span>
                             <span className="text-xl font-black text-red-600 tracking-tight" data-testid="resume-total">
@@ -1479,19 +1454,21 @@ const CheckoutPage = () => {
 
               <div className="flex flex-col gap-3">
                 
-                {/* OPTION 1: Dynamic QR (FIX-048: Tạm vô hiệu hóa trong bản demo) */}
+                {/* OPTION 1: Dynamic PayOS QR */}
                 <div
-                  aria-disabled="true"
-                  className="p-4 rounded-xl border-2 border-slate-200 bg-slate-50/70 opacity-60 cursor-not-allowed flex flex-col gap-3"
+                  onClick={() => setPaymentMethod('PAYOS_VIETQR')}
+                  className={`p-4 rounded-xl border-2 cursor-pointer flex flex-col gap-3 ${paymentMethod === 'PAYOS_VIETQR' ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                       <input
                         type="radio"
                         name="payment_method"
-                        disabled={true}
-                        checked={false}
-                        className="w-4 h-4 accent-red-600 mt-1 cursor-not-allowed"
+                        value="PAYOS_VIETQR"
+                        checked={paymentMethod === 'PAYOS_VIETQR'}
+                        onChange={() => setPaymentMethod('PAYOS_VIETQR')}
+                        aria-label="Thanh toán QR Động (PayOS / VietQR)"
+                        className="w-4 h-4 accent-red-600 mt-1 cursor-pointer"
                       />
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -1499,11 +1476,11 @@ const CheckoutPage = () => {
                             Thanh toán QR Động (PayOS / VietQR)
                           </span>
                           <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                            Tạm chưa hỗ trợ (Demo)
+                            QR theo đơn hàng
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                          Thanh toán QR tạm chưa hỗ trợ trong bản demo. Vui lòng chọn phương thức Thanh toán khi nhận hàng (COD).
+                          Mã QR được tạo theo số tiền của đơn hàng. Trạng thái thanh toán được xác nhận từ PayOS.
                         </p>
                       </div>
                     </div>
@@ -1676,10 +1653,7 @@ const CheckoutPage = () => {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium mt-0.5">
-                          <Gift className="w-3 h-3 text-emerald-500" />
-                          <span>Tặng bao vợt Pro + quấn cán (0₫)</span>
-                        </div>
+
                       </div>
                     </div>
                   );
@@ -1720,6 +1694,15 @@ const CheckoutPage = () => {
                 {voucherError && (
                   <p className="text-[11px] font-semibold text-red-600">{voucherError}</p>
                 )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 p-3 text-xs space-y-2">
+                <label htmlFor="redeem-points" className="font-bold text-slate-900">Dùng điểm tích lũy</label>
+                <p>Khả dụng: {profile?.loyaltyPoints ?? 0} điểm. 1 điểm = 100 đồng; tối đa 10% tiền hàng sau voucher.</p>
+                <input id="redeem-points" type="number" min="0" max={maximumPoints} step="1" value={redeemPoints}
+                  disabled={maximumPoints === 0 || isValidatingVoucher}
+                  onChange={event => setRequestedPoints(Math.min(maximumPoints, Math.max(0, Math.trunc(Number(event.target.value) || 0))))}
+                  className="w-full rounded-lg border p-2" />
               </div>
 
               {/* Cost Breakdown */}

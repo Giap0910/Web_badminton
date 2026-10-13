@@ -13,8 +13,8 @@ export function useProductSuggestions(query) {
     const controller = new AbortController(); let active = true;
     const timer = setTimeout(async () => {
       try {
-        const data = await productApi.getProducts({ keyword: query.trim(), page: 0, size: 6, catalogScope: 'shop' }, { signal: controller.signal });
-        if (active) setState({ items: (data.content || []).filter(item => item.catalogVisible !== false), loading: false, error: '' });
+        const data = await productApi.getSuggestions(query.trim(), { signal: controller.signal });
+        if (active) setState({ items: (data || []).filter(item => item.catalogVisible !== false), loading: false, error: '' });
       } catch (error) {
         if (active) setState({ items: [], loading: false, error: 'Chưa tải được gợi ý. Bấm Enter để tìm lại.' });
       }

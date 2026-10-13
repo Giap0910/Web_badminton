@@ -13,6 +13,12 @@ const shoe = { id: 51, categoryId: 2, categoryName: 'Giày cầu lông', name: '
   brand: 'Mizuno', sku: 'SH-MZ-01', availableSizes: '["40", "40.5", "41"]',
   cushionTechnology: 'Mizuno Wave', soleType: 'Cao su', averageRating: 0, reviewCount: 0 };
 
+test('Mô tả không chèn bảng thông số', () => {
+  const html = render(facts.ProductDescription, { product: { ...shoe, description: 'Giày Mizuno hỗ trợ di chuyển linh hoạt.' } });
+  assert.match(html, /hỗ trợ di chuyển linh hoạt/);
+  assert.doesNotMatch(html, /Loại đế|Chất liệu mặt giày|Mã sản phẩm/);
+});
+
 test('Giày dùng thông số giày và ưu tiên danh mục API trước từ khóa trong tên', () => {
   const html = render(facts.ProductSpecifications, { product: { ...shoe, name: 'Giày dùng sân cầu lông' } });
   assert.match(html, /Mizuno Wave/);
@@ -81,4 +87,18 @@ test('Giảm giá được tính từ giá API, không tự tạo mức giảm',
   assert.match(render(facts.ProductDiscount, { product: { price: 80000, originalPrice: 100000 } }), /-20%/);
   assert.equal(render(facts.ProductDiscount, { product: { price: 80000 } }), '');
   assert.equal(render(facts.ProductDiscount, { product: { price: 100000, originalPrice: 80000 } }), '');
+});
+
+test('Biến thể hết cỡ bị khóa chọn, không lộ số lượng tồn hoặc tự tạo màu', () => {
+  const product = { ...shoe, inStock: true, variants: [
+    { id: 1, active: true, color: 'Trắng / Đen', size: '40', inStock: false, stock: null },
+    { id: 2, active: true, color: 'Trắng / Đen', size: '41', inStock: true, stock: null },
+    { id: 3, active: false, legacy: true, size: '44', inStock: false, stock: null }] };
+  const html = render(facts.ProductSelections, { product, selectedVariantId: 2 });
+  assert.match(html, /disabled=""[^>]*>40</);
+  assert.match(html, /aria-pressed="true"[^>]*>41</);
+  assert.doesNotMatch(html, />44<|20 sản phẩm|Tồn kho/);
+  assert.deepEqual(facts.productCartOptions(product, '', 2), { variantId: 2, size: '41', color: 'Trắng / Đen', weightGrip: '', packaging: '' });
+  assert.deepEqual(facts.productCartOptions(product, '', 1), {});
+  assert.doesNotMatch(render(facts.ProductSelections, { product: { variants: [{ id: 1, active: true, inStock: true, packaging: '10m' }] } }), /Màu sắc/);
 });

@@ -25,9 +25,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import MockPayOSControls from '../components/MockPayOSControls';
 
 const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
-  const isQRSuspended = typeof propQREnabled === 'boolean'
-    ? !propQREnabled
-    : (typeof window !== 'undefined' && Boolean(window.__PAYOS_ENABLED__) ? false : true);
+  const isQRSuspended = propQREnabled === false;
 
   const { orderId } = useParams();
   const location = useLocation();
@@ -287,11 +285,11 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
 
       // Handle null (BUG A: 200 with null body) or 404 -> no payment attempt yet
       if (payData == null || getFailed404) {
-        const isSuspendedInFetch = typeof isQRSuspended !== 'undefined'
-          ? isQRSuspended
-          : ((typeof window !== 'undefined' && window.__PAYOS_ENABLED__) || (typeof globalThis !== 'undefined' && globalThis.__PAYOS_ENABLED__) ? false : true);
+        const isSuspendedInFetch = typeof isQRSuspended !== 'undefined' && isQRSuspended;
+        const environmentVerified = typeof envStatus === 'undefined' || envStatus === 'VERIFIED';
 
-        if (!isSuspendedInFetch && !hasInitialRecoveredRef.current && data?.status === 'PENDING') {
+        if (!isSuspendedInFetch && environmentVerified && !hasInitialRecoveredRef.current && data?.status === 'PENDING'
+            && (!data.paymentMethod || data.paymentMethod === 'PAYOS_VIETQR')) {
           hasInitialRecoveredRef.current = true;
           try {
             const paymentKey = getOrCreatePaymentLinkKey(targetOrderId);
@@ -373,8 +371,11 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
 
   useEffect(() => {
     hasInitialRecoveredRef.current = false;
-    fetchOrder();
   }, [orderId]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [orderId, envStatus]);
 
   // Polling check order status every 4 seconds
   useEffect(() => {
@@ -818,15 +819,14 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
       }
     };
 
-    // FIX-058 R1: If environment is not verified or in error, retry verifying environment as well
-    if (typeof envStatus !== 'undefined' && (envStatus !== 'VERIFIED' || !paymentEnv)) {
-      if (typeof fetchPaymentEnvironment === 'function') {
-        fetchPaymentEnvironment({ force: true });
-      }
-    }
-
     try {
       setError('');
+      if (typeof envStatus !== 'undefined' && (envStatus !== 'VERIFIED' || !paymentEnv)) {
+        if (typeof fetchPaymentEnvironment === 'function') {
+          await fetchPaymentEnvironment({ force: true });
+        }
+        return;
+      }
       const res = await orderApi.getOrderById(targetOrderId);
       if (!checkValid()) return;
 
@@ -886,11 +886,11 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
       // In PayOS-enabled mode: Must call POST payment-link with SAME orderId and SAME payment key to trigger creation / provider recovery
       // In demo COD mode: read-only status check, NO POST payment-link call
       if (payData == null || getFailed404 || payData.status === 'CREATING') {
-        const isSuspendedInCheck = typeof isQRSuspended !== 'undefined'
-          ? isQRSuspended
-          : ((typeof window !== 'undefined' && window.__PAYOS_ENABLED__) || (typeof globalThis !== 'undefined' && globalThis.__PAYOS_ENABLED__) ? false : true);
+        const isSuspendedInCheck = typeof isQRSuspended !== 'undefined' && isQRSuspended;
 
-        if (!isSuspendedInCheck) {
+        const canCreateLink = latest.status === 'PENDING' &&
+          (!latest.paymentMethod || latest.paymentMethod === 'PAYOS_VIETQR');
+        if (!isSuspendedInCheck && canCreateLink) {
           const key = getOrCreatePaymentLinkKey(targetOrderId);
           const postRes = await orderApi.createPaymentLink(targetOrderId, key);
           if (!checkValid()) return;

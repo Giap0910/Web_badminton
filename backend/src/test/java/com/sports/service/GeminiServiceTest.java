@@ -38,6 +38,7 @@ class GeminiServiceTest {
         assertTrue(response.getReply().contains("chế độ tư vấn cơ bản"));
     }
     @Test void upgradedModelUsesHeaderHistoryAndDropsUnknownIds() {
+        ReflectionTestUtils.setField(service, "provider", "gemini");
         ReflectionTestUtils.setField(service, "apiKey", "test-key");
         var client = (RestTemplate) ReflectionTestUtils.getField(service, "restTemplate");
         var server = MockRestServiceServer.bindTo(client).build();
@@ -56,11 +57,58 @@ class GeminiServiceTest {
         server.verify();
     }
     @Test void networkErrorFallsBackWithoutPretendingAiSucceeded() {
+        ReflectionTestUtils.setField(service, "provider", "gemini");
         ReflectionTestUtils.setField(service, "apiKey", "test-key");
         var client = (RestTemplate) ReflectionTestUtils.getField(service, "restTemplate");
         var server = MockRestServiceServer.bindTo(client).build();
         server.expect(anything()).andRespond(withServerError());
         assertTrue(service.chatWithAi(null, new AiChatRequest("Giày")).isFallback());
+        server.verify();
+    }
+
+    @Test void openAiUsesRealCatalogHistoryAndRejectsInventedIds() {
+        ReflectionTestUtils.setField(service, "openAiKey", "test-openai");
+        var server = MockRestServiceServer.bindTo((RestTemplate) ReflectionTestUtils.getField(service, "restTemplate")).build();
+        server.expect(requestTo("https://api.openai.com/v1/responses"))
+                .andExpect(header("Authorization", "Bearer test-openai"))
+                .andExpect(jsonPath("$.model").value("gpt-5.4-mini"))
+                .andExpect(jsonPath("$.store").value(false))
+                .andExpect(jsonPath("$.input[0].role").value("assistant"))
+                .andExpect(jsonPath("$.instructions").value(org.hamcrest.Matchers.containsString("1200000")))
+                .andExpect(jsonPath("$.text.format.strict").value(true))
+                .andRespond(withSuccess("{\"status\":\"completed\",\"output\":[{\"type\":\"reasoning\"},{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"reply\\\":\\\"Giày Yonex 1.200.000 đồng\\\",\\\"recommendedProductIds\\\":[999,2,2]}\"}]}]}", MediaType.APPLICATION_JSON));
+        var request = new AiChatRequest("Tôi cần giày Yonex");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("model", "Bạn muốn hãng nào?")));
+        var response = service.chatWithAi(null, request);
+        assertFalse(response.isFallback());
+        assertEquals("OPENAI", response.getProvider());
+        assertEquals(List.of(2L), response.getRecommendedProductIds());
+        server.verify();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {401, 429, 503})
+    void openAiFailuresUseBasicMode(int status) {
+        ReflectionTestUtils.setField(service, "openAiKey", "test-openai");
+        var server = MockRestServiceServer.bindTo((RestTemplate) ReflectionTestUtils.getField(service, "restTemplate")).build();
+        server.expect(anything()).andRespond(withStatus(org.springframework.http.HttpStatus.valueOf(status)));
+        var response = service.chatWithAi(null, new AiChatRequest("Giày Yonex"));
+        assertTrue(response.isFallback());
+        assertEquals("RULE_BASED", response.getProvider());
+        assertEquals(List.of(2L), response.getRecommendedProductIds());
+        server.verify();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "{\"status\":\"incomplete\",\"output\":[]}",
+            "{\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"refusal\"}]}]}",
+            "{\"status\":\"completed\",\"output\":[]}"})
+    void openAiIncompleteOrRefusedResponsesUseBasicMode(String body) {
+        ReflectionTestUtils.setField(service, "openAiKey", "test-openai");
+        var server = MockRestServiceServer.bindTo((RestTemplate) ReflectionTestUtils.getField(service, "restTemplate")).build();
+        server.expect(anything()).andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+        assertTrue(service.chatWithAi(null, new AiChatRequest("Giày Yonex")).isFallback());
         server.verify();
     }
 }

@@ -3,6 +3,7 @@ import AdminLayout from '../components/AdminLayout';
 import ProductImage from '../components/ProductImage';
 import AdminProductFields from '../components/AdminProductFields';
 import AdminProductImport from '../components/AdminProductImport';
+import AdminVariantInventory from '../components/AdminVariantInventory';
 import { PRODUCT_BRANDS, productToAdminForm, buildAdminProductPayload, filterAdminProducts, adminProductFacts } from '../utils/adminProductForm';
 import { adminApi } from '../api/adminApi';
 import { productApi } from '../api/productApi';
@@ -127,10 +128,10 @@ const AdminProductsPage = () => {
   };
 
   const handleDelete = async product => {
-    if (operationLock.current || !window.confirm(`Xóa sản phẩm “${product.name}”? Thao tác này không thể hoàn tác bằng nút Hiện. Sản phẩm có lịch sử bán hàng phải dùng Ẩn.`)) return;
+    if (operationLock.current || !window.confirm(`Xóa sản phẩm “${product.name}” khỏi danh mục kinh doanh? Lịch sử đơn hàng và đánh giá được giữ lại. Đơn đang xử lý/giao hàng hoặc đổi trả chưa hoàn tất sẽ chặn xóa. Thao tác xóa không có nút khôi phục.`)) return;
     operationLock.current = true; setBusyId(product.id); setActionError('');
     try {
-      await adminApi.deleteProduct(product.id); setNotification('Đã xóa sản phẩm chưa có lịch sử bán hàng.');
+      await adminApi.deleteProduct(product.id); setNotification('Đã xóa sản phẩm khỏi danh mục; lịch sử giao dịch được giữ nguyên.');
       await fetchProducts();
     } catch (error) { setActionError(error.response?.data?.message || 'Không thể xóa sản phẩm.'); }
     finally { operationLock.current = false; setBusyId(null); }
@@ -319,6 +320,7 @@ const AdminProductsPage = () => {
                               <span className="text-[10px] text-amber-600 font-bold">Sắp hết</span>
                             )}
                           </div>
+                          <AdminVariantInventory product={prod} onSaved={fetchProducts} />
                         </td>
 
                         {/* Cột 5: Lực căng */}
@@ -489,6 +491,7 @@ const AdminProductsPage = () => {
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor="product-stock" className="text-xs font-bold text-slate-900">{editingId != null ? 'Tồn kho khả dụng' : 'Tồn kho ban đầu'} <span className="text-secondary">*</span></label>
                     <input id="product-stock"
+                      disabled={editingId != null && formData.hasVariants}
                       type="number" min="0" max="2147483647" step="1"
                       required
                       value={formData.stock}
@@ -496,6 +499,7 @@ const AdminProductsPage = () => {
                       placeholder="20"
                       className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                     />
+                    {editingId != null && formData.hasVariants && <p className="text-xs text-slate-500">Tổng được cộng tự động. Sửa số lượng tại “Tồn từng biến thể” trong bảng sản phẩm.</p>}
                   </div>
                 </div>
 

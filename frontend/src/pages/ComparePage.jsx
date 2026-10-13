@@ -182,16 +182,16 @@ const ComparePage = () => {
                         </div>
                       </div>
                       <button
-                        onClick={() => addToCart(racket, 1)}
-                        disabled={racket.stock <= 0}
+                        onClick={() => window.location.assign(`/products/${racket.id}`)}
+                        disabled={!racket.inStock}
                         className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all ${
-                          racket.stock > 0
+                          racket.inStock
                             ? 'bg-secondary hover:bg-secondary-hover text-white active:scale-95 shadow-secondary/20'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
-                        <span>{racket.stock > 0 ? 'Thêm giỏ' : 'Hết hàng'}</span>
+                        <span>{racket.inStock ? 'Thêm giỏ' : 'Hết hàng'}</span>
                       </button>
                     </div>
                   </th>
@@ -296,8 +296,8 @@ const ComparePage = () => {
                 </td>
                 {selectedRackets.map((r) => (
                   <td key={r.id} className="p-5 font-bold text-slate-700">
-                    {r.stock > 0 ? (
-                      <span className="text-emerald-700 font-extrabold">{r.stock} chiếc</span>
+                    {r.inStock ? (
+                      <span className="text-emerald-700 font-extrabold">Còn hàng</span>
                     ) : (
                       <span className="text-rose-600 font-bold">Hết hàng</span>
                     )}

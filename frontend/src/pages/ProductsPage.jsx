@@ -4,7 +4,7 @@ import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
 import ProductImage from '../components/ProductImage';
 import { productSpecSummary } from '../components/ProductFacts';
-import { readCatalogQuery, updateCatalogQuery, buildCatalogParams, readCatalogPage, catalogDisplayRange, catalogFilterChips } from '../utils/productCatalogQuery.jsx';
+import { readCatalogQuery, updateCatalogQuery, buildCatalogParams, readCatalogPage, catalogFilterChips } from '../utils/productCatalogQuery.jsx';
 
 import { SlidersHorizontal, Home, ChevronLeft, ChevronRight, ShieldCheck, CheckCircle2, LayoutGrid, List, X, Tag } from 'lucide-react';
 
@@ -172,7 +172,6 @@ const ProductsPage = () => {
 
   const displayedProducts = products;
   const validCurrentPage = Math.min(Math.max(currentPage, 1), Math.max(1, totalPages));
-  const [rangeStart, rangeEnd] = catalogDisplayRange(validCurrentPage, products.length, totalElements, ITEMS_PER_PAGE);
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== validCurrentPage) {
       setFilter({ page: newPage });
@@ -568,9 +567,6 @@ const ProductsPage = () => {
                   <h2 className="font-display text-lg font-bold text-slate-900 leading-tight">
                     {CATEGORY_TABS.find(t => t.value === selectedCategory)?.label || 'Tất cả sản phẩm'}
                   </h2>
-                  <span className="text-xs text-slate-500">
-                    Hiển thị <strong className="text-slate-900">{rangeStart} - {rangeEnd}</strong> trong tổng số <strong className="text-slate-900">{totalElements}</strong> sản phẩm
-                  </span>
                 </div>
 
                 {/* Sắp xếp & Chế độ xem */}
@@ -711,10 +707,7 @@ const ProductsPage = () => {
 
             {/* Thanh Phân Trang (Pagination Bar) Chuẩn Design System */}
             {totalElements > 0 && (
-              <div className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
-                <span className="text-xs sm:text-sm text-slate-500">
-                  Hiển thị <strong className="text-slate-900">{rangeStart} - {rangeEnd}</strong> trong tổng số <strong className="text-slate-900">{totalElements}</strong> sản phẩm
-                </span>
+              <div className="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex items-center justify-center gap-4 mt-2">
 
                 <div className="flex items-center gap-1.5">
                   {/* Nút Trước (Prev) */}

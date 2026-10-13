@@ -71,6 +71,7 @@ public class OrderService {
         order.setRequestHash(hash);
         order.setItems(prepareItems(order, request.getItems()));
         calculateOrderTotal(order, request.getVoucherCode());
+        applyLoyalty(order, request.getRedeemPoints());
         reserveItems(order.getItems());
         Order saved = saveNewOrder(order);
         if ("PAYOS_VIETQR".equals(order.getPaymentMethod())) {
@@ -123,7 +124,7 @@ public class OrderService {
             int total = quantities.merge(item.getProductId(), item.getQuantity(), Integer::sum);
             if (total > 100) throw new BadRequestException("Tổng số lượng mỗi sản phẩm tối đa là 100");
             validateText(item.getSelectedSize(), 50, false);
-            validateText(item.getSelectedColor(), 50, false);
+            validateText(item.getSelectedColor(), 200, false);
             validateText(item.getSelectedWeight(), 50, false);
             validateText(item.getStringingService(), 100, false);
             validateText(item.getStringTension(), 50, false);
@@ -190,17 +191,21 @@ public class OrderService {
     }
 
     private OrderItem prepareItem(Order order, OrderItemRequest request, Product product) {
+        ProductVariant variant = ProductVariantService.select(product, request);
         return OrderItem.builder().order(order).product(product).quantity(request.getQuantity())
-                .price(product.getPrice()).selectedSize(request.getSelectedSize())
-                .selectedColor(request.getSelectedColor()).selectedWeight(request.getSelectedWeight())
+                .variant(variant).price(product.getPrice()).selectedSize(variant == null ? request.getSelectedSize() : variant.getSize())
+                .selectedColor(variant == null ? request.getSelectedColor() : variant.getColor())
+                .selectedWeight(variant == null ? request.getSelectedWeight() : variant.getWeightGrip())
                 .stringingService(request.getStringingService()).stringTension(request.getStringTension()).build();
     }
 
     private void reserveItems(List<OrderItem> items) {
         for (OrderItem item : items) {
             Product product = item.getProduct();
+            ProductVariantService.reserve(item.getVariant(), item.getQuantity());
             product.setStock(product.getStock() - item.getQuantity());
             product.setReservedStock(product.getReservedStock() + item.getQuantity());
+            ProductVariantService.refreshTotals(product);
             productRepository.save(product);
         }
     }
@@ -238,6 +243,18 @@ public class OrderService {
             throw new BadRequestException("Phương thức thanh toán chưa được hỗ trợ");
         }
         return method;
+    }
+
+    private void applyLoyalty(Order order, Integer requestedPoints) {
+        if (requestedPoints == null || requestedPoints == 0) return;
+        if (requestedPoints < 0 || requestedPoints > 1000000) throw new BadRequestException("Số điểm không hợp lệ");
+        Long userId = order.getUser().getId();
+        var recognized = orderRepository.findRecognizedPaymentOrders().stream()
+                .filter(o -> o.getUser().getId().equals(userId)).map(Order::getId).collect(Collectors.toSet());
+        long available = LoyaltyPolicy.available(orderRepository.findByUserIdOrderByCreatedAtDesc(userId),recognized);
+        BigDecimal amount = LoyaltyPolicy.discount(requestedPoints,available,order.getTotalAmount().subtract(order.getShippingFee()));
+        order.setPointsUsed(requestedPoints);order.setPointsDiscount(amount);
+        order.setTotalAmount(VndAmount.requireValid(order.getTotalAmount().subtract(amount)));
     }
 
     private Order lockOrder(Long orderId) {
@@ -285,6 +302,8 @@ public class OrderService {
             }
             product.setReservedStock(product.getReservedStock() - item.getQuantity());
             if (restoreAvailable) product.setStock(product.getStock() + item.getQuantity());
+            ProductVariantService.settle(item.getVariant(), item.getQuantity(), restoreAvailable);
+            ProductVariantService.refreshTotals(product);
             productRepository.save(product);
         }
     }
@@ -411,10 +430,11 @@ public class OrderService {
                     int qty = item.getQuantity() != null ? item.getQuantity() : 1;
                     return OrderItemResponse.builder()
                             .id(item.getId())
-                            .productId(item.getProduct() != null ? item.getProduct().getId() : null)
-                            .productName(item.getProduct() != null ? item.getProduct().getName() : "")
-                            .productBrand(item.getProduct() != null ? item.getProduct().getBrand() : "")
-                            .productImageUrl(item.getProduct() != null ? item.getProduct().getImageUrl() : "")
+                            .productId(item.getProductIdSnapshot() != null ? item.getProductIdSnapshot() : item.getProduct() != null ? item.getProduct().getId() : null)
+                            .productName(item.getProductNameSnapshot() != null ? item.getProductNameSnapshot() : item.getProduct() != null ? item.getProduct().getName() : "Sản phẩm đã ngừng bán")
+                            .productSku(item.getProductSkuSnapshot()).productDeleted(item.getProduct()==null)
+                            .productBrand(item.getProductBrandSnapshot() != null ? item.getProductBrandSnapshot() : item.getProduct() != null ? item.getProduct().getBrand() : "")
+                            .productImageUrl(null)
                             .weightGrip(item.getProduct() != null ? item.getProduct().getWeightGrip() : "")
                             .selectedSize(item.getSelectedSize())
                             .selectedColor(item.getSelectedColor())
@@ -438,6 +458,7 @@ public class OrderService {
                 .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO)
                 .voucherCode(order.getVoucherCode())
                 .discountAmount(order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO)
+                .pointsUsed(order.getPointsUsed()).pointsDiscount(order.getPointsDiscount())
                 .note(order.getNote())
                 .status(order.getStatus().name())
                 .paymentMethod(order.getPaymentMethod())

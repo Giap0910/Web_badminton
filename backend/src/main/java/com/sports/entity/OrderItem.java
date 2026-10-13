@@ -23,8 +23,20 @@ public class OrderItem {
     private Order order;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id")
     private Product product;
+    @Column(name = "product_id_snapshot") private Long productIdSnapshot;
+    @Column(name = "product_name_snapshot", length = 200) private String productNameSnapshot;
+    @Column(name = "product_sku_snapshot", length = 50) private String productSkuSnapshot;
+    @Column(name = "product_brand_snapshot", length = 50) private String productBrandSnapshot;
+    @Column(name = "product_image_snapshot", length = 500) private String productImageSnapshot;
+    @PrePersist public void captureProduct() {
+        if (product == null || productNameSnapshot != null) return;
+        productIdSnapshot=product.getId();productNameSnapshot=product.getName();
+        productSkuSnapshot=product.getSku();productBrandSnapshot=product.getBrand();productImageSnapshot=product.getImageUrl();
+    }
+    @ManyToOne(fetch = FetchType.EAGER) @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
 
     @Column(nullable = false)
     private Integer quantity;
@@ -35,7 +47,7 @@ public class OrderItem {
     @Column(name = "selected_size", length = 50)
     private String selectedSize;
 
-    @Column(name = "selected_color", length = 50)
+    @Column(name = "selected_color", length = 200)
     private String selectedColor;
 
     @Column(name = "selected_weight", length = 50)

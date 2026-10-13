@@ -4,6 +4,7 @@ const CartContext = createContext(null);
 const textOption = (value) => typeof value === 'string' ? value.trim() : '';
 
 export const normalizeOptions = (options = {}) => ({
+  variantId: Number.isSafeInteger(options.variantId) && options.variantId > 0 ? options.variantId : null,
   selectedSize: textOption(options.selectedSize || options.size),
   selectedColor: textOption(options.selectedColor || options.color),
   selectedWeight: textOption(options.selectedWeight || options.selectedWeightGrip || options.weightGrip),
@@ -16,7 +17,13 @@ export const normalizeOptions = (options = {}) => ({
 });
 
 export const cartLineId = (product, options) => JSON.stringify([product.id, normalizeOptions(options)]);
-const stockLimit = (product) => Number.isInteger(product.stock) ? Math.max(0, product.stock) : 0;
+const stockLimit = (product, options = {}) => {
+  if (Array.isArray(product.variants) && product.variants.length) {
+    const variant = product.variants.find(v => v.id === options.variantId && v.active && !v.legacy);
+    return variant?.inStock ? 100 : 0;
+  }
+  return product.inStock === true ? 100 : Number.isInteger(product.stock) ? Math.max(0, product.stock) : 0;
+};
 
 const readCart = () => {
   try {
@@ -47,9 +54,9 @@ export const CartProvider = ({ children }) => {
   const addToCart = (product, quantity = 1, rawOptions = {}) => {
     const prev = cartRef.current;
     if (!product?.id || !Number.isInteger(quantity) || quantity <= 0) return null;
-    const used = prev.filter((item) => item.product.id === product.id).reduce((sum, item) => sum + item.quantity, 0);
-    if (used + quantity > stockLimit(product) || used + quantity > 100) return null;
     const options = normalizeOptions(rawOptions);
+    const used = prev.filter(item => item.product.id === product.id && item.variantId === options.variantId).reduce((sum, item) => sum + item.quantity, 0);
+    if (used + quantity > stockLimit(product, options) || used + quantity > 100) return null;
     const cartItemId = cartLineId(product, options);
     const existing = prev.find((item) => item.cartItemId === cartItemId);
     const next = existing
@@ -69,9 +76,9 @@ export const CartProvider = ({ children }) => {
     const prev = cartRef.current;
     const target = prev.find((item) => item.cartItemId === cartItemId);
     if (!target) return;
-    const others = prev.filter((item) => item.product.id === target.product.id && item.cartItemId !== cartItemId)
+    const others = prev.filter((item) => item.product.id === target.product.id && item.variantId === target.variantId && item.cartItemId !== cartItemId)
       .reduce((sum, item) => sum + item.quantity, 0);
-    if (quantity + others > stockLimit(target.product) || quantity + others > 100) return;
+    if (quantity + others > stockLimit(target.product, target.options) || quantity + others > 100) return;
     commitCart(prev.map((item) => item.cartItemId === cartItemId ? { ...item, quantity } : item));
   };
 

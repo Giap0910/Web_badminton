@@ -27,6 +27,19 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("SELECT COUNT(r) FROM Review r WHERE r.product.id = :id")
     long countReviewReferences(@Param("id") Long id);
 
+    @Query("SELECT COUNT(i) FROM OrderItem i WHERE i.product.id=:id AND i.order.status IN "
+            + "(com.sports.entity.OrderStatus.PENDING,com.sports.entity.OrderStatus.PAID,com.sports.entity.OrderStatus.SHIPPING)")
+    long countActiveOrderReferences(@Param("id") Long id);
+    @Query("SELECT COUNT(r) FROM ReturnRequest r JOIN r.order.items i WHERE i.product.id=:id AND r.status IN "
+            + "(com.sports.entity.ReturnStatus.PENDING,com.sports.entity.ReturnStatus.APPROVED)")
+    long countActiveReturns(@Param("id") Long id);
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE OrderItem i SET i.product=null,i.variant=null WHERE i.product.id=:id")
+    int detachOrderHistory(@Param("id") Long id);
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Review r SET r.product=null WHERE r.product.id=:id")
+    int detachReviewHistory(@Param("id") Long id);
+
     List<Product> findByBrandIgnoreCase(String brand);
 
     @Query("SELECT p FROM Product p WHERE p.stock > 0 ORDER BY p.id DESC")

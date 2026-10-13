@@ -89,7 +89,7 @@ public class UserService {
                         ? java.math.BigDecimal.ZERO : order.getShippingFee()).max(java.math.BigDecimal.ZERO))
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         profile.setPaidProductAmount(netPaid);
-        profile.setLoyaltyPoints(netPaid.divideToIntegralValue(new java.math.BigDecimal("10000")).longValue());
+        profile.setLoyaltyPoints(LoyaltyPolicy.available(customerOrders,paidIds));
         return profile;
     }
 

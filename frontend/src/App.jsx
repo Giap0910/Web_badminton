@@ -91,16 +91,16 @@ function AppContent() {
             <Route path="/products/:id" element={<ProductDetailPage />} />
 
             {/* 4 Trang Chi Tiết Phụ Kiện Chuyên Biệt Mới */}
-            <Route path="/product/racket-grip/:id" element={<RacketGripDetailPage />} />
-            <Route path="/product/string/:id" element={<StringDetailPage />} />
-            <Route path="/product/shuttlecock/:id" element={<ShuttlecockDetailPage />} />
-            <Route path="/product/sweatband/:id" element={<SweatbandDetailPage />} />
+            <Route path="/product/racket-grip/:id" element={<ProductDetailPage />} />
+            <Route path="/product/string/:id" element={<ProductDetailPage />} />
+            <Route path="/product/shuttlecock/:id" element={<ProductDetailPage />} />
+            <Route path="/product/sweatband/:id" element={<ProductDetailPage />} />
 
             {/* Alias tương thích /products/... */}
-            <Route path="/products/racket-grip/:id" element={<RacketGripDetailPage />} />
-            <Route path="/products/string/:id" element={<StringDetailPage />} />
-            <Route path="/products/shuttlecock/:id" element={<ShuttlecockDetailPage />} />
-            <Route path="/products/sweatband/:id" element={<SweatbandDetailPage />} />
+            <Route path="/products/racket-grip/:id" element={<ProductDetailPage />} />
+            <Route path="/products/string/:id" element={<ProductDetailPage />} />
+            <Route path="/products/shuttlecock/:id" element={<ProductDetailPage />} />
+            <Route path="/products/sweatband/:id" element={<ProductDetailPage />} />
             <Route path="/compare" element={<ComparePage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route

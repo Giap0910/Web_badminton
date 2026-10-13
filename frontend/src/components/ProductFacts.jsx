@@ -54,7 +54,18 @@ export function productSpecSummary(product) {
   return UNKNOWN_PRODUCT_INFO;
 }
 
-export function productCartOptions(product, selectedSize = '') {
+export function productVariants(product) {
+  return Array.isArray(product?.variants) ? product.variants.filter(v => v.active && !v.legacy) : [];
+}
+
+export function productCartOptions(product, selectedSize = '', variantId = null) {
+  const variants = productVariants(product);
+  if (variants.length) {
+    const variant = variants.find(v => v.id === variantId) ||
+      (variants.length === 1 ? variants[0] : variants.find(v => v.size === selectedSize && v.inStock));
+    return variant?.inStock ? { variantId: variant.id, size: variant.size || '', color: variant.color || '',
+      weightGrip: variant.weightGrip || '', packaging: variant.packaging || '' } : {};
+  }
   const category = productCategory(product);
   const options = {};
   if (['SHOES', 'APPAREL'].includes(category) && availableProductSizes(product).includes(selectedSize)) options.size = selectedSize;
@@ -80,11 +91,19 @@ export function ProductDescription({ product }) {
   return <div className="space-y-6 text-xs sm:text-sm text-slate-600 leading-relaxed">
     <div className="space-y-3"><h3 className="text-base font-bold text-slate-900">{product?.name}</h3>
       <p className="whitespace-pre-line">{productValue(product?.description)}</p></div>
-    <ProductSpecifications product={product} />
   </div>;
 }
 
-export function ProductSelections({ product, selectedSize = '', onSizeChange = () => {} }) {
+export function ProductBenefits({ product }) {
+  if (!Array.isArray(product?.benefits) || !product.benefits.length) return null;
+  return <section className="mt-5 rounded-xl border border-red-100 bg-red-50/40 p-4 text-xs">
+    <h3 className="font-bold text-slate-900 mb-3">Ưu đãi sản phẩm</h3>
+    <ul className="space-y-2 text-slate-700">{product.benefits.map(benefit => <li key={benefit}>{benefit}</li>)}</ul>
+  </section>;
+}
+
+export function ProductSelections({ product, selectedSize = '', onSizeChange = () => {}, selectedVariantId, onVariantChange = () => {} }) {
+  if (productVariants(product).length) return <VariantSelections product={product} selectedVariantId={selectedVariantId} onChange={onVariantChange} />;
   const sizes = availableProductSizes(product);
   const hasSizes = ['SHOES', 'APPAREL'].includes(productCategory(product));
   return <div className="space-y-4 mb-5 text-xs">
@@ -98,6 +117,25 @@ export function ProductSelections({ product, selectedSize = '', onSizeChange = (
         {size}</button>)}</div> : <p className="text-slate-500">{UNKNOWN_PRODUCT_INFO}</p>}</div>
       : <div className="bg-[#F2F4F6] rounded-xl p-3 text-slate-700">{productSpecSummary(product)}</div>}
   </div>;
+}
+
+function VariantSelections({ product, selectedVariantId, onChange }) {
+  const variants = productVariants(product);
+  const selected = variants.find(v => v.id === selectedVariantId);
+  const fields = [['color', 'Màu sắc'], ['size', 'Kích cỡ'], ['weightGrip', 'Trọng lượng / Cỡ cán'], ['packaging', 'Quy cách']];
+  const compatible = (variant, field) => field === 'color' || !selected?.color || variant.color === selected.color;
+  return <div className="space-y-4 mb-5 text-xs">{fields.map(([field, label]) => {
+    const values = [...new Set(variants.map(v => v[field]).filter(Boolean))];
+    if (!values.length) return null;
+    return <div key={field}><span className="block font-bold text-slate-900 mb-2">{label}:</span>
+      <div className="flex flex-wrap gap-2">{values.map(value => {
+        const matching = variants.filter(v => v[field] === value && compatible(v, field));
+        const target = matching.find(v => v.inStock && (field !== 'color' || !selected?.size || v.size === selected.size)) || matching.find(v => v.inStock);
+        return <button key={value} type="button" disabled={!target} aria-pressed={selected?.[field] === value}
+          onClick={() => target && onChange(target.id)}
+          className={`min-w-11 min-h-11 px-3 py-2 rounded-xl font-bold border ${!target ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : selected?.[field] === value ? 'bg-slate-900 text-white' : 'bg-white text-slate-800 hover:bg-slate-50'}`}>{value}</button>;
+      })}</div></div>;
+  })}</div>;
 }
 
 export function ReviewStars({ rating }) {

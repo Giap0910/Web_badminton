@@ -68,6 +68,7 @@ export const buildOrderPayload = ({
   voucherCode,
   note,
   checkoutItems,
+  redeemPoints,
 }) => {
   const fullShippingAddress = [addressDetail, ward, district, province].filter(Boolean).join(', ');
   return {
@@ -76,12 +77,14 @@ export const buildOrderPayload = ({
     shippingPhone: shippingPhone || '',
     paymentMethod: paymentMethod || 'PAYOS_VIETQR',
     voucherCode: voucherCode?.trim() || null,
+    ...(redeemPoints > 0 ? { redeemPoints } : {}),
     note: [note, ...(checkoutItems || []).map((item, index) => {
       const extra = [item.options?.gender, item.options?.capacity, item.options?.packaging].filter(Boolean);
       return extra.length ? `Dòng ${index + 1} - ${item.product?.name || ''}: ${extra.join(', ')}` : '';
     })].filter(Boolean).join('\n'),
     items: (checkoutItems || []).map((item) => ({
       productId: item.product?.id,
+      ...(item.variantId ? { variantId: item.variantId } : {}),
       quantity: item.quantity,
       selectedSize: item.selectedSize || '',
       selectedColor: item.selectedColor || '',

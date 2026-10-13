@@ -15,6 +15,10 @@ const gripSource = fs.readFileSync(path.join(__dirname, 'RacketGripDetailPage.js
 // Real OrderItemOptions implementation for true component runtime verification
 import { OrderItemOptions } from '../utils/orderItemOptions.js';
 
+const testStorage = new Map();
+globalThis.sessionStorage ??= { getItem: key => testStorage.get(key) ?? null,
+  setItem: (key, value) => testStorage.set(key, String(value)), removeItem: key => testStorage.delete(key) };
+
 test('STEP 1 — COD Demo Verification Suite', async (t) => {
   const esbuild = await import('esbuild');
   const React = await import('react');
@@ -398,7 +402,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
   // =========================================================================
   // FIX-048 TESTS: CheckoutPage COD Defaults & Submit Guard
   // =========================================================================
-  await t.test('FIX-048 TEST 1: CheckoutPage defaults to COD and Dynamic QR is disabled with demo notice', async () => {
+  await t.test('Checkout mặc định COD và cho phép chọn QR động PayOS', async () => {
     const transformed = await esbuild.transform(checkoutSource, {
       loader: 'jsx',
       format: 'cjs',
@@ -461,6 +465,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
       if (specifier.includes('AuthContext')) return mockAuth;
       if (specifier.includes('orderApi')) return mockOrderApi;
       if (specifier.includes('voucherApi')) return mockVoucherApi;
+      if (specifier.includes('useCheckoutVoucher')) return { __esModule: true, default: () => ({ discountAmount: 0, error: '', success: false, validating: false, apply: () => {} }) };
       if (specifier.includes('shippingAddressApi')) return mockShippingAddressApi;
       if (specifier.includes('formatters')) return mockFormatters;
       if (specifier.includes('idempotency')) {
@@ -499,29 +504,28 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
     effects.length = 0;
     const finalMarkup = ReactDOMServer.renderToStaticMarkup(React.createElement(Component));
 
-    // Dynamic QR must be marked disabled with demo notice
-    assert.ok(finalMarkup.includes('Thanh toán QR tạm chưa hỗ trợ trong bản demo'), 'Must display QR disabled demo notice');
-    assert.ok(finalMarkup.includes('Tạm chưa hỗ trợ (Demo)'), 'Must render unsupported badge');
+    assert.match(finalMarkup, /value="PAYOS_VIETQR"/);
+    assert.doesNotMatch(finalMarkup, /Thanh toán QR tạm chưa hỗ trợ trong bản demo/);
+    const qrRadio = finalMarkup.match(/<input[^>]+value="PAYOS_VIETQR"[^>]*>/)?.[0];
+    assert.ok(qrRadio && !qrRadio.includes('disabled'), 'Radio QR phải cho phép chọn');
 
     // COD must be rendered as active payment method
     assert.ok(finalMarkup.includes('Thanh toán khi nhận hàng (COD)'), 'Must render COD payment method option');
   });
 
-  await t.test('FIX-048 TEST 2: Submit guard strictly blocks non-COD payment methods without calling API', async () => {
+  await t.test('Checkout chỉ nhận COD hoặc PayOS, không chặn QR bằng quy tắc demo cũ', async () => {
     assert.ok(
-      checkoutSource.includes("if (paymentMethod !== 'COD')"),
-      'handleSubmitOrder must have guard blocking any paymentMethod other than COD'
+      checkoutSource.includes("if (!['COD', 'PAYOS_VIETQR'].includes(paymentMethod))"),
+      'Phải kiểm tra phương thức được hỗ trợ'
     );
-    assert.ok(
-      checkoutSource.includes("Thanh toán QR tạm chưa hỗ trợ trong bản demo"),
-      'Guard must display clear demo notice'
-    );
+    assert.ok(!checkoutSource.includes("if (paymentMethod !== 'COD')"));
   });
 
   // =========================================================================
   // FIX-048 COMPONENT RUNTIME TESTS: QRPaymentPage in Demo COD Mode
   // =========================================================================
   async function createQRPaymentHarness({
+    qrEnabled = false,
     orderId = '501',
     initialOrder = null,
     initialPayment = null,
@@ -690,7 +694,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
       stateCursor = 0;
       effectCursor = 0;
       effects.length = 0;
-      ReactDOMServer.renderToStaticMarkup(React.createElement(Component));
+      ReactDOMServer.renderToStaticMarkup(React.createElement(Component, { isQREnabled: qrEnabled }));
 
       await runEffects();
       await new Promise((r) => setTimeout(r, 60));
@@ -698,7 +702,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
       stateCursor = 0;
       effectCursor = 0;
       effects.length = 0;
-      const finalMarkup = ReactDOMServer.renderToStaticMarkup(React.createElement(Component));
+      const finalMarkup = ReactDOMServer.renderToStaticMarkup(React.createElement(Component, { isQREnabled: qrEnabled }));
       await runEffects();
       return finalMarkup;
     };
@@ -841,6 +845,19 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
     } finally {
       harness.dispose();
     }
+  });
+
+  await t.test('QR đã bật: hiển thị QR và link PayOS sau khi Backend xác minh môi trường REAL', async (sub) => {
+    const payment = { id: 9001, orderId: 306, paymentMode: 'REAL', status: 'PENDING',
+      qrPayload: 'TEST-QR-NONPAYABLE', checkoutUrl: 'https://pay.payos.vn/web/test-only' };
+    const harness = await createQRPaymentHarness({ qrEnabled: true, orderId: '306',
+      getOrderPaymentHandler: async () => ({ data: payment }) });
+    sub.after(() => harness.dispose());
+    const markup = await harness.render();
+    assert.ok(markup.includes('Tiếp tục thanh toán qua PayOS'));
+    assert.ok(markup.includes('https://pay.payos.vn/web/test-only'));
+    assert.ok(markup.includes('TEST-QR-NONPAYABLE'));
+    assert.ok(!markup.includes('TẠM HOÃN THANH TOÁN QR'));
   });
 
   // =========================================================================

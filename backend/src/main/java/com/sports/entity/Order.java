@@ -70,6 +70,10 @@ public class Order {
     @Column(name = "discount_amount", precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal discountAmount = BigDecimal.ZERO;
+    @Column(name = "points_used", nullable = false) @Builder.Default
+    private Integer pointsUsed = 0;
+    @Column(name = "points_discount", nullable = false, precision = 12, scale = 2) @Builder.Default
+    private BigDecimal pointsDiscount = BigDecimal.ZERO;
 
     @Column(name = "shipping_fee", precision = 12, scale = 2)
     @Builder.Default

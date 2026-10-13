@@ -297,13 +297,7 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
 
             <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
-            <div className="flex items-center gap-2 pl-1 cursor-pointer">
-              <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
-                HN
-              </div>
-              <span className="hidden md:inline-block text-xs font-bold text-slate-800">Hoàng Nam</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </div>
+
           </div>
         </header>
 

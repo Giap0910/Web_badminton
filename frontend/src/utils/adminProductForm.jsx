@@ -32,7 +32,7 @@ export function productToAdminForm(product = {}) {
   const form = Object.fromEntries(fields.map(key => [key, product[key] == null ? '' : String(product[key])]));
   return { ...form, brand: canonicalProductBrand(product.brand) || 'Yonex', availableSizes: sizesForForm(product.availableSizes),
     initialAvailableSizes: sizesForForm(product.availableSizes), originalAvailableSizes: product.availableSizes,
-    expectedStock: product.stock, catalogVisible: product.catalogVisible };
+    expectedStock: product.stock, catalogVisible: product.catalogVisible, hasVariants: !!product.variants?.length };
 }
 
 function numberValue(value, label, max, positive = false) {

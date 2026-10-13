@@ -12,6 +12,7 @@ import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientResponseException;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,6 +23,9 @@ import java.util.stream.Collectors;
 public class GeminiService {
     @Value("${gemini.api-key:}") private String apiKey;
     @Value("${gemini.model:gemini-3.8-flash}") private String modelName;
+    @Value("${ai.provider:openai}") private String provider = "openai";
+    @Value("${openai.api-key:}") private String openAiKey;
+    @Value("${openai.model:gpt-5.4-mini}") private String openAiModel = "gpt-5.4-mini";
     private final ProductRepository productRepository;
     private final ProductService productService;
     private final AiChatLogRepository chatLogRepository;
@@ -38,7 +42,7 @@ public class GeminiService {
 
     public AiChatResponse chatWithAi(Long userId, AiChatRequest request) {
         List<Product> products = selectProducts(request);
-        AiChatResponse response = hasKey() ? callGemini(request, products) : basicResponse(products);
+        AiChatResponse response = answer(request, products);
         enrich(response, products);
         saveLog(userId, request.getMessage(), response.getReply());
         return response;
@@ -46,6 +50,63 @@ public class GeminiService {
 
     private boolean hasKey() {
         return apiKey != null && !apiKey.isBlank() && !apiKey.equals("your_gemini_api_key_here");
+    }
+
+    private AiChatResponse answer(AiChatRequest request, List<Product> products) {
+        if ("gemini".equalsIgnoreCase(provider)) {
+            return hasKey() ? callGemini(request, products) : basicResponse(products);
+        }
+        return openAiKey == null || openAiKey.isBlank() ? basicResponse(products) : callOpenAi(request, products);
+    }
+
+    private AiChatResponse callOpenAi(AiChatRequest request, List<Product> products) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(openAiKey);
+            String body = restTemplate.postForObject("https://api.openai.com/v1/responses",
+                    new HttpEntity<>(openAiBody(request, products), headers), String.class);
+            return parseOpenAi(body);
+        } catch (RestClientResponseException exception) {
+            log.warn("Dịch vụ OpenAI chưa sẵn sàng, HTTP={}", exception.getStatusCode().value());
+            return basicResponse(products);
+        } catch (Exception exception) {
+            log.warn("Phản hồi OpenAI chưa hợp lệ: {}", exception.getClass().getSimpleName());
+            return basicResponse(products);
+        }
+    }
+
+    private Map<String, Object> openAiBody(AiChatRequest request, List<Product> products) {
+        List<Map<String, Object>> input = new ArrayList<>();
+        request.getHistory().forEach(message -> input.add(Map.of("role",
+                "model".equals(message.getRole()) ? "assistant" : "user", "content", message.getText())));
+        input.add(Map.of("role", "user", "content", request.getMessage()));
+        return Map.of("model", openAiModel, "instructions", instruction(products), "input", input,
+                "store", false, "max_output_tokens", 2048, "reasoning", Map.of("effort", "low"),
+                "text", Map.of("format", answerSchema()));
+    }
+
+    private Map<String, Object> answerSchema() {
+        Map<String, Object> properties = Map.of("reply", Map.of("type", "string"),
+                "recommendedProductIds", Map.of("type", "array", "items", Map.of("type", "integer")));
+        return Map.of("type", "json_schema", "name", "shop_advice", "strict", true,
+                "schema", Map.of("type", "object", "properties", properties,
+                        "required", List.of("reply", "recommendedProductIds"), "additionalProperties", false));
+    }
+
+    private AiChatResponse parseOpenAi(String body) throws Exception {
+        JsonNode root = objectMapper.readTree(body);
+        if (!"completed".equals(root.path("status").asText())) {
+            throw new IllegalArgumentException("Phản hồi chưa hoàn tất");
+        }
+        StringBuilder text = new StringBuilder();
+        for (JsonNode output : root.path("output")) {
+            if (!"message".equals(output.path("type").asText())) continue;
+            for (JsonNode content : output.path("content")) {
+                if ("output_text".equals(content.path("type").asText())) text.append(content.path("text").asText(""));
+            }
+        }
+        return parseAnswer(text.toString(), "OPENAI", openAiModel);
     }
 
     String effectiveModel() {
@@ -133,13 +194,20 @@ public class GeminiService {
         for (JsonNode part : root.path("candidates").path(0).path("content").path("parts")) {
             if (!part.path("thought").asBoolean(false)) text.append(part.path("text").asText(""));
         }
-        JsonNode answer = objectMapper.readTree(text.toString());
+        return parseAnswer(text.toString(), "GEMINI", effectiveModel());
+    }
+
+    private AiChatResponse parseAnswer(String text, String providerName, String model) throws Exception {
+        JsonNode answer = objectMapper.readTree(text);
+        if (answer == null || !answer.isObject() || !answer.path("recommendedProductIds").isArray()) {
+            throw new IllegalArgumentException("Phản hồi sai cấu trúc");
+        }
         String reply = answer.path("reply").asText("");
         if (reply.isBlank()) throw new IllegalArgumentException("Phản hồi trống");
         List<Long> ids = new ArrayList<>();
         for (JsonNode id : answer.path("recommendedProductIds")) if (id.isIntegralNumber()) ids.add(id.asLong());
         return AiChatResponse.builder().reply(reply).recommendedProductIds(ids)
-                .provider("GEMINI").model(effectiveModel()).fallback(false).build();
+                .provider(providerName).model(model).fallback(false).build();
     }
 
     private AiChatResponse basicResponse(List<Product> products) {

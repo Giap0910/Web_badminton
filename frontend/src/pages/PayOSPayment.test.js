@@ -10,6 +10,8 @@ import {
   getStoredPaymentLinkIntent,
   clearStoredPaymentLinkIntent,
   buildOrderPayload,
+  canonicalStringify,
+  isResponseStale,
   getOrCreateIdempotencyKey,
   clearStoredCheckoutIntent
 } from '../utils/idempotency.js';
@@ -459,6 +461,53 @@ function createProductionFetchOrderRunner(scope) {
   return factory(...values);
 }
 
+for (const envStatus of ['LOADING', 'ERROR']) {
+  test(`QR restoration: manual check waits for verified environment (${envStatus})`, async () => {
+    let environmentCalls = 0;
+    let orderCalls = 0;
+    let createCalls = 0;
+    const isCheckingRef = { current: false };
+    const runner = createProductionCheckPaymentRunner({
+      orderId: 99, envStatus, paymentEnv: null, isCheckingRef, isVerifying: false,
+      isMountedRef: { current: true }, currentOrderIdRef: { current: 99 },
+      setIsVerifying: () => {}, setError: () => {},
+      fetchPaymentEnvironment: async () => { environmentCalls++; },
+      orderApi: {
+        getOrderById: async () => { orderCalls++; return { data: { id: 99 } }; },
+        createPaymentLink: async () => { createCalls++; }
+      }
+    });
+    await runner();
+    assert.equal(environmentCalls, 1);
+    assert.equal(orderCalls, 0);
+    assert.equal(createCalls, 0);
+    assert.equal(isCheckingRef.current, false);
+  });
+}
+
+for (const latest of [
+  { id: 99, status: 'PENDING', paymentMethod: 'COD' },
+  { id: 99, status: 'CANCELLED', paymentMethod: 'PAYOS_VIETQR' }
+]) {
+  test(`QR restoration: manual check never creates link for ${latest.paymentMethod}/${latest.status}`, async () => {
+    let createCalls = 0;
+    const runner = createProductionCheckPaymentRunner({
+      orderId: 99, envStatus: 'VERIFIED', paymentEnv: { paymentMode: 'REAL' },
+      isCheckingRef: { current: false }, isVerifying: false, isQRSuspended: false,
+      isMountedRef: { current: true }, currentOrderIdRef: { current: 99 },
+      setIsVerifying: () => {}, setError: () => {}, setOrder: () => {}, setPayment: () => {},
+      isOrderPaid: () => false, navigate: () => {}, getOrCreatePaymentLinkKey,
+      orderApi: {
+        getOrderById: async () => ({ data: latest }),
+        getOrderPayment: async () => ({ data: null }),
+        createPaymentLink: async () => { createCalls++; }
+      }
+    });
+    await runner();
+    assert.equal(createCalls, 0);
+  });
+}
+
 function createProductionPollingRunner(scope) {
   const match = qrPageCode.match(/\/\/ Polling check order status every 4 seconds\r?\n\s*useEffect\(\(\) => {([\s\S]*?)},\s*\[orderId\]\);/);
   if (!match) throw new Error('Could not extract polling effect from QRPaymentPage.jsx');
@@ -471,6 +520,37 @@ function createProductionPollingRunner(scope) {
 
 // Explicitly set PayOS enabled for baseline remediation tests that verify enabled lifecycle
 globalThis.__PAYOS_ENABLED__ = true;
+
+function checkoutSubmitScope(method, orderApi, navigate) {
+  const checkoutItems = [{ cartItemId: 'qr-test', product: { id: 4, price: 4350000 }, quantity: 1, variantId: 277 }];
+  const currentPayload = buildOrderPayload({ customerName: 'Khách thử', shippingPhone: '0900000000',
+    addressDetail: 'Số 1', province: 'Hà Nội', ward: 'Phường Ba Đình', paymentMethod: method, checkoutItems });
+  const currentFingerprint = canonicalStringify(currentPayload);
+  return { paymentMethod: method, orderApi, navigate, checkoutItems, currentPayload, currentFingerprint,
+    currentFingerprintRef: { current: currentFingerprint }, isSubmittingRef: { current: false }, loading: false,
+    isValidatingVoucher: false, voucherCode: '', voucherSuccess: false, customerName: 'Khách thử',
+    shippingPhone: '0900000000', addressDetail: 'Số 1', provinceCode: '01', wardCode: '00001',
+    getOrCreateIdempotencyKey, clearStoredCheckoutIntent, getOrCreatePaymentLinkKey, isResponseStale,
+    removeFromCart: () => {}, setLoading: () => {}, setErrorMsg: message => { if (message) throw new Error(message); } };
+}
+
+function productionCheckoutSubmit(scope) {
+  const source = fs.readFileSync(path.join(__dirname, 'CheckoutPage.jsx'), 'utf8');
+  const body = source.match(/const handleSubmitOrder = async \(\) => \{([\s\S]*?)\n  \};/)?.[1];
+  assert.ok(body, 'Phải chạy handler từ CheckoutPage thật');
+  return new Function(...Object.keys(scope), `return async () => {${body}}`)(...Object.values(scope));
+}
+
+for (const method of ['PAYOS_VIETQR', 'COD']) test(`Checkout thật: ${method} tạo đúng một đơn và dùng đúng luồng thanh toán`, async () => {
+  sessionStorage.clear();
+  let orders = 0, links = 0, navigation;
+  const api = { createOrder: async payload => { orders++; assert.equal(payload.paymentMethod, method); return { id: 301, status: 'PENDING' }; },
+    createPaymentLink: async (id, key) => { links++; assert.equal(id, 301); assert.ok(key); return { orderId: id, status: 'PENDING' }; } };
+  await productionCheckoutSubmit(checkoutSubmitScope(method, api, (route, state) => { navigation = { route, state }; }))();
+  assert.equal(orders, 1); assert.equal(links, method === 'COD' ? 0 : 1);
+  assert.equal(navigation.route, method === 'COD' ? '/order-success/301' : '/payment/qr/301');
+  assert.equal(navigation.state.state.order.id, 301);
+});
 
 test('FIX-002 REMEDIATION TEST 8 (BUG A) — handleCheckPayment on GET 200 + null calls createPaymentLink with same orderId and same key', async () => {
   sessionStorage.clear();
@@ -1236,6 +1316,7 @@ test('DEMO COD REMEDIATION TEST 1 — handleCheckPayment on GET 200 + null calls
 
   const handleCheckPayment = createProductionCheckPaymentRunner({
     orderId,
+    isQRSuspended: true,
     orderApi: mockOrderApi,
     getOrCreatePaymentLinkKey,
     isCheckingRef,
@@ -1287,6 +1368,7 @@ test('DEMO COD REMEDIATION TEST 2 — handleCheckPayment on GET CREATING calls c
 
   const handleCheckPayment = createProductionCheckPaymentRunner({
     orderId,
+    isQRSuspended: true,
     orderApi: mockOrderApi,
     getOrCreatePaymentLinkKey,
     isCheckingRef,
@@ -1329,6 +1411,7 @@ test('DEMO COD REMEDIATION TEST 3 — fetchOrder on initial load with GET 200 + 
 
   const fetchOrder = createProductionFetchOrderRunner({
     orderId,
+    isQRSuspended: true,
     orderApi: mockOrderApi,
     getOrCreatePaymentLinkKey,
     hasInitialRecoveredRef,

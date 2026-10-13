@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
+export const internalProductImage = src => typeof src === 'string' && /^\/api\/media\/products\/\d+\/[a-zA-Z0-9-]+\.(jpg|png|webp)$/.test(src);
 
 /**
  * ProductImage Component
@@ -24,12 +26,15 @@ const ProductImage = ({
   className = '',
   imgClassName = 'w-full h-full object-contain',
   loading = 'lazy',
+  compact = false,
   ...props
 }) => {
   const [hasError, setHasError] = useState(false);
+  useEffect(() => setHasError(false), [src]);
 
   // If no source provided or failed to load
-  if (!src || typeof src !== 'string' || !src.trim() || hasError) {
+  if (!internalProductImage(src) || hasError) {
+    if (compact) return <span className={`flex flex-col items-center justify-center bg-slate-100 text-slate-400 text-[9px] leading-snug ${className}`}><strong>HG</strong><span>Đang cập nhật</span></span>;
     return <BadmintonPlaceholder className={className} />;
   }
 

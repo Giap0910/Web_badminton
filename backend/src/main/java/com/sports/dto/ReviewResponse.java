@@ -13,6 +13,7 @@ public class ReviewResponse {
     private Long id;
     private Long productId;
     private String productName;
+    private Boolean productDeleted;
     private String productImageUrl;
     private String productBrand;
     private Long userId;

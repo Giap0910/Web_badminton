@@ -25,6 +25,7 @@ public class ReviewService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
     public List<ReviewResponse> getReviewsByProduct(Long productId) {
         return reviewRepository.findByProductIdOrderByCreatedAtDesc(productId).stream()
                 .map(this::toDto)
@@ -64,12 +65,14 @@ public class ReviewService {
         return reviewRepository.findByProductIdOrderByCreatedAtDesc(productId).size();
     }
 
+    @Transactional(readOnly = true)
     public List<ReviewResponse> getUserReviews(Long userId) {
         return reviewRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ReviewResponse> getAllReviews() {
         return reviewRepository.findAll().stream()
                 .sorted((r1, r2) -> r2.getCreatedAt().compareTo(r1.getCreatedAt()))
@@ -88,10 +91,11 @@ public class ReviewService {
     private ReviewResponse toDto(Review review) {
         return ReviewResponse.builder()
                 .id(review.getId())
-                .productId(review.getProduct().getId())
-                .productName(review.getProduct().getName())
-                .productImageUrl(review.getProduct().getImageUrl())
-                .productBrand(review.getProduct().getBrand())
+                .productId(review.getProductIdSnapshot() != null ? review.getProductIdSnapshot() : review.getProduct()!=null ? review.getProduct().getId() : null)
+                .productName(review.getProductNameSnapshot()!=null ? review.getProductNameSnapshot() : review.getProduct()!=null ? review.getProduct().getName() : "Sản phẩm đã ngừng bán")
+                .productDeleted(review.getProduct()==null)
+                .productImageUrl(null)
+                .productBrand(review.getProductBrandSnapshot()!=null ? review.getProductBrandSnapshot() : review.getProduct()!=null ? review.getProduct().getBrand() : "")
                 .userId(review.getUser().getId())
                 .username(review.getUser().getUsername())
                 .userFullName(review.getUser().getFullName())

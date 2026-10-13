@@ -13,6 +13,8 @@ public class OrderItemResponse {
     private Long id;
     private Long productId;
     private String productName;
+    private String productSku;
+    private Boolean productDeleted;
     private String productBrand;
     private String productImageUrl;
     private String weightGrip;

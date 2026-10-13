@@ -49,6 +49,23 @@ public class Product {
 
     @Column(name = "sku", length = 50, unique = true)
     private String sku;
+    @Column(name = "legacy_sku", length = 50, unique = true)
+    private String legacySku;
+
+    @Column(name = "manufacturer_code", length = 100)
+    private String manufacturerCode;
+    @Column(name = "color_name", length = 200)
+    private String colorName;
+    @Column(length = 100)
+    private String edition;
+    @Column(name = "arrived_at")
+    private java.time.LocalDateTime arrivedAt;
+    @Column(name = "specification_source", length = 1000)
+    private String specificationSource;
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @OrderBy("id ASC") @Builder.Default
+    private java.util.List<ProductVariant> variants = new java.util.ArrayList<>();
 
     // Technical Badminton Attributes
     @Column(name = "weight_grip", length = 50)

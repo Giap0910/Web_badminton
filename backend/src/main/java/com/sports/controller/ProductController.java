@@ -20,6 +20,18 @@ import java.util.List;
 public class ProductController {
 
     private final ProductService productService;
+    private final com.sports.service.ProductVariantService productVariantService;
+    @PatchMapping("/{id}/variants/{variantId}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<com.sports.dto.ProductVariantDto> updateVariant(@PathVariable Long id,
+            @PathVariable Long variantId, @Valid @RequestBody com.sports.dto.ProductVariantDto dto) {
+        return ResponseEntity.ok(productVariantService.update(id, variantId, dto));
+    }
+
+    @GetMapping("/suggestions")
+    public ResponseEntity<List<ProductDto>> suggestions(@RequestParam String keyword) {
+        return ResponseEntity.ok(productService.getSuggestions(keyword));
+    }
 
     @GetMapping
     public ResponseEntity<?> getProducts(
