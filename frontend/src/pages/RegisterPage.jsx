@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth, loginDestination } from '../context/AuthContext';
 
 const RegisterPage = () => {
   const [activeTab, setActiveTab] = useState('register');
@@ -23,13 +23,16 @@ const RegisterPage = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const submissionLock = useRef(false), mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const { register, login } = useAuth();
   const navigate = useNavigate();
+  const destination = loginDestination(useLocation());
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (submitting) return;
+    if (submissionLock.current) return;
     setErrorMsg('');
     setSuccessMsg('');
 
@@ -60,7 +63,7 @@ const RegisterPage = () => {
       return;
     }
 
-    setSubmitting(true);
+    submissionLock.current = true; setSubmitting(true);
     try {
       const generatedUsername = cleanEmail.split('@')[0] + Math.floor(Math.random() * 100);
 
@@ -71,29 +74,28 @@ const RegisterPage = () => {
         fullName: registerFullName.trim(),
         phone: '',
       });
-      setSuccessMsg('Đăng ký tài khoản thành công! Đang chuyển hướng...');
-      setTimeout(() => {
-        navigate('/');
-      }, 1000);
+      if (mounted.current) navigate(destination.path, { state: destination.state, replace: true });
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin.');
     } finally {
-      setSubmitting(false);
+      submissionLock.current = false; if (mounted.current) setSubmitting(false);
     }
   };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    if (submissionLock.current) return;
+    submissionLock.current = true;
     setErrorMsg('');
     setSuccessMsg('');
     setSubmitting(true);
     try {
       await login(loginIdentifier, loginPassword);
-      navigate('/');
+      if (mounted.current) navigate(destination.path, { state: destination.state, replace: true });
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Email/Số điện thoại hoặc mật khẩu không chính xác');
     } finally {
-      setSubmitting(false);
+      submissionLock.current = false; if (mounted.current) setSubmitting(false);
     }
   };
 
@@ -163,14 +165,14 @@ const RegisterPage = () => {
             <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            <span className="hidden sm:inline">Bảo mật SSL 256-bit</span>
+            <span className="hidden sm:inline">Đăng nhập bằng tài khoản</span>
           </div>
           <span className="text-slate-600 hidden sm:inline">•</span>
           <div className="flex items-center gap-1.5">
             <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
-            <span>Hotline: <strong className="text-slate-200 font-semibold">1900 6886</strong></span>
+            <span>Thông tin liên hệ đang cập nhật</span>
           </div>
         </div>
       </header>
@@ -255,7 +257,7 @@ const RegisterPage = () => {
               <div className="space-y-4 transition-opacity duration-200">
                 <div className="mb-3">
                   <h1 className="text-xl font-bold text-slate-900">Tạo tài khoản HG Club</h1>
-                  <p className="text-xs text-slate-500 mt-1">Đăng ký thành viên để nhận voucher 100K và tích điểm đổi quà</p>
+                  <p className="text-xs text-slate-500 mt-1">Đăng ký để quản lý đơn hàng và tích điểm từ tiền hàng đã thanh toán</p>
                 </div>
 
                 <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
@@ -395,7 +397,7 @@ const RegisterPage = () => {
                         className="w-4 h-4 mt-0.5 text-red-600 border-slate-300 rounded focus:ring-red-500 cursor-pointer accent-red-600"
                       />
                       <span className="text-xs text-slate-500 leading-tight">
-                        Tôi đồng ý với <a href="#" onClick={(e) => { e.preventDefault(); alert('Điều khoản HG Badminton: Cam kết hàng chính hãng BWF 100%, bảo mật thanh toán SSL.'); }} className="text-blue-600 font-medium hover:underline">Điều khoản dịch vụ</a> và <a href="#" onClick={(e) => { e.preventDefault(); alert('Chính sách bảo mật: Tuân thủ quy chuẩn bảo mật PCI-DSS và bảo vệ dữ liệu người dùng.'); }} className="text-blue-600 font-medium hover:underline">Chính sách quyền riêng tư</a> của HG Badminton.
+                        Tôi đồng ý sử dụng tài khoản để quản lý hồ sơ, địa chỉ và đơn hàng tại HG Badminton. Không chia sẻ mật khẩu hoặc khóa bí mật.
                       </span>
                     </label>
                   </div>
@@ -500,10 +502,10 @@ const RegisterPage = () => {
                     </label>
                     <button
                       type="button"
-                      onClick={() => alert('Vui lòng liên hệ hotline 1900 6886 hoặc nhập email để đặt lại mật khẩu.')}
+                      disabled aria-disabled="true" title="Chưa tích hợp dịch vụ khôi phục mật khẩu"
                       className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
                     >
-                      Quên mật khẩu?
+                      Khôi phục mật khẩu chưa hỗ trợ
                     </button>
                   </div>
 
@@ -521,40 +523,7 @@ const RegisterPage = () => {
                   </div>
                 </form>
 
-                <div className="relative flex items-center justify-center my-4">
-                  <div className="border-t border-slate-200 w-full"></div>
-                  <span className="bg-white px-3 text-[11px] font-medium text-slate-400 uppercase tracking-wider">Hoặc tiếp tục với</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setErrorMsg('Đăng nhập mạng xã hội chưa được tích hợp. Vui lòng dùng tài khoản của bạn.');
-                    }}
-                    className="flex items-center justify-center gap-2 py-2.5 px-3 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z" />
-                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z" />
-                      <path fill="#FBBC05" d="M5.28 14.27a7.2 7.2 0 010-4.54V6.58H1.25a11.98 11.98 0 000 10.84l4.03-3.15z" />
-                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z" />
-                    </svg>
-                    <span>Google</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setErrorMsg('Đăng nhập mạng xã hội chưa được tích hợp. Vui lòng dùng tài khoản của bạn.');
-                    }}
-                    className="flex items-center justify-center gap-2 py-2.5 px-3 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                    </svg>
-                    <span>Facebook</span>
-                  </button>
-                </div>
+                <p className="text-xs text-slate-500 mt-4">Hiện hỗ trợ đăng nhập bằng tài khoản đã đăng ký.</p>
               </div>
             )}
 
@@ -564,9 +533,9 @@ const RegisterPage = () => {
           <div className="bg-slate-50 px-8 py-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>Bảo mật dữ liệu chuẩn mã hóa PCI-DSS</span>
+              <span>Mật khẩu được mã hóa trên máy chủ</span>
             </div>
-            <a href="#" onClick={(e) => { e.preventDefault(); alert('Tổng đài hỗ trợ 24/7: 1900 6886 hoặc email support@hgbadminton.vn'); }} className="text-blue-600 hover:underline font-medium">Trợ giúp 24/7</a>
+            <span className="text-xs text-slate-500">Thông tin hỗ trợ đang được cập nhật.</span>
           </div>
 
         </div>
@@ -579,7 +548,7 @@ const RegisterPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V4a2 2 0 10-2 2h2m0 13l4-4m-4 4l-4-4" />
               </svg>
             </div>
-            <span className="text-[11px] font-medium text-slate-400">Voucher 100K cho thành viên mới</span>
+            <span className="text-[11px] font-medium text-slate-400">Theo dõi đơn hàng và ưu đãi đang áp dụng</span>
           </div>
           <div className="flex flex-col items-center">
             <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-slate-200 mb-1.5 backdrop-blur-sm">
@@ -587,7 +556,7 @@ const RegisterPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <span className="text-[11px] font-medium text-slate-400">Tích lũy điểm cược đổi quà BWF</span>
+            <span className="text-[11px] font-medium text-slate-400">Tích 1 điểm cho mỗi 10.000đ tiền hàng đã thanh toán</span>
           </div>
           <div className="flex flex-col items-center">
             <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-slate-200 mb-1.5 backdrop-blur-sm">
@@ -607,9 +576,9 @@ const RegisterPage = () => {
           © 2025 HG Badminton Store Co., Ltd. Tất cả quyền được bảo lưu.
         </div>
         <div className="flex items-center gap-5">
-          <a href="#" className="hover:text-slate-300 transition-colors">Điều khoản dịch vụ</a>
-          <a href="#" className="hover:text-slate-300 transition-colors">Chính sách bảo mật</a>
-          <a href="#" className="hover:text-slate-300 transition-colors">Quy chế hoạt động</a>
+          <span className="text-slate-400">Điều khoản dịch vụ đang cập nhật</span>
+          <span className="text-slate-400">Chính sách bảo mật đang cập nhật</span>
+          <span className="text-slate-400">Quy chế hoạt động đang cập nhật</span>
         </div>
       </footer>
 

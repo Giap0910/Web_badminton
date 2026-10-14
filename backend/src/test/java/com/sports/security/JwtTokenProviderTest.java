@@ -89,10 +89,143 @@ class JwtTokenProviderTest {
             assertThat(parsed.getHeader().getAlgorithm()).isEqualTo("HS256");
             assertThat(parsed.getBody().get("role")).isEqualTo("ROLE_USER");
             assertThat(parsed.getBody().get("email")).isEqualTo("jwt-test@example.invalid");
+            assertThat(provider.getTokenVersionFromJwt(token)).isZero();
             assertThat(parsed.getBody().getExpiration().getTime() - parsed.getBody().getIssuedAt().getTime())
                     .isEqualTo(86400000L);
             assertThat(output.getAll()).doesNotContain(secret, token);
         });
+    }
+
+    @Test void legacyTokensHaveVersionZeroAndUpdatedTokensCarryLongVersion() {
+        String secret=randomSecret();JwtTokenProvider provider=provider(secret);
+        String legacy=Jwts.builder().setSubject("jwt-test").claim("userId",7L)
+                .setExpiration(new java.util.Date(System.currentTimeMillis()+60000))
+                .signWith(Keys.hmacShaKeyFor(HexFormat.of().parseHex(secret))).compact();
+        assertThat(provider.getTokenVersionFromJwt(legacy)).isZero();
+        User user=User.builder().id(7L).username("jwt-test").role(Role.ROLE_USER).tokenVersion(3L).build();
+        String token=provider.generateToken(new UsernamePasswordAuthenticationToken(new CustomUserDetails(user),null));
+        assertThat(provider.getTokenVersionFromJwt(token)).isEqualTo(3L);
+    }
+
+    private JwtTokenProvider provider(String secret) {
+        var provider=new JwtTokenProvider();ReflectionTestUtils.setField(provider,"jwtSecret",secret);
+        ReflectionTestUtils.setField(provider,"jwtExpirationMs",86400000L);return provider;
+    }
+
+    private WebFixture webFixture() {
+        String secret=randomSecret();var provider=provider(secret);
+        var encoder=new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4);
+        User user=User.builder().id(7L).username("jwt-test").email("jwt-test@example.invalid").fullName("Khách kiểm thử")
+                .password(encoder.encode("old-secret")).role(Role.ROLE_USER).build();
+        var users=org.mockito.Mockito.mock(com.sports.repository.UserRepository.class);
+        var orders=org.mockito.Mockito.mock(com.sports.repository.OrderRepository.class);
+        org.mockito.Mockito.when(users.findByUsername("jwt-test")).thenAnswer(call->java.util.Optional.of(user));
+        org.mockito.Mockito.when(users.findById(7L)).thenAnswer(call->java.util.Optional.of(user));
+        org.mockito.Mockito.when(users.findByIdForUpdate(7L)).thenAnswer(call->java.util.Optional.of(user));
+        org.mockito.Mockito.when(users.save(org.mockito.ArgumentMatchers.any())).thenAnswer(call->call.getArgument(0));
+        org.mockito.Mockito.when(users.saveAndFlush(org.mockito.ArgumentMatchers.any())).thenAnswer(call->call.getArgument(0));
+        var auth=new com.sports.service.AuthService(org.mockito.Mockito.mock(
+                org.springframework.security.authentication.AuthenticationManager.class),users,encoder,provider);
+        var profile=new com.sports.service.UserService(users,encoder,orders);
+        var web=new org.springframework.web.context.support.AnnotationConfigWebApplicationContext();
+        web.setServletContext(new org.springframework.mock.web.MockServletContext());
+        web.register(SecurityConfig.class,com.sports.controller.AuthController.class,com.sports.controller.UserController.class,
+                com.sports.controller.AdminUserController.class,com.sports.exception.GlobalExceptionHandler.class,WebConfig.class);
+        web.addBeanFactoryPostProcessor(factory->{
+            factory.registerSingleton("authService",auth);factory.registerSingleton("userService",profile);
+            factory.registerSingleton("jwtAuthenticationFilter",new JwtAuthenticationFilter(provider,new UserDetailsServiceImpl(users)));
+        });web.refresh();return new WebFixture(web,provider,user,users,secret);
+    }
+
+    private record WebFixture(org.springframework.web.context.support.AnnotationConfigWebApplicationContext context,
+            JwtTokenProvider provider,User user,com.sports.repository.UserRepository users,String secret) {
+        String token() { return provider.generateToken(new UsernamePasswordAuthenticationToken(new CustomUserDetails(user),null)); }
+    }
+
+    @org.springframework.context.annotation.Configuration
+    @org.springframework.web.servlet.config.annotation.EnableWebMvc
+    static class WebConfig {}
+
+    @Test void httpLogoutRequiresAuthenticationAndRevokesAllPreviouslyIssuedTokens() throws Exception {
+        var fixture=webFixture();
+        try (var web=fixture.context()) {
+            var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(web)
+                    .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+            String first=fixture.token(),second=fixture.token();
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/logout"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/me").header("Authorization","Bearer "+first))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/logout").header("Authorization","Bearer "+first))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+            assertThat(fixture.user().getTokenVersion()).isEqualTo(1L);
+            for (String token:java.util.List.of(first,second))
+                mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/me").header("Authorization","Bearer "+token))
+                        .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/me").header("Authorization","Bearer "+fixture.token()))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.tokenVersion").doesNotExist());
+        }
+    }
+
+    @Test void httpPasswordByteLimitAndSuccessRevokeWorkWithRealBcryptAndJwtFilter() throws Exception {
+        var fixture=webFixture();
+        try (var web=fixture.context()) {
+            var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(web)
+                    .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+            String token=fixture.token(),path="/api/users/change-password";
+            String invalid="{\"currentPassword\":\"old-secret\",\"newPassword\":\""+ "đ".repeat(37)+"\"}";
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path).header("Authorization","Bearer "+token)
+                    .contentType("application/json").content(invalid)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+            assertThat(fixture.user().getTokenVersion()).isZero();
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path).header("Authorization","Bearer "+token)
+                    .contentType("application/json").content("{\"currentPassword\":\"old-secret\",\"newPassword\":\"new-secret\"}"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+            assertThat(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().matches("new-secret",fixture.user().getPassword())).isTrue();
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/me").header("Authorization","Bearer "+token))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+        }
+    }
+
+    @Test void httpAdminCannotSelfDeactivateUserCannotManageAccountsAndNullStatusFails() throws Exception {
+        var fixture=webFixture();
+        try (var web=fixture.context()) {
+            var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(web)
+                    .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+            String path="/api/admin/users/7/status",userToken=fixture.token();
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path).header("Authorization","Bearer "+userToken)
+                    .param("active","false")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+            fixture.user().setRole(Role.ROLE_ADMIN);String adminToken=fixture.token();
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path).header("Authorization","Bearer "+adminToken)
+                    .param("active","false")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path).header("Authorization","Bearer "+adminToken)
+                    .param("active","null")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+            assertThat(fixture.user().getIsActive()).isTrue();assertThat(fixture.user().getTokenVersion()).isZero();
+        }
+    }
+
+    @Test void httpChecksTokenUserIdLegacyVersionAndRejectsLockedOrReactivatedOldSession() throws Exception {
+        var fixture=webFixture();
+        try (var web=fixture.context()) {
+            var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(web)
+                    .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+            String old=Jwts.builder().setSubject("jwt-test").claim("userId",7L)
+                    .setExpiration(new java.util.Date(System.currentTimeMillis()+60000))
+                    .signWith(Keys.hmacShaKeyFor(HexFormat.of().parseHex(fixture.secret()))).compact();
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/me").header("Authorization","Bearer "+old))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+            String wrong=Jwts.builder().setSubject("jwt-test").claim("userId",8L)
+                    .setExpiration(new java.util.Date(System.currentTimeMillis()+60000))
+                    .signWith(Keys.hmacShaKeyFor(HexFormat.of().parseHex(fixture.secret()))).compact();
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/me").header("Authorization","Bearer "+wrong))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+            fixture.user().setIsActive(false);
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/me").header("Authorization","Bearer "+old))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+            fixture.user().setIsActive(true);fixture.user().setTokenVersion(1L);
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/me").header("Authorization","Bearer "+old))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+        }
     }
 
     @Test

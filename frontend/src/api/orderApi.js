@@ -1,19 +1,19 @@
 import axiosClient from './axiosClient.js';
 
 export const orderApi = {
-  createOrder: (data, idempotencyKey) => {
-    const config = {};
+  createOrder: (data, idempotencyKey, options) => {
+    const config = { ...options };
     if (typeof idempotencyKey === 'string' && idempotencyKey.trim()) {
-      config.headers = { 'Idempotency-Key': idempotencyKey.trim() };
+      config.headers = { ...config.headers, 'Idempotency-Key': idempotencyKey.trim() };
     } else if (idempotencyKey && typeof idempotencyKey === 'object') {
       Object.assign(config, idempotencyKey);
     }
     return axiosClient.post('/orders', data, config);
   },
-  createPaymentLink: (orderId, idempotencyKey) => {
-    const config = {};
+  createPaymentLink: (orderId, idempotencyKey, options) => {
+    const config = { ...options };
     if (typeof idempotencyKey === 'string' && idempotencyKey.trim()) {
-      config.headers = { 'Idempotency-Key': idempotencyKey.trim() };
+      config.headers = { ...config.headers, 'Idempotency-Key': idempotencyKey.trim() };
     }
     return axiosClient.post(`/orders/${orderId}/payment-link`, undefined, config);
   },

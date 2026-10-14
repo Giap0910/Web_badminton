@@ -1,29 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { productApi } from '../api/productApi';
-import { reviewApi } from '../api/reviewApi';
+import { reviewApi, useProductReviews, buildReviewPayload } from '../api/reviewApi';
 import { useCart } from '../context/CartContext';
 import { useCompare } from '../context/CompareContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
 import { productCategory } from '../utils/formatters';
-import { ProductBenefits, ProductDescription, ProductSpecifications, ProductSelections, ProductRating, ReviewSummary, productCartOptions, availableProductSizes, productVariants, productValue } from '../components/ProductFacts';
+import { ProductBenefits, ProductDescription, ProductSpecifications, ProductSelections, ProductRating, ProductReviewList, productCartOptions, availableProductSizes, productVariants, productValue, useProductFavorite, copyProductLink } from '../components/ProductFacts';
 import ProductImage, { BadmintonPlaceholder } from '../components/ProductImage';
 import ProductGallery, { productGallerySlots } from '../components/ProductGallery';
 import { ShoppingCart, Layers, Star, CheckCircle2, Heart, ZoomIn, Home, ChevronRight, ChevronLeft, Bolt, Share2, AlertCircle, X } from 'lucide-react';
 
 const ProductDetailPage = () => {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const reviewRoute = useRef(id), reviewLock = useRef(false), reviewAttempt = useRef(0); reviewRoute.current = id;
+  useEffect(() => { reviewRoute.current = id; reviewLock.current = false; reviewAttempt.current++; setReviewSubmitting(false);
+    return () => { reviewRoute.current = null; reviewAttempt.current++; }; }, [id]);
   const [product, setProduct] = useState(null);
-  const [reviews, setReviews] = useState([]);
-  const [reviewsError, setReviewsError] = useState('');
+  const { reviews, reviewsError, reviewsLoading, setReviews, retryReviews } = useProductReviews(id);
+
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [shareError, setShareError] = useState('');
   const [activeTab, setActiveTab] = useState('description');
   const [addedToast, setAddedToast] = useState(false);
   const [shareToast, setShareToast] = useState(false);
@@ -46,7 +50,8 @@ const ProductDetailPage = () => {
 
   const { addToCart } = useCart();
   const { toggleRacket, isInComparison } = useCompare();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
+  const { isFavorite, toggleFavorite, favoriteError } = useProductFavorite(user?.id, Number(id));
 
   const isComparing = product ? isInComparison(product.id) : false;
 
@@ -64,19 +69,23 @@ const ProductDetailPage = () => {
     setActiveImage(0);
     setSelectedVariantId(productVariants(product).find(v => v.inStock)?.id ?? null);
     setQuantity(1);
-    setActiveTab('description');
+    setActiveTab(/^#review-\d+$/.test(location.hash) ? 'reviews' : 'description');
   }, [product?.id, isShoes, isApparel, isBag, isAccessories]);
+  useEffect(() => {
+    if (!/^#review-\d+$/.test(location.hash)) return;
+    setActiveTab('reviews');
+    if (!reviewsLoading) document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'center' });
+  }, [location.hash, reviewsLoading, activeTab]);
 
   useEffect(() => {
     let active = true;
     const fetchDetails = async () => {
       setLoading(true);
       setDataError('');
-      setReviewsError('');
+
       try {
-        const [prodData, reviewData, allProds, galleryApi] = await Promise.all([
+        const [prodData, allProds, galleryApi] = await Promise.all([
           productApi.getProductById(id),
-          reviewApi.getProductReviews(id).catch(() => { if (active) setReviewsError('Không tải được đánh giá.'); return []; }),
           productApi.getProducts({ size: 8 }).catch(() => []),
           productApi.getProductImages(id).catch(() => [])
         ]);
@@ -90,7 +99,6 @@ const ProductDetailPage = () => {
         }
 
         setProduct(prodData);
-        setReviews(Array.isArray(reviewData) ? reviewData : (reviewData?.items || []));
 
         const list = Array.isArray(allProds) ? allProds : (allProds?.content || []);
         const filtered = list.filter(p => p.id !== Number(id) && p.categoryId === prodData?.categoryId).slice(0, 4);
@@ -140,38 +148,34 @@ const ProductDetailPage = () => {
     }
   };
 
-  const handleShare = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      setShareToast(true);
-      setTimeout(() => setShareToast(false), 2500);
-    }
+  const handleShare = async () => {
+    setShareError(''); setShareToast(false);
+    try { await copyProductLink(Number(id)); setShareToast(true); setTimeout(() => setShareToast(false), 2500); }
+    catch (error) { setShareError(error.message || 'Không sao chép được liên kết.'); }
   };
 
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
-    if (!comment.trim()) return;
+    if (!comment.trim() || reviewLock.current) return;
     if (!isAuthenticated) {
       setReviewError('Vui lòng đăng nhập tài khoản để gửi đánh giá sản phẩm.');
       setTimeout(() => setReviewError(''), 4000);
       return;
     }
-    setReviewSubmitting(true);
+    reviewLock.current = true; const submittedId = id, attempt = ++reviewAttempt.current; setReviewSubmitting(true);
     setReviewError('');
     try {
-      const newRev = await reviewApi.createReview({
-        productId: product.id,
-        rating: newRating,
-        comment: comment.trim()
-      });
+      const newRev = await reviewApi.createReview(buildReviewPayload({ productId: product.id }, newRating, comment), { headers: { Authorization: `Bearer ${token}` } });
+      if (reviewRoute.current !== submittedId || reviewAttempt.current !== attempt) return;
       if (newRev && (newRev.id || newRev.productId)) {
         setReviews(prev => [newRev, ...prev]);
-        productApi.getProductById(id).then(setProduct).catch(() => {});
+        productApi.getProductById(id).then(data => { if (reviewRoute.current === submittedId) setProduct(data); }).catch(() => {});
         setComment('');
         setReviewSuccess(true);
         setTimeout(() => setReviewSuccess(false), 4000);
       }
     } catch (err) {
+      if (reviewRoute.current !== submittedId || reviewAttempt.current !== attempt) return;
       console.error('Review submission error:', err);
       setReviewSuccess(false);
       if (err?.response?.status === 401) {
@@ -183,7 +187,7 @@ const ProductDetailPage = () => {
       }
       setTimeout(() => setReviewError(''), 4000);
     } finally {
-      setReviewSubmitting(false);
+      if (reviewRoute.current === submittedId && reviewAttempt.current === attempt) { reviewLock.current = false; setReviewSubmitting(false); }
     }
   };
 
@@ -239,10 +243,11 @@ const ProductDetailPage = () => {
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-[#E2E8F0] mb-12">
 
           <ProductGallery product={product} activeIndex={activeImage} onChange={setActiveImage}
-            onZoom={() => setZoomModal(true)} favorite={isFavorite} onFavorite={() => setIsFavorite(!isFavorite)} />
+            onZoom={() => setZoomModal(true)} favorite={isFavorite} onFavorite={toggleFavorite} />
 
           {/* RIGHT COLUMN: SPECS & PURCHASING ARCHITECTURE (6 cols) */}
           <div className="lg:col-span-6 flex flex-col justify-between">
+            {favoriteError && <p role="alert" className="text-xs text-red-700">{favoriteError}</p>}
             <div>
               {/* Brand line & SKU Header */}
               <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
@@ -367,10 +372,11 @@ const ProductDetailPage = () => {
                     <Share2 className="w-4 h-4 text-slate-400" />
                     <span>{shareToast ? 'Đã sao chép liên kết!' : 'Chia sẻ thông số'}</span>
                   </button>
+                  {shareError && <p role="alert" className="text-xs text-red-700">{shareError}</p>}
                 </div>
                 {isShoes && (
                   <span className="font-semibold text-slate-700">
-                    Hotline tư vấn size: <strong className="text-secondary">1900 6886</strong>
+                    Đối chiếu kích cỡ và thông số của từng mẫu trước khi đặt hàng.
                   </span>
                 )}
               </div>
@@ -420,8 +426,6 @@ const ProductDetailPage = () => {
           {/* TAB 3: ĐÁNH GIÁ & NHẬN XÉT */}
           {activeTab === 'reviews' && (
             <div className="space-y-8 max-w-4xl">
-              <ReviewSummary product={product} reviews={reviews} />
-              {reviewsError && <p role="alert" className="text-sm text-slate-600">{reviewsError}</p>}
 
               {/* Form Submit Review */}
               <form onSubmit={handleReviewSubmit} className="p-5 bg-white border border-slate-200 rounded-2xl space-y-3">
@@ -443,6 +447,7 @@ const ProductDetailPage = () => {
                 </div>
                 <textarea
                   required
+                  maxLength={2000}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="Chia sẻ cảm nhận về lực smash, độ êm hoặc cảm giác thi đấu thực tế..."
@@ -471,31 +476,7 @@ const ProductDetailPage = () => {
               </form>
 
               {/* Review List */}
-              <div className="space-y-4">
-                {reviews && reviews.length > 0 ? (
-                  reviews.map((rev, idx) => (
-                    <div key={rev.id || idx} className="p-4 bg-[#F8FAFC] rounded-2xl border border-slate-100 space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <strong className="text-slate-900">{rev.userFullName || 'Khách hàng'}</strong>
-
-                        </div>
-                        <span className="text-slate-400 text-[11px]">{rev.createdAt ? String(rev.createdAt).split('T')[0] : 'Vừa xong'}</span>
-                      </div>
-                      <div className="flex text-amber-500">
-                        {[...Array(Number.isInteger(rev.rating) && rev.rating >= 1 && rev.rating <= 5 ? rev.rating : 0)].map((_, s) => (
-                          <Star key={s} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                        ))}
-                      </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">{rev.comment}</p>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center bg-[#F8FAFC] rounded-2xl border border-slate-100">
-                    <p className="text-xs text-slate-500 font-medium">Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên trải nghiệm và để lại đánh giá!</p>
-                  </div>
-                )}
-              </div>
+              <ProductReviewList product={product} reviews={reviews} error={reviewsError} loading={reviewsLoading} onRetry={retryReviews} />
             </div>
           )}
 

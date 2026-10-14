@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import UserLayout from '../components/UserLayout';
 import { userApi } from '../api/userApi';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   Camera,
   Check,
@@ -20,7 +21,11 @@ import {
 } from 'lucide-react';
 
 const ProfilePage = () => {
-  const { user, setProfile } = useAuth();
+  const { user, token, setProfile, clearLocalSession } = useAuth();
+  const navigate = useNavigate();
+  const mounted = useRef(true), passwordLock = useRef(false);
+  const requestConfig = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const avatarInput = useRef(null);
   const [avatarBusy, setAvatarBusy] = useState(false);
 
@@ -29,7 +34,7 @@ const ProfilePage = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [dob, setDob] = useState('');
-  const [gender, setGender] = useState('nam');
+  const [gender, setGender] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
 
   const [profileReady, setProfileReady] = useState(false);
@@ -53,7 +58,7 @@ const ProfilePage = () => {
     let active = true;
     const fetchProfile = async () => {
       try {
-        const res = await userApi.getProfile();
+        const res = await userApi.getProfile(requestConfig);
         const data = res?.data ?? res;
         if (!active) return;
         if (data) {
@@ -62,7 +67,7 @@ const ProfilePage = () => {
           setFullName(data.fullName || user?.fullName || '');
           setPhone(data.phone || '');
           setEmail(data.email || user?.email || '');
-          if (data.gender) setGender(data.gender);
+          setGender(['nam', 'nu', 'khac'].includes(data.gender) ? data.gender : '');
           setDob(data.dob || '');
         }
       } catch (err) {
@@ -88,7 +93,8 @@ const ProfilePage = () => {
     }
     setAvatarBusy(true); setProfileError('');
     try {
-      const data = await userApi.uploadAvatar(file);
+      const data = await userApi.uploadAvatar(file, requestConfig);
+      if (!mounted.current) return;
       setAvatarUrl(data.avatarUrl || ''); setProfile?.(data);
       setProfileSuccess('Đã lưu ảnh đại diện.');
     } catch (error) { setProfileError(error.response?.data?.message || 'Không tải được ảnh đại diện.'); }
@@ -97,7 +103,8 @@ const ProfilePage = () => {
   const removeAvatar = async () => {
     setAvatarBusy(true); setProfileError('');
     try {
-      const data = await userApi.deleteAvatar();
+      const data = await userApi.deleteAvatar(requestConfig);
+      if (!mounted.current) return;
       setAvatarUrl(''); setProfile?.(data); setProfileSuccess('Đã xóa ảnh đại diện.');
     } catch (error) { setProfileError(error.response?.data?.message || 'Không xóa được ảnh đại diện.'); }
     finally { setAvatarBusy(false); }
@@ -111,9 +118,10 @@ const ProfilePage = () => {
     setProfileError('');
 
     try {
-      const updated = await userApi.updateProfile({ fullName, phone, dob: dob || null });
+      const updated = await userApi.updateProfile({ fullName, phone, dob: dob || null, gender: gender || null }, requestConfig);
+      if (!mounted.current) return;
       setProfile?.(updated);
-      setProfileSuccess('Đã lưu họ tên, số điện thoại và ngày sinh.');
+      setProfileSuccess('Đã lưu thông tin cá nhân.');
     } catch (err) {
       setProfileError(err.response?.data?.message || 'Không thể cập nhật thông tin cá nhân. Vui lòng thử lại.');
     } finally {
@@ -127,6 +135,7 @@ const ProfilePage = () => {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    if (passwordLock.current) return;
     setPasswordSuccess('');
     setPasswordError('');
 
@@ -140,17 +149,19 @@ const ProfilePage = () => {
       return;
     }
 
-    setUpdatingPassword(true);
+    passwordLock.current = true; setUpdatingPassword(true);
     try {
-      await userApi.changePassword({ currentPassword, newPassword });
-      setPasswordSuccess('Cập nhật mật khẩu mới thành công!');
+      await userApi.changePassword({ currentPassword, newPassword }, requestConfig);
+      if (!mounted.current) return;
+      clearLocalSession();
+      navigate('/login', { replace: true, state: { message: 'Đã đổi mật khẩu và thu hồi mọi phiên. Vui lòng đăng nhập lại.' } });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
       setPasswordError(err.response?.data?.message || 'Mật khẩu hiện tại không chính xác.');
     } finally {
-      setUpdatingPassword(false);
+      passwordLock.current = false; if (mounted.current) setUpdatingPassword(false);
       setTimeout(() => setPasswordSuccess(''), 4000);
     }
   };
@@ -207,7 +218,7 @@ const ProfilePage = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 max-w-md leading-relaxed">
-                Định dạng JPG, PNG tối đa 5MB và 4096 × 4096px. Tỉ lệ khuyến nghị 1:1 để hiển thị tối ưu trên bảng xếp hạng HG Club.
+                Định dạng JPG, PNG tối đa 5MB và 4096 × 4096px. Tỉ lệ khuyến nghị 1:1 để hiển thị rõ ảnh đại diện.
               </p>
               <div className="flex items-center gap-3 mt-1.5 justify-center sm:justify-start">
                 <button
@@ -253,10 +264,6 @@ const ProfilePage = () => {
                   <label className="text-xs font-bold text-slate-900">
                     Số điện thoại <span className="text-secondary">*</span>
                   </label>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-                    <BadgeCheck className="w-3.5 h-3.5" />
-                    Đã xác thực
-                  </span>
                 </div>
                 <input
                   type="tel"
@@ -304,7 +311,7 @@ const ProfilePage = () => {
             {/* Giới tính */}
             <div className="flex flex-col gap-2 pt-1">
               <label className="text-xs font-bold text-slate-900">Giới tính</label>
-              <div className="flex items-center gap-6">
+              <fieldset disabled={loadingProfile || !profileReady || updatingProfile || avatarBusy} className="flex items-center gap-6 flex-wrap">
                 <label className="inline-flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -338,7 +345,9 @@ const ProfilePage = () => {
                   />
                   <span className="text-xs text-slate-800 font-medium">Khác</span>
                 </label>
-              </div>
+                <label className="inline-flex items-center gap-2 cursor-pointer"><input type="radio" name="gender" value="" checked={!gender}
+                  onChange={() => setGender('')} /><span className="text-xs">Không cung cấp</span></label>
+              </fieldset>
             </div>
 
             <div className="flex items-center justify-end pt-3 border-t border-slate-100">
@@ -492,7 +501,7 @@ const ProfilePage = () => {
             <div className="flex flex-col">
               <span className="text-xs font-black text-slate-900">Bảo hành 90 ngày</span>
               <span className="text-[11px] text-slate-500 leading-snug mt-0.5">
-                Bảo hành khung vợt chính hãng 1 đổi 1 do lỗi sản xuất từ Yonex, Victor, Lining.
+                Bảo hành 1 đổi 1 trong 90 ngày cho vợt, giày, quần áo và balo/bao vợt đủ điều kiện. Phụ kiện không có ưu đãi này.
               </span>
             </div>
           </div>
@@ -502,9 +511,9 @@ const ProfilePage = () => {
               <RotateCcw className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black text-slate-900">Đổi size giày 7 ngày</span>
+              <span className="text-xs font-black text-slate-900">Phí giao hàng</span>
               <span className="text-[11px] text-slate-500 leading-snug mt-0.5">
-                Đổi size miễn phí tận nhà trong vòng 7 ngày nếu mang không vừa chân thi đấu.
+                Phí giao hàng 30.000đ; miễn phí từ 1.000.000đ tiền hàng. Phí cuối cùng được kiểm tra tại thanh toán.
               </span>
             </div>
           </div>
@@ -514,9 +523,9 @@ const ProfilePage = () => {
               <PhoneCall className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black text-slate-900">Hotline Kỹ Thuật</span>
+              <span className="text-xs font-black text-slate-900">Thông tin liên hệ</span>
               <span className="text-[11px] text-slate-500 leading-snug mt-0.5">
-                Tư vấn chọn cước, chỉnh thông số vợt: <strong className="text-secondary font-bold">1900 6886</strong> (8:30 - 21:30)
+                Hotline và giờ hỗ trợ của cửa hàng chưa được xác minh.
               </span>
             </div>
           </div>

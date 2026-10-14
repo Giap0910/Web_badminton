@@ -1,136 +1,63 @@
 import useBannerCarousel from '../hooks/useBannerCarousel';
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { productApi } from '../api/productApi';
-import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
-import { ProductRating, productSpecSummary, productValue, productCartOptions } from '../components/ProductFacts';
+import { ProductRating } from '../components/ProductFacts';
 import { productCategory } from '../utils/formatters';
 import { Flame, ArrowRight, ChevronRight, ArrowUpRight, Footprints, Backpack, Shirt, Trophy, Swords, X, ShoppingCart, Check, ShieldCheck, Truck, Shield, Headphones } from 'lucide-react';
 
-// Danh sách Hero Slides theo đúng chuẩn thi đấu HG BWF
-const HERO_SLIDES = [
-  {
-    badgeText: 'Giải đấu Quốc tế 2024',
-    tagline: 'Tournament Series 2024',
-    titleLine1: 'HG PRO TOUR 2024',
-    titleGradient: 'BỨT PHÁ MỌI GIỚI HẠN SMASH',
-    description: 'Khám phá bộ sưu tập vợt, giày và trang bị thi đấu chuyên nghiệp chuẩn BWF. Giảm tới 35% cho thành viên mới cùng dịch vụ căng cước chuẩn BWF Tournament.',
-    ctaPrimary: 'Mua ngay',
-    ctaPrimaryLink: '/products',
-    ctaSecondary: 'Khám phá bộ sưu tập',
-    ctaSecondaryLink: '/products?sale=true',
-    slideCode: '01 / 04 SMASH EDITION',
-    bgImage: 'https://lh3.googleusercontent.com/aida/AEtjO1WnCri4_js0e8_-uBsfS2jif7zSpzBPOHaHnHP0kIUHp3v5h6_D5sR-XfIHJytBPt3KgbcRUEHT6PMS9K52OI_DaS-Ro61enM8us2nebGYymeA-IrL3Bzt_a_Q5BwTJj2Hjp2WaCT_yDorE3D9Zr2YfwifheyDXtK4J3AfimAlwfYF-c29Yv-Dj7ydJVciQMv6RwTtr9zmzgTew16-rgAneEdC0a9lpAb99jsq4WApfao2LO-yx73JDa2I'
-  },
-  {
-    badgeText: 'Bản Đột Phá Carbon 2025',
-    tagline: 'Hyper Slim Shaft Series',
-    titleLine1: 'YONEX ASTROX 100ZZ',
-    titleGradient: 'KURENAI TOURNAMENT EDITION',
-    description: 'Trang bị khung nặng đầu tích hợp hệ thống Rotational Generator và đũa siêu mỏng Hyper Slim Shaft cho cú smash cắm sàn không thể cản phá.',
-    ctaPrimary: 'Xem chi tiết',
-    ctaPrimaryLink: '/products?keyword=Astrox',
-    ctaSecondary: 'So sánh thông số',
-    ctaSecondaryLink: '/compare',
-    slideCode: '02 / 04 POWER SMASH',
-    bgImage: 'https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?q=80&w=2070&auto=format&fit=crop'
-  },
-  {
-    badgeText: 'Công Nghệ Đệm Khí Power Cushion+',
-    tagline: 'Court Agility 2024',
-    titleLine1: 'GIÀY THI ĐẤU YONEX 65Z3',
-    titleGradient: 'TỐI ƯU TỐC ĐỘ BƯỚC DI CHUYỂN',
-    description: 'Khả năng hấp thụ chấn động và hoàn trả lực vượt trội giúp bạn làm chủ từng pha bật nhảy cứu cầu góc sân hiểm hóc nhất.',
-    ctaPrimary: 'Khám phá giày',
-    ctaPrimaryLink: '/products?categoryId=2',
-    ctaSecondary: 'Xem ưu đãi',
-    ctaSecondaryLink: '/products?sale=true',
-    slideCode: '03 / 04 SPEED & AGILITY',
-    bgImage: 'https://images.unsplash.com/photo-1613918108466-292b78a8ef95?q=80&w=2076&auto=format&fit=crop'
-  },
-  {
-    badgeText: 'Dịch Vụ Chuẩn BWF Certified',
-    tagline: 'Electronic Precision 9.0',
-    titleLine1: 'CĂNG CƯỚC 4 NÚT ĐIỆN TỬ',
-    titleGradient: 'CHUẨN LỰC ĐẾN TỪNG LBS',
-    description: 'Đội ngũ KTV chứng chỉ quốc tế căng vợt điện tử lấy liền sau 20 phút. Bảo hành đứt cước 24H an tâm tuyệt đối trên mọi giải đấu.',
-    ctaPrimary: 'Khám phá ngay',
-    ctaPrimaryLink: '/products?categoryId=5',
-    ctaSecondary: 'Xem loại cước',
-    ctaSecondaryLink: '/product/string/string-bg80p',
-    slideCode: '04 / 04 STRINGING PRO',
-    bgImage: 'https://images.unsplash.com/photo-1544919982-b61976f0ba43?q=80&w=2069&auto=format&fit=crop'
-  }
+export const HERO_SLIDES = [
+  { badgeText: 'Danh mục vợt cầu lông', tagline: 'Lựa chọn theo lối chơi', titleLine1: 'VỢT CẦU LÔNG',
+    titleGradient: 'CHỌN ĐÚNG TRANG BỊ', description: 'Xem thông số và các phiên bản còn hàng của Yonex, Victor, Li-Ning, Mizuno, Kawasaki và Fleet.',
+    ctaPrimary: 'Xem vợt', ctaPrimaryLink: '/products?categoryId=1', ctaSecondary: 'So sánh thông số', ctaSecondaryLink: '/compare' },
+  { badgeText: 'Danh mục giày cầu lông', tagline: 'Chọn kích cỡ phù hợp', titleLine1: 'GIÀY CẦU LÔNG',
+    titleGradient: 'SẴN SÀNG DI CHUYỂN', description: 'Đối chiếu kích cỡ, màu sắc và thông số từng mẫu trước khi chọn mua.',
+    ctaPrimary: 'Xem giày', ctaPrimaryLink: '/products?categoryId=2', ctaSecondary: 'Xem sản phẩm', ctaSecondaryLink: '/products' },
+  { badgeText: 'Quần áo và túi cầu lông', tagline: 'Trang bị cho buổi tập', titleLine1: 'QUẦN ÁO & TÚI',
+    titleGradient: 'LỰA CHỌN THEO NHU CẦU', description: 'Kiểm tra chất liệu, kích cỡ và quy cách của từng sản phẩm trong danh mục.',
+    ctaPrimary: 'Xem quần áo', ctaPrimaryLink: '/products?categoryId=3', ctaSecondary: 'Xem balo & bao vợt', ctaSecondaryLink: '/products?categoryId=4' },
+  { badgeText: 'Danh mục phụ kiện', tagline: 'Hoàn thiện trang bị', titleLine1: 'PHỤ KIỆN CẦU LÔNG',
+    titleGradient: 'CHỌN ĐÚNG QUY CÁCH', description: 'Tìm dây cước, quấn cán, quả cầu và các phụ kiện theo thông số trong cửa hàng.',
+    ctaPrimary: 'Xem phụ kiện', ctaPrimaryLink: '/products?categoryId=5', ctaSecondary: 'Tìm dây cước', ctaSecondaryLink: '/products?categoryId=5&keyword=c%C6%B0%E1%BB%9Bc' }
 ];
-
-// 8 Sản phẩm bán chạy chuẩn thiết kế gốc
-
-// 4 Sản phẩm mới về (New Arrivals 2024)
-
+export function homeCatalog(response) {
+  const list = Array.isArray(response) ? response : response?.content;
+  if (!Array.isArray(list)) throw new Error('Danh sách sản phẩm không hợp lệ.');
+  return list.filter(item => Number.isSafeInteger(item?.id) && item.id > 0 && item.catalogVisible !== false);
+}
+export const newHomeProducts = products => products.filter(item => item.isNew === true).slice(0, 4);
 const HomePage = () => {
   const { activeSlide, dragging, offset, handlers } = useBannerCarousel(HERO_SLIDES.length);
   const [activeTab, setActiveTab] = useState('all');
   const [products, setProducts] = useState([]);
-  const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const [quickViewQty, setQuickViewQty] = useState(1);
-  const [addedSuccess, setAddedSuccess] = useState(false);
+  const [loading, setLoading] = useState(true), [dataError, setDataError] = useState(''), [retry, setRetry] = useState(0);
 
-  const { addToCart } = useCart();
-  const navigate = useNavigate();
 
   // Danh sách công khai từ API.
   useEffect(() => {
+    let active = true;
     const loadProducts = async () => {
+      setLoading(true); setDataError(''); setProducts([]);
       try {
         const res = await productApi.getProducts({});
-        const list = Array.isArray(res) ? res : (res?.content || []);
-        if (list.length > 0) {
-          setProducts(list);
-        }
+        const list = homeCatalog(res);
+        if (active) setProducts(list);
       } catch (err) {
-        console.warn('Không thể tải sản phẩm:', err);
-      }
+        if (active) setDataError('Không tải được sản phẩm. Vui lòng thử lại.');
+      } finally { if (active) setLoading(false); }
     };
     loadProducts();
-  }, []);
+    return () => { active = false; };
+  }, [retry]);
 
   // Filter products by tab
   const filteredProducts = products.filter(item => {
-    const categories = { racket: 'RACKET', shoes: 'SHOES', bag: 'BAG', accessory: 'ACCESSORIES' };
+    const categories = { racket: 'RACKET', shoes: 'SHOES', apparel: 'APPAREL', bag: 'BAG', accessory: 'ACCESSORIES' };
     return activeTab === 'all' || productCategory(item) === categories[activeTab];
   });
 
   const currentHero = HERO_SLIDES[activeSlide];
-
-  const handleOpenQuickView = (product) => {
-    setQuickViewProduct(product);
-    setQuickViewQty(1);
-    setAddedSuccess(false);
-  };
-
-  const handleCloseQuickView = () => {
-    setQuickViewProduct(null);
-  };
-
-  const handleQuickAdd = () => {
-    if (quickViewProduct) {
-      if (!addToCart(quickViewProduct, quickViewQty, productCartOptions(quickViewProduct))) {
-        alert('Không đủ tồn kho hoặc số lượng không hợp lệ.');
-        return;
-      }
-      setAddedSuccess(true);
-      setTimeout(() => {
-        setAddedSuccess(false);
-        handleCloseQuickView();
-      }, 1200);
-    }
-  };
-
-  const formatPrice = (price) => {
-    if (!price && price !== 0) return 'Liên hệ';
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-  };
 
   return (
     <div className="w-full flex flex-col bg-[#F8FAFC]">
@@ -139,10 +66,6 @@ const HomePage = () => {
       <section role="region" aria-label="Banner quảng cáo" tabIndex={0} {...handlers}
         style={{ touchAction: 'pan-y' }} className="relative w-full overflow-hidden bg-[#131B2E] text-white py-14 lg:py-24 select-none cursor-grab active:cursor-grabbing">
         {/* Background Image & Layered Lighting */}
-        <div 
-          className="absolute inset-0 z-0 opacity-40 mix-blend-luminosity bg-cover bg-center transition-all duration-700"
-          style={{ backgroundImage: `url('${currentHero.bgImage}')` }}
-        />
         <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#131B2E] via-[#131B2E]/90 to-transparent" />
         <div className="absolute -right-32 -bottom-32 w-[550px] h-[550px] rounded-full bg-secondary/15 blur-[120px] pointer-events-none" />
         <div className="absolute right-1/4 top-0 w-[400px] h-[400px] rounded-full bg-[#497CFF]/10 blur-[100px] pointer-events-none" />
@@ -157,10 +80,10 @@ const HomePage = () => {
                 <span className="text-secondary font-bold">★</span> {currentHero.badgeText}
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary text-white text-xs tracking-wider uppercase font-bold shadow-sm">
-                100% Chính hãng BWF Approved
+                THÔNG SỐ THEO TỪNG MẪU
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[#7C839B] text-xs">
-                Bảo hành 1 đổi 1
+                Xem điều kiện bảo hành bên dưới
               </span>
             </div>
 
@@ -215,7 +138,7 @@ const HomePage = () => {
               DANH MỤC NỔI BẬT
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              Lựa chọn theo từng dòng trang bị thi đấu chuyên nghiệp chuẩn thi đấu BWF
+              Lựa chọn trang bị theo từng danh mục sản phẩm.
             </p>
           </div>
           <Link 
@@ -380,14 +303,14 @@ const HomePage = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-display text-xl sm:text-2xl font-extrabold uppercase text-slate-900">
-                  SẢN PHẨM BÁN CHẠY NHẤT
+                  SẢN PHẨM NỔI BẬT
                 </h2>
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-secondary text-white">
-                  TOP BEST SELLERS
+                  TRONG CỬA HÀNG
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Lựa chọn hàng đầu của các tay vợt chuyên nghiệp & vận động viên tuyển quốc gia
+                Xem sản phẩm đang hiển thị trong từng danh mục.
               </p>
             </div>
           </div>
@@ -408,7 +331,7 @@ const HomePage = () => {
                 activeTab === 'racket' ? 'bg-white text-secondary shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Vợt Hot
+              Vợt cầu lông
             </button>
             <button 
               onClick={() => setActiveTab('shoes')}
@@ -416,7 +339,11 @@ const HomePage = () => {
                 activeTab === 'shoes' ? 'bg-white text-secondary shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Giày Siêu Bám Sân
+              Giày cầu lông
+            </button>
+            <button onClick={() => setActiveTab('apparel')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === 'apparel' ? 'bg-white text-secondary shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+              Quần áo
             </button>
             <button 
               onClick={() => setActiveTab('bag')}
@@ -438,19 +365,21 @@ const HomePage = () => {
         </div>
 
         {/* 8 Product Cards Grid */}
+        {loading && <p role="status">Đang tải sản phẩm...</p>}
+        {dataError && <div role="alert" className="mb-4 text-red-700">{dataError}<button type="button" onClick={() => setRetry(value => value + 1)} className="ml-3 underline">Thử lại</button></div>}
+        {!loading && !dataError && filteredProducts.length === 0 && <p>Chưa có sản phẩm trong danh mục này.</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
           {filteredProducts.slice(0, 8).map((product) => (
             <ProductCard 
               key={product.id} 
               product={product} 
-              onQuickView={handleOpenQuickView}
             />
           ))}
         </div>
       </section>
 
       {/* 4. SECTION: GIÁ TRỊ VƯỢT TRỘI - VÌ SAO CHỌN CHÚNG TÔI (WHY CHOOSE US) */}
-      <section className="w-full bg-[#131B2E] text-white py-14 lg:py-20 border-t border-slate-800">
+      <section id="shop-policy" className="w-full bg-[#131B2E] text-white py-14 lg:py-20 border-t border-slate-800">
         <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center text-center gap-2 mb-12">
             <span className="px-3.5 py-1 rounded-full bg-secondary/15 text-secondary text-xs font-bold uppercase tracking-widest">
@@ -469,10 +398,10 @@ const HomePage = () => {
                 <ShieldCheck className="w-8 h-8 text-secondary" />
               </div>
               <h3 className="font-display text-lg font-bold text-white">
-                Hàng chính hãng 100%
+                Thông số sản phẩm
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xs">
-                Nhập khẩu trực tiếp từ Yonex, Victor, Lining, Mizuno với tem chống hàng giả chuẩn Bộ Công An.
+                Xem thông số, màu sắc, kích cỡ và quy cách theo từng mẫu trước khi đặt hàng.
               </p>
             </div>
 
@@ -482,10 +411,10 @@ const HomePage = () => {
                 <Truck className="w-8 h-8 text-secondary" />
               </div>
               <h3 className="font-display text-lg font-bold text-white">
-                Giao hàng nhanh 2-3 ngày
+                Phí giao hàng
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xs">
-                Miễn phí vận chuyển toàn quốc cho đơn hàng từ 500.000đ. Đóng gói hộp chống va đập 3 lớp.
+                Phí giao hàng 30.000đ; miễn phí từ 1.000.000đ tiền hàng. Voucher vận chuyển giảm theo phí thực tế.
               </p>
             </div>
 
@@ -495,10 +424,10 @@ const HomePage = () => {
                 <Shield className="w-8 h-8 text-secondary" />
               </div>
               <h3 className="font-display text-lg font-bold text-white">
-                Bảo hành chính hãng
+                Bảo hành 1 đổi 1 trong 90 ngày
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xs">
-                12 tháng cho vợt, 6 tháng cho giày và phụ kiện. Kích hoạt bảo hành điện tử nhanh qua hotline.
+                Áp dụng vợt, giày, quần áo và balo/bao vợt sau khi thanh toán và giao hoàn tất. Phụ kiện không có ưu đãi này.
               </p>
             </div>
 
@@ -508,10 +437,10 @@ const HomePage = () => {
                 <Headphones className="w-8 h-8 text-secondary" />
               </div>
               <h3 className="font-display text-lg font-bold text-white">
-                Hỗ trợ tận tâm 24/7
+                Điểm tích lũy HGClub
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xs">
-                Đội ngũ chuyên gia tư vấn chọn vợt theo lối đánh, cân lực cổ tay và hỗ trợ chọn size giày chuẩn xác.
+                Mỗi 10.000đ tiền hàng đã thanh toán nhận 1 điểm; 1 điểm đổi 100đ, tối đa 10% tiền hàng sau voucher. Không tính phí giao hàng.
               </p>
             </div>
           </div>
@@ -524,13 +453,13 @@ const HomePage = () => {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-[#2563EB]" />
-              <span className="text-xs uppercase tracking-wider text-[#2563EB] font-bold">HÀNG CHÍNH HÃNG MỚI VỀ 2024</span>
+              <span className="text-xs uppercase tracking-wider text-[#2563EB] font-bold">SẢN PHẨM MỚI VỀ</span>
             </div>
             <h2 className="font-display text-2xl sm:text-3xl text-slate-900 font-extrabold uppercase tracking-tight">
               BỘ SƯU TẬP MỚI VỀ
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
-              Cập nhật những công nghệ đột phá mới nhất cho vận động viên HG Badminton
+              Các sản phẩm được đánh dấu mới trong 14 ngày từ ngày về hàng do cửa hàng ghi nhận.
             </p>
           </div>
           <Link 
@@ -543,14 +472,14 @@ const HomePage = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-          {products.slice(0, 4).map((product) => (
+          {newHomeProducts(products).map((product) => (
             <ProductCard 
               key={product.id} 
               product={product} 
-              onQuickView={handleOpenQuickView}
             />
           ))}
         </div>
+        {!loading && !dataError && newHomeProducts(products).length === 0 && <p>Hiện chưa có sản phẩm mới về trong 14 ngày gần đây.</p>}
       </section>
 
       {/* 6. SECTION: ĐÁNH GIÁ KHÁCH HÀNG (Customer Reviews - 3 Cards) */}
@@ -601,137 +530,6 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-
-      {/* QUICK VIEW MODAL (Xem Nhanh Sản Phẩm) */}
-      {quickViewProduct && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-          onClick={handleCloseQuickView}
-        >
-          <div 
-            className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close Button */}
-            <button 
-              onClick={handleCloseQuickView}
-              className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors"
-              aria-label="Đóng"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {/* Left Image Stage */}
-            <div className="w-full md:w-1/2 bg-[#F2F4F6] p-6 flex items-center justify-center relative min-h-[260px]">
-              <img 
-                src={quickViewProduct.imageUrl} 
-                alt={quickViewProduct.name}
-                className="max-h-64 object-contain mix-blend-multiply"
-              />
-              <span className="absolute top-4 left-4 px-2.5 py-0.5 rounded-full bg-secondary text-white text-xs font-bold uppercase tracking-wider">
-                {productValue(quickViewProduct.categoryName)}
-              </span>
-            </div>
-
-            {/* Right Product Details */}
-            <div className="w-full md:w-1/2 p-6 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                  <span className="font-bold text-slate-900 uppercase">
-                    {productValue(quickViewProduct.brand)}
-                  </span>
-                  <span className="bg-[#ECEEF0] text-slate-700 px-2 py-0.5 rounded font-mono text-[11px]">
-                    {productSpecSummary(quickViewProduct)}
-                  </span>
-                </div>
-
-                <h3 className="font-display text-lg font-bold text-slate-900 leading-snug">
-                  {quickViewProduct.name}
-                </h3>
-
-                {/* Rating */}
-                <ProductRating product={quickViewProduct} />
-
-                {/* Price */}
-                <div className="flex items-baseline gap-2 my-3">
-                  <span className="font-display text-2xl font-black text-secondary">
-                    {formatPrice(quickViewProduct.price)}
-                  </span>
-                  {quickViewProduct.originalPrice > quickViewProduct.price && (
-                    <span className="text-sm text-slate-400 line-through">
-                      {formatPrice(quickViewProduct.originalPrice)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Tech Highlights */}
-                <div className="border-t border-slate-100 pt-3 my-3 text-xs text-slate-600 space-y-1">
-                  <p>Mã sản phẩm: {productValue(quickViewProduct.sku)}</p>
-                  <p>Danh mục: {productValue(quickViewProduct.categoryName)}</p>
-                  <p className="line-clamp-3">{productValue(quickViewProduct.description)}</p>
-                </div>
-              </div>
-
-              {/* Action Cluster */}
-              <div className="space-y-3 pt-4 border-t border-slate-100">
-                {/* Quantity */}
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-slate-700">Số lượng:</span>
-                  <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
-                    <button 
-                      onClick={() => setQuickViewQty(Math.max(1, quickViewQty - 1))}
-                      className="px-3 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold"
-                    >
-                      -
-                    </button>
-                    <span className="px-4 py-1 text-xs font-bold text-slate-900">
-                      {quickViewQty}
-                    </span>
-                    <button 
-                      onClick={() => setQuickViewQty(quickViewQty + 1)}
-                      className="px-3 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Add to cart CTA */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleQuickAdd}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 ${
-                      addedSuccess
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-secondary hover:bg-secondary-hover text-white'
-                    }`}
-                  >
-                    {addedSuccess ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        <span>Đã thêm vào giỏ!</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="w-4 h-4" />
-                        <span>{['SHOES', 'APPAREL'].includes(productCategory(quickViewProduct)) ? 'Chọn kích cỡ' : 'Thêm vào giỏ hàng'}</span>
-                      </>
-                    )}
-                  </button>
-                  <Link
-                    to={`/products/${quickViewProduct.id}`}
-                    onClick={handleCloseQuickView}
-                    className="py-3 px-4 rounded-xl border border-slate-200 hover:border-slate-400 text-slate-700 font-bold text-xs uppercase tracking-wider text-center transition-colors"
-                  >
-                    Xem chi tiết
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };

@@ -119,7 +119,7 @@ public class ProductService {
         var filter = ProductSpecification.filterProducts(keyword, brand, weightGrip,
                 balancePoint, stiffness, playStyle, minPrice, maxPrice, categoryId)
                 .and(ProductSpecification.catalogAttributes(filters));
-        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), productSort(sortBy, sortDir));
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, Math.min(100, size)), productSort(sortBy, sortDir));
         Page<Product> result = productRepository.findAll(scopedFilter(filter, catalogScope), pageable);
         return PageResponse.<ProductDto>builder().content(result.getContent().stream().map(this::toDto).toList())
                 .pageNo(result.getNumber()).pageSize(result.getSize()).totalElements(result.getTotalElements())
@@ -166,13 +166,17 @@ public class ProductService {
     }
 
     public RacketComparisonResponse compareRackets(List<Long> productIds) {
-        if (productIds == null || productIds.isEmpty() || productIds.size() > 3) {
+        if (productIds == null || productIds.isEmpty() || productIds.size() > 3
+                || productIds.stream().anyMatch(id -> id == null || id <= 0)
+                || new java.util.HashSet<>(productIds).size() != productIds.size()) {
             throw new BadRequestException("Vui lòng chọn từ 1 đến tối đa 3 cây vợt để so sánh thông số");
         }
 
         List<ProductDto> rackets = productIds.stream()
                 .map(this::getProductById)
                 .collect(Collectors.toList());
+        if (rackets.stream().anyMatch(product -> !java.util.Objects.equals(product.getCategoryId(), 1L)))
+            throw new BadRequestException("Chỉ có thể so sánh sản phẩm thuộc danh mục vợt cầu lông");
 
         List<String> attributes = Arrays.asList(
                 "Thương hiệu",
@@ -226,10 +230,40 @@ public class ProductService {
         Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với ID: " + id));
         validateStockSnapshot(product, dto);
+        validateVariantMetadata(product,dto);
         applyCategory(product, dto);
         applyDetails(product, dto);
         applySpecifications(product, dto);
+        if (!product.getVariants().isEmpty()) ProductVariantService.refreshCatalog(product);
         return toDto(productRepository.save(product));
+    }
+
+    private void validateVariantMetadata(Product product,ProductDto dto) {
+        if (dto.getVariants()!=null) throw new BadRequestException("Hãy quản lý từng biến thể bằng API biến thể, không thay thế qua sản phẩm cha");
+        if (product.getVariants().isEmpty()) return;
+        Long category=product.getCategory()==null ? null : product.getCategory().getId();
+        if (dto.getCategoryId()!=null && !java.util.Objects.equals(category,dto.getCategoryId()))
+            throw new BadRequestException("Không đổi danh mục khi đã có biến thể. Hãy tạo sản phẩm đúng danh mục và giữ lịch sử");
+        requireSameChoice(dto.getColorName(),product.getColorName(),"Màu sắc");
+        if (java.util.Objects.equals(category,1L)) requireSameChoice(dto.getWeightGrip(),product.getWeightGrip(),"Trọng lượng/cỡ cán");
+        if (java.util.Objects.equals(category,5L)) requireSameChoice(dto.getQuantityPerPack(),product.getQuantityPerPack(),"Quy cách");
+        if (java.util.Objects.equals(category,2L) || java.util.Objects.equals(category,3L)) {
+            if (dto.getAvailableSizes()!=null && !sameSizes(dto.getAvailableSizes(),product.getAvailableSizes()))
+                throw new BadRequestException("Kích cỡ lấy từ từng biến thể; hãy thêm hoặc bật/tắt biến thể tương ứng");
+        }
+    }
+
+    private void requireSameChoice(String requested,String current,String label) {
+        if (requested!=null && !java.util.Objects.equals(requested.trim(),current==null ? null : current.trim()))
+            throw new BadRequestException(label+" lấy từ từng biến thể; hãy thêm hoặc bật/tắt biến thể tương ứng");
+    }
+
+    private boolean sameSizes(String requested,String current) {
+        try {
+            var mapper=new ObjectMapper();
+            var before=mapper.readTree(current==null ? "[]" : current);var after=mapper.readTree(requested);
+            return before.equals(after);
+        } catch(Exception ex) { return java.util.Objects.equals(requested,current); }
     }
 
     private void applyCategory(Product product, ProductDto dto) {

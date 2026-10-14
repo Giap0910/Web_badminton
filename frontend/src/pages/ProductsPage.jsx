@@ -11,11 +11,10 @@ import { SlidersHorizontal, Home, ChevronLeft, ChevronRight, ShieldCheck, CheckC
 // Dữ liệu 5 Banner chuyên biệt cho 5 Danh mục chuẩn thiết kế gốc
 const CATEGORY_BANNERS = {
   RACKET: {
-    title: 'VỢT CẦU LÔNG CHÍNH HÃNG',
+    title: 'VỢT CẦU LÔNG',
     gradientText: 'SỨC MẠNH TRONG TỪNG CÚ ĐÁNH',
     badge: "VỢT CẦU LÔNG",
     description: "Xem trọng lượng, độ cứng, sức căng và vật liệu của từng mẫu vợt.",
-    bgImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCyZXdxJpoFOlwmtmeFFODdaKMjWEGX2OyWaSaX_Nvho97g9G2jdBvtbw6G-jedPZbN32CxgmEkgRM3S-HegblDFAiod0n2Gjju2TfcNgFCii_3MP2QTxgImjoE-EMDMz6DzpghRiVk84mNGTCq0VlQNL1kz8U66lFDhXa23U3u2XwIzUacKys-q-Bc_tXkQxsol67tQfYIxOVssAac6PCMfc2Iuw1t2zRoQH1i6yEmZ8_xDLFh4U1b',
     perks: ["Trọng lượng","Độ cứng","Sức căng","Vật liệu"]
   },
   SHOES: {
@@ -23,7 +22,6 @@ const CATEGORY_BANNERS = {
     gradientText: 'BỨT TỐC & TIẾP ĐẤT HOÀN HẢO',
     badge: "GIÀY CẦU LÔNG",
     description: "Xem kích cỡ, loại đế, công nghệ đệm và chất liệu của từng mẫu giày.",
-    bgImage: 'https://lh3.googleusercontent.com/aida/AEtjO1Wn2o8ScP8jjmX0LuN3xMttSNjH6JSYW7AymRR785owkRwdGoywlzZHDUM1pyPmG_yiMGAU3IVHKwxjw2Eh7DD4vn6Y0S--ejVbrHHEnUwS7NqcdaJxK-xf9ttcOK1yEy1jgmkrHFpyWUM01kYgJI8AZXqWjsR-3HczLz5sBfNgTXG3IVxK8KK8niMRkmR8_FjXl1NJ7RuUTpJJw9c35hxfQL-fWcCfETFyokX_buRjYQH9MGw-BuQrng',
     perks: ["Kích cỡ","Loại đế","Công nghệ đệm","Chất liệu"]
   },
   BAG: {
@@ -31,7 +29,6 @@ const CATEGORY_BANNERS = {
     gradientText: 'BẢO VỆ VỢT TIÊU CHUẨN TOUR',
     badge: "BALO VÀ BAO VỢT",
     description: "Xem loại túi, dung tích, sức chứa vợt và khả năng chống nước theo dữ liệu từng mẫu.",
-    bgImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBWD-k6lHEcXn9J84Xjd7_QcDz680mSkQcdsp8iBVkfdo5VODDUCsbC5FIZgIkRB3AvM3qHiNmI7l-Tjl7XD_b7pGrQMyiKqDKO4Lro8vi6lg7Z3e2LQBTYwSztI6AR8B_n7O8cfTp_XTHq4fNYPFrmYBow03iYqCuH-I7GTXjuZaers7BI85NotMTjPFTN4dm9MMs-ZbMyunfH9yNam-wBmtZy_aW7ik6iIQ1oVi7DYorDbLbWGkpL',
     perks: ["Loại túi","Dung tích","Sức chứa vợt","Chống nước"]
   },
   APPAREL: {
@@ -39,7 +36,6 @@ const CATEGORY_BANNERS = {
     gradientText: 'SIÊU THOÁNG MÁT & BỨT PHÁ TỐC ĐỘ',
     badge: "TRANG PHỤC CẦU LÔNG",
     description: "Xem kích cỡ, giới tính và chất liệu vải của từng mẫu trang phục.",
-    bgImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9IEUCgLlL3GW5QIfUXCh_OdodRH7_6SUEKaSHWhU2Rq7VfJrxtbjPPayQDVW8hFirkY66GGyXt4mapHlXYaz5SC0f97d_1FG2RYqn-9sLHN1UsBdfzolgv4YaHRJjIUyrDoWE6q-W0rItCRvyHVaCEhY4dwLJ6tKRyNPX90TiUNrWJtKtelXtDOssE73al0GyFMYTUUitzmd0XenPGkYPuqF1-dgHtMIg-zx0QBbQRbc2COOA9jMP',
     perks: ["Kích cỡ","Giới tính","Chất liệu","Mô tả sản phẩm"]
   },
   ACCESSORIES: {
@@ -47,15 +43,13 @@ const CATEGORY_BANNERS = {
     gradientText: 'ĐẦY ĐỦ TINH HOA CHO TỪNG TRẬN ĐẤU',
     badge: "PHỤ KIỆN CẦU LÔNG",
     description: "Xem loại phụ kiện và quy cách đóng gói của từng sản phẩm.",
-    bgImage: 'https://lh3.googleusercontent.com/aida/AEtjO1Vi9OaVFBPd6y0h2lY1ChhCbZUxacPh47LeL-4-CqofIOg6PE0CkZFT4JTWaUEof84EMDCWgJBLhyg-rcznbAd0uWPkOi-mxEf83c6JB8z4pkwtbLGfpZWjz4s4mHde4DQEdPY2QevLbZ4tmfyl1c7Qi19ysYkscofFnYdTuKhBIl8p2XLG9UIFDb6AJ11Re3DD02bGTBRd1bAUUcZiLuZFstUxq2Ygr3qz8pcGdzUamC0Lrc_Tw2bDsIA',
     perks: ["Loại phụ kiện","Quy cách đóng gói","Thương hiệu","Mã sản phẩm"]
   },
   ALL: {
     title: 'TẤT CẢ TRANG BỊ CẦU LÔNG',
-    gradientText: 'CHÍNH HÃNG HG BADMINTON PRO',
+    gradientText: 'CHỌN TRANG BỊ PHÙ HỢP',
     badge: "TRANG BỊ CẦU LÔNG",
     description: "Khám phá sản phẩm và xem thông tin của từng mẫu trước khi lựa chọn.",
-    bgImage: 'https://lh3.googleusercontent.com/aida/AEtjO1WnCri4_js0e8_-uBsfS2jif7zSpzBPOHaHnHP0kIUHp3v5h6_D5sR-XfIHJytBPt3KgbcRUEHT6PMS9K52OI_DaS-Ro61enM8us2nebGYymeA-IrL3Bzt_a_Q5BwTJj2Hjp2WaCT_yDorE3D9Zr2YfwifheyDXtK4J3AfimAlwfYF-c29Yv-Dj7ydJVciQMv6RwTtr9zmzgTew16-rgAneEdC0a9lpAb99jsq4WApfao2LO-yx73JDa2I',
     perks: ["Thương hiệu","Danh mục","Thông số","Mã sản phẩm"]
   }
 };
@@ -92,8 +86,8 @@ const U_RATINGS = [
   { label: '5U', weight: '75-79g' },
 ];
 
-const SHOE_SIZES = ['39', '40', '40.5', '41', '42', '42.5', '43', '44', '45'];
-const APPAREL_SIZES = ['S', 'M', 'L', 'XL', '2XL'];
+export const SHOE_SIZES = ['35', '35.5', '36', '36.5', '37', '37.5', '38', '38.5', '39', '39.5', '40', '40.5', '41', '41.5', '42'];
+export const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const GENDER_OPTIONS = [
   { label: 'Tất cả', value: 'ALL' },
   { label: 'Nam', value: 'Nam' },
@@ -213,8 +207,7 @@ const ProductsPage = () => {
       {/* 1. TOP PANORAMIC CATEGORY HERO BANNER */}
       <section className="relative w-full overflow-hidden bg-[#131B2E] text-white">
         <div
-          className="absolute inset-0 z-0 opacity-40 mix-blend-luminosity bg-cover bg-center transition-all duration-700"
-          style={{ backgroundImage: `url('${currentBanner.bgImage}')` }}
+          className="absolute inset-0 z-0 bg-gradient-to-br from-[#131B2E] via-blue-950 to-[#131B2E]"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#131B2E] via-[#131B2E]/90 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#131B2E] via-transparent to-transparent" />
@@ -549,9 +542,9 @@ const ProductsPage = () => {
 
             {/* Dịch vụ & Tư vấn hỗ trợ */}
             <div className="p-3 bg-[#F2F4F6] rounded-xl text-xs text-slate-600 mt-2 space-y-1">
-              <span className="font-bold text-slate-900 block">Kỹ Thuật Viên BWF Trực Tuyến</span>
+              <span className="font-bold text-slate-900 block">Kiểm tra thông số trước khi chọn</span>
               <p className="text-[11px] leading-relaxed">
-                Cần tư vấn lực căng dây hoặc chọn form giày cho bàn chân bè? Hotline: <strong className="text-secondary">1900 6886</strong>
+                Xem lực căng, kích cỡ và thông số theo từng sản phẩm. Thông tin hotline cửa hàng chưa được xác minh.
               </p>
             </div>
 

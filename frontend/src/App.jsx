@@ -53,28 +53,33 @@ const PageFallbackLoader = () => (
 );
 
 // Protected Route Guard for Admin
-const AdminRoute = ({ children }) => {
-  const { user, isAdmin, loading } = useAuth();
+export const AdminRoute = ({ children }) => {
+  const { user, isAuthenticated, isAdmin, loading, verificationError, retryVerification } = useAuth();
   const location = useLocation();
-  if (loading) return null;
-  if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
-  }
-  return <AdminPageBoundary key={location.pathname + location.search}>{children}</AdminPageBoundary>;
+  if (loading) return <PageFallbackLoader />;
+  if (verificationError) return <SessionVerificationError message={verificationError} onRetry={retryVerification} />;
+  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname + location.search, returnState: location.state }} />;
+  if (!isAdmin) return <p role="alert" className="p-8">Tài khoản này không có quyền quản trị.</p>;
+  return <React.Fragment key={user.id}><AdminPageBoundary key={location.pathname + location.search}>{children}</AdminPageBoundary></React.Fragment>;
 };
 
 // Protected Route Guard for Authenticated Users
-const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-  if (loading) return null;
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
+export const PrivateRoute = ({ children }) => {
+  const { user, isAuthenticated, loading, verificationError, retryVerification } = useAuth();
+  const location = useLocation();
+  if (loading) return <PageFallbackLoader />;
+  if (verificationError) return <SessionVerificationError message={verificationError} onRetry={retryVerification} />;
+  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname + location.search, returnState: location.state }} />;
+  return <React.Fragment key={user.id}>{children}</React.Fragment>;
 };
+
+export const SessionVerificationError = ({ message, onRetry }) => <div role="alert" className="p-8 text-center space-y-3">
+  <p>{message}</p><button type="button" onClick={onRetry} className="rounded-xl bg-slate-900 text-white px-4 py-2">Xác minh lại phiên đăng nhập</button>
+</div>;
 
 function AppContent() {
   const location = useLocation();
+  const { sessionNotice } = useAuth();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
   const isAdminPage = location.pathname.startsWith('/admin');
   const hideCustomerNav = isAuthPage || isAdminPage;
@@ -82,6 +87,7 @@ function AppContent() {
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-800 antialiased">
       {!hideCustomerNav && <Navbar />}
+      {sessionNotice && <p role="status" className="p-3 text-sm text-center bg-blue-50 text-blue-900">{sessionNotice}</p>}
 
       <div className="flex-1">
         <Suspense fallback={<PageFallbackLoader />}>

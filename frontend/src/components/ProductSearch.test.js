@@ -19,9 +19,9 @@ function hookHarness(getSuggestions) {
 
 function voucherHarness(validateVoucher) {
   let state, effect, pending, cleanup, previous, api;
-  const current = { current: '' }, storage = new Map();
+  const refs = [], storage = new Map(); let refCursor = 0;
   const react = { useState: initial => [state ??= initial, next => { state = next; }],
-    useRef: () => current, useEffect: (fn, deps) => { effect = { fn, key: deps[0] }; } };
+    useRef: initial => refs[refCursor++] ??= { current: initial }, useEffect: (fn, deps) => { effect = { fn, key: deps[0] }; } };
   const modules = { react, '../api/voucherApi': { voucherApi: { validateVoucher } }, '../utils/formatters': { formatPrice: String } };
   const sessionStorage = { setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) };
   const instance = { exports: {} };
@@ -29,6 +29,7 @@ function voucherHarness(validateVoucher) {
   new Function('require', 'module', 'exports', 'setTimeout', 'clearTimeout', 'sessionStorage', source)(name => modules[name], instance, instance.exports,
     fn => { pending = fn; return 1; }, () => { pending = null; }, sessionStorage);
   return { render: (code, total, cart = 'cart') => {
+    refCursor = 0;
     api = instance.exports.default(code, total, cart);
     if (effect.key !== previous) { cleanup?.(); previous = effect.key; cleanup = effect.fn(); }
     return api;

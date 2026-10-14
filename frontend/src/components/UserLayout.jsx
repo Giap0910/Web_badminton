@@ -143,20 +143,17 @@ const UserLayout = ({
                 <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 font-black text-2xl overflow-hidden shadow-inner ring-4 ring-slate-100">
                   <AccountAvatar url={profile?.avatarUrl} name={user?.fullName || user?.username} />
                 </div>
-                <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-secondary text-white flex items-center justify-center shadow-md border-2 border-white">
-                  <BadgeCheck className="w-3.5 h-3.5" />
-                </span>
               </div>
 
               <h2 className="font-black text-base text-slate-900">
-                {user?.fullName || user?.username || 'Nguyễn Văn A'}
+                {user?.fullName || user?.username || 'Tài khoản'}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">{user?.email || 'van.nguyen@hgpro.vn'}</p>
+              {user?.email && <p className="text-xs text-slate-500 mt-0.5">{user.email}</p>}
 
               {/* TIER PROGRESSION */}
               <div className="w-full mt-4 pt-3 bg-slate-50 rounded-xl p-3 flex flex-col gap-2 text-left border border-slate-100">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-800">HG VIP Club</span>
+                  <span className="font-bold text-slate-800">HGClub</span>
                   <span className="text-secondary font-black">{profile?.loyaltyPoints ?? "Đang tải"} điểm</span>
                 </div>
                 <span className="text-[11px] text-slate-500 leading-tight">
@@ -218,20 +215,20 @@ const UserLayout = ({
                 <span className="text-[10px] tracking-wider uppercase font-black text-blue-200 bg-blue-900/40 px-2 py-0.5 rounded">
                   Dịch vụ HG Pro
                 </span>
-                <span className="text-secondary font-black text-xs">BWF Standard</span>
+                <span className="text-secondary font-black text-xs">HGClub</span>
               </div>
               <h3 className="font-black text-sm text-white leading-snug">
-                Gói Căng Cước Điện Tử 4 Nút Chuẩn BWF
+                Tích điểm từ tiền hàng đã thanh toán
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Miễn phí 1 lần cân cước & cuốn cán chính hãng khi đặt đơn thứ 6 trong tháng này.
+                Mỗi 10.000đ tích 1 điểm; 1 điểm đổi 100đ, tối đa 10% tiền hàng sau voucher.
               </p>
               <div className="pt-1 flex items-center justify-between">
                 <a
-                  href="/products?category=vot-cau-long"
+                  href="/products?categoryId=1"
                   className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-bold transition-colors"
                 >
-                  Xem biểu đồ cước & lực căng
+                  Xem sản phẩm
                   <ArrowRight className="w-3.5 h-3.5" />
                 </a>
               </div>

@@ -36,6 +36,98 @@ if (typeof globalThis.sessionStorage === 'undefined') {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const adminPageSource = fs.readFileSync(path.join(__dirname, 'AdminPaymentsPage.jsx'), 'utf8');
 
+let runtimePromise;
+let savedCsv;
+const loadAdminPaymentRuntime = () => runtimePromise ??= (async () => {
+  const [esbuild, React, icons] = await Promise.all([import('esbuild'), import('react'), import('lucide-react')]);
+  const code = await esbuild.transform(adminPageSource, { loader: 'jsx', format: 'cjs', target: 'node18' });
+  const imports = {
+    react: React.default, 'lucide-react': icons,
+    '../components/AdminLayout': { default: ({ children }) => React.createElement('div', null, children) },
+    '../components/AdminPaymentLog': { default: () => null },
+    '../components/AdminProductImport': { saveAdminFile: (blob, name) => { savedCsv = { blob, name }; } },
+    '../api/adminApi.js': { adminApi: {} },
+    '../utils/idempotency.js': { getOrCreateReconciliationKey, clearStoredReconciliationIntent, getStoredReconciliationIntent },
+    '../utils/paymentFormatters.js': { formatReviewReason, getPaymentStatusBadge },
+  };
+  const module = { exports: {} };
+  new Function('require', 'module', 'exports', code.code)((name) => {
+    if (!(name in imports)) throw new Error(`Thiếu phụ thuộc kiểm thử: ${name}`);
+    return imports[name];
+  }, module, module.exports);
+  return module.exports;
+})();
+
+test('Đơn đã hủy với CREATING hiển thị đúng mà không tự đổi trạng thái thanh toán', async () => {
+  const page = await loadAdminPaymentRuntime();
+  const React = await import('react');
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const payment = { id: 28, orderStatus: 'CANCELLED', status: 'CREATING', paidAt: null, reference: null };
+
+  const html = renderToStaticMarkup(React.createElement(page.AdminPaymentStatus, { payment }));
+
+  assert.match(html, /Đơn đã hủy/);
+  assert.match(html, /Thanh toán chưa được xác nhận/);
+  assert.match(html, /Sổ thanh toán: CREATING/);
+  assert.doesNotMatch(html, /Đang tạo liên kết|Đã thanh toán/);
+  assert.deepEqual(payment, { id: 28, orderStatus: 'CANCELLED', status: 'CREATING', paidAt: null, reference: null });
+});
+
+test('Bộ lọc bỏ đơn đã hủy khỏi chờ thanh toán và vẫn giữ khoản cần đối soát', async () => {
+  const page = await loadAdminPaymentRuntime();
+  const cancelled = { orderStatus: 'CANCELLED', status: 'CREATING' };
+  const review = { orderStatus: 'CANCELLED', status: 'NEEDS_REVIEW' };
+
+  assert.equal(page.matchesAdminPaymentStatus(cancelled, 'PENDING'), false);
+  assert.equal(page.matchesAdminPaymentStatus(cancelled, 'FAILED'), true);
+  assert.equal(page.isClosedAdminPayment(cancelled), true);
+  assert.equal(page.matchesAdminPaymentStatus(review, 'NEEDS_REVIEW'), true);
+  assert.equal(page.matchesAdminPaymentStatus({ orderStatus: 'PENDING', status: 'PENDING' }, 'PENDING'), true);
+  assert.equal(page.matchesAdminPaymentStatus({ status: 'CREATING' }, 'PENDING'), true);
+});
+
+test('Đơn đã hủy không che bằng chứng PAID hoặc NEEDS_REVIEW', async () => {
+  const page = await loadAdminPaymentRuntime();
+  const React = await import('react');
+  const { renderToStaticMarkup } = await import('react-dom/server');
+
+  const paid = renderToStaticMarkup(React.createElement(page.AdminPaymentStatus,
+    { payment: { orderStatus: 'CANCELLED', status: 'PAID' } }));
+  const review = renderToStaticMarkup(React.createElement(page.AdminPaymentStatus,
+    { payment: { orderStatus: 'CANCELLED', status: 'NEEDS_REVIEW' } }));
+
+  assert.match(paid, /Đã thanh toán/); assert.doesNotMatch(paid, /chưa được xác nhận/);
+  assert.match(review, /Cần đối soát/); assert.match(review, /Sổ thanh toán: NEEDS_REVIEW/);
+});
+
+test('fetchPayments thật giữ riêng trạng thái đơn và trạng thái attempt từ Backend', async () => {
+  const source = adminPageSource.match(/const fetchPayments = (async \(\) => \{[\s\S]*?\n  \});/)[1];
+  let transactions;
+  const scope = { activeRequestIdRef: { current: 0 }, setIsLoading: () => {}, setHasLoaded: () => {}, setDataError: () => {},
+    setTransactions: value => { transactions = value; }, adminApi: { getAllPayments: async () =>
+      [{ id: 12, orderId: 28, orderStatus: 'CANCELLED', status: 'CREATING', amount: 170000, paymentMethod: 'PAYOS_VIETQR' }] } };
+
+  await new Function('scope', `with (scope) { return (${source}); }`)(scope)();
+
+  assert.equal(transactions[0].orderStatus, 'CANCELLED');
+  assert.equal(transactions[0].status, 'CREATING');
+  assert.equal(transactions[0].paidAt, null); assert.equal(transactions[0].reference, null);
+});
+
+test('CSV đối soát xuất hai trạng thái riêng và không phát sinh xác nhận thanh toán', async () => {
+  const page = await loadAdminPaymentRuntime();
+
+  page.exportPayments([{ id: 12, orderCode: '#HG-28', customer: '=HYPERLINK("bad")', amount: 170000,
+    status: 'CREATING', orderStatus: 'CANCELLED', paymentMethod: 'PAYOS_VIETQR', paidAt: null, reviewReason: null }]);
+  const text = await savedCsv.blob.text();
+
+  assert.equal(savedCsv.name, 'payment-reconciliation.csv');
+  assert.match(text, /"Trạng thái thanh toán","Trạng thái đơn hàng"/);
+  assert.match(text, /"CREATING","CANCELLED"/);
+  assert.match(text, /"'=HYPERLINK/);
+  assert.doesNotMatch(text, /"PAID"/);
+});
+
 test('SECTION 8 & 42 — No fake identifiers (TXN-, QR-, COD-DIRECT) in AdminPaymentsPage source', () => {
   assert.equal(adminPageSource.includes('TXN-'), false, 'Must not construct fake TXN- identifiers');
   assert.equal(adminPageSource.includes('COD-DIRECT'), false, 'Must not construct fake COD-DIRECT bankRef');

@@ -45,6 +45,7 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .setSubject(userPrincipal.getUsername())
                 .claim("userId", userPrincipal.getId())
+                .claim("tokenVersion",userPrincipal.getTokenVersion())
                 .claim("role", role)
                 .claim("email", userPrincipal.getEmail())
                 .setIssuedAt(now)
@@ -87,5 +88,11 @@ public class JwtTokenProvider {
             log.error("Chuỗi claims JWT rỗng: {}", ex.getMessage());
         }
         return false;
+    }
+
+    public long getTokenVersionFromJwt(String token) {
+        Claims claims=Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
+        Long version=claims.get("tokenVersion",Long.class);
+        return version==null ? 0L : version;
     }
 }

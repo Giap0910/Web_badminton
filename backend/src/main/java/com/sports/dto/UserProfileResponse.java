@@ -20,6 +20,7 @@ public class UserProfileResponse {
     private String address;
     private String avatarUrl;
     private java.time.LocalDate dob;
+    private String gender;
     private Long loyaltyPoints;
     private java.math.BigDecimal paidProductAmount;
     private String role;

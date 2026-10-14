@@ -90,6 +90,7 @@ const AdminPaymentsPage = () => {
           const mapped = list.map((p) => ({
             id: p.id,
             orderId: p.orderId,
+            orderStatus: p.orderStatus || null,
             orderCode: p.orderCode != null ? `#HG-${p.orderCode}` : p.orderId ? `#HG-${p.orderId}` : '—',
             provider: p.provider || 'PAYOS',
             amount: p.amount || 0,
@@ -277,16 +278,7 @@ const AdminPaymentsPage = () => {
         ? t.paymentMethod === 'COD'
         : !t.paymentMethod?.includes('PAYOS') && t.paymentMethod !== 'COD';
 
-    const matchesStatus =
-      selectedStatus === 'ALL'
-        ? true
-        : selectedStatus === 'PAID'
-        ? t.status === 'PAID'
-        : selectedStatus === 'NEEDS_REVIEW'
-        ? t.status === 'NEEDS_REVIEW'
-        : selectedStatus === 'PENDING'
-        ? ['PENDING', 'CREATING'].includes(t.status)
-        : ['FAILED', 'EXPIRED', 'CANCELLED'].includes(t.status);
+    const matchesStatus = matchesAdminPaymentStatus(t, selectedStatus);
 
     return matchesSearch && matchesMethod && matchesStatus;
   });
@@ -384,11 +376,11 @@ const AdminPaymentsPage = () => {
           </div>
 
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Giao dịch hủy / Quá hạn</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Đơn đã hủy / Liên kết kết thúc</span>
             <span className="text-2xl font-black text-slate-400 mt-1">
-              {hasLoaded && !dataError ? transactions.filter((t) => ['FAILED', 'EXPIRED', 'CANCELLED'].includes(t.status)).length : '—'}
+              {hasLoaded && !dataError ? transactions.filter(isClosedAdminPayment).length : '—'}
             </span>
-            <span className="text-[11px] text-slate-400 mt-2">Bao gồm PayOS hết hạn và hủy</span>
+            <span className="text-[11px] text-slate-400 mt-2">Theo trạng thái đơn hoặc sổ thanh toán</span>
           </div>
         </div>
 
@@ -425,7 +417,7 @@ const AdminPaymentsPage = () => {
               <option value="PAID">Đã thanh toán (PAID)</option>
               <option value="NEEDS_REVIEW">Cần đối soát (NEEDS_REVIEW)</option>
               <option value="PENDING">Chờ thanh toán (PENDING)</option>
-              <option value="FAILED">Hết hạn / Đã hủy (FAILED)</option>
+              <option value="FAILED">Đơn đã hủy / Liên kết kết thúc</option>
             </select>
           </div>
         </div>
@@ -459,8 +451,6 @@ const AdminPaymentsPage = () => {
                   </tr>
                 ) : (
                   filteredTransactions.map((t) => {
-                    const badge = getPaymentStatusBadge(t.status);
-                    const StatusIcon = badge.icon;
                     const isRowReconciling = submittingIds.has(t.id);
 
                     return (
@@ -489,6 +479,7 @@ const AdminPaymentsPage = () => {
                               )}
                             </div>
                             <span className="text-[11px] text-blue-600 font-bold">Đơn hàng {t.orderCode}</span>
+                            <span className="text-[11px] text-slate-500">Trạng thái đơn: {adminOrderStatusLabel(t.orderStatus)}</span>
                           </div>
                         </td>
 
@@ -530,10 +521,7 @@ const AdminPaymentsPage = () => {
                         {/* Cột 6: Trạng thái & Thao tác */}
                         <td className="py-4 px-6 align-top text-right">
                           <div className="flex flex-col items-end gap-1.5">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-bold text-xs ${badge.bg}`}>
-                              <StatusIcon className="w-3.5 h-3.5" />
-                              <span>{badge.label}</span>
-                            </span>
+                            <AdminPaymentStatus payment={t} />
 
                             {/* Lý do đối soát nếu có */}
                             {t.reviewReason && (
@@ -674,9 +662,39 @@ const AdminPaymentsPage = () => {
 
 export default AdminPaymentsPage;
 
-function exportPayments(rows) {
-  const headers = ['Mã giao dịch', 'Mã đơn', 'Khách hàng', 'Số tiền', 'Trạng thái', 'Phương thức', 'Ngày thanh toán', 'Lý do đối soát'];
+export function exportPayments(rows) {
+  const headers = ['Mã giao dịch', 'Mã đơn', 'Khách hàng', 'Số tiền', 'Trạng thái thanh toán', 'Trạng thái đơn hàng', 'Phương thức', 'Ngày thanh toán', 'Lý do đối soát'];
   const cell = value => { let text = String(value ?? ''); if (/^[=+@-]/.test(text.trimStart())) text = "'" + text; return '"' + text.replaceAll('"', '""') + '"'; };
-  const values = [headers, ...rows.map(row => [row.id, row.orderCode, row.customer, row.amount, row.status, row.paymentMethod, row.paidAt, row.reviewReason])];
+  const values = [headers, ...rows.map(row => [row.id, row.orderCode, row.customer, row.amount, row.status, row.orderStatus, row.paymentMethod, row.paidAt, row.reviewReason])];
   saveAdminFile(new Blob(['\ufeff' + values.map(row => row.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), 'payment-reconciliation.csv');
+}
+
+export function isClosedAdminPayment(payment) {
+  return payment.orderStatus === 'CANCELLED' || ['FAILED', 'EXPIRED', 'CANCELLED'].includes(payment.status);
+}
+
+export function matchesAdminPaymentStatus(payment, filter) {
+  if (filter === 'ALL') return true;
+  if (filter === 'PAID' || filter === 'NEEDS_REVIEW') return payment.status === filter;
+  if (filter === 'PENDING') return payment.orderStatus !== 'CANCELLED' && ['PENDING', 'CREATING'].includes(payment.status);
+  return isClosedAdminPayment(payment);
+}
+
+export function adminOrderStatusLabel(status) {
+  return { PENDING: 'Chờ xử lý', PAID: 'Đã ghi nhận thanh toán', SHIPPING: 'Đang giao',
+    COMPLETED: 'Đã hoàn tất', CANCELLED: 'Đã hủy' }[status] || status || 'Chưa có thông tin';
+}
+
+export function AdminPaymentStatus({ payment }) {
+  const stopped = payment.orderStatus === 'CANCELLED' && ['CREATING', 'PENDING'].includes(payment.status);
+  const badge = stopped ? getPaymentStatusBadge('CANCELLED') : getPaymentStatusBadge(payment.status);
+  const StatusIcon = badge.icon;
+  return <>
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-bold text-xs ${badge.bg}`}>
+      <StatusIcon className="w-3.5 h-3.5" />
+      <span>{stopped ? 'Đơn đã hủy' : badge.label}</span>
+    </span>
+    <span className="text-[10px] text-slate-500">Sổ thanh toán: {payment.status || 'Chưa xác định'}</span>
+    {stopped && <span className="text-[11px] text-slate-500">Thanh toán chưa được xác nhận</span>}
+  </>;
 }

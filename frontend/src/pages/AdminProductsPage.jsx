@@ -417,7 +417,7 @@ const AdminProductsPage = () => {
                       type="text"
                       value={formData.sku}
                       onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                      placeholder="Ví dụ: YNX-100ZZ-4U"
+                      placeholder="Để trống để máy chủ cấp mã HG theo danh mục"
                       className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner font-mono"
                     />
                   </div>
@@ -452,6 +452,7 @@ const AdminProductsPage = () => {
                     <label htmlFor="product-categoryId" className="text-xs font-bold text-slate-900">Danh mục</label>
                     <select id="product-categoryId"
                       value={formData.categoryId}
+                      disabled={editingId != null && formData.hasVariants}
                       onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                       className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                     >

@@ -247,7 +247,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
   // =========================================================================
   describe('5. OrderSuccess, OrderDetail & AdminPayments Metadata', () => {
     test('5.1. OrderSuccessPage displays "Thanh toán thành công mô phỏng" when isPaid && isMockMode', () => {
-      assert.match(orderSuccessSource, /\{isMockMode \? 'Thanh toán thành công mô phỏng' : 'Giao dịch đã xác thực'\}/);
+      assert.match(orderSuccessSource, /isMockMode\s*\?\s*'Thanh toán thành công mô phỏng'\s*:\s*'Giao dịch đã xác thực'/);
       assert.match(orderSuccessSource, /\{isMockMode \? 'VietQR Mô phỏng \(MOCK\)' : 'VietQR Tự động'\}/);
     });
 
@@ -746,7 +746,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
     });
 
     test('9.21. handleCheckPayment when UNKNOWN triggers environment re-verification', () => {
-      assert.match(qrSource, /if\s*\(typeof envStatus !== 'undefined' && \(envStatus !== 'VERIFIED' \|\| !paymentEnv\)\)\s*\{[\s\S]*?fetchPaymentEnvironment\(\{ force: true \}\);/);
+      assert.match(qrSource, /if\s*\(typeof envStatus !== 'undefined' && \(envStatus !== 'VERIFIED' \|\| !paymentEnv\)\)\s*\{[\s\S]*?fetchPaymentEnvironment\(\{\s*force:\s*true\s*\}\)/);
     });
 
     test('9.22. Late response from Order 501 does not overwrite Order 502 (currentOrderIdRef & generation guard)', () => {
@@ -812,6 +812,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
       const activeCleanups = new Map();
       const prevDepsMap = new Map();
       const capturedElements = new Map();
+      let unmounted = false;
 
       let checkPaymentHandler = null;
       let retryEnvHandler = null;
@@ -869,6 +870,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
       }
 
       async function runEffects() {
+        if (unmounted) return;
         for (const eff of effects) {
           const oldDeps = prevDepsMap.get(eff.slot);
           if (depsChanged(oldDeps, eff.deps)) {
@@ -901,11 +903,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
           }
           return callback(...args);
         };
-        const realTimer = setInterval(wrappedFn, ms);
-        if (realTimer && typeof realTimer.unref === 'function') {
-          realTimer.unref();
-        }
-        capturedIntervals.push({ id, fn: wrappedFn, ms, realTimer });
+          capturedIntervals.push({ id, fn: wrappedFn, ms });
         return id;
       };
 
@@ -918,6 +916,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
       };
 
       function unmount() {
+        unmounted = true;
         for (const item of capturedIntervals) {
           try { clearInterval(item.realTimer); } catch {}
         }
@@ -1023,22 +1022,17 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
       const Component = moduleObj.exports.default;
 
       async function renderWithLifecycle(customWaitMs = 30) {
-        stateCursor = 0;
-        effectCursor = 0;
-        effects.length = 0;
-        capturedElements.clear();
-        ReactDOMServer.renderToStaticMarkup(React.createElement(Component));
-
-        await runEffects();
-        await new Promise((r) => setTimeout(r, customWaitMs));
-
-        stateCursor = 0;
-        effectCursor = 0;
-        effects.length = 0;
-        capturedElements.clear();
-        const finalMarkup = ReactDOMServer.renderToStaticMarkup(React.createElement(Component));
-        await runEffects();
-
+        let finalMarkup;
+        for (let pass = 0; pass < 3; pass++) {
+          if (unmounted) break;
+          stateCursor = 0;
+          effectCursor = 0;
+          effects.length = 0;
+          capturedElements.clear();
+          finalMarkup = ReactDOMServer.renderToStaticMarkup(React.createElement(Component));
+          await runEffects();
+          await new Promise(resolve => setTimeout(resolve, pass === 0 ? customWaitMs : 0));
+        }
         return { finalMarkup, stateStore, unmount };
       }
 
@@ -2109,19 +2103,21 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
     });
 
     // 12.5. Case F: Component unmounts before request resolves -> 0 navigation, 0 side-effects
-    test('12.5. Case F: Component unmounts while request is in-flight -> 0 navigation, 0 side-effects', async () => {
+    test('12.5. Case F: Component unmounts while request is in-flight -> 0 navigation, 0 side-effects', { timeout: 5000 }, async () => {
       let resolveDelayed;
       const delayed = new Promise((resolve) => {
         resolveDelayed = resolve;
       });
+      let requestStarted;
+      const started = new Promise(resolve => { requestStarted = resolve; });
 
       const harness = await createQRPaymentRuntimeHarness({
         initialOrderId: '501',
-        getOrderByIdHandler: async () => delayed,
+        getOrderByIdHandler: async () => { requestStarted(); return delayed; },
       });
 
-      harness.renderWithLifecycle();
-      await new Promise((r) => setTimeout(r, 40));
+      const rendering = harness.renderWithLifecycle();
+      await started;
 
       // Unmount before resolve
       harness.unmount();
@@ -2129,10 +2125,11 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
 
       // Late resolve
       resolveDelayed({ data: { id: 501, status: 'PAID' } });
-      await new Promise((r) => setTimeout(r, 40));
+      await rendering;
 
       assert.equal(harness.getNavigatedTo(), null, 'No navigation after unmount');
       assert.equal(harness.getNavigationHistory().length, 0, 'No navigation calls recorded');
+      assert.equal(harness.createPaymentLinkCalls.length, 0, 'No payment mutation after unmount');
     });
 
     // 12.6. Case G: Explicit retry after 403 begins a new authorization check
@@ -2654,8 +2651,8 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
       assert.equal(harness.getActivePollIntervalCount(), 1, 'Initial polling interval must be active');
       assert.equal(harness.isPollIntervalCleared(), false, 'Polling interval must NOT be cleared initially');
       assert.equal(harness.getPollCallbackCount(), 0, 'No poll callbacks yet');
-      assert.equal(orderGetCalls, 1, 'Initial GET order count = 1');
-      assert.equal(paymentGetCalls, 1, 'Initial GET payment count = 1');
+      assert.equal(orderGetCalls, 2, 'One order load before and one after environment verification');
+      assert.equal(paymentGetCalls, 2, 'Payment snapshot refreshed after environment verification');
 
       // Step 2: Backend reports Order CANCELLED; Poll Tick 1 executes
       orderStatus = 'CANCELLED';
@@ -3150,19 +3147,23 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
     });
 
     // 15.6. Case G: Sequential replacement A -> B -> C with delayed responses preserves Session C
-    test('15.6. Case G: Session sequence A -> B -> C with delayed responses from A and B does NOT disrupt Session C', async () => {
+    test('15.6. Case G: Session sequence A -> B -> C with delayed responses from A and B does NOT disrupt Session C', { timeout: 5000 }, async () => {
       let resolveA = null;
       let resolveB = null;
-      let count = 0;
+      let phase = 'initial';
+      let beginA, beginB;
+      const startedA = new Promise(resolve => { beginA = resolve; });
+      const startedB = new Promise(resolve => { beginB = resolve; });
 
       const harness = await createQRPaymentRuntimeHarness({
         initialOrderId: '501',
         getOrderByIdHandler: async (id) => {
-          count++;
-          if (count === 2) {
+          if (phase === 'poll-A') {
+            beginA();
             return new Promise((r) => { resolveA = () => r({ data: { id: 501, status: 'PENDING', totalAmount: 111 } }); });
           }
-          if (count === 4) {
+          if (phase === 'poll-B') {
+            beginB();
             return new Promise((r) => { resolveB = () => r({ data: { id: 501, status: 'PENDING', totalAmount: 222 } }); });
           }
           return { data: { id: 501, status: 'PENDING', totalAmount: 333 } };
@@ -3171,14 +3172,20 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
 
       // Session A starts
       await harness.renderWithLifecycle();
+      phase = 'poll-A';
       const tickA = harness.triggerPollTick();
+      await startedA;
 
       // Session B starts
+      phase = 'check-B';
       await harness.triggerCheckPayment();
       await harness.renderWithLifecycle();
+      phase = 'poll-B';
       const tickB = harness.triggerPollTick();
+      await startedB;
 
       // Session C starts
+      phase = 'check-C';
       await harness.triggerCheckPayment();
       const stateC = await harness.renderWithLifecycle();
       assert.ok(stateC.finalMarkup.includes('333'));

@@ -18,6 +18,7 @@ public class CustomUserDetails implements UserDetails {
     private final String password;
     private final String fullName;
     private final boolean active;
+    private final long tokenVersion;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomUserDetails(User user) {
@@ -27,6 +28,7 @@ public class CustomUserDetails implements UserDetails {
         this.password = user.getPassword();
         this.fullName = user.getFullName();
         this.active = user.getIsActive() == null || Boolean.TRUE.equals(user.getIsActive());
+        this.tokenVersion=user.getTokenVersion()==null ? 0L : user.getTokenVersion();
         this.authorities = Collections.singletonList(
                 new SimpleGrantedAuthority(user.getRole().name())
         );

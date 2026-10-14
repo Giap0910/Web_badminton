@@ -20,6 +20,12 @@ public class ReviewController {
 
     private final ReviewService reviewService;
 
+    @GetMapping("/eligible-products")
+    public ResponseEntity<List<ReviewService.EligibleProduct>> getEligibleProducts(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(reviewService.getEligibleProducts(userDetails.getId()));
+    }
+
     @GetMapping("/product/{productId}")
     public ResponseEntity<List<ReviewResponse>> getProductReviews(@PathVariable Long productId) {
         return ResponseEntity.ok(reviewService.getReviewsByProduct(productId));

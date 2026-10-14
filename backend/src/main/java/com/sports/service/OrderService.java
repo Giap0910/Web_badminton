@@ -222,13 +222,13 @@ public class OrderService {
 
     private void calculateOrderTotal(Order order, String voucherCode) {
         BigDecimal subtotal = calculateSubtotal(order.getItems());
-        BigDecimal shippingFee = subtotal.compareTo(new BigDecimal("1000000")) >= 0
-                ? BigDecimal.ZERO : new BigDecimal("30000");
+        BigDecimal shippingFee = VoucherService.quoteShipping(subtotal);
         BigDecimal discount = BigDecimal.ZERO;
         if (voucherCode != null && !voucherCode.isBlank()) {
             VoucherValidateResponse voucher = voucherService.reserveVoucher(
                     new VoucherValidateRequest(voucherCode.trim(), subtotal));
             discount = VndAmount.requireValid(voucher.getDiscountAmount());
+            if (voucher.getFinalShippingFee() != null) shippingFee = VndAmount.requireValid(voucher.getFinalShippingFee());
             order.setVoucherCode(voucher.getCode());
         }
         BigDecimal discountedSubtotal = VndAmount.requireValid(subtotal.subtract(discount));
@@ -401,6 +401,7 @@ public class OrderService {
                 throw new BadRequestException("Cần xác nhận đã thu tiền mặt/COD trước khi hoàn tất đơn");
             }
             order.setStatus(newStatus);
+            order.setCompletedAt(LocalDateTime.now());
         } else {
             throw new BadRequestException("Không được chuyển trạng thái đơn hàng theo luồng này");
         }
@@ -434,6 +435,7 @@ public class OrderService {
                             .productName(item.getProductNameSnapshot() != null ? item.getProductNameSnapshot() : item.getProduct() != null ? item.getProduct().getName() : "Sản phẩm đã ngừng bán")
                             .productSku(item.getProductSkuSnapshot()).productDeleted(item.getProduct()==null)
                             .productBrand(item.getProductBrandSnapshot() != null ? item.getProductBrandSnapshot() : item.getProduct() != null ? item.getProduct().getBrand() : "")
+                            .categoryIdSnapshot(item.getCategoryIdSnapshot())
                             .productImageUrl(null)
                             .weightGrip(item.getProduct() != null ? item.getProduct().getWeightGrip() : "")
                             .selectedSize(item.getSelectedSize())
@@ -466,6 +468,7 @@ public class OrderService {
                 .expiresAt(order.getExpiresAt())
                 .timeRemainingSeconds(secondsRemaining)
                 .createdAt(order.getCreatedAt())
+                .completedAt(order.getCompletedAt())
                 .cashCollected(order.getCashCollectedAt() != null)
                 .cashCollectedAt(order.getCashCollectedAt())
                 .cashCollectedBy(order.getCashCollectedBy())

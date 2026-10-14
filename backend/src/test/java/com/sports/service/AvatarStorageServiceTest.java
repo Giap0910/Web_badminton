@@ -2,7 +2,7 @@ package com.sports.service;
 import com.sports.exception.BadRequestException;
 import com.sports.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import javax.imageio.ImageIO;
@@ -11,7 +11,16 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 class AvatarStorageServiceTest {
-    @TempDir Path directory;
+    Path directory;
+    @BeforeEach void retainArtifacts() throws Exception {
+        Path workspace=Path.of("").toAbsolutePath().normalize();
+        if (workspace.getFileName().toString().equals("backend")) workspace=workspace.getParent();
+        if (!java.nio.file.Files.isRegularFile(workspace.resolve("backend/pom.xml")))
+            throw new IllegalStateException("Test artifacts must remain inside the project workspace");
+        directory=workspace.resolve("backups/project-completion-20261013/avatar-test-"+java.util.UUID.randomUUID());
+        java.nio.file.Files.createDirectories(directory);
+        System.out.println("Retained avatar test artifacts: "+directory);
+    }
     AvatarStorageService service() {
         var service = new AvatarStorageService();
         ReflectionTestUtils.setField(service, "storageRoot", directory.toString());

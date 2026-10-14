@@ -21,6 +21,13 @@ public class ProductController {
 
     private final ProductService productService;
     private final com.sports.service.ProductVariantService productVariantService;
+    @PostMapping("/{id}/variants")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<com.sports.dto.ProductVariantDto> createVariant(@PathVariable Long id,
+            @Valid @RequestBody com.sports.dto.ProductVariantDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(productVariantService.create(id,dto));
+    }
+
     @PatchMapping("/{id}/variants/{variantId}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<com.sports.dto.ProductVariantDto> updateVariant(@PathVariable Long id,

@@ -27,9 +27,7 @@ public class AuthService {
     private final JwtTokenProvider tokenProvider;
 
     public AuthResponse login(AuthRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
+        Authentication authentication = authenticate(request);
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = tokenProvider.generateToken(authentication);
@@ -51,6 +49,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        validateNewPassword(request.getPassword());
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new BadRequestException("Tên đăng nhập đã tồn tại trong hệ thống");
         }
@@ -73,5 +72,27 @@ public class AuthService {
 
         // Auto login after registration
         return login(new AuthRequest(request.getUsername(), request.getPassword()));
+    }
+
+    private Authentication authenticate(AuthRequest request) {
+        try {
+            return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(),request.getPassword()));
+        } catch(IllegalArgumentException invalid) {
+            throw new org.springframework.security.authentication.BadCredentialsException("Thông tin đăng nhập không hợp lệ");
+        }
+    }
+
+    public static void validateNewPassword(String password) {
+        if (password==null || password.isBlank() || password.length()<6)
+            throw new BadRequestException("Mật khẩu mới phải có ít nhất 6 ký tự");
+        if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>72)
+            throw new BadRequestException("Mật khẩu mới không được vượt quá 72 byte UTF-8");
+    }
+
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
+    public void logout(Long userId) {
+        User user=userRepository.findByIdForUpdate(userId).orElseThrow(()->new BadRequestException("Tài khoản không tồn tại"));
+        user.setTokenVersion(Math.addExact(user.getTokenVersion()==null ? 0L : user.getTokenVersion(),1L));
+        userRepository.saveAndFlush(user);
     }
 }

@@ -1,5 +1,6 @@
 import { normalizeSearch } from './adminCustomers.jsx';
 export const PRODUCT_BRANDS = ['Yonex', 'Victor', 'Li-Ning', 'Mizuno', 'Kawasaki', 'Fleet'];
+export const VARIANT_CHOICE_FIELDS = ['availableSizes', 'colorName', 'weightGrip', 'quantityPerPack'];
 
 export const CATEGORY_FIELDS = {
   1: [['weightGrip', 'Trọng lượng và cán', 50], ['weightClass', 'Hạng trọng lượng', 50],
@@ -28,7 +29,7 @@ function sizesForForm(raw) {
 
 export function productToAdminForm(product = {}) {
   const fields = [...Object.values(CATEGORY_FIELDS).flat().map(([key]) => key),
-    'sku', 'name', 'categoryId', 'price', 'originalPrice', 'stock', 'description', 'origin'];
+    'sku', 'name', 'categoryId', 'price', 'originalPrice', 'stock', 'description', 'origin', 'colorName'];
   const form = Object.fromEntries(fields.map(key => [key, product[key] == null ? '' : String(product[key])]));
   return { ...form, brand: canonicalProductBrand(product.brand) || 'Yonex', availableSizes: sizesForForm(product.availableSizes),
     initialAvailableSizes: sizesForForm(product.availableSizes), originalAvailableSizes: product.availableSizes,
@@ -50,6 +51,7 @@ function textValue(value, label, max, required = false) {
 
 function addSpecifications(payload, form) {
   for (const [key, label, max, type] of CATEGORY_FIELDS[payload.categoryId] || []) {
+    if (form.hasVariants && VARIANT_CHOICE_FIELDS.includes(key)) continue;
     if (key === 'availableSizes') {
       if (form.originalAvailableSizes != null && form.availableSizes === form.initialAvailableSizes) continue;
       const sizes = String(form.availableSizes || '').split(',').map(size => size.trim()).filter(Boolean);
@@ -73,9 +75,30 @@ export function buildAdminProductPayload(form, categories, editing = false) {
     description: String(form.description || '').trim(), origin: textValue(form.origin, 'Xuất xứ', 100) };
   const sku = textValue(form.sku, 'SKU', 50);
   if (sku) payload.sku = sku;
-  if (!editing || stock !== form.expectedStock) { payload.stock = stock; if (editing) payload.expectedStock = form.expectedStock; }
+  if (!editing || (!form.hasVariants && stock !== form.expectedStock)) { payload.stock = stock; if (editing) payload.expectedStock = form.expectedStock; }
+  if (!form.hasVariants) payload.colorName = textValue(form.colorName, 'Màu sắc', 200);
   addSpecifications(payload, form);
   return payload;
+}
+
+export function buildAdminVariantPayload(form, categoryId) {
+  const payload = { color: textValue(form.color, 'Màu sắc', 200) || null,
+    size: textValue(form.size, 'Kích cỡ', 50) || null,
+    weightGrip: textValue(form.weightGrip, 'Trọng lượng và cán', 50) || null,
+    packaging: textValue(form.packaging, 'Quy cách', 100) || null,
+    stock: numberValue(form.stock, 'Tồn kho biến thể', 1000000), active: true };
+  if (Number(categoryId) === 1 && !payload.weightGrip) throw new Error('Vợt cần trọng lượng và cán, ví dụ 4U-G5.');
+  if ([2, 3].includes(Number(categoryId)) && !payload.size) throw new Error('Giày và quần áo cần kích cỡ cụ thể.');
+  if (Number(categoryId) === 2 && (!/^\d+(\.\d+)?$/.test(payload.size) || Number(payload.size) < 35 || Number(payload.size) > 42))
+    throw new Error('Kích cỡ giày phải từ 35 đến 42.');
+  return payload;
+}
+
+export function buildAdminVariantStockPayload(variant, stock, active) {
+  if (variant.legacy) throw new Error('Biến thể cũ cần đối soát, không sửa tồn kho trực tiếp.');
+  if (typeof active !== 'boolean') throw new Error('Trạng thái biến thể không hợp lệ.');
+  if (!active && Number(variant.reservedStock) > 0) throw new Error('Biến thể đang giữ chỗ cho đơn hàng, chưa thể ngừng bán.');
+  return { stock: numberValue(stock, 'Tồn kho biến thể', 1000000), expectedStock: variant.stock, active };
 }
 
 export function filterAdminProducts(products, search, category, brand, stockStatus, visibility) {

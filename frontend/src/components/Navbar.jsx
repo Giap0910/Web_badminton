@@ -72,7 +72,7 @@ const Navbar = () => {
               </div>
               <div className="flex flex-col text-left leading-none">
                 <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Hotline</span>
-                <span className="text-xs font-bold text-white tracking-wide">1900 6886</span>
+                <span className="text-xs font-bold text-white tracking-wide">Chưa cấu hình</span>
               </div>
             </div>
 
@@ -222,7 +222,7 @@ const Navbar = () => {
                 • Cước Cầu Lông
               </Link>
               <Link
-                to="/product/shuttlecock/shuttle-as50"
+                to="/products?categoryId=5&accessoryType=qua_cau"
                 onClick={() => setMobileMenuOpen(false)}
                 className="px-2 py-1.5 rounded text-slate-400 hover:text-white"
               >
@@ -249,7 +249,7 @@ const Navbar = () => {
 
               <div className="flex items-center gap-2 text-xs text-slate-400">
                 <Phone className="w-3.5 h-3.5 text-secondary" />
-                <span>1900 6886</span>
+                <span>Chưa cấu hình</span>
               </div>
             </div>
           </div>

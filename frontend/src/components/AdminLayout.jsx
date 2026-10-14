@@ -11,14 +11,9 @@ import {
   Tag,
   Star,
   Settings,
-  Search,
-  Bell,
-  MessageSquare,
   LogOut,
   Store,
   ShieldCheck,
-  ChevronDown,
-  Activity,
   Menu,
   X
 } from 'lucide-react';
@@ -28,6 +23,7 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const adminName = user?.fullName || user?.username || 'Quản trị viên';
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -137,7 +133,6 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
                         <Icon className="w-4 h-4" />
                         <span>{item.label}</span>
                       </div>
-                      <span className="w-2 h-2 rounded-full bg-secondary"></span>
                     </NavLink>
                   );
                 })}
@@ -217,13 +212,12 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
         <div className="p-3 bg-[#0B1120] border-t border-slate-800 flex flex-col gap-2">
           <div className="flex items-center gap-3 px-2 py-1">
             <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-secondary font-black text-xs">
-              {user?.fullName?.charAt(0) || 'A'}
+              {adminName.charAt(0)}
             </div>
             <div className="overflow-hidden flex-1">
-              <p className="text-xs font-bold text-white truncate">{user?.fullName || 'Admin Hoàng Nam'}</p>
+              <p className="text-xs font-bold text-white truncate">{adminName}</p>
               <p className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Super Admin BWF
+                {user?.role === 'ROLE_ADMIN' ? 'Quản trị viên' : 'Tài khoản'}
               </p>
             </div>
           </div>
@@ -270,34 +264,14 @@ const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
 
             {/* Live System Indicator */}
             <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[11px] font-bold text-emerald-700">Hệ thống hoạt động ổn định</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="text-[11px] font-bold text-emerald-700">Trang quản trị</span>
             </div>
           </div>
 
           {/* Topbar Actions */}
           <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              className="relative p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-              title="Tin nhắn CSKH"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600"></span>
-            </button>
-
-            <button
-              type="button"
-              className="relative p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-              title="Thông báo đơn mới"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary"></span>
-            </button>
-
-            <div className="h-6 w-px bg-slate-200 mx-1"></div>
-
-
+            <Link to="/profile" className="rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100" aria-label="Hồ sơ tài khoản quản trị">{adminName}</Link>
           </div>
         </header>
 

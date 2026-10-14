@@ -32,6 +32,7 @@ public class OrderResponse {
     private LocalDateTime expiresAt;
     private Long timeRemainingSeconds;
     private LocalDateTime createdAt;
+    private LocalDateTime completedAt;
     private Boolean cashCollected;
     private LocalDateTime cashCollectedAt;
     private Long cashCollectedBy;

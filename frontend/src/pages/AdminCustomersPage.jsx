@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { adminApi } from '../api/adminApi';
 import { normalizeCustomer, normalizeSearch } from '../utils/adminCustomers.jsx';
@@ -24,64 +24,64 @@ const AdminCustomersPage = () => {
   const [dataError, setDataError] = useState('');
   const [customers, setCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('search') || '');
-  const [selectedTier, setSelectedTier] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [toastMessage, setToastMessage] = useState('');
   const [viewCustomer, setViewCustomer] = useState(null);
+  const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
+  const mounted = useRef(true), loadGeneration = useRef(0), mutationLock = useRef(false);
 
   const formatPrice = (p) =>
     p == null ? 'Chưa có thông tin' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
   const fetchUsers = async () => {
+    const generation = ++loadGeneration.current;setLoading(true);
     try {
-      if (adminApi?.getAllUsers) {
-        const res = await adminApi.getAllUsers();
-        const list = Array.isArray(res) ? res : res?.data || [];
-        if (Array.isArray(list)) {
-          const mapped = list.filter(user => user.role !== 'ROLE_ADMIN').map(normalizeCustomer);
-          setCustomers(mapped);
-        }
+      const res = await adminApi.getAllUsers(), list = Array.isArray(res) ? res : res?.data;
+      if (!Array.isArray(list)) throw new Error('Dữ liệu khách hàng không hợp lệ');
+      const mapped = list.filter(user => user.role !== 'ROLE_ADMIN').map(normalizeCustomer);
+      if (mounted.current && generation === loadGeneration.current) {
+        setCustomers(mapped);setDataError('');
+        setViewCustomer(previous => previous ? mapped.find(customer => customer.id === previous.id) || null : null);
       }
+      return mapped;
     } catch (err) {
-      setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
-    }
+      if (mounted.current && generation === loadGeneration.current)
+        setDataError(err.response?.data?.message || err.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
+      return null;
+    } finally {if (mounted.current && generation === loadGeneration.current) setLoading(false);}
   };
 
   useEffect(() => {
+    mounted.current = true;
     fetchUsers();
+    return () => {mounted.current = false;loadGeneration.current += 1;};
   }, []);
 
   const handleToggleLock = async (id) => {
+    if (mutationLock.current) return;
     const target = customers.find((c) => c.id === id);
     if (!target) return;
-    const newStatus = target.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
-    const isActive = newStatus === 'ACTIVE';
-
+    const isActive = target.status !== 'ACTIVE';
+    mutationLock.current = true;setBusy(true);setToastMessage('');setDataError('');loadGeneration.current += 1;
     try {
-      if (adminApi?.updateUserStatus) {
-        await adminApi.updateUserStatus(id, isActive);
-      }
-      setToastMessage(`Đã ${isActive ? 'mở khóa' : 'tạm khóa'} tài khoản của ${target.fullName}.`);
+      await adminApi.updateUserStatus(id, isActive);
+      if (!mounted.current) return;
+      const reloaded = await fetchUsers();
+      const current = reloaded?.find(customer => customer.id === id);
+      if (!current || (current.status === 'ACTIVE') !== isActive) throw new Error('Chưa xác nhận được trạng thái tài khoản. Vui lòng tải lại.');
+      if (mounted.current) setToastMessage(`Đã ${isActive ? 'mở khóa' : 'tạm khóa'} tài khoản của ${target.fullName}.`);
     } catch (err) {
-      console.warn('Lỗi cập nhật trạng thái user:', err);
-      setToastMessage(err.response?.data?.message || 'Không thể cập nhật trạng thái tài khoản.');
-      return;
-    }
-
-    setCustomers((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
-    );
-    setTimeout(() => setToastMessage(''), 3000);
+      if (mounted.current) setDataError(err.response?.data?.message || err.message || 'Không thể cập nhật trạng thái tài khoản.');
+    } finally {mutationLock.current = false;if (mounted.current) setBusy(false);}
   };
 
   const filteredCustomers = customers.filter((c) => {
     const matchesSearch =
       normalizeSearch([c.fullName, c.email, c.phone, c.code].join(' ')).includes(normalizeSearch(searchQuery));
 
-    const matchesTier = selectedTier === 'ALL' ? true : c.tier === selectedTier;
     const matchesStatus = selectedStatus === 'ALL' ? true : c.status === selectedStatus;
 
-    return matchesSearch && matchesTier && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -104,10 +104,11 @@ const AdminCustomersPage = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Chính sách tích điểm HGClub, quản lý cấp bậc VIP và hạn mức ưu đãi xưởng BWF
+                Thông tin tài khoản, điểm từ số tiền đã thanh toán và lịch sử đơn hàng
               </p>
             </div>
           </div>
+          <button type="button" disabled={busy || loading} onClick={fetchUsers} className="rounded-xl border px-3 py-2 text-xs font-bold">Làm mới khách hàng</button>
         </div>
 
         {toastMessage && (
@@ -123,7 +124,7 @@ const AdminCustomersPage = () => {
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tổng khách hàng</span>
               <span className="text-2xl font-black text-slate-900 mt-1">{customers.length}</span>
-              <span className="text-[11px] text-emerald-600 font-bold mt-1">Chưa có dữ liệu</span>
+              <span className="text-[11px] text-emerald-600 font-bold mt-1">Không gồm tài khoản quản trị</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Users className="w-6 h-6" />
@@ -132,9 +133,9 @@ const AdminCustomersPage = () => {
 
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Hội viên VIP Gold & Diamond</span>
-              <span className="text-2xl font-black text-secondary mt-1">Chưa có dữ liệu</span>
-              <span className="text-[11px] text-slate-500 font-medium mt-1">Chưa có dữ liệu</span>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tài khoản hoạt động</span>
+              <span className="text-2xl font-black text-secondary mt-1">{customers.filter(customer => customer.status === 'ACTIVE').length}</span>
+              <span className="text-[11px] text-slate-500 font-medium mt-1">Theo trạng thái đã lưu trên máy chủ</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-red-50 text-secondary flex items-center justify-center">
               <Crown className="w-6 h-6" />
@@ -143,9 +144,9 @@ const AdminCustomersPage = () => {
 
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Giá trị đơn TB (AOV)</span>
-              <span className="text-2xl font-black text-slate-900 mt-1">Chưa có dữ liệu</span>
-              <span className="text-[11px] text-emerald-600 font-bold mt-1">Chưa có dữ liệu</span>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tổng điểm tích lũy</span>
+              <span className="text-2xl font-black text-slate-900 mt-1">{customers.every(customer => customer.points != null) ? customers.reduce((sum, customer) => sum + customer.points, 0).toLocaleString('vi-VN') : 'Chưa có thông tin'}</span>
+              <span className="text-[11px] text-emerald-600 font-bold mt-1">Không cộng điểm theo số lượng đơn</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <TrendingUp className="w-6 h-6" />
@@ -168,18 +169,6 @@ const AdminCustomersPage = () => {
 
           <div className="flex items-center gap-2.5">
             <select
-              value={selectedTier}
-              onChange={(e) => setSelectedTier(e.target.value)}
-              className="bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer"
-            >
-              <option value="ALL">Tất cả cấp bậc</option>
-              <option value="DIAMOND">Kim Cương (Diamond)</option>
-              <option value="GOLD">Hạng Vàng (Gold)</option>
-              <option value="SILVER">Hạng Bạc (Silver)</option>
-              <option value="STANDARD">Tiêu chuẩn</option>
-            </select>
-
-            <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
               className="bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer"
@@ -197,7 +186,7 @@ const AdminCustomersPage = () => {
             <table className="w-full text-left border-collapse min-w-[850px]">
               <thead>
                 <tr className="bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                  <th className="py-3.5 px-6">Hội viên & Cấp bậc</th>
+                  <th className="py-3.5 px-6">Khách hàng</th>
                   <th className="py-3.5 px-4">Thông tin liên hệ</th>
                   <th className="py-3.5 px-4">Điểm HGClub</th>
                   <th className="py-3.5 px-4">Đơn hàng</th>
@@ -210,14 +199,11 @@ const AdminCustomersPage = () => {
                 {filteredCustomers.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400">
-                      Không tìm thấy khách hàng nào phù hợp với bộ lọc.
+                      {loading ? 'Đang tải khách hàng...' : dataError ? 'Chưa tải được danh sách khách hàng.' : 'Không tìm thấy khách hàng nào phù hợp với bộ lọc.'}
                     </td>
                   </tr>
                 ) : (
                   filteredCustomers.map((c) => {
-                    const isDiamond = c.tier === 'DIAMOND';
-                    const isGold = c.tier === 'GOLD';
-                    const isSilver = c.tier === 'SILVER';
 
                     return (
                       <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
@@ -227,28 +213,7 @@ const AdminCustomersPage = () => {
                             <span className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 border border-slate-200 shrink-0">{c.fullName.charAt(0)}</span>
                             <div className="flex flex-col min-w-0">
                               <span className="font-bold text-slate-900 line-clamp-1">{c.fullName}</span>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                {isDiamond && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-black">
-                                    <Crown className="w-3 h-3 text-blue-600" />
-                                    {c.tierLabel}
-                                  </span>
-                                )}
-                                {isGold && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black">
-                                    <Award className="w-3 h-3 text-amber-600" />
-                                    {c.tierLabel}
-                                  </span>
-                                )}
-                                {isSilver && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
-                                    {c.tierLabel}
-                                  </span>
-                                )}
-                                {!isDiamond && !isGold && !isSilver && (
-                                  <span className="text-[10px] text-slate-400 font-medium">{c.tierLabel}</span>
-                                )}
-                              </div>
+                              <span className="text-[10px] text-slate-400 mt-0.5">{c.code}</span>
                             </div>
                           </div>
                         </td>
@@ -302,6 +267,7 @@ const AdminCustomersPage = () => {
                             </button>
                             <button
                               type="button"
+                              disabled={busy || loading}
                               onClick={() => handleToggleLock(c.id)}
                               title={c.status === 'ACTIVE' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
                               className={`p-1.5 rounded-lg transition-colors ${
@@ -342,9 +308,7 @@ const AdminCustomersPage = () => {
                 <span className="w-20 h-20 rounded-full flex items-center justify-center bg-slate-100 text-2xl">{viewCustomer.fullName.charAt(0)}</span>
                 <h4 className="font-black text-base text-slate-900">{viewCustomer.fullName}</h4>
                 <p className="text-xs text-slate-500">{viewCustomer.email} • {viewCustomer.phone}</p>
-                <span className="px-3 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-black">
-                  {viewCustomer.tierLabel}
-                </span>
+                <span className="text-xs text-slate-500">{viewCustomer.status === 'ACTIVE' ? 'Tài khoản hoạt động' : 'Tài khoản tạm khóa'}</span>
               </div>
 
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 grid grid-cols-2 gap-3 text-xs">
@@ -361,8 +325,8 @@ const AdminCustomersPage = () => {
                   <span className="font-medium text-slate-700">{viewCustomer.joinedDate}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Đặc quyền:</span>
-                  <span className="font-bold text-blue-600">Chưa có thông tin</span>
+                  <span className="text-slate-400 block text-[11px]">Điểm tích lũy:</span>
+                  <span className="font-bold text-blue-600">{viewCustomer.points == null ? 'Chưa có thông tin' : viewCustomer.points.toLocaleString('vi-VN')}</span>
                 </div>
               </div>
 

@@ -15,6 +15,12 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
   const esbuild = await import('esbuild');
   const React = await import('react');
   const ReactDOMServer = await import('react-dom/server');
+  const authSource = fs.readFileSync(path.join(__dirname, '../context/AuthContext.jsx'), 'utf8');
+  const helperSource = authSource.slice(authSource.indexOf('export function safeInternalRedirect'), authSource.indexOf('const sessionUser'));
+  const helperModule = { exports: {} };
+  const helperCompiled = await esbuild.transform(helperSource, { format: 'cjs' });
+  new Function('module', 'exports', helperCompiled.code)(helperModule, helperModule.exports);
+  const authHelpers = helperModule.exports;
 
   // Helper for component mounting and running
   function createHarness(overrides = {}) {
@@ -135,7 +141,7 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
           };
         }
         if (id.includes('authApi')) return { authApi: { register: async () => ({ data: {} }) } };
-        if (id.includes('AuthContext')) return { useAuth: () => ({ user: null }) };
+        if (id.includes('AuthContext')) return { ...authHelpers, useAuth: () => ({ user: null }) };
         if (id === 'lucide-react') {
           return new Proxy({}, {
             get: (_, prop) => (props) => React.createElement('span', { 'data-icon': prop, ...props })
@@ -193,6 +199,7 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
         }
         if (id.includes('AuthContext')) {
           return {
+            ...authHelpers,
             useAuth: () => ({
               user: null,
               login: async () => {},
@@ -220,6 +227,13 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
     }
   });
 
+  await t.test('FIX-026: Production loginDestination preserves Buy Now state and rejects external redirects', () => {
+    assert.deepEqual(authHelpers.loginDestination({ search: '', state: { from: '/checkout', returnState: { selectedItemIds: ['variant-11'] } } }),
+      { path: '/checkout', state: { selectedItemIds: ['variant-11'] } });
+    assert.equal(authHelpers.loginDestination({ search: '?redirect=https%3A%2F%2Fexternal.invalid', state: null }).path, '/');
+    assert.equal(authHelpers.loginDestination({ search: '?redirect=%2Fproducts%2F10', state: null }).path, '/products/10');
+  });
+
   // =========================================================================
   // FIX-036 TESTS: AdminDashboardPage Semantics & Accuracy
   // =========================================================================
@@ -237,6 +251,8 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
       totalOrders: 42,
       totalCustomers: 15,
       pendingOrders: 3,
+      unverifiedPaidOrders: 0,
+      topSellingProducts: [{ productId: 11, productSku: 'HG-RACKET-011', productName: 'Vợt bán chạy từ API', quantity: 7, grossMerchandiseAmount: 7000000, productDeleted: false }],
       recentOrders: [
         {
           id: 101,
@@ -337,8 +353,14 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
       assert.ok(html.includes('Xuất báo cáo'), 'Report controls must render');
       assert.ok(!html.includes('Chưa hỗ trợ lọc'), 'Date range filtering is now supported');
 
-      // 3. Verify Top Products is transparent about no API support
-      assert.ok(html.includes('Chưa hỗ trợ'), 'Top products must state Chưa hỗ trợ');
+      // 3. Verify Top Products uses server data and explains the price basis
+      assert.ok(html.includes('Vợt bán chạy từ API'), 'Top products must come from the API');
+      assert.ok(html.includes('HG-RACKET-011'), 'Ranking must preserve the actual SKU');
+      assert.ok(html.includes('7 sản phẩm'), 'Ranking must display the actual quantity');
+      assert.ok(html.includes('trước voucher và đổi điểm'), 'Gross item value must not be described as net revenue');
+      assert.ok(!html.includes('Live Ops'), 'Dashboard must not claim unsupported real-time monitoring');
+      assert.ok(html.includes('#HG-101'), 'Recent order code must use the real order ID');
+      assert.ok(!html.includes('#HG-98765'), 'Provider payment code must not replace the order ID');
 
       // 4. Verify Recent Orders uses real data, no fake phone or stringing fallback
       assert.ok(html.includes('Nguyễn Văn Test'), 'Customer name must be from API');
@@ -365,6 +387,8 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
       totalOrders: 0,
       totalCustomers: 0,
       pendingOrders: 0,
+      unverifiedPaidOrders: 0,
+      topSellingProducts: [],
       recentOrders: [],
       dailyRevenue: {}
     };

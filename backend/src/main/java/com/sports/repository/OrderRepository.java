@@ -44,11 +44,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByStatus(OrderStatus status);
 
-    @Query("SELECT o FROM Order o WHERE (o.paymentMethod = 'PAYOS_VIETQR' AND o.status IN "
+    @Query("SELECT o FROM Order o WHERE ((o.paymentMethod = 'PAYOS_VIETQR' AND o.status IN "
             + "(com.sports.entity.OrderStatus.PAID, com.sports.entity.OrderStatus.SHIPPING, com.sports.entity.OrderStatus.COMPLETED) "
-            + "AND EXISTS (SELECT p.id FROM PaymentAttempt p WHERE p.order = o AND p.status = com.sports.entity.PaymentAttempt$Status.PAID "
-            + "AND p.paidAt IS NOT NULL AND p.amount = o.totalAmount)) "
-            + "OR (o.paymentMethod = 'COD' AND o.cashCollectedAt IS NOT NULL)")
+            + "AND EXISTS (SELECT p.id FROM PaymentAttempt p WHERE p.order = o AND p.provider='PAYOS' "
+            + "AND p.status = com.sports.entity.PaymentAttempt$Status.PAID AND p.paidAt IS NOT NULL AND p.amount = o.totalAmount)) "
+            + "OR (o.paymentMethod = 'COD' AND o.cashCollectedAt IS NOT NULL AND NOT EXISTS "
+            + "(SELECT p.id FROM PaymentAttempt p WHERE p.order=o AND p.status IN "
+            + "(com.sports.entity.PaymentAttempt$Status.PAID,com.sports.entity.PaymentAttempt$Status.NEEDS_REVIEW)) "
+            + "AND NOT EXISTS (SELECT e.id FROM PaymentEvent e WHERE e.paymentAttempt.order=o AND e.amount>0 "
+            + "AND (e.receivedPayment=true OR e.processingResult='PAID')))) "
+            + "AND NOT EXISTS (SELECT c.id FROM PaymentEventConflict c WHERE c.paymentEvent.paymentAttempt.order=o) "
+            + "AND NOT EXISTS (SELECT e.id FROM PaymentEvent e WHERE e.paymentAttempt.order=o AND e.reviewReason IN "
+            + "('IDENTITY_MISMATCH','CURRENCY_MISMATCH','EVENT_IDENTITY_CONFLICT'))")
     List<Order> findRecognizedPaymentOrders();
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT o FROM Order o WHERE o.id = :id")

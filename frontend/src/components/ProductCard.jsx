@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { productImages, productOptions, productCategory } from '../utils/formatters';
 import { useCart } from '../context/CartContext';
-import { ShoppingCart, Heart } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { ShoppingCart, Heart, Eye } from 'lucide-react';
 import ProductImage from './ProductImage';
-import { ProductRating, productSpecSummary, productValue, productCartOptions } from './ProductFacts';
+import { ProductRating, productSpecSummary, productValue, productCartOptions, useProductFavorite } from './ProductFacts';
 
-const ProductCard = ({ product, onQuickView }) => {
+const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
   const needsSelection = product.variants?.length > 1 || ['SHOES', 'APPAREL'].includes(productCategory(product))
     || productOptions(product.weightGrip || product.weightClass).length > 0;
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { user } = useAuth();
+  const { isFavorite, toggleFavorite, favoriteError } = useProductFavorite(user?.id, product.id);
   const [addedAnimation, setAddedAnimation] = useState(false);
   const inStock = product.inStock ?? (Number.isInteger(product.stock) && product.stock > 0);
   // Use product.imageUrl as primary per Backend Contract Section 1 & 6
@@ -62,9 +64,7 @@ const ProductCard = ({ product, onQuickView }) => {
   const handleQuickView = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (onQuickView) {
-      onQuickView(product);
-    }
+    navigate(productDetailUrl);
   };
 
   // Badge logic matching design: "Bán chạy" (red), "Mới" (blue), or discount %
@@ -83,29 +83,33 @@ const ProductCard = ({ product, onQuickView }) => {
       
       {/* Upper Badge Row */}
       <div className="flex items-center justify-between mb-2">
-        <span className={`px-2.5 py-0.5 rounded-full font-bold text-xs uppercase tracking-wide ${
+        {badgeLabel ? <span className={`px-2.5 py-0.5 rounded-full font-bold text-xs uppercase tracking-wide ${
           isNew 
             ? 'bg-[#2563EB] text-white' 
             : 'bg-secondary text-white'
         }`}>
           {badgeLabel}
-        </span>
+        </span> : <span />}
         <button 
           type="button"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setIsFavorite(!isFavorite);
+            toggleFavorite();
           }}
           aria-label="Yêu thích" 
+          aria-pressed={isFavorite} title="Lưu yêu thích trên thiết bị này"
           className="text-slate-400 hover:text-secondary transition-colors p-1"
         >
           <Heart className={`w-5 h-5 ${isFavorite ? 'fill-secondary text-secondary' : ''}`} />
         </button>
       </div>
+      {favoriteError && <p role="alert" className="text-[11px] text-red-700">{favoriteError}</p>}
 
       {/* Product Image Stage with Hover Quick-Actions */}
       <div className="relative w-full h-56 bg-[#F2F4F6] rounded-lg overflow-hidden flex items-center justify-center p-3">
+        <button type="button" onClick={handleQuickView} title="Xem chi tiết" aria-label={`Xem chi tiết ${product.name}`}
+          className="absolute top-2 right-2 z-10 bg-white rounded-full p-2 text-slate-600 shadow-sm"><Eye className="w-4 h-4" /></button>
         <Link to={productDetailUrl} className="w-full h-full flex items-center justify-center">
           <ProductImage
             src={imageUrl}

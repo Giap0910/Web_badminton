@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getOrderStatusLabel } from '../utils/formatters';
+import { formatDate, getOrderStatusLabel } from '../utils/formatters';
 import UserLayout from '../components/UserLayout';
+import ProductImage from '../components/ProductImage';
 import { orderApi } from '../api/orderApi';
 import OrderItemOptions, { formatOrderItemOptionsText } from '../components/OrderItemOptions';
 import {
@@ -23,6 +24,39 @@ import {
   PackageCheck
 } from 'lucide-react';
 
+export function normalizeUserOrder(item) {
+  const items = Array.isArray(item.items) ? item.items : Array.isArray(item.orderItems) ? item.orderItems : [];
+  const first = items[0];
+  const quantity = items.reduce((sum, line) => sum + (Number.isInteger(line.quantity) && line.quantity > 0 ? line.quantity : 0), 0);
+  return { id: item.id, orderCode: item.payosOrderCode ? `#HG-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#HG-${item.id}`,
+    createdAt: formatDate(item.createdAt), paymentMethod: item.paymentMethod === 'PAYOS_VIETQR' ? 'PayOS / VietQR'
+      : item.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng (COD)' : 'Chưa xác định',
+    productName: first?.productName || first?.product?.name || 'Xem sản phẩm trong chi tiết đơn hàng',
+    productImage: first?.productImageUrl || first?.product?.imageUrl || null,
+    stringDetail: formatOrderItemOptionsText(first, ''), items, quantity, quantitySummary: `Số lượng: ${quantity} sản phẩm`,
+    totalPrice: item.totalAmount ?? item.totalPrice ?? 0, shippingFee: item.shippingFee ?? 0,
+    status: item.status || 'UNKNOWN', statusLabel: getOrderStatusLabel(item), statusSub: getOrderStatusLabel(item),
+    receiverName: item.customerName || item.shippingName || '', receiverPhone: item.shippingPhone || '', shippingAddress: item.shippingAddress || '' };
+}
+
+export function userOrderSlipCsv(orders) {
+  const cell = value => {
+    let text = String(value ?? '');
+    if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
+    return `"${text.replaceAll('"', '""')}"`;
+  };
+  const header = ['Mã đơn', 'Thời gian', 'Người nhận', 'Điện thoại', 'Địa chỉ', 'Sản phẩm và số lượng', 'Tổng số lượng', 'Phí vận chuyển (đồng)', 'Tổng đơn (đồng)', 'Phương thức', 'Trạng thái'];
+  const rows = orders.map(order => [order.orderCode, order.createdAt, order.receiverName, order.receiverPhone,
+    order.shippingAddress, order.items.map(item => `${item.productName || 'Sản phẩm'} × ${item.quantity}; ${formatOrderItemOptionsText(item, '')}`).join('\n'),
+    order.quantity, order.shippingFee, order.totalPrice, order.paymentMethod, order.statusLabel]);
+  return '\uFEFF' + [header, ...rows].map(row => row.map(cell).join(',')).join('\r\n');
+}
+
+function downloadUserOrderSlips(orders) {
+  const url = URL.createObjectURL(new Blob([userOrderSlipCsv(orders)], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a'); link.href = url; link.download = 'phieu-don-hang-HG.csv'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 const MyOrdersPage = () => {
   const [dataError, setDataError] = useState('');
@@ -39,33 +73,7 @@ const MyOrdersPage = () => {
         const res = await orderApi.getMyOrders();
         const list = Array.isArray(res) ? res : res?.data || [];
         if (Array.isArray(list)) {
-          // Merge API fields with design-specific fields
-          const formatted = list.map((item, idx) => {
-            const itemsList = Array.isArray(item.items) ? item.items : (Array.isArray(item.orderItems) ? item.orderItems : []);
-            const firstItem = itemsList[0];
-            const techString = formatOrderItemOptionsText(firstItem, item.stringOption || 'Kỹ thuật viên đan tiêu chuẩn BWF');
-
-            return {
-              id: item.id || idx + 1,
-              orderCode: item.payosOrderCode ? `#HG-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#HG-${item.id || 89000 + idx}`,
-              createdAt: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '14:35 - 24/10/2024',
-              paymentMethod: item.paymentMethod?.includes('PAYOS') ? 'VietQR Pro Chuyển khoản' : 'COD Đồng kiểm',
-              productName: firstItem?.productName || firstItem?.product?.name || item.productName || 'Vợt Cầu Lông HG',
-              productImage: firstItem?.productImageUrl || firstItem?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-              stringDetail: techString,
-              items: itemsList,
-              quantitySummary: `Số lượng: ${itemsList.length || 1} sản phẩm`,
-              totalPrice: item.totalAmount || item.totalPrice || 0,
-              shippingFee: item.shippingFee || 0,
-              status: item.status || 'PROCESSING',
-              statusLabel: getOrderStatusLabel(item),
-              statusSub: getOrderStatusLabel(item),
-              receiverName: item.customerName || item.shippingName || 'Khách hàng HG',
-              receiverPhone: item.shippingPhone || '',
-              shippingAddress: item.shippingAddress || ''
-            };
-          });
-          setOrders(formatted);
+          setOrders(list.map(normalizeUserOrder));
         }
       } catch (err) {
         setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
@@ -156,11 +164,12 @@ const MyOrdersPage = () => {
               </div>
               <button
                 type="button"
-                onClick={() => alert('Hệ thống đang trích xuất hóa đơn GTGT điện tử (e-Invoice) của các đơn hàng...')}
+                disabled={loading || Boolean(dataError) || orders.length === 0}
+                onClick={() => downloadUserOrderSlips(filteredOrders)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-colors self-start sm:self-auto"
               >
                 <Download className="w-4 h-4" />
-                <span>Xuất hóa đơn điện tử</span>
+                <span>Xuất phiếu đơn hàng (CSV)</span>
               </button>
             </div>
 
@@ -261,10 +270,10 @@ const MyOrdersPage = () => {
                         <td className="py-4 px-4 align-top">
                           <div className="flex items-start gap-3">
                             <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center p-1 shrink-0 overflow-hidden border border-slate-200">
-                              <img
+                              <ProductImage compact
                                 src={order.productImage}
                                 alt={order.productName}
-                                className="w-full h-full object-cover rounded-lg"
+                                className="w-full h-full rounded-lg"
                               />
                             </div>
                             <div className="flex flex-col min-w-0">
@@ -411,28 +420,19 @@ const MyOrdersPage = () => {
                 {/* Thông tin danh sách sản phẩm */}
                 <div className="border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-slate-100">
-                    Sản phẩm trong đơn ({selectedOrder.items?.length || 1})
+                    Sản phẩm trong đơn ({selectedOrder.quantity} sản phẩm)
                   </span>
                   <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                    {(selectedOrder.items && selectedOrder.items.length > 0 ? selectedOrder.items : [{
-                      productName: selectedOrder.productName,
-                      productImageUrl: selectedOrder.productImage,
-                      quantity: 1,
-                      price: selectedOrder.totalPrice,
-                      subtotal: selectedOrder.totalPrice,
-                      selectedWeight: selectedOrder.stringDetail
-                    }]).map((it, itIdx) => {
+                    {(selectedOrder.items || []).map((it, itIdx) => {
                       const itemSubtotal = it.subtotal != null ? it.subtotal : (it.price ? it.price * (it.quantity || 1) : 0);
                       return (
                         <div key={it.id || itIdx} className="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100">
                           <div className="flex items-center gap-3 min-w-0">
-                            {it.productImageUrl && (
-                              <img
+                              <ProductImage compact
                                 src={it.productImageUrl}
                                 alt={it.productName || 'Sản phẩm'}
-                                className="w-12 h-12 rounded-lg object-contain bg-white border border-slate-100 shrink-0 p-1"
+                                className="w-12 h-12 rounded-lg bg-white border border-slate-100 shrink-0 p-1"
                               />
-                            )}
                             <div className="min-w-0">
                               <p className="font-bold text-slate-900 truncate">{it.productName || it.product?.name || 'Sản phẩm'}</p>
                               <OrderItemOptions item={it} />

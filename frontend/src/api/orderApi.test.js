@@ -84,3 +84,19 @@ test('orderApi.getOrderPayment sends GET /orders/{id}/payment', async () => {
     axiosClient.get = originalGet;
   }
 });
+
+test('Đặt đơn và tạo QR giữ Authorization đã chụp cùng mã chống trùng', async () => {
+  const original = axiosClient.post; const calls = [];
+  axiosClient.post = async (...args) => { calls.push(args); return { id: 1 }; };
+  const options = { headers: { Authorization: 'Bearer session-A' }, timeout: 8000 };
+  try {
+    await orderApi.createOrder({ customerName: 'Phong' }, 'order-key', options);
+    await orderApi.createPaymentLink(1, 'payment-key', options);
+    assert.equal(calls[0][2].headers.Authorization, 'Bearer session-A');
+    assert.equal(calls[0][2].headers['Idempotency-Key'], 'order-key');
+    assert.equal(calls[1][2].headers.Authorization, 'Bearer session-A');
+    assert.equal(calls[1][2].headers['Idempotency-Key'], 'payment-key');
+    assert.equal(calls[0][2].timeout, 8000);
+    assert.deepEqual(options, { headers: { Authorization: 'Bearer session-A' }, timeout: 8000 });
+  } finally { axiosClient.post = original; }
+});

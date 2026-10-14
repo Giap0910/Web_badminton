@@ -22,4 +22,7 @@ public class DashboardStatsResponse {
     private Map<String, BigDecimal> dailyRevenue;
     private Long unverifiedPaidOrders;
     private String revenueBasis;
+    private List<TopSellingProduct> topSellingProducts;
+    public record TopSellingProduct(Long productId, String productSku, String productName, Long quantity,
+            BigDecimal grossMerchandiseAmount, Boolean productDeleted) {}
 }

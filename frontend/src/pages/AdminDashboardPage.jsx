@@ -23,13 +23,46 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+function reportNumber(value, label) {
+  if (value == null || typeof value === 'string' && value.trim() === '' || !['number', 'string'].includes(typeof value)
+    || !Number.isSafeInteger(Number(value)) || Number(value) < 0) throw new Error(`Dữ liệu ${label} không hợp lệ`);
+  return Number(value);
+}
+
+export function normalizeDashboardOrder(order) {
+  const id = Number.isSafeInteger(Number(order.id)) && Number(order.id) > 0 ? Number(order.id) : null;
+  const created = order.createdAt ? new Date(order.createdAt) : null;
+  return { id, code: id ? `#HG-${id}` : '—', customer: order.customerName || '—', phone: order.shippingPhone || '—',
+    product: order.items?.[0]?.productName || '—', stringReq: order.items?.[0]?.stringingService
+      ? `${order.items[0].stringingService}${order.items[0].stringTension ? ` (${order.items[0].stringTension})` : ''}` : '—',
+    amount: order.totalAmount == null ? null : reportNumber(order.totalAmount, 'số tiền đơn'),
+    time: created && Number.isFinite(created.getTime()) ? created.toLocaleString('vi-VN') : '—',
+    statusLabel: order.status ? getOrderStatusLabel(order) : 'Chưa có thông tin' };
+}
+
+export function normalizeDashboardData(data) {
+  if (!data || !Array.isArray(data.recentOrders) || !data.dailyRevenue || typeof data.dailyRevenue !== 'object'
+    || Array.isArray(data.dailyRevenue)) throw new Error('Dữ liệu báo cáo không hợp lệ');
+  const stats = Object.fromEntries([['totalRevenue', 'doanh thu'], ['totalOrders', 'tổng đơn hàng'],
+    ['totalCustomers', 'tổng tài khoản'], ['pendingOrders', 'đơn chờ xử lý']].map(([key, label]) => [key, reportNumber(data[key], label)]));
+  const entries = Object.entries(data.dailyRevenue).map(([day, value]) => [day, reportNumber(value, 'doanh thu theo ngày')]);
+  const maximum = Math.max(...entries.map(([, value]) => value), 1);
+  if (data.topSellingProducts != null && !Array.isArray(data.topSellingProducts)) throw new Error('Xếp hạng sản phẩm không hợp lệ');
+  return { stats, chart: entries.map(([day, revenue]) => ({ day, revenue, height: Math.round(revenue / maximum * 100) })),
+    recentOrders: data.recentOrders.map(normalizeDashboardOrder),
+    unverified: data.unverifiedPaidOrders == null ? null : reportNumber(data.unverifiedPaidOrders, 'đơn chưa xác minh'),
+    topSellingProducts: data.topSellingProducts?.map(product => ({ ...product,
+      quantity: reportNumber(product.quantity, 'số lượng đã bán'),
+      grossMerchandiseAmount: reportNumber(product.grossMerchandiseAmount, 'giá trị tiền hàng') })) ?? null };
+}
+
 const AdminDashboardPage = () => {
   const [dataError, setDataError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [recentOrders, setRecentOrders] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [range, setRange] = useState({ from: '', to: '' });
-  const [unverified, setUnverified] = useState(0);
+  const [unverified, setUnverified] = useState(null), [topSellingProducts, setTopSellingProducts] = useState(null);
   const requestId = useRef(0);
   const [stats, setStats] = useState({
     totalRevenue: 'Chưa tải',
@@ -39,71 +72,20 @@ const AdminDashboardPage = () => {
   });
 
   const formatPrice = (p) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p || 0);
+    p == null ? '—' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
   const handleRefresh = async () => {
     const request = ++requestId.current;
     setIsRefreshing(true);
     setDataError('');
     try {
-      if (adminApi?.getDashboardStats) {
-        const res = await adminApi.getDashboardStats({ from: range.from || undefined, to: range.to || undefined });
-        if (request !== requestId.current) return;
-        const data = res?.data ?? res;
-        if (data) {
-          setUnverified(data.unverifiedPaidOrders || 0);
-          const revVal = data.totalRevenue != null ? Number(data.totalRevenue) : 0;
-          const ordVal = data.totalOrders != null ? Number(data.totalOrders) : 0;
-          const custVal = data.totalCustomers != null ? Number(data.totalCustomers) : 0;
-          const pendVal = data.pendingOrders != null ? Number(data.pendingOrders) : 0;
-
-          setStats({
-            totalRevenue: formatPrice(revVal),
-            totalOrders: ordVal,
-            totalCustomers: custVal,
-            pendingOrders: pendVal
-          });
-
-          // Connect dailyRevenue from API if available
-          if (data.dailyRevenue && typeof data.dailyRevenue === 'object') {
-            const entries = Object.entries(data.dailyRevenue);
-            const maxVal = Math.max(...entries.map(([, val]) => Number(val) || 0), 1);
-            const mappedChart = entries.map(([day, val]) => {
-              const numVal = Number(val) || 0;
-              return {
-                day,
-                revenue: numVal,
-                height: Math.round((numVal / maxVal) * 100)
-              };
-            });
-            setChartData(mappedChart);
-          } else {
-            setChartData([]);
-          }
-
-          if (Array.isArray(data.recentOrders)) {
-            const mappedOrders = data.recentOrders.map((o, idx) => ({
-              id: o.id || idx + 1,
-              code: o.payosOrderCode ? `#HG-${o.payosOrderCode}` : (o.id ? `#HG-${o.id}` : '—'),
-              customer: o.customerName || '—',
-              phone: o.shippingPhone || '—',
-              product: o.items?.[0]?.productName || '—',
-              stringReq: o.items?.[0]?.stringingService
-                ? `${o.items[0].stringingService}${o.items[0].stringTension ? ` (${o.items[0].stringTension})` : ''}`
-                : '—',
-              amount: o.totalAmount != null ? Number(o.totalAmount) : 0,
-              time: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('vi-VN') : '—',
-              status: o.status || 'PENDING',
-              statusLabel: getOrderStatusLabel(o)
-            }));
-            setRecentOrders(mappedOrders);
-          } else {
-            setRecentOrders([]);
-          }
-        }
-      }
+      const res = await adminApi.getDashboardStats({ from: range.from || undefined, to: range.to || undefined });
+      if (request !== requestId.current) return;
+      const data = normalizeDashboardData(res?.data ?? res);
+      setStats({ ...data.stats, totalRevenue: formatPrice(data.stats.totalRevenue) });setUnverified(data.unverified);
+      setChartData(data.chart);setRecentOrders(data.recentOrders);setTopSellingProducts(data.topSellingProducts);
     } catch (err) {
-      if (request === requestId.current) setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
+      if (request === requestId.current) setDataError(err.response?.data?.message || err.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     } finally {
       if (request === requestId.current) setIsRefreshing(false);
     }
@@ -123,13 +105,9 @@ const AdminDashboardPage = () => {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="inline-block w-2.5 h-2.5 rounded-full bg-secondary animate-pulse"></span>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                 Báo cáo tổng quan hoạt động
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#131b2e] text-blue-300 text-[10px] font-black uppercase tracking-wider ml-1">
-                Live Ops
-              </span>
             </div>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -143,6 +121,7 @@ const AdminDashboardPage = () => {
 
             <button
               type="button"
+              disabled={isRefreshing}
               onClick={handleRefresh}
               className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all active:scale-95 cursor-pointer"
             >
@@ -172,7 +151,7 @@ const AdminDashboardPage = () => {
               </div>
             </div>
             <div className="mt-4 pt-2 flex items-center gap-2 border-t border-slate-100">
-              <span className="text-[11px] text-slate-500">Chỉ ghi nhận tiền PayOS đã xác nhận và tiền mặt/COD đã xác nhận thu. {unverified > 0 && `${unverified} đơn cũ chưa có bằng chứng thu tiền.`}</span>
+              <span className="text-[11px] text-slate-500">Chỉ ghi nhận tiền PayOS đã xác nhận và tiền mặt/COD đã xác nhận thu. {unverified > 0 && `${unverified} đơn chưa có bằng chứng thu tiền.`}{unverified == null && ' Chưa có thống kê đơn chưa xác minh.'}</span>
             </div>
           </div>
 
@@ -198,7 +177,6 @@ const AdminDashboardPage = () => {
               </div>
             </div>
             <div className="mt-4 pt-2 flex items-center gap-1.5 border-t border-slate-100">
-              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
               <span className="text-[11px] text-slate-600 font-bold">{range.from ? 'Đơn tạo hoặc thu tiền trong kỳ' : 'Toàn bộ đơn trong hệ thống'}</span>
             </div>
           </div>
@@ -292,7 +270,7 @@ const AdminDashboardPage = () => {
               </div>
             ) : (
               <div className="h-56 flex items-center justify-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
-                Chưa có dữ liệu biểu đồ doanh thu
+                {stats.totalOrders === 'Chưa tải' ? 'Chưa tải được biểu đồ doanh thu' : 'Chưa có dữ liệu biểu đồ doanh thu'}
               </div>
             )}
 
@@ -311,7 +289,7 @@ const AdminDashboardPage = () => {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
                 <h3 className="text-base font-black text-slate-900">Sản phẩm bán chạy nhất</h3>
-                <p className="text-xs text-slate-500">Xếp hạng theo sản lượng</p>
+                <p className="text-xs text-slate-500">Xếp hạng theo số lượng đã bán trên đơn có bằng chứng thanh toán trong kỳ</p>
               </div>
               <Link
                 to="/admin/products"
@@ -321,13 +299,21 @@ const AdminDashboardPage = () => {
               </Link>
             </div>
 
-            <div className="py-12 flex flex-col items-center justify-center text-center p-4">
+            {topSellingProducts == null ? <div className="py-12 flex flex-col items-center justify-center text-center p-4">
               <Package className="w-10 h-10 text-slate-300 mb-2" />
-              <p className="text-xs font-bold text-slate-600">Chưa hỗ trợ</p>
+              <p className="text-xs font-bold text-slate-600">Chưa tải được xếp hạng</p>
               <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
-                API máy chủ hiện tại chưa cung cấp danh sách xếp hạng sản phẩm bán chạy.
+                Danh sách xếp hạng chưa được máy chủ cung cấp. Hãy làm mới báo cáo.
               </p>
-            </div>
+            </div> : topSellingProducts.length === 0 ? <p className="py-8 text-center text-sm text-slate-500">Chưa có sản phẩm bán được xác minh trong kỳ.</p>
+              : <ol className="space-y-3">{topSellingProducts.map((product, index) => <li key={`${product.productId ?? 'retired'}-${product.productSku ?? index}`}
+                className="flex items-start gap-3 border-b border-slate-100 pb-3">
+                <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">{index + 1}</span>
+                <div className="flex-1 min-w-0"><p className="text-sm font-bold text-slate-900">{product.productName || 'Chưa có tên sản phẩm'}</p>
+                  <p className="text-xs text-slate-500">{product.productSku || 'Chưa có mã sản phẩm'}{product.productDeleted === true && ' · Đã ngừng bán'}</p>
+                  <p className="text-xs text-slate-600">{product.quantity.toLocaleString('vi-VN')} sản phẩm · Tiền hàng: {formatPrice(product.grossMerchandiseAmount)}</p></div>
+              </li>)}</ol>}
+            <p className="text-[11px] text-slate-500">Tiền hàng theo giá từng dòng đơn, trước voucher và đổi điểm, không gồm phí vận chuyển; chưa phân bổ giảm giá theo sản phẩm.</p>
           </div>
         </div>
 
@@ -363,7 +349,7 @@ const AdminDashboardPage = () => {
                 {recentOrders.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="py-8 text-center text-slate-400">
-                      Chưa có đơn hàng nào
+                      {stats.totalOrders === 'Chưa tải' ? 'Chưa tải được đơn hàng gần đây' : 'Chưa có đơn hàng nào'}
                     </td>
                   </tr>
                 ) : (
@@ -391,7 +377,7 @@ const AdminDashboardPage = () => {
                       </td>
                       <td className="py-4 px-6 align-top text-right">
                         <Link
-                          to={`/admin/orders`}
+                          to={order.id ? `/admin/orders?search=${encodeURIComponent(order.code)}` : '/admin/orders'}
                           className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors inline-block"
                         >
                           Chi tiết

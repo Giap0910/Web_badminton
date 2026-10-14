@@ -1,10 +1,10 @@
 import axiosClient from './axiosClient';
 
 export const shippingAddressApi = {
-  getMyAddresses: () => axiosClient.get('/shipping-addresses'),
-  getAddressById: (id) => axiosClient.get(`/shipping-addresses/${id}`),
-  createAddress: (data) => axiosClient.post('/shipping-addresses', data),
-  updateAddress: (id, data) => axiosClient.put(`/shipping-addresses/${id}`, data),
-  setDefaultAddress: (id) => axiosClient.patch(`/shipping-addresses/${id}/default`),
-  deleteAddress: (id) => axiosClient.delete(`/shipping-addresses/${id}`),
+  getMyAddresses: (config) => axiosClient.get('/shipping-addresses', config),
+  getAddressById: (id, config) => axiosClient.get(`/shipping-addresses/${id}`, config),
+  createAddress: (data, config) => axiosClient.post('/shipping-addresses', data, config),
+  updateAddress: (id, data, config) => axiosClient.put(`/shipping-addresses/${id}`, data, config),
+  setDefaultAddress: (id, config) => axiosClient.patch(`/shipping-addresses/${id}/default`, null, config),
+  deleteAddress: (id, config) => axiosClient.delete(`/shipping-addresses/${id}`, config),
 };

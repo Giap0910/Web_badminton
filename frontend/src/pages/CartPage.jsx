@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { voucherApi } from '../api/voucherApi';
+import useCheckoutVoucher from '../components/useCheckoutVoucher';
+import ProductImage from '../components/ProductImage';
 import { formatPrice } from '../utils/formatters';
 import {
   Trash2,
@@ -29,14 +30,10 @@ const CartPage = () => {
   const { cart, updateQuantity, removeFromCart, cartTotal, clearCart, addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [cartError, setCartError] = useState('');
 
   // Coupon state
   const [couponCode, setCouponCode] = useState(() => sessionStorage.getItem('hg_voucher_code') || '');
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [appliedVoucher, setAppliedVoucher] = useState(null);
-  const [couponError, setCouponError] = useState('');
-  const [couponSuccess, setCouponSuccess] = useState('');
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   // Selected items state (default all selected)
   const [selectedItemIds, setSelectedItemIds] = useState(
@@ -76,75 +73,30 @@ const CartPage = () => {
   // Free shipping threshold: 1,000,000 VND
   const freeShippingThreshold = 1000000;
   const isFreeShipping = selectedSubtotal >= freeShippingThreshold;
-  const shippingFee = selectedSubtotal === 0 || isFreeShipping ? 0 : 30000;
   const shippingProgress = Math.min(100, Math.round((selectedSubtotal / freeShippingThreshold) * 100));
 
   const voucherKey = JSON.stringify([couponCode, cart.filter((item) =>
     selectedItemIds.has(item.cartItemId)).map((item) => [item.cartItemId, item.quantity, item.product.price])]);
-  const voucherKeyRef = useRef(voucherKey);
-  voucherKeyRef.current = voucherKey;
-  useEffect(() => {
-    setCouponDiscount(0);
-    setAppliedVoucher(null);
-    setCouponSuccess('');
-    setCouponError('');
-    setIsValidatingCoupon(false);
-  }, [voucherKey]);
+  const voucher = useCheckoutVoucher(couponCode, selectedSubtotal, voucherKey);
+  const { discountAmount: couponDiscount, appliedVoucher, error: couponError, success: couponSuccess,
+    validating: isValidatingCoupon, apply: handleApplyCoupon, shippingDiscountAmount, finalShippingFee: shippingFee } = voucher;
 
   // Effective coupon discount
   const effectiveDiscount = selectedSubtotal > 0 ? Math.min(selectedSubtotal, couponDiscount) : 0;
+  const displayedShippingFee = shippingFee + shippingDiscountAmount;
 
   // Final Total
   const finalTotal = Math.max(0, selectedSubtotal - effectiveDiscount + shippingFee);
 
-  const handleApplyCoupon = async (e) => {
-    e.preventDefault();
-    if (!couponCode.trim()) return;
-
-    const requestKey = voucherKey;
-    setCouponDiscount(0);
-    setAppliedVoucher(null);
-    setIsValidatingCoupon(true);
-    setCouponError('');
-    setCouponSuccess('');
-
-    try {
-      const res = await voucherApi.validateVoucher(couponCode.trim(), selectedSubtotal);
-      if (voucherKeyRef.current !== requestKey) return;
-      const vData = res?.data ?? res;
-      if (vData && vData.valid) {
-        setCouponDiscount(vData.discountAmount || 0);
-        setAppliedVoucher(vData);
-        sessionStorage.setItem('hg_voucher_code', vData.code);
-        setCouponSuccess(`Áp dụng thành công mã ${vData.code}! Giảm ${formatPrice(vData.discountAmount)}`);
-      } else {
-        setCouponDiscount(0);
-        setAppliedVoucher(null);
-        setCouponError('Mã giảm giá không hợp lệ.');
-      }
-    } catch (err) {
-      if (voucherKeyRef.current !== requestKey) return;
-      setCouponDiscount(0);
-      setAppliedVoucher(null);
-      setCouponError(err.response?.data?.message || 'Không thể xác thực mã giảm giá.');
-    } finally {
-      if (voucherKeyRef.current === requestKey) setIsValidatingCoupon(false);
-    }
-  };
-
   const handleRemoveCoupon = () => {
     sessionStorage.removeItem('hg_voucher_code');
     setCouponCode('');
-    setCouponDiscount(0);
-    setAppliedVoucher(null);
-    setCouponSuccess('');
-    setCouponError('');
   };
 
   const handleCheckoutClick = () => {
     if (isValidatingCoupon) return;
     if (!cart.some((item) => selectedItemIds.has(item.cartItemId))) {
-      alert('Vui lòng chọn ít nhất một sản phẩm để tiến hành thanh toán!');
+      setCartError('Vui lòng chọn ít nhất một sản phẩm để tiến hành thanh toán.');
       return;
     }
     const checkoutState = {
@@ -160,8 +112,6 @@ const CartPage = () => {
     }
   };
 
-  // Frequently bought together accessories
-  const crossSellProducts = [];
 
   if (cart.length === 0) {
     return (
@@ -193,7 +143,8 @@ const CartPage = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased pt-6 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+        {cartError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{cartError}</p>}
+
         {/* Top Header Stepper */}
         <div className="hidden md:flex items-center justify-center mb-8">
           <nav className="flex items-center gap-4 text-xs font-bold text-slate-400">
@@ -314,7 +265,7 @@ const CartPage = () => {
                             className="w-4 h-4 rounded accent-red-600 mt-2 sm:mt-0 shrink-0 cursor-pointer"
                           />
                           <div className="w-20 h-20 rounded-xl bg-slate-50 p-1 shrink-0 flex items-center justify-center border border-slate-100 overflow-hidden">
-                            <img
+                            <ProductImage compact
                               src={item.product.imageUrl || item.product.image}
                               alt={item.product.name}
                               className="w-full h-full object-contain"
@@ -434,13 +385,7 @@ const CartPage = () => {
                   </button>
                 </div>
                 <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                  <button
-                    type="button"
-                    onClick={() => alert('Giỏ hàng đã được đồng bộ với trạng thái mới nhất!')}
-                    className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 shadow-sm transition-colors"
-                  >
-                    Cập nhật giỏ hàng
-                  </button>
+                  <span className="text-xs text-slate-500">Thay đổi số lượng được lưu tự động; tồn kho được kiểm tra khi đặt hàng.</span>
                 </div>
               </div>
             </div>
@@ -453,15 +398,15 @@ const CartPage = () => {
                 </div>
                 <div className="text-xs text-slate-500">
                   <span className="font-bold text-slate-900 block text-sm">Cần hỗ trợ tư vấn thông số căng cước chính xác?</span>
-                  Đội ngũ đan vợt chứng chỉ Victor & Yonex sẵn sàng hỗ trợ trực tiếp.
+                  Xem thông số đã công bố của từng mẫu sản phẩm.
                 </div>
               </div>
               <a
-                href="tel:19006886"
+                href="/products?categoryId=1"
                 className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-red-600 font-bold text-xs transition-colors shrink-0 flex items-center gap-1.5"
               >
                 <PhoneCall className="w-3.5 h-3.5" />
-                <span>Hotline 1900 6886</span>
+                <span>Xem vợt và thông số</span>
               </a>
             </div>
           </div>
@@ -502,6 +447,7 @@ const CartPage = () => {
                 {couponError && (
                   <p className="text-[11px] font-semibold text-red-600">{couponError}</p>
                 )}
+                {couponSuccess && <p role="status" className="text-[11px] text-emerald-700">{couponSuccess}</p>}
 
                 {/* Applied Coupon Tag */}
                 {appliedVoucher && (
@@ -516,7 +462,7 @@ const CartPage = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-red-600">
-                        -{formatPrice(effectiveDiscount)}
+                        -{formatPrice(shippingDiscountAmount || effectiveDiscount)}
                       </span>
                       <button
                         type="button"
@@ -537,14 +483,18 @@ const CartPage = () => {
                   <span className="text-slate-900 font-bold">{formatPrice(selectedSubtotal)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Giảm giá coupon ({appliedVoucher?.code || 'None'})</span>
+                  <span>Giảm tiền hàng{appliedVoucher && effectiveDiscount > 0 ? ` (${appliedVoucher.code})` : ''}</span>
                   <span className="text-red-600 font-bold">-{formatPrice(effectiveDiscount)}</span>
                 </div>
+                {shippingDiscountAmount > 0 && <div className="flex items-center justify-between">
+                  <span>Giảm phí vận chuyển ({appliedVoucher?.code})</span>
+                  <span className="text-red-600 font-bold">-{formatPrice(shippingDiscountAmount)}</span>
+                </div>}
 
                 <div className="flex items-center justify-between">
-                  <span>Phí vận chuyển</span>
+                  <span>{shippingDiscountAmount > 0 ? 'Phí vận chuyển trước ưu đãi' : 'Phí vận chuyển'}</span>
                   <span className="text-emerald-600 font-bold">
-                    {shippingFee === 0 ? '0₫ (Miễn phí)' : formatPrice(shippingFee)}
+                    {displayedShippingFee === 0 ? '0₫ (Miễn phí)' : formatPrice(displayedShippingFee)}
                   </span>
                 </div>
 
@@ -554,7 +504,7 @@ const CartPage = () => {
                 <div className="flex items-baseline justify-between pt-1">
                   <div className="flex flex-col">
                     <span className="text-sm font-black text-slate-900">Tổng cộng</span>
-                    <span className="text-[11px] text-slate-400">(Đã gồm VAT 8% và hóa đơn điện tử)</span>
+                    <span className="text-[11px] text-slate-400">Tổng tiền dự kiến; máy chủ xác nhận khi đặt đơn</span>
                   </div>
                   <span className="text-2xl font-black text-red-600 tracking-tight">
                     {formatPrice(finalTotal)}
@@ -566,6 +516,7 @@ const CartPage = () => {
               <button
                 type="button"
                 onClick={handleCheckoutClick}
+                disabled={isValidatingCoupon}
                 className="w-full py-3.5 px-4 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-bold text-sm uppercase tracking-wider rounded-xl shadow-lg shadow-red-500/25 transition-all flex items-center justify-center gap-2 group"
               >
                 <Lock className="w-4 h-4" />
@@ -577,15 +528,15 @@ const CartPage = () => {
               <div className="pt-2 flex flex-col gap-2 text-[11px] text-slate-500">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Thanh toán an toàn & bảo mật qua SSL 256-bit</span>
+                  <span>Trạng thái thanh toán được xác minh từ máy chủ</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <RotateCcw className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Đổi mới trong 7 ngày nếu không vừa chân / lỗi sản xuất</span>
+                  <span>Bảo hành 1 đổi 1 trong 90 ngày; không áp dụng phụ kiện</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Award className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Cam kết 100% chính hãng - Đền gấp 10 lần nếu hàng giả</span>
+                  <span>Thông tin sản phẩm theo mẫu đã đối chiếu</span>
                 </div>
               </div>
 
@@ -594,57 +545,6 @@ const CartPage = () => {
 
         </div>
 
-        {/* Frequently Bought Together (Cross-sell Section) */}
-        <div className="mt-12 pt-8 border-t border-slate-200">
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-slate-900">Sản phẩm thường mua cùng</h3>
-            <p className="text-xs text-slate-500 mt-1">Tối ưu hiệu năng thi đấu với phụ kiện chính hãng được tin dùng</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {crossSellProducts.map((p) => (
-              <div
-                key={p.id}
-                className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 hover:shadow-md transition-all"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-16 h-16 rounded-xl bg-slate-50 p-1 shrink-0 flex items-center justify-center border border-slate-100 overflow-hidden">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-contain" />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-bold uppercase text-red-600 tracking-wider">
-                      {p.tag}
-                    </span>
-                    <span className="text-xs font-bold text-slate-900 line-clamp-1 mt-0.5">
-                      {p.name}
-                    </span>
-                    <div className="flex items-baseline gap-1.5 mt-1">
-                      <span className="text-xs font-black text-slate-900">{formatPrice(p.price)}</span>
-                      <span className="text-[10px] text-slate-400 line-through">{formatPrice(p.originalPrice)}</span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    addToCart({
-                      id: p.id,
-                      name: p.name,
-                      price: p.price,
-                      imageUrl: p.image,
-                      stockQuantity: 99
-                    }, 1);
-                    alert(`Đã thêm "${p.name}" vào giỏ hàng thành công!`);
-                  }}
-                  className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-600 text-red-600 hover:text-white flex items-center justify-center transition-all shrink-0"
-                  title="Thêm nhanh vào giỏ"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
 
       </div>
     </div>

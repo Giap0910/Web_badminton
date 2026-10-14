@@ -1,23 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ShoppingCart, Bolt, ChevronRight, CheckCircle2, Star, RefreshCw, Droplets, Sparkles, Send, Heart, ZoomIn, Truck, PackageCheck, Award, AlertCircle } from 'lucide-react';
 import { productApi } from '../api/productApi';
-import { reviewApi } from '../api/reviewApi';
+import { reviewApi, useProductReviews, buildReviewPayload } from '../api/reviewApi';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { formatPrice, productImages } from '../utils/formatters';
 
 import ProductCard from '../components/ProductCard';
-import { ProductDescription, ProductSpecifications, ProductSelections, ProductRating, ProductReviewEntries, ReviewSummary, ProductDiscount, productCartOptions, productValue, productAccessoryLabel } from '../components/ProductFacts';
+import ProductImage from '../components/ProductImage';
+import { ProductDescription, ProductSpecifications, ProductSelections, ProductRating, ProductReviewEntries, ReviewSummary, ProductDiscount, productCartOptions, productValue, productAccessoryLabel, useProductFavorite } from '../components/ProductFacts';
 
 const SweatbandDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const reviewRoute = useRef(id), reviewLock = useRef(false), reviewAttempt = useRef(0); reviewRoute.current = id;
+  useEffect(() => { reviewRoute.current = id; reviewLock.current = false; reviewAttempt.current++; setReviewSubmitting(false);
+    return () => { reviewRoute.current = null; reviewAttempt.current++; }; }, [id]);
   const { addToCart } = useCart();
+  const { token, isAuthenticated, user } = useAuth();
+  const { isFavorite, toggleFavorite, favoriteError } = useProductFavorite(user?.id, Number(id));
 
   const [product, setProduct] = useState(null);
-  const [reviews, setReviews] = useState([]);
+  const { reviews, reviewsError, reviewsLoading, setReviews, retryReviews } = useProductReviews(id);
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [reviewsError, setReviewsError] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -29,7 +36,6 @@ const SweatbandDetailPage = () => {
   // Review Form state
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
-  const [reviewerName, setReviewerName] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
@@ -37,18 +43,16 @@ const SweatbandDetailPage = () => {
     const fetchProd = async () => {
       setLoading(true);
       setProduct(null);
-      setReviews([]);
-      setReviewsError('');
+
+
       try {
-        const [prodData, revData, relatedData] = await Promise.all([
+        const [prodData, relatedData] = await Promise.all([
           productApi.getProductById(id),
-          reviewApi.getProductReviews(id).catch(() => { if (active) setReviewsError('Không tải được đánh giá.'); return []; }),
           productApi.getProducts({ page: 0, size: 5, categoryId: 5 }).catch(() => ({ content: [] }))
         ]);
         if (!active) return;
         setProduct(prodData);
         setRelatedProducts((relatedData?.content || []).filter(item => item.id !== prodData.id).slice(0, 4));
-        setReviews(Array.isArray(revData) ? revData : (revData?.items || []));
       } catch (err) {
         console.error('Error fetching sweatband detail:', err);
       } finally {
@@ -117,24 +121,21 @@ const SweatbandDetailPage = () => {
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!reviewComment.trim()) return;
-    setReviewSubmitting(true);
+    if (!isAuthenticated) { alert('Vui lòng đăng nhập để đánh giá sản phẩm đã mua.'); return; }
+    if (reviewLock.current) return; reviewLock.current = true; const submittedId = id, attempt = ++reviewAttempt.current; setReviewSubmitting(true);
     try {
-      const newRev = await reviewApi.createReview({
-        productId: product.id,
-        rating: reviewRating,
-        comment: reviewComment,
-        userFullName: reviewerName.trim() || 'Khách hàng thể thao'
-      });
+      const newRev = await reviewApi.createReview(buildReviewPayload({ productId: product.id }, reviewRating, reviewComment), { headers: { Authorization: `Bearer ${token}` } });
+      if (reviewRoute.current !== submittedId || reviewAttempt.current !== attempt) return;
       setReviews(prev => [newRev, ...prev]);
-      productApi.getProductById(id).then(setProduct).catch(console.error);
+      productApi.getProductById(id).then(data => { if (reviewRoute.current === submittedId) setProduct(data); }).catch(console.error);
       setReviewComment('');
-      setReviewerName('');
       alert('Cảm ơn bạn đã gửi đánh giá sản phẩm!');
     } catch (err) {
+      if (reviewRoute.current !== submittedId || reviewAttempt.current !== attempt) return;
       console.error(err);
       alert('Chưa thể gửi đánh giá, vui lòng thử lại sau.');
     } finally {
-      setReviewSubmitting(false);
+      if (reviewRoute.current === submittedId && reviewAttempt.current === attempt) { reviewLock.current = false; setReviewSubmitting(false); }
     }
   };
 
@@ -197,12 +198,14 @@ const SweatbandDetailPage = () => {
               <button 
                 type="button" 
                 aria-label="Yêu thích"
+                onClick={toggleFavorite} aria-pressed={isFavorite} title="Lưu yêu thích trên thiết bị này"
                 className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/90 text-slate-500 shadow flex items-center justify-center hover:text-secondary transition-colors"
               >
-                <Heart className="w-4 h-4" />
+                <Heart className={`w-4 h-4 ${isFavorite ? 'fill-secondary text-secondary' : ''}`} />
               </button>
+              {favoriteError && <p role="alert" className="absolute bottom-3 left-3 right-3 text-xs text-red-700">{favoriteError}</p>}
 
-              <img 
+              <ProductImage
                 src={galleryImages[activeImage]} 
                 alt={product.name}
                 className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
@@ -225,7 +228,7 @@ const SweatbandDetailPage = () => {
                     activeImage === idx ? 'border-secondary ring-2 ring-secondary/20 scale-95' : 'border-slate-200 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={src} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
+                  <ProductImage src={src} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
                 </button>
               ))}
             </div>
@@ -397,19 +400,12 @@ const SweatbandDetailPage = () => {
           {/* TAB 3: ĐÁNH GIÁ */}
           {activeTab === 'reviews' && (
             <div className="pt-6 flex flex-col gap-6">
-              <ReviewSummary product={product} reviews={reviews} />
+              {!reviewsError && !reviewsLoading && <ReviewSummary product={product} reviews={reviews} />}
 
               {/* Add review form */}
               <form onSubmit={handleReviewSubmit} className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col gap-3">
                 <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Viết nhận xét của bạn</span>
                 <div className="flex flex-wrap gap-4 items-center">
-                  <input
-                    type="text"
-                    placeholder="Họ tên của bạn..."
-                    value={reviewerName}
-                    onChange={(e) => setReviewerName(e.target.value)}
-                    className="px-3 py-1.5 text-xs bg-white rounded-lg border border-slate-200 focus:outline-none focus:border-secondary flex-1 min-w-[200px]"
-                  />
                   <div className="flex items-center gap-1 text-xs text-slate-600">
                     <span>Đánh giá:</span>
                     <div className="flex text-amber-500 cursor-pointer">
@@ -424,6 +420,7 @@ const SweatbandDetailPage = () => {
                   </div>
                 </div>
                 <textarea
+                  maxLength={2000}
                   rows="2"
                   placeholder="Cảm nhận về độ thấm hút, độ co giãn, chất liệu..."
                   value={reviewComment}
@@ -442,7 +439,7 @@ const SweatbandDetailPage = () => {
               </form>
 
               {/* Reviews list */}
-              <ProductReviewEntries reviews={reviews} error={reviewsError} />
+              <ProductReviewEntries reviews={reviews} error={reviewsError} loading={reviewsLoading} onRetry={retryReviews} />
             </div>
           )}
 

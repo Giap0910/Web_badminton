@@ -34,18 +34,23 @@ public class UserService {
         return customerProfile(user, orders, paidIds);
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public UserProfileResponse updateUserProfile(Long userId, UserProfileUpdateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        User user=lockedUser(userId);
 
         if (request.getFullName() != null) {
+            if (request.getFullName().isBlank()) throw new BadRequestException("Họ tên không được để trống");
             user.setFullName(request.getFullName().trim());
         }
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone().trim());
         }
         if (request.isDobProvided()) user.setDob(request.getDob());
+        if (request.isGenderProvided() || request.getGender()!=null) {
+            if (request.getGender()!=null && !java.util.Set.of("nam","nu","khac").contains(request.getGender()))
+                throw new BadRequestException("Giới tính không hợp lệ");
+            user.setGender(request.getGender());
+        }
         if (request.getAddress() != null) {
             user.setAddress(request.getAddress().trim());
         }
@@ -54,16 +59,17 @@ public class UserService {
         return getUserProfile(userId);
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void changePassword(Long userId, ChangePasswordRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        AuthService.validateNewPassword(request.getNewPassword());
+        User user=lockedUser(userId);
 
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+        if (!matchesCurrentPassword(request.getCurrentPassword(),user.getPassword())) {
             throw new BadRequestException("Mật khẩu hiện tại không chính xác!");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        revokeSessions(user);
         userRepository.save(user);
     }
 
@@ -93,29 +99,46 @@ public class UserService {
         return profile;
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public UserProfileResponse updateUserStatus(Long userId, boolean active) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
+        var admins=userRepository.findAllAdminsForUpdate();
+        User user=lockedUser(userId);
+        boolean wasActive=!Boolean.FALSE.equals(user.getIsActive());
+        if (!active && wasActive && user.getRole()==com.sports.entity.Role.ROLE_ADMIN
+                && admins.stream().filter(admin -> !Boolean.FALSE.equals(admin.getIsActive())).count()<2)
+            throw new BadRequestException("Không thể khóa quản trị viên đang hoạt động cuối cùng");
+        if (wasActive!=active) revokeSessions(user);
         user.setIsActive(active);
         return toProfileResponse(userRepository.save(user));
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public UserProfileResponse uploadAvatar(Long userId, org.springframework.web.multipart.MultipartFile file) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        User user=lockedUser(userId);
         user.setAvatarKey(avatarStorage.store(file));
         userRepository.save(user);
         return getUserProfile(userId);
     }
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public UserProfileResponse deleteAvatar(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        User user=lockedUser(userId);
         user.setAvatarKey(null);
         userRepository.save(user);
         return getUserProfile(userId);
+    }
+
+    private User lockedUser(Long userId) {
+        return userRepository.findByIdForUpdate(userId).orElseThrow(()->new ResourceNotFoundException("Không tìm thấy người dùng"));
+    }
+
+    private void revokeSessions(User user) {
+        user.setTokenVersion(Math.addExact(user.getTokenVersion()==null ? 0L : user.getTokenVersion(),1L));
+    }
+
+    private boolean matchesCurrentPassword(String supplied,String stored) {
+        if (supplied==null || supplied.isBlank()) return false;
+        try { return passwordEncoder.matches(supplied,stored); }
+        catch(IllegalArgumentException invalid) { return false; }
     }
 
     private UserProfileResponse toProfileResponse(User user) {
@@ -127,6 +150,7 @@ public class UserService {
                 .phone(user.getPhone())
                 .address(user.getAddress())
                 .dob(user.getDob())
+                .gender(user.getGender())
                 .avatarUrl(user.getAvatarKey() == null ? null : "/api/media/avatars/" + user.getAvatarKey())
                 .role(user.getRole().name())
                 .isActive(user.getIsActive() != null ? user.getIsActive() : true)

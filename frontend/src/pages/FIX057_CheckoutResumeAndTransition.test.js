@@ -896,7 +896,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
       useState: (initial) => {
         const id = stateCursor++;
         if (!stateStore.has(id)) {
-          stateStore.set(id, initial);
+          stateStore.set(id, typeof initial === 'function' ? initial() : initial);
         }
         const val = stateStore.get(id);
         const setter = (newVal) => {
@@ -1040,12 +1040,17 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
       },
     };
 
-    const mockVoucherApi = { voucherApi: { getUserVouchers: async () => ({ data: [] }) } };
+    const mockVoucherApi = { voucherApi: {
+      getUserVouchers: async () => ({ data: [] }),
+      validateVoucher: async code => ({ valid: true, code, discountAmount: 0 }),
+    } };
     const mockShippingAddressApi = { shippingAddressApi: { getAddresses: async () => ({ data: [] }) } };
     const mockFormatters = { formatPrice: (v) => `${(v || 0).toLocaleString('vi-VN')} đ` };
     const mockLucide = new Proxy({}, { get: (t, p) => (props) => React.createElement('span', { 'data-icon': p, ...props }) });
 
+    let checkoutVoucherModule;
     const customRequire = (specifier) => {
+      if (specifier.includes('useCheckoutVoucher')) return checkoutVoucherModule;
       if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;
@@ -1080,6 +1085,12 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
       }
       throw new Error('Unknown: ' + specifier);
     };
+
+    const voucherSource = fs.readFileSync(path.resolve(__dirname, '../components/useCheckoutVoucher.jsx'), 'utf8');
+    const voucherTransform = await esbuild.transform(voucherSource, { loader: 'jsx', format: 'cjs', target: 'node18' });
+    const voucherModule = { exports: {} };
+    new Function('require', 'module', 'exports', voucherTransform.code)(customRequire, voucherModule, voucherModule.exports);
+    checkoutVoucherModule = voucherModule.exports;
 
     const moduleObj = { exports: {} };
     const fn = new Function('require', 'module', 'exports', 'React', transformed.code);

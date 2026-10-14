@@ -55,9 +55,7 @@ class OrderIdempotencyIntegrationTest {
     static void stopDatabase() throws Exception {
         if (context != null) context.close();
         if (!SCHEMA.matches("fix018_test_[0-9a-f]{32}")) throw new IllegalStateException("Schema test không hợp lệ");
-        try (var connection = connect(""); var statement = connection.createStatement()) {
-            statement.execute("DROP DATABASE `" + SCHEMA + "`");
-        }
+        System.out.println("Retained test database: " + SCHEMA);
     }
 
     static Connection connect(String database) throws SQLException {
@@ -164,7 +162,7 @@ class OrderIdempotencyIntegrationTest {
         String key = UUID.randomUUID().toString();
         var first = service.createOrder(userId, request(), key);
         try (var connection = connect(SCHEMA); var statement = connection.prepareStatement(
-                "INSERT INTO orders(user_id,total_amount,status,idempotency_key,request_hash,checkout_revision) VALUES(?,?,?,?,?,?)")) {
+                "INSERT INTO orders(user_id,total_amount,status,idempotency_key,request_hash,checkout_revision,points_used,points_discount) VALUES(?,?,?,?,?,?,0,0)")) {
             statement.setLong(1, userId);
             statement.setBigDecimal(2, BigDecimal.ONE);
             statement.setString(3, "PENDING");

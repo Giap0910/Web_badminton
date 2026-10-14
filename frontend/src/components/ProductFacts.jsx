@@ -1,8 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
-import { productCategory, productRating } from '../utils/formatters';
+import { productCategory, productRating, formatDate } from '../utils/formatters';
 
 export const UNKNOWN_PRODUCT_INFO = 'Chưa có thông tin';
+
+export function favoriteIds(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 500) : [];
+}
+const readFavorites = owner => {
+  try { return favoriteIds(JSON.parse(localStorage.getItem(`hg_favorites_${owner}`) || '[]')); } catch { return []; }
+};
+export function useProductFavorite(ownerId, productId) {
+  const [record, setRecord] = useState({ owner: null, ids: [] }), [favoriteError, setError] = useState('');
+  const owner = useRef(ownerId); owner.current = ownerId;
+  useEffect(() => {
+    owner.current = ownerId;
+    setRecord({ owner: ownerId, ids: ownerId ? readFavorites(ownerId) : [] }); setError('');
+    const changed = event => {
+      if (event.type === 'storage' && event.key !== `hg_favorites_${ownerId}`) return;
+      if (event.type === 'hg:favorites' && event.detail?.owner !== ownerId) return;
+      setRecord({ owner: ownerId, ids: ownerId ? readFavorites(ownerId) : [] });
+    };
+    window.addEventListener('hg:favorites', changed); window.addEventListener('storage', changed);
+    return () => { owner.current = null; window.removeEventListener('hg:favorites', changed); window.removeEventListener('storage', changed); };
+  }, [ownerId]);
+  const toggleFavorite = () => {
+    if (owner.current !== ownerId) return;
+    if (!Number.isSafeInteger(ownerId) || ownerId < 1) { setError('Đăng nhập để lưu yêu thích trên thiết bị này.'); return; }
+    if (!Number.isSafeInteger(productId) || productId < 1) return;
+    const ids = readFavorites(ownerId);
+    if (!ids.includes(productId) && ids.length >= 500) { setError('Danh sách yêu thích trên thiết bị đã đủ 500 sản phẩm.'); return; }
+    const next = favoriteIds(ids.includes(productId) ? ids.filter(id => id !== productId) : [...ids, productId]);
+    try {
+      localStorage.setItem(`hg_favorites_${ownerId}`, JSON.stringify(next)); setRecord({ owner: ownerId, ids: next }); setError('');
+      window.dispatchEvent(new CustomEvent('hg:favorites', { detail: { owner: ownerId } }));
+    } catch { setError('Không lưu được yêu thích trên thiết bị này.'); }
+  };
+  return { isFavorite: record.owner === ownerId && record.ids.includes(productId), toggleFavorite, favoriteError };
+}
+export async function copyProductLink(productId, reviewId) {
+  if (!Number.isSafeInteger(productId) || productId < 1) throw new Error('Không còn trang sản phẩm để chia sẻ.');
+  if (!navigator.clipboard?.writeText) throw new Error('Trình duyệt chưa hỗ trợ sao chép liên kết.');
+  const fragment = Number.isSafeInteger(reviewId) && reviewId > 0 ? `#review-${reviewId}` : '';
+  await navigator.clipboard.writeText(`${window.location.origin}/products/${productId}${fragment}`);
+}
 const CATEGORY_FIELDS = {
   RACKET: [['Trọng lượng / Chu vi cán', 'weightGrip'], ['Hạng trọng lượng', 'weightClass'],
     ['Điểm cân bằng', 'balancePoint'], ['Độ cứng', 'stiffness'], ['Sức căng tối đa', 'maxTension'],
@@ -178,20 +219,27 @@ export function ReviewSummary({ product, reviews = [] }) {
   </div>;
 }
 
-export function ProductReviewEntries({ reviews = [], error = '' }) {
-  return <div className="space-y-4">{error ? <p role="alert" className="text-sm text-slate-600">{error}</p>
+export function ProductReviewEntries({ reviews = [], error = '', loading = false, onRetry }) {
+  return <div className="space-y-4">{error ? <div role="alert" className="text-sm text-slate-600">{error}
+    {onRetry && <button type="button" className="ml-3 underline" onClick={onRetry}>Thử lại</button>}</div>
+      : loading ? <p role="status">Đang tải đánh giá...</p>
       : reviews.length === 0 ? <p className="text-sm text-slate-500">Chưa có đánh giá.</p>
-        : reviews.map((review, index) => <div key={review.id ?? index}
+        : reviews.filter(review => review.visible !== false).map((review, index) => <div key={review.id ?? index} id={`review-${review.id}`}
           className="p-4 bg-[#F8FAFC] rounded-xl border border-slate-100 space-y-2 text-xs">
           <strong className="text-slate-900 break-words">{productValue(review.userFullName) === UNKNOWN_PRODUCT_INFO ? 'Khách hàng' : review.userFullName}</strong>
+          {review.verifiedPurchase === true && <span className="ml-3 text-emerald-700">Đã mua hàng</span>}
+          {review.createdAt && <p className="text-slate-400">{formatDate(review.createdAt)}</p>}
           <div><ReviewStars rating={review.rating} /></div><p className="text-slate-600 break-words whitespace-pre-line">{review.comment}</p>
+          {typeof review.officialReply === 'string' && review.officialReply.trim() && <div className="border-l-4 border-blue-500 p-3 bg-blue-50">
+            <strong>Phản hồi cửa hàng</strong>{review.replyUpdatedAt && <span className="ml-3">{formatDate(review.replyUpdatedAt)}</span>}
+            <p className="whitespace-pre-line break-words">{review.officialReply}</p></div>}
         </div>)}
   </div>;
 }
 
-export function ProductReviewList({ product, reviews = [], error = '' }) {
-  return <div className="space-y-4"><ReviewSummary product={product} reviews={reviews} />
-    <ProductReviewEntries reviews={reviews} error={error} /></div>;
+export function ProductReviewList({ product, reviews = [], error = '', loading = false, onRetry }) {
+  return <div className="space-y-4">{!error && !loading && <ReviewSummary product={product} reviews={reviews} />}
+    <ProductReviewEntries reviews={reviews} error={error} loading={loading} onRetry={onRetry} /></div>;
 }
 
 export function ProductDiscount({ product }) {

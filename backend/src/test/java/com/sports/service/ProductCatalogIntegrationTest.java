@@ -86,6 +86,17 @@ class ProductCatalogIntegrationTest {
         assertEquals(124, products.count());
     }
 
+    @ParameterizedTest
+    @ValueSource(ints={-1,0,100,101,Integer.MAX_VALUE})
+    void pageSizesRemainWithinOneToOneHundredWithoutChangingCatalogScope(int requestedSize) {
+        var page=service.getProductsPaged(null,null,null,null,null,null,null,null,null,-1,requestedSize,"id","asc");
+        int expected=Math.max(1,Math.min(100,requestedSize));
+        assertEquals(expected,page.getPageSize());assertEquals(0,page.getPageNo());
+        assertEquals(expected,page.getContent().size());assertEquals(110,page.getTotalElements());
+        assertEquals(124,products.count());
+        assertFalse(page.getContent().stream().anyMatch(product->Set.of(236L,237L,31L).contains(product.getId())));
+    }
+
     @Test
     void bothLiNingAliasesReturnSameProductsAndCanonicalName() {
         var legacy = service.getProducts(null, "Lining", null, null, null, null, null, null, null);
@@ -106,7 +117,27 @@ class ProductCatalogIntegrationTest {
             assertThrows(ResourceNotFoundException.class, () -> service.compareRackets(List.of(id)));
         }
         assertEquals(List.of(), service.getProductImages(Long.MAX_VALUE));
-        assertFalse(service.getProductImages(1L).isEmpty());
+        assertEquals(ProductService.approvedImages(context.getBean(ProductImageRepository.class)
+                .findByProductIdOrderByDisplayOrderAsc(1L)),service.getProductImages(1L));
+    }
+
+    @Test
+    void comparisonOnlyAcceptsDistinctVisibleRacketsAndSerializesNoStockCounts() throws Exception {
+        var catalog=service.getProducts(null,null,null,null,null,null,null,null,null);
+        var rackets=catalog.stream().filter(product->Objects.equals(product.getCategoryId(),1L)).limit(2).toList();
+        var other=catalog.stream().filter(product->!Objects.equals(product.getCategoryId(),1L)).findFirst().orElseThrow();
+        assertEquals(2,rackets.size());Long first=rackets.get(0).getId(),second=rackets.get(1).getId();
+        assertThrows(BadRequestException.class,()->service.compareRackets(List.of(first,first)));
+        assertThrows(BadRequestException.class,()->service.compareRackets(List.of(other.getId())));
+        assertThrows(BadRequestException.class,()->service.compareRackets(Arrays.asList(first,null)));
+        var response=service.compareRackets(List.of(second,first));
+        assertEquals(List.of(second,first),response.getRackets().stream().map(ProductDto::getId).toList());
+        var json=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().valueToTree(response);
+        for(var product:json.path("rackets")) {
+            assertTrue(product.path("stock").isNull());assertTrue(product.path("reservedStock").isNull());
+            for(var variant:product.path("variants")) assertTrue(variant.path("stock").isNull());
+        }
+        assertEquals(124,products.count());
     }
 
     @Test
@@ -118,7 +149,8 @@ class ProductCatalogIntegrationTest {
         authenticate("ROLE_ADMIN");
         assertEquals(124, allProducts().size());
         assertEquals("Kumpoo", service.getProductById(31L, "all").getBrand());
-        assertFalse(service.getProductImages(31L, "all").isEmpty());
+        assertEquals(ProductService.approvedImages(context.getBean(ProductImageRepository.class)
+                .findByProductIdOrderByDisplayOrderAsc(31L)),service.getProductImages(31L,"all"));
     }
 
     private List<ProductDto> allProducts() {
@@ -139,6 +171,7 @@ class ProductCatalogIntegrationTest {
             reload();
             assertSpecifications(create, service.getProductById(saved.getId()), category);
             ProductDto update = fixture(category, "B");
+            preserveVariantChoices(update,saved);
             update.setExpectedStock(saved.getStock());
             update.setSku(saved.getSku());
             service.updateProduct(saved.getId(), update);
@@ -154,6 +187,36 @@ class ProductCatalogIntegrationTest {
     private void reload() {
         products.flush();
         SharedEntityManagerCreator.createSharedEntityManager(context.getBean(EntityManagerFactory.class)).clear();
+    }
+
+    private void preserveVariantChoices(ProductDto update,ProductDto saved) {
+        update.setWeightGrip(saved.getWeightGrip());update.setAvailableSizes(saved.getAvailableSizes());
+        update.setColorName(saved.getColorName());update.setQuantityPerPack(saved.getQuantityPerPack());
+    }
+
+    private String adminJson(ProductDto dto) throws com.fasterxml.jackson.core.JsonProcessingException {
+        authenticate("ROLE_ADMIN");
+        return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(dto);
+    }
+
+    @Test void galleriesRequireBothImageApprovalAndTheCorrectCatalogScope() {
+        tx.executeWithoutResult(status->{
+            var images=context.getBean(ProductImageRepository.class);
+            var visible=products.findById(1L).orElseThrow();var hidden=products.findById(31L).orElseThrow();
+            String visibleUrl="/api/media/products/1/approved-test.jpg",hiddenUrl="/api/media/products/31/approved-test.jpg";
+            images.saveAndFlush(com.sports.entity.ProductImage.builder().product(visible).imageUrl(visibleUrl)
+                    .displayOrder(-1).rightsApproved(true).modelVerified(true).build());
+            images.saveAndFlush(com.sports.entity.ProductImage.builder().product(visible)
+                    .imageUrl("/api/media/products/1/unapproved-test.jpg").rightsApproved(false).modelVerified(true).build());
+            images.saveAndFlush(com.sports.entity.ProductImage.builder().product(hidden).imageUrl(hiddenUrl)
+                    .displayOrder(-1).rightsApproved(true).modelVerified(true).build());
+            reload();
+            assertTrue(service.getProductImages(1L).contains(visibleUrl));
+            assertFalse(service.getProductImages(1L).contains("/api/media/products/1/unapproved-test.jpg"));
+            assertThrows(ResourceNotFoundException.class,()->service.getProductImages(31L));
+            authenticate("ROLE_ADMIN");assertTrue(service.getProductImages(31L,"all").contains(hiddenUrl));
+            status.setRollbackOnly();
+        });
     }
 
     private ProductDto fixture(int category, String version) {
@@ -216,7 +279,7 @@ class ProductCatalogIntegrationTest {
             String keyword = "FILTER6-" + UUID.randomUUID();
             var first = filterFixture(keyword, "[\"40\"]", "Nam", true);
             filterFixture(keyword, "[\"40.5\"]", "Nữ", false);
-            filterFixture(keyword, "[\"140\"]", "Unisex", true);
+            filterFixture(keyword, "[\"39\",\"41\"]", "Unisex", true);
             var second = filterFixture(keyword, "[\"40\"]", "Unisex", true);
             var invalid = products.findById(filterFixture(keyword, "[\"40\"]", "Nam", true).getId()).orElseThrow();
             invalid.setAvailableSizes("{\"legacy\":\"40\"}");
@@ -341,6 +404,14 @@ class ProductCatalogIntegrationTest {
             mvc.perform(put("/api/products/1").with(user("customer").roles("USER"))
                     .contentType("application/json").content("{}"))
                     .andExpect(status().isForbidden());
+            for (var method : List.of(post("/api/products/1/variants"),patch("/api/products/1/variants/1"))) {
+                mvc.perform(method.contentType("application/json").content("{\"stock\":20,\"size\":\"40\"}"))
+                        .andExpect(status().isUnauthorized());
+            }
+            for (var method : List.of(post("/api/products/1/variants"),patch("/api/products/1/variants/1"))) {
+                mvc.perform(method.with(user("customer").roles("USER")).contentType("application/json")
+                        .content("{\"stock\":20,\"size\":\"40\"}")).andExpect(status().isForbidden());
+            }
             assertVisibilityHttpValidation(mvc);
         }
     }
@@ -365,18 +436,19 @@ class ProductCatalogIntegrationTest {
     void administratorHttpCreateAndUpdatePersistAllCategorySpecifications(int category) throws Exception {
         try (var web = productWebContext()) {
             var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(web).apply(springSecurity()).build();
-            var json = new com.fasterxml.jackson.databind.ObjectMapper();
+            var json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
             tx.executeWithoutResult(status -> {
                 assertDoesNotThrow(() -> {
                     var create = fixture(category, "HTTP A");
                     var result = mvc.perform(post("/api/products").with(user("admin").roles("ADMIN"))
-                            .contentType("application/json").content(json.writeValueAsString(create)))
+                            .contentType("application/json").content(adminJson(create)))
                             .andExpect(status().isCreated()).andReturn();
                     var saved = json.readValue(result.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8), ProductDto.class);
                     var update = fixture(category, "HTTP B");
+                    preserveVariantChoices(update,saved);
                     update.setExpectedStock(saved.getStock()); update.setSku(saved.getSku());
                     mvc.perform(put("/api/products/" + saved.getId()).with(user("admin").roles("ADMIN"))
-                            .contentType("application/json").content(json.writeValueAsString(update))).andExpect(status().isOk());
+                            .contentType("application/json").content(adminJson(update))).andExpect(status().isOk());
                     reload();
                     assertSpecifications(update, service.getProductById(saved.getId()), category);
                 });
@@ -385,12 +457,49 @@ class ProductCatalogIntegrationTest {
         }
     }
 
+    @Test void administratorVariantApiPersistsTotalsAndPreservesIdentityAcrossReload() throws Exception {
+        try (var web=productWebContext()) {
+            var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(web).apply(springSecurity()).build();
+            tx.executeWithoutResult(status->{
+                var saved=service.createProduct(fixture(2,"Inventory"));
+                assertDoesNotThrow(()->{
+                    var response=mvc.perform(post("/api/products/"+saved.getId()+"/variants").with(user("admin").roles("ADMIN"))
+                            .contentType("application/json").content("{\"color\":\"Xanh\",\"size\":\"41\",\"stock\":20}"))
+                            .andExpect(status().isCreated()).andExpect(jsonPath("$.stock").value(20)).andReturn();
+                    var added=new com.fasterxml.jackson.databind.ObjectMapper().readValue(response.getResponse()
+                            .getContentAsString(java.nio.charset.StandardCharsets.UTF_8),com.sports.dto.ProductVariantDto.class);
+                    reload();assertEquals(27,service.getProductById(saved.getId()).getStock());
+                    assertTrue(service.getProductById(saved.getId()).getAvailableSizes().contains("41"));
+                    verifyVariantPatch(mvc,saved.getId(),added.getId());
+                    reload();assertEquals(7,service.getProductById(saved.getId()).getStock());
+                    assertFalse(service.getProductById(saved.getId()).getAvailableSizes().contains("41"));
+                });
+                status.setRollbackOnly();
+            });
+        }
+    }
+
+    private void verifyVariantPatch(org.springframework.test.web.servlet.MockMvc mvc,Long productId,Long variantId) throws Exception {
+        String path="/api/products/"+productId+"/variants/"+variantId;
+        mvc.perform(patch(path).with(user("admin").roles("ADMIN")).contentType("application/json")
+                .content("{\"stock\":18,\"expectedStock\":20,\"size\":\"42\"}")).andExpect(status().isBadRequest());
+        mvc.perform(patch(path).with(user("admin").roles("ADMIN")).contentType("application/json")
+                .content("{\"stock\":18,\"expectedStock\":20,\"color\":null}")).andExpect(status().isBadRequest());
+        mvc.perform(patch(path).with(user("admin").roles("ADMIN")).contentType("application/json")
+                .content("{\"stock\":18,\"expectedStock\":20,\"active\":false}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.active").value(false)).andExpect(jsonPath("$.stock").value(18));
+        mvc.perform(post("/api/products/"+productId+"/variants").with(user("admin").roles("ADMIN"))
+                .contentType("application/json").content("{\"color\":\" Xanh \",\"size\":\"41\",\"stock\":20}"))
+                .andExpect(status().isBadRequest());
+    }
+
     private org.springframework.web.context.support.AnnotationConfigWebApplicationContext productWebContext() {
         var web = new org.springframework.web.context.support.AnnotationConfigWebApplicationContext();
         web.setServletContext(new org.springframework.mock.web.MockServletContext());
         web.register(com.sports.security.SecurityConfig.class, ProductController.class, GlobalExceptionHandler.class, ProductWebConfig.class);
         web.addBeanFactoryPostProcessor(factory -> {
             factory.registerSingleton("productService", service);
+            factory.registerSingleton("productVariantService",context.getBean(ProductVariantService.class));
             factory.registerSingleton("jwtAuthenticationFilter", new com.sports.security.JwtAuthenticationFilter(
                     mock(com.sports.security.JwtTokenProvider.class), mock(com.sports.security.UserDetailsServiceImpl.class)));
         });
@@ -408,9 +517,12 @@ class ProductCatalogIntegrationTest {
     static class Config {
         @Bean
         DataSource dataSource() {
+            String schema=System.getProperty("product.catalog.mysql.schema","");
+            if (!schema.matches("hg_catalog_test_[0-9a-f]{32}"))
+                throw new IllegalArgumentException("Product integration chỉ chạy trên schema hg_catalog_test_ + UUID cô lập");
             return new DriverManagerDataSource(
-                    "jdbc:mysql://127.0.0.1:3306/badminton_catalog_restore_20261011?useSSL=false&allowPublicKeyRetrieval=true",
-                    "root", "");
+                    "jdbc:mysql://127.0.0.1:3306/"+schema+"?useSSL=false&allowPublicKeyRetrieval=true",
+                    System.getProperty("product.catalog.mysql.user","root"),System.getProperty("product.catalog.mysql.password",""));
         }
 
         @Bean
@@ -419,7 +531,7 @@ class ProductCatalogIntegrationTest {
             factory.setDataSource(dataSource);
             factory.setPackagesToScan("com.sports.entity");
             factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-            factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", "validate",
+            factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto", Boolean.getBoolean("product.catalog.mysql.bootstrap") ? "update" : "validate",
                     "hibernate.dialect", "org.hibernate.dialect.MariaDBDialect",
                     "hibernate.physical_naming_strategy",
                     "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy"));
@@ -440,6 +552,10 @@ class ProductCatalogIntegrationTest {
         ProductService productService(ProductRepository products, CategoryRepository categories,
                 ReviewService reviews, ProductImageRepository images) {
             return new ProductService(products, categories, reviews, images);
+        }
+
+        @Bean ProductVariantService productVariantService(ProductRepository products,ProductVariantRepository variants) {
+            return new ProductVariantService(products,variants);
         }
     }
 }

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { aiApi } from '../api/aiApi';
-import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import ProductImage from './ProductImage';
 import { 
   Sparkles, 
   X, 
@@ -22,6 +23,7 @@ const quickPrompts = [
 ];
 
 const AiChatbotWidget = () => {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -34,7 +36,13 @@ const AiChatbotWidget = () => {
   const [loading, setLoading] = useState(false);
   const [advisorStatus, setAdvisorStatus] = useState('Chưa kết nối AI');
   const messagesEndRef = useRef(null);
-  const { addToCart } = useCart();
+  const sendLock = useRef(false), mounted = useRef(true), generation = useRef(0);
+  useEffect(() => {
+    mounted.current = true; generation.current++; sendLock.current = false;
+    setLoading(false); setAdvisorStatus('Chưa kết nối AI'); setInputValue('');
+    setMessages([{ sender: 'ai', text: 'Xin chào! Bạn muốn tìm vợt theo lối chơi và mức giá nào?', products: [] }]);
+    return () => { mounted.current = false; generation.current++; };
+  }, [user?.id]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -47,8 +55,10 @@ const AiChatbotWidget = () => {
   }, [messages, isOpen]);
 
   const handleSend = async (textToSend) => {
-    const query = textToSend || inputValue;
-    if (!query.trim() || loading) return;
+    const query = String(textToSend || inputValue).trim();
+    if (!query || sendLock.current) return;
+    if (query.length > 2000) return;
+    sendLock.current = true; const attempt = ++generation.current;
 
     // Add user message
     const newMessages = [...messages, { sender: 'user', text: query }];
@@ -59,26 +69,30 @@ const AiChatbotWidget = () => {
     try {
       const history = messages.slice(1).slice(-6).map(message => ({ role: message.sender === 'user' ? 'user' : 'model', text: message.text.slice(0, 2000) }));
       const res = await aiApi.chat(query, history);
+      if (!mounted.current || generation.current !== attempt) return;
       setAdvisorStatus(!res.fallback && res.model ? res.model : 'Tư vấn cơ bản');
       setMessages([
         ...newMessages,
         {
           sender: 'ai',
           text: res.reply || 'Dưới đây là một số gợi ý phù hợp nhất với bạn:',
-          products: res.recommendedProducts || []
+          products: Array.isArray(res.recommendedProducts) ? res.recommendedProducts.filter(item => Number.isSafeInteger(item?.id) && item.id > 0 && item.catalogVisible !== false) : []
         }
       ]);
     } catch (error) {
+      if (!mounted.current || generation.current !== attempt) return;
+      setAdvisorStatus('Chưa kết nối AI');
       setMessages([
         ...newMessages,
         {
           sender: 'ai',
-          text: 'Rất tiếc, đã có sự cố kết nối tới máy chủ AI. Bạn hãy thử lại sau ít giây hoặc tham khảo danh mục vợt của shop nhé!',
+          text: error.response?.status === 429 ? 'Tư vấn đang nhận nhiều yêu cầu. Vui lòng đợi một lúc rồi gửi lại.'
+            : 'Không kết nối được dịch vụ tư vấn. Vui lòng thử lại hoặc xem danh mục sản phẩm.',
           products: []
         }
       ]);
     } finally {
-      setLoading(false);
+      if (mounted.current && generation.current === attempt) { sendLock.current = false; setLoading(false); }
     }
   };
 
@@ -92,15 +106,15 @@ const AiChatbotWidget = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 group flex items-center gap-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white pl-4 pr-5 py-3.5 rounded-full shadow-xl shadow-emerald-700/25 hover:shadow-2xl hover:scale-105 transition-all duration-300"
+          className="fixed bottom-6 right-3 sm:right-6 max-w-[calc(100vw-1.5rem)] z-50 group flex items-center gap-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white pl-4 pr-5 py-3.5 rounded-full shadow-xl shadow-emerald-700/25 hover:shadow-2xl hover:scale-105 transition-all duration-300"
         >
           <div className="relative">
             <Sparkles className="w-5 h-5 text-amber-300 animate-spin-slow" />
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping" />
           </div>
-          <div className="text-left">
+          <div className="text-left min-w-0">
             <div className="text-xs font-black tracking-wide flex items-center gap-1">
-              AI TƯ VẤN VỢT <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded">{advisorStatus}</span>
+              AI TƯ VẤN VỢT <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded max-w-[100px] truncate" title={advisorStatus}>{advisorStatus}</span>
             </div>
             <div className="text-[10px] text-emerald-100 font-medium">Bắt đúng lối chơi • Chuẩn kho hàng</div>
           </div>
@@ -109,7 +123,7 @@ const AiChatbotWidget = () => {
 
       {/* Floating Chat Modal */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[94vw] sm:w-[440px] h-[600px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-scale-up">
+        <div className="fixed bottom-6 right-3 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[440px] max-w-[calc(100vw-1.5rem)] h-[600px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-scale-up">
           
           {/* Header */}
           <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-slate-900 p-4 text-white flex items-center justify-between shadow-md">
@@ -168,7 +182,7 @@ const AiChatbotWidget = () => {
                           key={p.id}
                           className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 flex items-center gap-3 hover:bg-white transition-all shadow-sm"
                         >
-                          <img
+                          <ProductImage compact
                             src={p.imageUrl}
                             alt={p.name}
                             className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
@@ -193,13 +207,8 @@ const AiChatbotWidget = () => {
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
                             </Link>
-                            <button
-                              onClick={() => addToCart(p, 1)}
-                              className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-                              title="Thêm vào giỏ"
-                            >
-                              <ShoppingCart className="w-3.5 h-3.5" />
-                            </button>
+                            <Link to={`/products/${p.id}`} onClick={() => setIsOpen(false)}
+                              className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px]" title="Chọn phiên bản sản phẩm">Chọn phiên bản</Link>
                           </div>
                         </div>
                       ))}
@@ -250,6 +259,7 @@ const AiChatbotWidget = () => {
               type="text"
               placeholder="Hỏi về lối chơi, trợ lực, chọn vợt..."
               value={inputValue}
+              maxLength={2000}
               onChange={(e) => setInputValue(e.target.value)}
               disabled={loading}
               className="flex-1 px-4 py-2.5 text-xs sm:text-sm rounded-full border border-slate-300 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"

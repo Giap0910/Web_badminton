@@ -527,6 +527,12 @@ function checkoutSubmitScope(method, orderApi, navigate) {
     addressDetail: 'Số 1', province: 'Hà Nội', ward: 'Phường Ba Đình', paymentMethod: method, checkoutItems });
   const currentFingerprint = canonicalStringify(currentPayload);
   return { paymentMethod: method, orderApi, navigate, checkoutItems, currentPayload, currentFingerprint,
+    user: { id: 91 }, currentCartRef: { current: checkoutItems }, pendingSubmissionRef: { current: null },
+    checkoutOwnerRef: { current: 91 }, checkoutActiveRef: { current: true },
+    checkoutTokenRef: { current: null },
+    setPendingSubmission: () => {}, updateQuantity: () => {}, province: 'Hà Nội', ward: 'Phường Ba Đình',
+    email: '', note: '', requestedPoints: 0, saveInfo: false,
+    subtotal: 4350000, effectiveDiscount: 0, pointsDiscount: 0, shippingFee: 0, shippingDiscountAmount: 0, finalTotal: 4350000, redeemPoints: 0,
     currentFingerprintRef: { current: currentFingerprint }, isSubmittingRef: { current: false }, loading: false,
     isValidatingVoucher: false, voucherCode: '', voucherSuccess: false, customerName: 'Khách thử',
     shippingPhone: '0900000000', addressDetail: 'Số 1', provinceCode: '01', wardCode: '00001',
@@ -536,9 +542,16 @@ function checkoutSubmitScope(method, orderApi, navigate) {
 
 function productionCheckoutSubmit(scope) {
   const source = fs.readFileSync(path.join(__dirname, 'CheckoutPage.jsx'), 'utf8');
-  const body = source.match(/const handleSubmitOrder = async \(\) => \{([\s\S]*?)\n  \};/)?.[1];
-  assert.ok(body, 'Phải chạy handler từ CheckoutPage thật');
-  return new Function(...Object.keys(scope), `return async () => {${body}}`)(...Object.values(scope));
+  const helpersStart = source.indexOf('export const pendingCheckoutStorageKey');
+  const helpersEnd = source.indexOf('/**', helpersStart);
+  const submissionStart = source.indexOf('  const validateNewCheckout =');
+  const handlerStart = source.indexOf('  const handleSubmitOrder =');
+  const submissionEnd = source.indexOf('\n  };', handlerStart) + '\n  };'.length;
+  assert.ok(helpersStart >= 0 && submissionStart >= 0 && submissionEnd > handlerStart,
+    'Phải chạy handler và các helper từ CheckoutPage thật');
+  const helpers = source.slice(helpersStart, helpersEnd).replaceAll('export ', '');
+  const submission = source.slice(submissionStart, submissionEnd);
+  return new Function(...Object.keys(scope), `${helpers}\n${submission}\nreturn handleSubmitOrder;`)(...Object.values(scope));
 }
 
 for (const method of ['PAYOS_VIETQR', 'COD']) test(`Checkout thật: ${method} tạo đúng một đơn và dùng đúng luồng thanh toán`, async () => {
@@ -686,6 +699,7 @@ test('FIX-002 REMEDIATION TEST 10 — handleCheckPayment on GET PENDING does NOT
   const orderId = 1003;
   let createPaymentLinkCalls = 0;
   let alertMessage = null;
+  let pendingPayment = null;
 
   const mockOrderApi = {
     getOrderById: async (id) => ({ data: { id, status: 'PENDING', paymentMethod: 'PAYOS_VIETQR' } }),
@@ -710,7 +724,7 @@ test('FIX-002 REMEDIATION TEST 10 — handleCheckPayment on GET PENDING does NOT
     setIsVerifying: () => {},
     setError: () => {},
     setOrder: () => {},
-    setPayment: () => {},
+    setPayment: value => { pendingPayment = value; },
     isOrderPaid: () => false,
     navigate: () => {},
     alert: (msg) => { alertMessage = msg; },
@@ -720,7 +734,8 @@ test('FIX-002 REMEDIATION TEST 10 — handleCheckPayment on GET PENDING does NOT
   await handleCheckPayment();
 
   assert.equal(createPaymentLinkCalls, 0, 'Must NOT call createPaymentLink when payment is already PENDING');
-  assert.ok(alertMessage);
+  assert.equal(alertMessage, null);
+  assert.equal(pendingPayment?.status, 'PENDING');
 });
 
 test('FIX-002 REMEDIATION TEST 11 — handleCheckPayment double-click guard prevents duplicate POST calls', async () => {
@@ -1431,4 +1446,19 @@ test('DEMO COD REMEDIATION TEST 3 — fetchOrder on initial load with GET 200 + 
 
   // Reset back to enabled for any subsequent tests
   globalThis.__PAYOS_ENABLED__ = true;
+});
+
+test('Tải mã QR đang hiển thị ra SVG, giữ nguyên dữ liệu và giải phóng blob URL', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'QRPaymentPage.jsx'), 'utf8');
+  const helper = source.slice(source.indexOf('export function saveRenderedQr'), source.indexOf('const QRPaymentPage'));
+  const calls = []; const svg = {};
+  class Serializer { serializeToString(node) { assert.equal(node, svg); return '<svg>actual-qr</svg>'; } }
+  const url = { createObjectURL(blob) { assert.equal(blob.type, 'image/svg+xml;charset=utf-8'); calls.push('create'); return 'blob:qr'; },
+    revokeObjectURL(value) { calls.push(['revoke', value]); } };
+  const anchor = { click() { calls.push(['click', this.href, this.download]); } };
+  const save = new Function('XMLSerializer', 'URL', 'document', 'Blob',
+    helper.replace('export ', '') + ';return saveRenderedQr;')(Serializer, url, { createElement: () => anchor }, Blob);
+  assert.throws(() => save(null, 1), /Chưa có mã QR/);
+  save(svg, 10);
+  assert.deepEqual(calls, ['create', ['click', 'blob:qr', 'thanh-toan-HG-10.svg'], ['revoke', 'blob:qr']]);
 });

@@ -1,203 +1,42 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Clock, 
-  ShieldCheck, 
-  CheckCircle2, 
-  Globe, 
-  Youtube, 
-  Video, 
-  Camera 
-} from 'lucide-react';
+import { MapPin, ShieldCheck, ShoppingBag, Layers } from 'lucide-react';
 
-const Footer = () => {
-  const [email, setEmail] = useState('');
-  const [subscribed, setSubscribed] = useState(false);
-
-  const handleSubscribe = (e) => {
-    e.preventDefault();
-    if (email.trim()) {
-      alert('Đăng ký nhận tin chưa được tích hợp. Email của bạn chưa được gửi hoặc lưu.');
-    }
-  };
-
-  return (
-    <footer className="w-full bg-[#0F172A] text-white pt-12 sm:pt-16 pb-8 border-t border-slate-800">
-      <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Main 4 Columns Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 pb-12 border-b border-slate-800/80">
-          
-          {/* Col 1: Brand Info */}
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center gap-1.5">
-                <span className="font-display text-xl tracking-tight font-extrabold text-white">
-                  HG <span className="text-secondary font-black">BADMINTON</span>
-                </span>
-                <span className="bg-secondary text-white px-1.5 py-0.5 rounded text-[10px] font-extrabold tracking-widest uppercase">
-                  PRO
-                </span>
-              </div>
-            </div>
-            
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Hệ thống phân phối dụng cụ cầu lông đỉnh cao, ủy quyền chính hãng Yonex, Victor, Lining. Chuyên gia tư vấn kỹ thuật căng cước tiêu chuẩn BWF Tournament.
-            </p>
-            
-            <div className="flex flex-col gap-2.5 text-xs text-slate-300 mt-2">
-              <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
-                <span>Flagship HCM: 284 Cao Thắng, Phường 12, Quận 10, TP.HCM</span>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
-                <span>Showroom HN: 98 Trần Đại Nghĩa, Bách Khoa, Hai Bà Trưng, Hà Nội</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-secondary shrink-0" />
-                <span>1900 6886 - 0988 123 456</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4 text-secondary shrink-0" />
-                <span>prosupport@hgbadminton.vn</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Col 2: Policies */}
-          <div className="flex flex-col gap-3">
-            <span className="text-sm font-bold text-white uppercase tracking-wider mb-1">
-              Chính Sách
-            </span>
-            <Link to="/products" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Chính sách đổi trả 7 ngày
-            </Link>
-            <Link to="/products" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Bảo hành chính hãng 90 ngày
-            </Link>
-            <Link to="/products" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Chính sách giao hàng hỏa tốc 2H
-            </Link>
-            <Link to="/products" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Hình thức thanh toán VietQR & Trả góp
-            </Link>
-            <Link to="/products" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Chính sách bảo mật thông tin khách hàng
-            </Link>
-          </div>
-
-          {/* Col 3: Customer Support */}
-          <div className="flex flex-col gap-3">
-            <span className="text-sm font-bold text-white uppercase tracking-wider mb-1">
-              Hỗ Trợ Khách Hàng
-            </span>
-            <Link to="/compare" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Hướng dẫn chọn vợt theo lối chơi (Smash/Speed)
-            </Link>
-            <Link to="/products" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Bảng đo lực & hướng dẫn căng cước 4 nút điện tử
-            </Link>
-            <Link to="/my-orders" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Tra cứu đơn hàng trực tuyến
-            </Link>
-            <a href="#faq" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Câu hỏi thường gặp (FAQ)
-            </a>
-            <a href="#consulting" className="text-xs text-slate-300 hover:text-white transition-colors">
-              Cộng đồng & Tư vấn kỹ thuật cầu lông
-            </a>
-          </div>
-
-          {/* Col 4: Newsletter & Trust */}
-          <div className="flex flex-col gap-4">
-            <span className="text-sm font-bold text-white uppercase tracking-wider">
-              Đăng Ký Nhận Tin
-            </span>
-            <p className="text-xs text-slate-300">
-              Nhận mã giảm giá 10% cho đơn hàng đầu tiên và thông báo các đợt mở bán phiên bản giới hạn sớm nhất.
-            </p>
-
-            <form onSubmit={handleSubscribe} className="flex items-center gap-2">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email của bạn..."
-                className="w-full bg-slate-800 text-white placeholder:text-slate-400 text-xs px-3 py-2 rounded-lg border border-slate-700 outline-none focus:border-royal transition-colors"
-              />
-              <button
-                type="submit"
-                className="bg-secondary text-white hover:bg-secondary-container px-4 py-2 text-xs rounded-lg font-bold transition-all shadow shrink-0 active:scale-95"
-              >
-                GỬI
-              </button>
-            </form>
-            {subscribed && (
-              <span className="text-xs text-emerald-400 font-semibold">
-                ✓ Đăng ký nhận tin thành công! Cảm ơn bạn.
-              </span>
-            )}
-
-            {/* Social Connect */}
-            <div className="flex flex-col gap-1.5 mt-1">
-              <span className="text-[11px] text-slate-400 uppercase font-bold tracking-wider">
-                Kết nối với chúng tôi
-              </span>
-              <div className="flex items-center gap-2.5">
-                <a href="#facebook" className="w-8 h-8 rounded-full bg-slate-800 hover:bg-royal flex items-center justify-center text-slate-300 hover:text-white transition-colors">
-                  <Globe className="w-4 h-4" />
-                </a>
-                <a href="#youtube" className="w-8 h-8 rounded-full bg-slate-800 hover:bg-secondary flex items-center justify-center text-slate-300 hover:text-white transition-colors">
-                  <Youtube className="w-4 h-4" />
-                </a>
-                <a href="#tiktok" className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300 hover:text-white transition-colors">
-                  <Video className="w-4 h-4" />
-                </a>
-                <a href="#instagram" className="w-8 h-8 rounded-full bg-slate-800 hover:bg-pink-600 flex items-center justify-center text-slate-300 hover:text-white transition-colors">
-                  <Camera className="w-4 h-4" />
-                </a>
-              </div>
-            </div>
-
-            {/* Ministry of Industry and Trade Badge */}
-            <div className="mt-1 flex items-center gap-2.5 p-2 bg-slate-800/80 rounded-lg border border-slate-700/60">
-              <ShieldCheck className="w-6 h-6 text-emerald-400 shrink-0" />
-              <div className="flex flex-col leading-tight">
-                <span className="text-xs font-bold text-white">ĐÃ THÔNG BÁO</span>
-                <span className="text-[10px] text-slate-400">Bộ Công Thương Việt Nam</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Bar: Copyright & Payment Badges */}
-        <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <div className="flex items-center gap-2">
-            <span className="bg-secondary text-white px-2 py-0.5 rounded font-bold text-[10px] tracking-wider uppercase">
-              Đã thông báo Bộ Công Thương
-            </span>
-            <span>© 2025 HG Badminton Equipment Ltd. Tất cả quyền được bảo lưu.</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] uppercase tracking-wider text-slate-300 font-bold hidden sm:inline">
-              Thanh toán an toàn:
-            </span>
-            <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-slate-300">
-              <span className="px-2 py-1 bg-white/10 text-white rounded tracking-wider uppercase">VietQR</span>
-              <span className="px-2 py-1 bg-white/10 text-white rounded tracking-wider uppercase">Visa</span>
-              <span className="px-2 py-1 bg-white/10 text-white rounded tracking-wider uppercase">Mastercard</span>
-              <span className="px-2 py-1 bg-white/10 text-white rounded tracking-wider uppercase">MoMo</span>
-            </div>
-          </div>
-        </div>
+const Footer = () => <footer className="w-full bg-[#0F172A] text-white pt-12 sm:pt-16 pb-8 border-t border-slate-800">
+  <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 pb-12 border-b border-slate-800/80">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2.5"><span className="font-display text-xl font-extrabold">HG <span className="text-secondary">BADMINTON</span></span>
+          <span className="bg-secondary px-1.5 py-0.5 rounded text-[10px] font-bold">PRO</span></div>
+        <p className="text-xs text-slate-300 leading-relaxed">Danh mục vợt, giày, quần áo, balo và phụ kiện cầu lông của Yonex, Victor, Li-Ning, Mizuno, Kawasaki và Fleet.</p>
+        <p className="flex gap-2 text-xs text-slate-400"><MapPin className="w-4 h-4 shrink-0" />Địa chỉ, hotline và email cửa hàng chưa được xác minh.</p>
       </div>
-    </footer>
-  );
-};
-
+      <div className="flex flex-col gap-3 text-xs text-slate-300">
+        <h2 className="text-sm font-bold text-white uppercase tracking-wider">Chính sách cửa hàng</h2>
+        <a href="/#shop-policy" className="hover:text-white">Phí giao hàng và điểm tích lũy</a>
+        <a href="/#shop-policy" className="hover:text-white">Bảo hành 1 đổi 1 trong 90 ngày</a>
+        <p className="leading-relaxed">Áp dụng vợt, giày, quần áo và balo/bao vợt đủ điều kiện. Phụ kiện không có ưu đãi bảo hành này.</p>
+        <Link to="/returns" className="hover:text-white">Xem yêu cầu bảo hành của tôi</Link>
+      </div>
+      <div className="flex flex-col gap-3 text-xs text-slate-300">
+        <h2 className="text-sm font-bold text-white uppercase tracking-wider">Hỗ trợ mua hàng</h2>
+        <Link to="/products" className="hover:text-white flex gap-2"><ShoppingBag className="w-4 h-4" />Xem danh mục sản phẩm</Link>
+        <Link to="/compare" className="hover:text-white flex gap-2"><Layers className="w-4 h-4" />So sánh thông số vợt</Link>
+        <Link to="/my-orders" className="hover:text-white">Tra cứu đơn hàng</Link>
+        <Link to="/shipping-addresses" className="hover:text-white">Quản lý địa chỉ nhận hàng</Link>
+        <Link to="/profile" className="hover:text-white">Thông tin tài khoản</Link>
+      </div>
+      <div className="flex flex-col gap-4 text-xs text-slate-300">
+        <h2 className="text-sm font-bold text-white uppercase tracking-wider">Thông tin mua hàng</h2>
+        <p className="leading-relaxed">Giá, kích cỡ, màu sắc và tình trạng còn hàng được hiển thị trên trang từng sản phẩm.</p>
+        <p className="p-3 bg-slate-800 rounded-lg border border-slate-700">Đăng ký nhận tin và các kênh mạng xã hội chưa được tích hợp.</p>
+        <p className="leading-relaxed">Có thể thanh toán COD. Thanh toán QR cần cổng PayOS/VietQR đang hoạt động; lựa chọn khả dụng được xác minh tại bước thanh toán.</p>
+      </div>
+    </div>
+    <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+      <span>© {new Date().getFullYear()} HG Badminton</span>
+      <p className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Kiểm tra thông tin đơn hàng và phương thức thanh toán trước khi xác nhận.</p>
+    </div>
+  </div>
+</footer>;
 export default Footer;

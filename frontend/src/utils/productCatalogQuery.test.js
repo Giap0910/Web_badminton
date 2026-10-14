@@ -87,3 +87,24 @@ test('Các điều kiện lọc từ URL hiện thành chip và không nhân đ�
   assert.ok(chips.some(chip => chip.key === 'sale'));
   assert.throws(() => catalog.buildCatalogParams(read('minPrice=-1')), /không hợp lệ/);
 });
+
+test('Bộ lọc thực hiển thị giày35–42 có39.5 và quần áoXS–XXL, gửi đúng size tới API', () => {
+  const render = categoryId => renderToStaticMarkup(React.createElement(MemoryRouter,
+    { initialEntries: [`/products?categoryId=${categoryId}`] }, React.createElement(ProductsPage)));
+  const shoe = render(2); const apparel = render(3);
+  for (const size of ['35', '36', '37', '38', '39', '39.5', '40', '40.5', '41', '42']) {
+    assert.match(shoe, new RegExp(`>${size}<`));
+    assert.equal(catalog.buildCatalogParams(read(`categoryId=2&productSize=${size}`)).productSize, size);
+  }
+  for (const size of ['43', '44', '45']) assert.doesNotMatch(shoe, new RegExp(`>${size}<`));
+  for (const size of ['XS', 'S', 'M', 'L', 'XL', 'XXL']) assert.match(apparel, new RegExp(`>${size}<`));
+  assert.doesNotMatch(apparel, />2XL</);
+  assert.equal(catalog.buildCatalogParams(read('categoryId=3&productSize=XXL')).productSize, 'XXL');
+});
+
+test('Cả5banner danh mục SSR giữdesigngradient vàkhông hotlinkảnhngoài/chứngnhậnchưaxácminh',()=>{
+  for(const categoryId of [1,2,3,4,5]) {
+    const html=renderToStaticMarkup(React.createElement(MemoryRouter,{initialEntries:[`/products?categoryId=${categoryId}`]},React.createElement(ProductsPage)));
+    assert.match(html,/bg-gradient-to-br from-\[#131B2E\] via-blue-950/);assert.doesNotMatch(html,/background-image|googleusercontent|unsplash|CHÍNH HÃNG/);
+  }
+});

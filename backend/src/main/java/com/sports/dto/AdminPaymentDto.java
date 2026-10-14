@@ -11,6 +11,7 @@ public class AdminPaymentDto {
     private String mockProviderStatus;
     private Long id;
     private Long orderId;
+    private com.sports.entity.OrderStatus orderStatus;
     private String provider;
     private Long orderCode;
     private String paymentLinkId;
@@ -28,7 +29,7 @@ public class AdminPaymentDto {
 
     public static AdminPaymentDto from(PaymentAttempt attempt) {
         var order = attempt.getOrder();
-        return AdminPaymentDto.builder().id(attempt.getId()).orderId(order.getId()).provider(attempt.getProvider())
+        return AdminPaymentDto.builder().id(attempt.getId()).orderId(order.getId()).orderStatus(order.getStatus()).provider(attempt.getProvider())
                 .orderCode(attempt.getOrderCode()).paymentLinkId(attempt.getPaymentLinkId()).amount(attempt.getAmount())
                 .currency(attempt.getCurrency()).status(attempt.getStatus()).checkoutUrl(attempt.getCheckoutUrl())
                 .qrPayload(attempt.getQrPayload()).expiresAt(attempt.getExpiresAt()).reference(attempt.getReference())

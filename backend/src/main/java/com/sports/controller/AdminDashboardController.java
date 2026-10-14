@@ -17,6 +17,11 @@ public class AdminDashboardController {
 
     private final com.sports.service.AdminReportService reports;
 
+    @GetMapping("/settings")
+    public ResponseEntity<java.util.Map<String, Object>> getSettings() {
+        return ResponseEntity.ok(reports.settings());
+    }
+
     @GetMapping
     public ResponseEntity<DashboardStatsResponse> getDashboardStats(
             @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,

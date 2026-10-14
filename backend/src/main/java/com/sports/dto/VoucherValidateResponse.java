@@ -17,5 +17,7 @@ public class VoucherValidateResponse {
     private BigDecimal discountValue;
     private BigDecimal discountAmount;
     private BigDecimal finalTotal;
+    private BigDecimal shippingDiscountAmount;
+    private BigDecimal finalShippingFee;
     private String message;
 }

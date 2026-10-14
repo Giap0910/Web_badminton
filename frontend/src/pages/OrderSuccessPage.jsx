@@ -161,8 +161,8 @@ const OrderSuccessPage = () => {
 
   // =========================================================================
   // PAYMENT ATTEMPT EXCLUSIVE AUTHORITY & ERROR PRIORITY (FIX-004 Round 5)
-  // When PaymentAttempt exists (payment != null), payment.status is the SOLE
-  // authority for payment UI. Order.status must NOT override any payment state.
+  // Online payment uses PaymentAttempt; COD cash receipt is authoritative only
+  // when the online attempt is absent or retired without payment.
   // When payment GET fails (paymentLoadStatus === 'error'), payment verification
   // error is displayed; order.status MUST NEVER be used as a success fallback.
   // When payment is confirmed absent (paymentLoadStatus === 'absent'), safe fallback
@@ -173,9 +173,10 @@ const OrderSuccessPage = () => {
   const isHistoricalRetiredPayOs = isCurrentCod && Boolean(payment && ['CANCELLED', 'EXPIRED', 'FAILED'].includes(payment.status));
   const isCodPaidConflict = isCurrentCod && Boolean(payment && payment.status === 'PAID');
   const isMockMode = payment?.paymentMode === 'MOCK' || order?.paymentMode === 'MOCK';
-
-  const isPaid = payment
-    ? (isCurrentCod ? false : payment?.status === 'PAID')
+  const isCodCashPaid = isCurrentCod && !isPaymentError && order?.cashCollected === true && order?.status !== 'CANCELLED'
+    && (paymentLoadStatus === 'absent' || isHistoricalRetiredPayOs);
+  const isPaid = isCurrentCod ? isCodCashPaid : payment
+    ? payment.status === 'PAID'
     : (paymentLoadStatus === 'absent' ? isOrderPaid(order) : false);
 
   const isNeedsReview = payment?.status === 'NEEDS_REVIEW';
@@ -567,6 +568,10 @@ const OrderSuccessPage = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 flex flex-col items-center">
+        {String(location.state?.order?.id) === String(orderId) && location.state?.addressSaveWarning &&
+          <p role="status" className="w-full mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            {location.state.addressSaveWarning}
+          </p>}
         
         {/* Separate Order Lifecycle Notice when Order is CANCELLED */}
         {isOrderCancelled && (
@@ -593,7 +598,7 @@ const OrderSuccessPage = () => {
               : 'text-red-600 bg-red-50'
           }`}>
             {isCurrentCod
-              ? 'Đơn hàng đã ghi nhận'
+              ? 'Đã thu tiền mặt/COD'
               : isMockMode
               ? 'Thanh toán thành công mô phỏng'
               : 'Giao dịch đã xác thực'}
@@ -631,7 +636,7 @@ const OrderSuccessPage = () => {
               }`}>
                 {isCurrentCod ? (
                   <>
-                    <Truck className="w-3.5 h-3.5" /> Thanh toán khi nhận hàng (COD)
+                    <Truck className="w-3.5 h-3.5" /> Đã thu tiền mặt/COD
                   </>
                 ) : (
                   <>
@@ -644,14 +649,16 @@ const OrderSuccessPage = () => {
             <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col items-start">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Thời gian tạo</span>
               <span className="text-xs font-semibold text-slate-800 mt-1 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-slate-400" /> Hôm nay, 14:35
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                {order?.createdAt && Number.isFinite(Date.parse(order.createdAt))
+                  ? new Date(order.createdAt).toLocaleString('vi-VN') : 'Chưa có thông tin'}
               </span>
             </div>
 
             <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col items-start">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dự kiến nhận hàng</span>
               <span className="text-xs font-bold text-red-600 mt-1 flex items-center gap-1">
-                <Zap className="w-3.5 h-3.5 fill-current" /> Hỏa tốc 2H (Hà Nội)
+                <Zap className="w-3.5 h-3.5 fill-current" /> Chờ xác nhận lịch giao
               </span>
             </div>
           </div>
@@ -785,7 +792,7 @@ const OrderSuccessPage = () => {
                 <div>
                   <span className="text-sm font-black text-slate-900 block">Tổng thanh toán:</span>
                   <span className={`text-[11px] font-semibold ${isCurrentCod ? 'text-blue-600' : 'text-red-600'}`}>
-                    {isCurrentCod ? 'Thanh toán tiền mặt khi nhận hàng (COD)' : 'Máy chủ đã ghi nhận thanh toán'}
+                    {isCurrentCod ? 'Máy chủ đã xác nhận thu tiền mặt/COD' : 'Máy chủ đã ghi nhận thanh toán'}
                   </span>
                 </div>
                 <span className="text-2xl font-black text-red-600 tracking-tight">
@@ -824,22 +831,21 @@ const OrderSuccessPage = () => {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-slate-900">Cần thay đổi thông số căng cước hoặc địa chỉ giao?</h4>
-                <p className="text-xs text-slate-500 mt-0.5">Liên hệ đội ngũ thợ căng chuyên nghiệp trước khi kiện hàng xuất kho.</p>
+                <p className="text-xs text-slate-500 mt-0.5">Thông tin hỗ trợ cửa hàng chưa được cấu hình. Kiểm tra nội dung đơn hàng đã lưu.</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <a
-                href="tel:19006886"
+                href="/my-orders"
                 className="flex items-center gap-1.5 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors"
               >
-                <Phone className="w-3.5 h-3.5" /> Hotline 1900 6886
+                <Phone className="w-3.5 h-3.5" /> Lịch sử đơn hàng
               </a>
               <a
-                href="#"
-                onClick={(e) => { e.preventDefault(); alert('Đang kết nối tới Zalo CSKH HG Badminton...'); }}
+                href={`/orders/${orderId}`}
                 className="flex items-center gap-1.5 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors"
               >
-                <MessageSquare className="w-3.5 h-3.5" /> Zalo CSKH
+                <MessageSquare className="w-3.5 h-3.5" /> Chi tiết đơn
               </a>
             </div>
           </div>
@@ -849,22 +855,22 @@ const OrderSuccessPage = () => {
             <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
               <ShieldCheck className="w-7 h-7 text-red-600 shrink-0" />
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-900">100% Chính Hãng</span>
-                <span className="text-[11px] text-slate-500">Bồi hoàn gấp 10 lần nếu phát hiện hàng giả</span>
+                <span className="text-xs font-bold text-slate-900">Đúng mẫu đã đặt</span>
+                <span className="text-[11px] text-slate-500">Đối chiếu sản phẩm và biến thể trong chi tiết đơn</span>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
               <CheckCircle2 className="w-7 h-7 text-red-600 shrink-0" />
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-900">Đổi Size Trong 7 Ngày</span>
-                <span className="text-[11px] text-slate-500">Hỗ trợ đổi size giày miễn phí tận nơi</span>
+                <span className="text-xs font-bold text-slate-900">Tích điểm theo thanh toán</span>
+                <span className="text-[11px] text-slate-500">Mỗi 10.000đ tiền hàng đã thanh toán tích 1 điểm</span>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
               <Award className="w-7 h-7 text-red-600 shrink-0" />
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-900">Bảo Hành Điện Tử</span>
-                <span className="text-[11px] text-slate-500">Tự động kích hoạt theo số điện thoại nhận hàng</span>
+                <span className="text-xs font-bold text-slate-900">Bảo hành 90 ngày</span>
+                <span className="text-[11px] text-slate-500">Từ ngày giao hoàn tất; không áp dụng phụ kiện</span>
               </div>
             </div>
           </div>

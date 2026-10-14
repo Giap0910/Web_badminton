@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ShoppingCart, Bolt, ChevronRight, CheckCircle2, ShieldCheck, RefreshCw, Zap, Award, AlertCircle } from 'lucide-react';
 import { productApi } from '../api/productApi';
-import { reviewApi } from '../api/reviewApi';
+import ProductImage from '../components/ProductImage';
+import { useProductReviews } from '../api/reviewApi';
 import { useCart } from '../context/CartContext';
 import { formatPrice, productImages } from '../utils/formatters';
 
@@ -14,8 +15,8 @@ const ShuttlecockDetailPage = () => {
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
-  const [reviews, setReviews] = useState([]);
-  const [reviewsError, setReviewsError] = useState('');
+  const { reviews, reviewsError, reviewsLoading, retryReviews } = useProductReviews(id);
+
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -30,16 +31,14 @@ const ShuttlecockDetailPage = () => {
     const fetchProd = async () => {
       setLoading(true);
       setProduct(null);
-      setReviews([]);
-      setReviewsError('');
+
+
       try {
-        const [prodData, revData] = await Promise.all([
+        const [prodData] = await Promise.all([
           productApi.getProductById(id),
-          reviewApi.getProductReviews(id).catch(() => { if (active) setReviewsError('Không tải được đánh giá.'); return []; })
         ]);
         if (!active) return;
         setProduct(prodData);
-        setReviews(Array.isArray(revData) ? revData : (revData?.items || []));
       } catch (err) {
         console.error('Error fetching shuttlecock detail:', err);
       } finally {
@@ -130,7 +129,7 @@ const ShuttlecockDetailPage = () => {
                 <span className="bg-[#0F172A] text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
                   <Award className="w-3.5 h-3.5 text-amber-400" />{productValue(product.brand)}</span>
               </div>
-              <img
+              <ProductImage
                 src={galleryImages[activeImage]}
                 alt={product.name}
                 className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
@@ -148,7 +147,7 @@ const ShuttlecockDetailPage = () => {
                     activeImage === i ? 'border-secondary ring-2 ring-secondary/20' : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
-                  <img src={src} alt={`Thumb ${i}`} className="w-full h-full object-cover" />
+                  <ProductImage src={src} alt={`Thumb ${i}`} className="w-full h-full object-cover" />
                   <span className="absolute inset-x-0 bottom-0 py-0.5 bg-[#0F172A]/80 text-white text-[9px] font-bold text-center">
                     {thumbLabels[i]}
                   </span>
@@ -269,7 +268,7 @@ const ShuttlecockDetailPage = () => {
 
           {activeTab === 'specs' && <ProductSpecifications product={product} />}
 
-          {activeTab === 'reviews' && <ProductReviewList product={product} reviews={reviews} error={reviewsError} />}
+          {activeTab === 'reviews' && <ProductReviewList product={product} reviews={reviews} error={reviewsError} loading={reviewsLoading} onRetry={retryReviews} />}
         </section>
 
       </div>

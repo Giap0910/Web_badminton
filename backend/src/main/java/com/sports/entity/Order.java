@@ -85,6 +85,8 @@ public class Order {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 
     @Column(name = "cash_collected_at")
     private LocalDateTime cashCollectedAt;

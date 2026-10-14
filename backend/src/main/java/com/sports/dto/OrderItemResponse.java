@@ -16,6 +16,7 @@ public class OrderItemResponse {
     private String productSku;
     private Boolean productDeleted;
     private String productBrand;
+    private Long categoryIdSnapshot;
     private String productImageUrl;
     private String weightGrip;
     private Integer quantity;

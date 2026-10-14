@@ -20,6 +20,7 @@ import java.util.List;
 
 @Component
 @Profile("dev")
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name="app.demo-data.enabled",havingValue="true",matchIfMissing=false)
 @RequiredArgsConstructor
 @Slf4j
 public class DataInitializer implements CommandLineRunner {

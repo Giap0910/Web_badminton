@@ -20,9 +20,10 @@ public class AiChatController {
     @PostMapping
     public ResponseEntity<AiChatResponse> chatWithAi(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody AiChatRequest request
+            @Valid @RequestBody AiChatRequest request,
+            jakarta.servlet.http.HttpServletRequest httpRequest
     ) {
         Long userId = userDetails != null ? userDetails.getId() : null;
-        return ResponseEntity.ok(geminiService.chatWithAi(userId, request));
+        return ResponseEntity.ok(geminiService.chatWithAi(userId, httpRequest.getRemoteAddr(), request));
     }
 }

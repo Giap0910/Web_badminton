@@ -21,6 +21,8 @@ public class AdminReportService {
     private final PaymentAttemptRepository payments;
     private final UserRepository users;
     private final ProductRepository products;
+    private final OrderRepository orderRepository;
+    private final PaymentEnvironmentService paymentEnvironment;
     public record ReportRow(OrderResponse order, LocalDateTime receivedAt, boolean confirmed, BigDecimal recognizedAmount) {}
     public record Report(DashboardStatsResponse stats, List<ReportRow> rows) {}
 
@@ -28,17 +30,21 @@ public class AdminReportService {
     public Report report(LocalDate from, LocalDate to) {
         validateRange(from, to);
         Map<Long, PaymentAttempt> proofs = payments.findAll().stream().collect(Collectors.toMap(p -> p.getOrder().getId(), p -> p));
-        List<ReportRow> all = orders.getAllOrders().stream().map(order -> receipt(order, proofs.get(order.getId()), from, to)).toList();
+        Set<Long> recognized = orderRepository.findRecognizedPaymentOrders().stream()
+                .map(com.sports.entity.Order::getId).collect(Collectors.toSet());
+        List<ReportRow> all = orders.getAllOrders().stream()
+                .map(order -> receipt(order, proofs.get(order.getId()), recognized.contains(order.getId()), from, to)).toList();
         List<ReportRow> selected = all.stream().filter(row -> inRange(row.order().getCreatedAt(), from, to)
                 || row.confirmed() && inRange(row.receivedAt(), from, to)).toList();
         BigDecimal revenue = all.stream().map(ReportRow::recognizedAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        long unverified = selected.stream().filter(row -> !row.confirmed() && Set.of("PAID", "COMPLETED").contains(row.order().getStatus())).count();
+        long unverified = selected.stream().filter(row -> !row.confirmed() && Set.of("PAID", "SHIPPING", "COMPLETED").contains(row.order().getStatus())).count();
         var stats = DashboardStatsResponse.builder().totalRevenue(revenue).totalOrders((long) selected.size())
                 .totalCustomers(users.count()).totalProducts(products.count())
                 .pendingOrders(selected.stream().filter(row -> "PENDING".equals(row.order().getStatus())).count())
                 .paidOrders(all.stream().filter(row -> row.recognizedAmount().signum() > 0).count())
                 .recentOrders(selected.stream().limit(5).map(ReportRow::order).toList()).dailyRevenue(daily(all, from, to))
-                .unverifiedPaidOrders(unverified).revenueBasis("Theo ngày nhận tiền PayOS đã xác nhận hoặc xác nhận thu COD; không suy từ hoàn tất đơn")
+                .unverifiedPaidOrders(unverified).topSellingProducts(topSelling(all))
+                .revenueBasis("Theo ngày nhận tiền PayOS có bằng chứng hợp lệ hoặc xác nhận thu COD không có xung đột; giá trị hàng bán chạy trước voucher, điểm và phí vận chuyển")
                 .build();
         return new Report(stats, selected);
     }
@@ -50,14 +56,58 @@ public class AdminReportService {
         }
     }
 
-    private ReportRow receipt(OrderResponse order, PaymentAttempt proof, LocalDate from, LocalDate to) {
-        boolean cash = "COD".equals(order.getPaymentMethod()) && Boolean.TRUE.equals(order.getCashCollected());
-        boolean payos = "PAYOS_VIETQR".equals(order.getPaymentMethod()) && proof != null && proof.getStatus() == PaymentAttempt.Status.PAID
-                && proof.getPaidAt() != null && proof.getAmount().compareTo(order.getTotalAmount()) == 0
+    private ReportRow receipt(OrderResponse order, PaymentAttempt proof, boolean recognized, LocalDate from, LocalDate to) {
+        boolean cash = recognized && "COD".equals(order.getPaymentMethod()) && Boolean.TRUE.equals(order.getCashCollected());
+        boolean payos = recognized && "PAYOS_VIETQR".equals(order.getPaymentMethod()) && proof != null && "PAYOS".equals(proof.getProvider())
+                && proof.getStatus() == PaymentAttempt.Status.PAID
+                && proof.getPaidAt() != null && proof.getAmount() != null && order.getTotalAmount() != null
+                && proof.getAmount().compareTo(order.getTotalAmount()) == 0
                 && Set.of("PAID", "SHIPPING", "COMPLETED").contains(order.getStatus());
         LocalDateTime received = cash ? order.getCashCollectedAt() : payos ? proof.getPaidAt() : null;
-        boolean confirmed = (cash || payos) && received != null;
+        boolean confirmed = recognized && (cash || payos) && received != null;
+        if (!confirmed) received = null;
         return new ReportRow(order, received, confirmed, confirmed && inRange(received, from, to) ? order.getTotalAmount() : BigDecimal.ZERO);
+    }
+
+    private List<DashboardStatsResponse.TopSellingProduct> topSelling(List<ReportRow> rows) {
+        Map<String, DashboardStatsResponse.TopSellingProduct> totals = new LinkedHashMap<>();
+        rows.stream().filter(row -> row.recognizedAmount().signum() > 0).forEach(row -> {
+            if (row.order().getItems() == null) return;
+            for (OrderItemResponse item : row.order().getItems()) {
+                if (item.getQuantity() == null || item.getQuantity() <= 0 || item.getPrice() == null) continue;
+                var value = new DashboardStatsResponse.TopSellingProduct(item.getProductId(), item.getProductSku(),
+                        item.getProductName(), item.getQuantity().longValue(), item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())),
+                        Boolean.TRUE.equals(item.getProductDeleted()));
+                totals.merge(rankingKey(item), value, this::mergeRanking);
+            }
+        });
+        return totals.values().stream().sorted(Comparator.comparingLong(DashboardStatsResponse.TopSellingProduct::quantity).reversed()
+                .thenComparing(DashboardStatsResponse.TopSellingProduct::grossMerchandiseAmount, Comparator.reverseOrder())
+                .thenComparing(value -> Objects.toString(value.productName(), ""))).limit(5).toList();
+    }
+
+    private String rankingKey(OrderItemResponse item) {
+        if (item.getProductId() != null) return "id:" + item.getProductId();
+        if (item.getProductSku() != null && !item.getProductSku().isBlank()) return "sku:" + item.getProductSku();
+        return "line:" + item.getId();
+    }
+
+    private DashboardStatsResponse.TopSellingProduct mergeRanking(DashboardStatsResponse.TopSellingProduct first,
+            DashboardStatsResponse.TopSellingProduct next) {
+        return new DashboardStatsResponse.TopSellingProduct(first.productId(), first.productSku(), first.productName(),
+                Math.addExact(first.quantity(), next.quantity()), first.grossMerchandiseAmount().add(next.grossMerchandiseAmount()),
+                first.productDeleted() || next.productDeleted());
+    }
+
+    public Map<String, Object> settings() {
+        Map<String, Object> store = new LinkedHashMap<>();
+        for (String field : List.of("name", "phone", "email", "address")) store.put(field, null);
+        store.put("verified", false);
+        return Map.of("readOnly", true, "store", store,
+                "shipping", Map.of("fee", VoucherService.quoteShipping(BigDecimal.ONE), "freeShippingThreshold", 1000000),
+                "loyalty", Map.of("paidAmountPerPoint", 10000, "pointValue", 100, "maxDiscountPercent", 10),
+                "warranty", Map.of("days", 90, "categoryIds", List.of(1, 2, 3, 4)),
+                "payment", Map.of("mode", paymentEnvironment.mode(), "connectionVerified", false));
     }
 
     private boolean inRange(LocalDateTime value, LocalDate from, LocalDate to) {
@@ -118,6 +168,11 @@ public class AdminReportService {
             List<List<Object>> daily = new ArrayList<>(); daily.add(List.of("Ngày nhận tiền", "Doanh thu"));
             stats.getDailyRevenue().forEach((date, amount) -> daily.add(List.of(date, amount)));
             sheet(book, "Doanh thu theo ngày", daily);
+            List<List<Object>> ranking = new ArrayList<>();
+            ranking.add(List.of("Mã sản phẩm", "Tên sản phẩm lúc mua", "Số lượng", "Giá trị hàng trước ưu đãi", "Đã ngừng bán"));
+            for (var product : stats.getTopSellingProducts()) ranking.add(Arrays.asList(product.productSku(), product.productName(),
+                    product.quantity(), product.grossMerchandiseAmount(), product.productDeleted() ? "Có" : "Không"));
+            sheet(book, "Sản phẩm bán chạy", ranking);
             book.write(output); return output.toByteArray();
         } catch (IOException ex) { throw new IllegalStateException("Không xuất được báo cáo Excel", ex); }
     }

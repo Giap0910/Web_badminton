@@ -42,6 +42,10 @@ public class User {
 
     @Column(name = "dob")
     private java.time.LocalDate dob;
+    @Column(length=10)
+    private String gender;
+    @Column(name="token_version",nullable=false) @Builder.Default
+    private Long tokenVersion=0L;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

@@ -24,7 +24,19 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import MockPayOSControls from '../components/MockPayOSControls';
 
+export function saveRenderedQr(svg, orderId) {
+  if (!svg) throw new Error('Chưa có mã QR để tải.');
+  const content = new XMLSerializer().serializeToString(svg);
+  const url = URL.createObjectURL(new Blob([content], { type: 'image/svg+xml;charset=utf-8' }));
+  try {
+    const link = document.createElement('a');
+    link.href = url; link.download = `thanh-toan-HG-${orderId}.svg`;
+    link.click();
+  } finally { URL.revokeObjectURL(url); }
+}
+
 const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
+  const qrContainerRef = useRef(null);
   const isQRSuspended = propQREnabled === false;
 
   const { orderId } = useParams();
@@ -919,9 +931,6 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
         }
       } else if (payData.status === 'PENDING') {
         setPayment(payData);
-        if (typeof alert === 'function') {
-          alert('Chưa có xác nhận thanh toán từ máy chủ. Vui lòng kiểm tra lại trạng thái đơn hàng.');
-        }
       } else {
         setPayment(payData);
       }
@@ -1074,14 +1083,14 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
           <div className="flex items-center gap-4 text-xs">
             <div className="hidden sm:flex items-center gap-1.5 text-slate-500">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span className="font-medium">Mã hóa SSL 256-bit</span>
+              <span className="font-medium">Thanh toán qua cổng PayOS</span>
             </div>
             <a
-              href="tel:19006886"
+              href="/my-orders"
               className="flex items-center gap-1.5 text-slate-700 font-bold bg-slate-100 px-3 py-1.5 rounded-full hover:bg-slate-200 transition"
             >
               <Phone className="w-3.5 h-3.5 text-red-600" />
-              <span>1900 6886</span>
+              <span>Lịch sử đơn hàng</span>
             </a>
           </div>
         </div>
@@ -1089,6 +1098,10 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
 
       {/* Main Content - Căn giữa tối giản */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8 md:py-12 flex flex-col items-center justify-center">
+        {String(location.state?.order?.id) === String(orderId) && location.state?.addressSaveWarning &&
+          <p role="status" className="w-full max-w-[540px] mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            {location.state.addressSaveWarning}
+          </p>}
 
         {/* Link quay lại & Thông báo */}
         <div className="w-full max-w-[540px] flex items-center justify-between mb-4">
@@ -1312,7 +1325,7 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
                   <p className="text-xs font-medium text-slate-500">Đang chuẩn bị liên kết thanh toán...</p>
                 </div>
               ) : isRealMode && payment?.qrPayload ? (
-                <div className="flex flex-col items-center justify-center p-1 w-full h-full">
+                <div ref={qrContainerRef} className="flex flex-col items-center justify-center p-1 w-full h-full">
                   <QRCodeSVG
                     value={payment.qrPayload}
                     size={210}
@@ -1485,11 +1498,15 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
             <div className="flex items-center justify-between text-xs text-slate-500 pt-1 px-1">
               <button
                 type="button"
-                onClick={() => alert('Tính năng tải mã QR tạm chưa hỗ trợ trong bản demo.')}
+                disabled={!isRealMode || !payment?.qrPayload || payment?.status !== 'PENDING'}
+                onClick={() => {
+                  try { saveRenderedQr(qrContainerRef.current?.querySelector('svg'), orderId); }
+                  catch (error) { setError(error.message || 'Không tải được mã QR.'); }
+                }}
                 className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-600 transition font-medium"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Tải mã QR (Chưa hỗ trợ)</span>
+                <span>Tải mã QR (SVG)</span>
               </button>
               <Link
                 to={`/checkout?orderId=${orderId}`}
@@ -1526,7 +1543,7 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
           </div>
           <div className="flex items-center gap-1.5">
             <Phone className="w-4 h-4 text-slate-400" />
-            <span>Gặp sự cố? Gọi ngay <strong className="font-bold text-slate-700">1900 6886</strong></span>
+            <span>Gặp sự cố? Kiểm tra <strong className="font-bold text-slate-700">Lịch sử đơn hàng</strong></span>
           </div>
         </div>
 
@@ -1537,7 +1554,7 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>© 2025 HG Badminton Store Co., Ltd. Tất cả quyền được bảo lưu.</p>
           <div className="flex items-center gap-4 text-[11px] text-slate-400 font-medium">
-            <span>Bảo mật PCI-DSS</span>
+            <span>Xác minh thanh toán từ máy chủ</span>
             <span>•</span>
             <span>VietQR Powered</span>
             <span>•</span>

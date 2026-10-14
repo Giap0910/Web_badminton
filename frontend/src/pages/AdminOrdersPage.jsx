@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getOrderStatusLabel, getNextOrderStatuses, isOrderPaid } from '../utils/formatters';
+import { formatDate, getOrderStatusLabel, getNextOrderStatuses, isOrderPaid } from '../utils/formatters';
 import AdminLayout from '../components/AdminLayout';
 import { adminApi } from '../api/adminApi';
 import { orderApi } from '../api/orderApi';
 import { normalizeSearch } from '../utils/adminCustomers.jsx';
 import OrderItemOptions, { formatOrderItemOptionsText } from '../components/OrderItemOptions';
+import ProductImage from '../components/ProductImage';
+import { saveAdminFile } from '../components/AdminProductImport';
 import {
   ShoppingBag,
   Search,
@@ -16,7 +18,6 @@ import {
   Truck,
   RotateCcw,
   QrCode,
-  Printer,
   FileSpreadsheet,
   Copy,
   Eye,
@@ -46,36 +47,7 @@ const AdminOrdersPage = () => {
         if (request !== requestId.current) return;
         const list = Array.isArray(res) ? res : res?.data || [];
         if (Array.isArray(list)) {
-          const mapped = list.map((item, idx) => {
-            const itemsList = Array.isArray(item.items) ? item.items : (Array.isArray(item.orderItems) ? item.orderItems : []);
-            const firstItem = itemsList[0];
-            const techStr = formatOrderItemOptionsText(firstItem, item.stringOption || 'Kỹ thuật viên vào cước BWF');
-
-            const statusLabel = getOrderStatusLabel(item);
-
-            return {
-              id: item.id || idx + 1,
-              code: item.payosOrderCode ? `#HG-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#HG-${item.id || 89000 + idx}`,
-              createdAt: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '24/10/2024',
-              customerName: item.customerName || item.shippingName || 'Khách hàng HG',
-              customerPhone: item.shippingPhone || '0988 123 456',
-              customerAddress: item.shippingAddress || 'TP. Hồ Chí Minh',
-              productName: firstItem?.productName || firstItem?.product?.name || 'Vợt Cầu Lông HG',
-              productImage: firstItem?.productImageUrl || firstItem?.product?.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-              stringReq: techStr,
-              items: itemsList,
-              totalAmount: item.totalAmount || 0,
-              rawPaymentMethod: item.paymentMethod,
-              nextStatuses: getNextOrderStatuses(item),
-              paymentMethod: item.paymentMethod?.includes('PAYOS') ? 'VietQR Pro' : 'COD',
-              paymentRef: item.payosOrderCode ? `PAYOS-${item.payosOrderCode}` : `REF-${item.id || 999}`,
-              isPaid: isOrderPaid(item),
-              cashCollected: item.cashCollected,
-              cashCollectedAt: item.cashCollectedAt,
-              status: item.status || 'PENDING',
-              statusLabel: statusLabel
-            };
-          });
+          const mapped = list.map(normalizeAdminOrder);
           setOrders(mapped);
           setDataError('');
           setSelectedOrder(previous => previous ? mapped.find(order => order.id === previous.id) || null : null);
@@ -94,7 +66,7 @@ const AdminOrdersPage = () => {
     return () => { clearInterval(timer); requestId.current++; };
   }, []);
 
-  const formatPrice = (p) =>
+  const formatPrice = (p) => p == null ? 'Chưa có thông tin' :
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
   const copyToClipboard = (text) => {
@@ -189,11 +161,12 @@ const AdminOrdersPage = () => {
             </button>
             <button
               type="button"
-              onClick={() => alert('Đang tạo phiếu xuất kho & nhãn vận đơn giao hàng hàng loạt...')}
+              disabled={loading || !!dataError || filteredOrders.length === 0}
+              onClick={() => exportAdminOrderSheet(filteredOrders)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
             >
-              <Printer className="w-4 h-4" />
-              <span>In phiếu giao</span>
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Xuất phiếu đơn hàng CSV</span>
             </button>
           </div>
         </div>
@@ -299,9 +272,9 @@ const AdminOrdersPage = () => {
                       {/* Cột 3: Sản phẩm & Yêu cầu cước */}
                       <td className="py-4 px-4 align-top">
                         <div className="flex items-start gap-2.5 max-w-[260px]">
-                          <img
+                          <ProductImage compact
                             src={order.productImage}
-                            alt=""
+                            alt={order.productName}
                             className="w-11 h-11 rounded-lg object-cover bg-slate-100 shrink-0 border border-slate-200"
                           />
                           <div className="flex flex-col min-w-0">
@@ -393,33 +366,25 @@ const AdminOrdersPage = () => {
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-3">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                     <span className="text-[10px] font-bold uppercase text-slate-500">
-                      Danh sách sản phẩm ({selectedOrder.items?.length || 1} mặt hàng)
+                      Danh sách sản phẩm ({selectedOrder.items.length} mặt hàng)
                     </span>
                   </div>
                   <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-                    {(selectedOrder.items && selectedOrder.items.length > 0 ? selectedOrder.items : [{
-                      productName: selectedOrder.productName,
-                      productImageUrl: selectedOrder.productImage,
-                      quantity: 1,
-                      price: selectedOrder.totalAmount,
-                      subtotal: selectedOrder.totalAmount,
-                      selectedWeight: selectedOrder.stringReq
-                    }]).map((it, itIdx) => {
-                      const itemSubtotal = it.subtotal != null ? it.subtotal : (it.price ? it.price * (it.quantity || 1) : 0);
+                    {selectedOrder.items.length === 0 && <p className="text-slate-500">Chưa có thông tin sản phẩm của đơn.</p>}
+                    {selectedOrder.items.map((it, itIdx) => {
+                      const itemSubtotal = it.subtotal ?? (it.price != null && it.quantity != null ? it.price * it.quantity : null);
                       return (
                         <div key={it.id || itIdx} className="flex items-center justify-between gap-3 p-2.5 bg-white rounded-xl border border-slate-100 shadow-xs">
                           <div className="flex items-center gap-3 min-w-0">
-                            {it.productImageUrl && (
-                              <img
+                            <ProductImage compact
                                 src={it.productImageUrl}
                                 alt={it.productName || 'Sản phẩm'}
                                 className="w-12 h-12 rounded-lg object-contain bg-slate-50 border border-slate-100 shrink-0 p-1"
                               />
-                            )}
                             <div className="min-w-0">
                               <p className="font-bold text-slate-900 truncate">{it.productName || it.product?.name || 'Sản phẩm'}</p>
                               <OrderItemOptions item={it} />
-                              <p className="text-[11px] text-slate-500 font-semibold mt-0.5">Số lượng: x{it.quantity || 1}</p>
+                              <p className="text-[11px] text-slate-500 font-semibold mt-0.5">Số lượng: x{it.quantity ?? '—'}</p>
                             </div>
                           </div>
                           <div className="text-right shrink-0">
@@ -454,10 +419,10 @@ const AdminOrdersPage = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => alert(`Đã in lệnh chuyển giao xưởng đan vợt đơn ${selectedOrder.code}`)}
+                  onClick={() => exportAdminOrderSheet([selectedOrder])}
                   className="px-5 py-2.5 rounded-xl bg-secondary text-white hover:bg-secondary/90 text-xs font-bold shadow-sm"
                 >
-                  In lệnh xưởng BWF
+                  Xuất phiếu đơn hàng CSV
                 </button>
               </div>
             </div>
@@ -469,3 +434,45 @@ const AdminOrdersPage = () => {
 };
 
 export default AdminOrdersPage;
+
+export function normalizeAdminOrder(item) {
+  const items = Array.isArray(item.items) ? item.items : Array.isArray(item.orderItems) ? item.orderItems : [];
+  const first = items[0];
+  const checked = { ...item, cashCollected: item.cashCollected ?? false };
+  return {
+    id: item.id, code: item.id != null ? `#HG-${item.id}` : 'Chưa có mã đơn', createdAt: formatDate(item.createdAt),
+    customerName: item.customerName || item.shippingName || 'Chưa có thông tin',
+    customerPhone: item.shippingPhone || 'Chưa có thông tin', customerAddress: item.shippingAddress || 'Chưa có thông tin',
+    productName: first?.productName || first?.product?.name || 'Chưa có thông tin sản phẩm',
+    productImage: first?.productImageUrl || first?.product?.imageUrl || null,
+    stringReq: formatOrderItemOptionsText(first), items, totalAmount: item.totalAmount ?? null,
+    rawPaymentMethod: item.paymentMethod, paymentMethod: { PAYOS_VIETQR: 'VietQR Pro', COD: 'COD' }[item.paymentMethod] || 'Chưa có thông tin',
+    paymentRef: item.paymentReference || item.reference || '—', isPaid: item.paymentMethod === 'COD'
+      ? checked.cashCollected === true : item.paymentMethod === 'PAYOS_VIETQR' && isOrderPaid(checked),
+    cashCollected: checked.cashCollected, cashCollectedAt: item.cashCollectedAt,
+    nextStatuses: getNextOrderStatuses(checked), status: item.status || 'UNKNOWN', statusLabel: getOrderStatusLabel(checked),
+  };
+}
+
+export function exportAdminOrderSheet(orders) {
+  const headers = ['Mã đơn', 'Ngày tạo', 'Người nhận', 'Số điện thoại', 'Địa chỉ', 'Phương thức', 'Trạng thái đơn',
+    'Xác nhận thanh toán', 'Tổng tiền đơn (không cộng lặp)', 'Tham chiếu thanh toán', 'SKU', 'Sản phẩm',
+    'Kích cỡ', 'Màu sắc', 'Trọng lượng/cán', 'Dịch vụ cước', 'Mức căng', 'Số lượng', 'Đơn giá', 'Tiền dòng'];
+  const rows = orders.flatMap(order => (order.items.length ? order.items : [null]).map(item => orderSheetRow(order, item)));
+  const csv = '\ufeff' + [headers, ...rows].map(row => row.map(orderSheetCell).join(',')).join('\r\n');
+  saveAdminFile(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'phieu-don-hang.csv');
+}
+
+function orderSheetRow(order, item) {
+  return [order.code, order.createdAt, order.customerName, order.customerPhone, order.customerAddress,
+    order.rawPaymentMethod, order.statusLabel, order.isPaid ? 'Đã ghi nhận thanh toán' : 'Chưa xác nhận thu tiền',
+    order.totalAmount, order.paymentRef, item?.productSku, item?.productName, item?.selectedSize, item?.selectedColor,
+    item?.selectedWeight || item?.weightGrip, item?.stringingService, item?.stringTension, item?.quantity,
+    item?.price, item?.subtotal ?? (item?.price != null && item?.quantity != null ? item.price * item.quantity : null)];
+}
+
+function orderSheetCell(value) {
+  let text = String(value ?? '');
+  if (!(typeof value === 'number') && /^[=+@-]/.test(text.trimStart())) text = "'" + text;
+  return '"' + text.replaceAll('"', '""') + '"';
+}

@@ -20,4 +20,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE u.id = :id")
     Optional<User> findByIdForUpdate(@Param("id") Long id);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.role=com.sports.entity.Role.ROLE_ADMIN ORDER BY u.id")
+    java.util.List<User> findAllAdminsForUpdate();
 }

@@ -1,65 +1,36 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { productCategory } from '../utils/formatters';
 
 const CompareContext = createContext(null);
-
+export function comparisonRackets(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value.filter(item => Number.isSafeInteger(item?.id) && item.id > 0 && productCategory(item) === 'RACKET'
+    && !seen.has(item.id) && seen.add(item.id)).slice(0, 3);
+}
 export const CompareProvider = ({ children }) => {
   const [selectedRackets, setSelectedRackets] = useState(() => {
-    try {
-      const saved = localStorage.getItem('badminton_compare');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    try { return comparisonRackets(JSON.parse(localStorage.getItem('badminton_compare') || '[]')); } catch { return []; }
   });
-
+  const [comparisonError, setComparisonError] = useState('');
+  const selection = useRef(selectedRackets); selection.current = selectedRackets;
   useEffect(() => {
-    localStorage.setItem('badminton_compare', JSON.stringify(selectedRackets));
+    try { localStorage.setItem('badminton_compare', JSON.stringify(selectedRackets)); }
+    catch { setComparisonError('Không lưu được danh sách so sánh trên thiết bị.'); }
   }, [selectedRackets]);
-
-  const addRacket = (product) => {
-    if (selectedRackets.find((r) => r.id === product.id)) return;
-    if (selectedRackets.length >= 3) {
-      alert('Bạn chỉ có thể chọn tối đa 3 cây vợt để so sánh thông số cùng một lúc!');
-      return;
-    }
-    setSelectedRackets((prev) => [...prev, product]);
+  const addRacket = product => {
+    if (comparisonRackets([product]).length !== 1) { setComparisonError('Chỉ có thể so sánh vợt cầu lông.'); return; }
+    setComparisonError('');
+    if (selection.current.some(item => item.id === product.id)) return;
+    if (selection.current.length >= 3) { setComparisonError('Chỉ chọn tối đa 3 cây vợt.'); return; }
+    const next = [...selection.current, { id: product.id, categoryId: 1, name: product.name, imageUrl: product.imageUrl }];
+    selection.current = next; setSelectedRackets(next);
   };
-
-  const removeRacket = (productId) => {
-    setSelectedRackets((prev) => prev.filter((r) => r.id !== productId));
-  };
-
-  const toggleRacket = (product) => {
-    if (selectedRackets.some((r) => r.id === product.id)) {
-      removeRacket(product.id);
-    } else {
-      addRacket(product);
-    }
-  };
-
-  const clearComparison = () => {
-    setSelectedRackets([]);
-    localStorage.removeItem('badminton_compare');
-  };
-
-  const isInComparison = (productId) => {
-    return selectedRackets.some((r) => r.id === productId);
-  };
-
-  return (
-    <CompareContext.Provider
-      value={{
-        selectedRackets,
-        addRacket,
-        removeRacket,
-        toggleRacket,
-        clearComparison,
-        isInComparison,
-      }}
-    >
-      {children}
-    </CompareContext.Provider>
-  );
+  const removeRacket = productId => { setComparisonError(''); selection.current = selection.current.filter(item => item.id !== productId); setSelectedRackets(selection.current); };
+  const toggleRacket = product => selection.current.some(item => item.id === product.id) ? removeRacket(product.id) : addRacket(product);
+  const clearComparison = () => { selection.current = []; setSelectedRackets([]); setComparisonError(''); };
+  const isInComparison = productId => selectedRackets.some(item => item.id === productId);
+  return <CompareContext.Provider value={{ selectedRackets, comparisonError, addRacket, removeRacket, toggleRacket, clearComparison, isInComparison }}>
+    {children}</CompareContext.Provider>;
 };
-
 export const useCompare = () => useContext(CompareContext);

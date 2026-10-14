@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AdministrativeAddressFields from '../components/AdministrativeAddressFields';
 import UserLayout from '../components/UserLayout';
 import { shippingAddressApi } from '../api/shippingAddressApi';
+import { useAuth } from '../context/AuthContext';
 import {
   MapPin,
   Plus,
@@ -22,6 +23,9 @@ import {
 
 
 const ShippingAddressPage = () => {
+  const { token } = useAuth();
+  const requestConfig = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  const mounted = useRef(true), saveLock = useRef(false), generation = useRef(0);
   const [dataError, setDataError] = useState('');
   const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,27 +42,32 @@ const ShippingAddressPage = () => {
   const [formDetail, setFormDetail] = useState('');
   const [formNote, setFormNote] = useState('');
   const [formIsDefault, setFormIsDefault] = useState(false);
-  const [formTag, setFormTag] = useState('Nhà riêng');
+  const [formTag, setFormTag] = useState('');
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
   const fetchAddresses = async () => {
+    const attempt = ++generation.current; setLoading(true); setDataError('');
     try {
-      const res = await shippingAddressApi.getMyAddresses();
+      const res = await shippingAddressApi.getMyAddresses(requestConfig);
+      if (!mounted.current || generation.current !== attempt) return;
       const list = Array.isArray(res) ? res : res?.data || [];
       if (Array.isArray(list)) {
         setAddresses(list);
       }
     } catch (err) {
+      if (!mounted.current || generation.current !== attempt) return;
       setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
     } finally {
-      setLoading(false);
+      if (mounted.current && generation.current === attempt) setLoading(false);
     }
   };
 
   useEffect(() => {
+    mounted.current = true;
     fetchAddresses();
+    return () => { mounted.current = false; generation.current++; };
   }, []);
 
   const handleOpenAdd = () => {
@@ -68,7 +77,7 @@ const ShippingAddressPage = () => {
     setFormCity(''); setFormWard(''); setProvinceCode(''); setWardCode('');
     setFormDetail('');
     setFormNote('');
-    setFormTag('Nhà riêng');
+    setFormTag('');
     setFormIsDefault(addresses.length === 0);
     setShowForm(true);
   };
@@ -82,13 +91,14 @@ const ShippingAddressPage = () => {
     setProvinceCode(addr.provinceCode || ''); setWardCode(addr.wardCode || '');
     setFormNote(addr.note || '');
     setFormIsDefault(addr.isDefault || false);
-    setFormTag(addr.tag || 'Nhà riêng');
+    setFormTag(addr.tag || '');
     setShowForm(true);
   };
 
   const handleSetDefault = async (id) => {
     try {
-      await shippingAddressApi.setDefaultAddress(id);
+      await shippingAddressApi.setDefaultAddress(id, requestConfig);
+      if (!mounted.current) return;
       await fetchAddresses();
       setMessage('Đã đặt làm địa chỉ mặc định thành công!');
     } catch (err) {
@@ -100,7 +110,8 @@ const ShippingAddressPage = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Bạn có chắc muốn xóa địa chỉ này?')) return;
     try {
-      await shippingAddressApi.deleteAddress(id);
+      await shippingAddressApi.deleteAddress(id, requestConfig);
+      if (!mounted.current) return;
       await fetchAddresses();
       setMessage('Đã xóa địa chỉ nhận hàng.');
     } catch (err) {
@@ -111,6 +122,8 @@ const ShippingAddressPage = () => {
 
   const handleSaveAddress = async (e) => {
     e.preventDefault();
+    if (saveLock.current) return;
+    saveLock.current = true;
     setSaving(true);
 
     const fullAddrString = [formDetail, formWard, formCity].filter(Boolean).join(', ');
@@ -119,15 +132,17 @@ const ShippingAddressPage = () => {
       phone: formPhone,
       address: fullAddrString,
       province: formCity, provinceCode, wardCode, ward: formWard, addressDetail: formDetail,
-      isDefault: formIsDefault
+      isDefault: formIsDefault, note: formNote.trim() || null, tag: formTag || null
     };
 
     try {
       if (editingId) {
-        await shippingAddressApi.updateAddress(editingId, payload);
+        await shippingAddressApi.updateAddress(editingId, payload, requestConfig);
+        if (!mounted.current) return;
         setMessage('Cập nhật địa chỉ nhận hàng thành công!');
       } else {
-        await shippingAddressApi.createAddress(payload);
+        await shippingAddressApi.createAddress(payload, requestConfig);
+        if (!mounted.current) return;
         setMessage('Thêm địa chỉ mới thành công!');
       }
       await fetchAddresses();
@@ -135,7 +150,7 @@ const ShippingAddressPage = () => {
     } catch (err) {
       setMessage(err.response?.data?.message || 'Không thể lưu địa chỉ. Dữ liệu chưa được lưu.');
     } finally {
-      setSaving(false);
+      saveLock.current = false; if (mounted.current) setSaving(false);
 
       setTimeout(() => setMessage(''), 3000);
     }
@@ -143,7 +158,8 @@ const ShippingAddressPage = () => {
 
   return (
     <UserLayout currentPage="Sổ địa chỉ" counts={{ addresses: addresses.length }}>
-      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
+      {dataError && <div role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}
+        <button type="button" onClick={fetchAddresses} className="ml-3 underline">Thử lại</button></div>}
       <div className="flex flex-col gap-6">
         {/* MAIN ADDRESS LIST CARD */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-8 flex flex-col gap-6">
@@ -330,6 +346,7 @@ const ShippingAddressPage = () => {
                   <input
                     type="text"
                     value={formNote}
+                    maxLength={1000}
                     onChange={(e) => setFormNote(e.target.value)}
                     placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến..."
                     className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
@@ -343,9 +360,10 @@ const ShippingAddressPage = () => {
                     onChange={(e) => setFormTag(e.target.value)}
                     className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                   >
+                    <option value="">Không phân loại</option>
                     <option value="Nhà riêng">Nhà riêng</option>
                     <option value="Văn phòng">Văn phòng</option>
-                    <option value="Sân cầu lông">Sân cầu lông</option>
+                    <option value="Khác">Khác</option>
                   </select>
                 </div>
               </div>
@@ -392,7 +410,7 @@ const ShippingAddressPage = () => {
             <div className="flex flex-col">
               <span className="text-xs font-black text-slate-900">Bảo hành 90 ngày</span>
               <span className="text-[11px] text-slate-500 leading-snug mt-0.5">
-                Bảo hành khung vợt chính hãng 1 đổi 1 do lỗi sản xuất từ Yonex, Victor, Lining.
+                Bảo hành 1 đổi 1 trong 90 ngày cho vợt, giày, quần áo và balo/bao vợt đủ điều kiện. Phụ kiện không có ưu đãi này.
               </span>
             </div>
           </div>
@@ -402,9 +420,9 @@ const ShippingAddressPage = () => {
               <RotateCcw className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black text-slate-900">Đổi size giày 7 ngày</span>
+              <span className="text-xs font-black text-slate-900">Phí giao hàng</span>
               <span className="text-[11px] text-slate-500 leading-snug mt-0.5">
-                Đổi size miễn phí tận nhà trong vòng 7 ngày nếu mang không vừa chân.
+                Phí giao hàng 30.000đ, miễn phí từ 1.000.000đ tiền hàng. Phí cuối cùng được kiểm tra tại thanh toán.
               </span>
             </div>
           </div>
@@ -414,9 +432,9 @@ const ShippingAddressPage = () => {
               <PhoneCall className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black text-slate-900">Hotline Kỹ Thuật</span>
+              <span className="text-xs font-black text-slate-900">Thông tin liên hệ</span>
               <span className="text-[11px] text-slate-500 leading-snug mt-0.5">
-                Tư vấn chọn cước, chỉnh thông số vợt: <strong className="text-secondary font-bold">1900 6886</strong> (8:30 - 21:30)
+                Hotline và giờ hỗ trợ của cửa hàng chưa được xác minh.
               </span>
             </div>
           </div>

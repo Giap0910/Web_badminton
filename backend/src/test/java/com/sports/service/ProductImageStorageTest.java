@@ -2,7 +2,7 @@ package com.sports.service;
 
 import com.sports.exception.ProductImageException;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.mock.web.MockMultipartFile;
 
 import javax.imageio.ImageIO;
@@ -19,7 +19,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ProductImageStorageTest {
-    @TempDir Path directory;
+    Path directory;
+    @BeforeEach void retainArtifacts() throws IOException {
+        Path workspace=Path.of("").toAbsolutePath().normalize();
+        if (workspace.getFileName().toString().equals("backend")) workspace=workspace.getParent();
+        if (!Files.isRegularFile(workspace.resolve("backend/pom.xml")))
+            throw new IllegalStateException("Test artifacts must remain inside the project workspace");
+        directory=workspace.resolve("backups/project-completion-20261013/product-image-test-"+java.util.UUID.randomUUID());
+        Files.createDirectories(directory);
+        System.out.println("Retained product image test artifacts: "+directory);
+    }
 
     @Test
     void shouldStoreExactApprovedPngWithServerFileName() throws Exception {

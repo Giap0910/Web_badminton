@@ -3,6 +3,7 @@ import axiosClient from './axiosClient.js';
 export const adminApi = {
   // Dashboard Metrics
   getDashboardStats: params => axiosClient.get('/admin/dashboard', { params }),
+  getSettings: () => axiosClient.get('/admin/dashboard/settings'),
   exportReport: params => axiosClient.get('/admin/reports', { params, responseType: 'blob' }),
   confirmCash: (id, amount) => axiosClient.post(`/admin/orders/${id}/cash-collection`, { amount }),
 
@@ -39,6 +40,8 @@ export const adminApi = {
 
   // Review Management
   getAllReviews: () => axiosClient.get('/admin/reviews'),
+  updateReviewVisibility: (id, visible) => axiosClient.put(`/admin/reviews/${id}/visibility`, { visible }),
+  replyReview: (id, reply) => axiosClient.put(`/admin/reviews/${id}/reply`, { reply }),
   deleteReview: (id) => axiosClient.delete(`/admin/reviews/${id}`),
 
   // Payments & PayOS VietQR
@@ -83,6 +86,7 @@ export const adminApi = {
 
   // Returns & Warranties
   getAllReturns: () => axiosClient.get('/returns/all'),
-  updateReturnStatus: (id, status) =>
-    axiosClient.put(`/returns/${id}/status`, null, { params: { status } }),
+  updateReturnStatus: (id, status, adminNote, replacementVariantId) =>
+    axiosClient.put(`/returns/${id}/status`, null, { params: { status, adminNote, replacementVariantId } }),
+  getReturnEvidence: id => axiosClient.get(`/returns/${id}/evidence`, { responseType: 'blob' }),
 };

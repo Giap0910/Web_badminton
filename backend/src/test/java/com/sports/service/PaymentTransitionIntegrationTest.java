@@ -84,7 +84,7 @@ class PaymentTransitionIntegrationTest {
     static void stop() throws Exception {
         if (context != null) context.close();
         if (!SCHEMA.matches("fix057_test_[0-9a-f]{32}")) throw new IllegalStateException();
-        try (var c = connect(); var s = c.createStatement()) { s.execute("DROP DATABASE `" + SCHEMA + "`"); }
+        System.out.println("Retained test database: " + SCHEMA);
     }
 
     private static Connection connect() throws SQLException {
@@ -389,6 +389,10 @@ class PaymentTransitionIntegrationTest {
         when(client.queryPayment(code)).thenReturn(zero("CANCELLED"));
         assertEquals("SHIPPING", statuses.update(orderId, OrderStatus.SHIPPING).getStatus());
         assertInventory(9, 0, 1);
+        assertThrows(BadRequestException.class,()->statuses.update(orderId,OrderStatus.COMPLETED));
+        assertEquals(OrderStatus.SHIPPING,order().getStatus());assertNull(order().getCashCollectedAt());
+        tx.executeWithoutResult(status->new CashCollectionService(orders,orderService).collect(orderId,userId,order().getTotalAmount()));
+        assertNotNull(order().getCashCollectedAt());assertEquals(userId,order().getCashCollectedBy());
         assertEquals("COMPLETED", statuses.update(orderId, OrderStatus.COMPLETED).getStatus());
         assertInventory(9, 0, 1);
         webhooks.accept(payload("POST-DELIVERY"));
@@ -828,7 +832,7 @@ class PaymentTransitionIntegrationTest {
     @Test
     void migratedSchemaAndJpaInitializeNewOrdersAtRevisionZero() throws Exception {
         try (var c = context.getBean(DataSource.class).getConnection(); var s = c.prepareStatement(
-                "INSERT INTO orders(user_id,total_amount,status) VALUES(?,1,'PENDING')", Statement.RETURN_GENERATED_KEYS)) {
+                "INSERT INTO orders(user_id,total_amount,status,points_used,points_discount) VALUES(?,1,'PENDING',0,0)", Statement.RETURN_GENERATED_KEYS)) {
             s.setLong(1, userId); s.executeUpdate();
             try (var ids = s.getGeneratedKeys()) { assertTrue(ids.next()); assertEquals(0, orders.findById(ids.getLong(1)).orElseThrow().getCheckoutRevision()); }
         }

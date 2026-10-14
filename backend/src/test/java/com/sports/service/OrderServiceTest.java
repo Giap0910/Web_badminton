@@ -70,7 +70,7 @@ class OrderServiceTest {
     @Test
     void unratedProductsDoNotReceiveFiveStars() {
         var reviews = mock(com.sports.repository.ReviewRepository.class);
-        var service = new ReviewService(reviews, productRepository, userRepository);
+        var service = new ReviewService(reviews, productRepository, userRepository, orderRepository);
         when(reviews.findByProductIdOrderByCreatedAtDesc(10L)).thenReturn(java.util.List.of());
         assertEquals(0.0, service.getAverageRating(10L));
         when(reviews.findByProductIdOrderByCreatedAtDesc(10L)).thenReturn(java.util.List.of(
@@ -268,6 +268,10 @@ class OrderServiceTest {
         orderService.updateOrderStatus(99L, OrderStatus.SHIPPING);
         order.setCashCollectedAt(java.time.LocalDateTime.now());
         orderService.updateOrderStatus(99L, OrderStatus.COMPLETED);
+        assertNotNull(order.getCompletedAt());
+        var completedAt=order.getCompletedAt();
+        orderService.updateOrderStatus(99L, OrderStatus.COMPLETED);
+        assertEquals(completedAt,order.getCompletedAt());
         assertEquals(3, mockProduct.getStock());
         assertEquals(0, mockProduct.getReservedStock());
         assertEquals(OrderStatus.COMPLETED, order.getStatus());
@@ -372,6 +376,39 @@ class OrderServiceTest {
         service.releaseVoucher("ONE");
         assertEquals(0, voucher.getUsedCount());
         assertTrue(service.reserveVoucher(request).isValid());
+    }
+
+    @Test
+    void demoInitializerRequiresExplicitOptInEvenWhenDevelopmentProfileIsActive() {
+        var users=mock(UserRepository.class);var products=mock(ProductRepository.class);
+        var categories=mock(com.sports.repository.CategoryRepository.class);
+        var encoder=mock(org.springframework.security.crypto.password.PasswordEncoder.class);
+        var runner=new org.springframework.boot.test.context.runner.ApplicationContextRunner()
+                .withUserConfiguration(com.sports.config.DataInitializer.class).withPropertyValues("spring.profiles.active=dev")
+                .withBean(UserRepository.class,()->users).withBean(ProductRepository.class,()->products)
+                .withBean(com.sports.repository.CategoryRepository.class,()->categories)
+                .withBean(org.springframework.security.crypto.password.PasswordEncoder.class,()->encoder);
+        runner.run(context->{assertNull(context.getStartupFailure());
+            assertTrue(context.getBeansOfType(com.sports.config.DataInitializer.class).isEmpty());});
+        runner.withPropertyValues("app.demo-data.enabled=false").run(context->
+                assertTrue(context.getBeansOfType(com.sports.config.DataInitializer.class).isEmpty()));
+        runner.withPropertyValues("app.demo-data.enabled=true").run(context->{assertNull(context.getStartupFailure());
+            assertEquals(1,context.getBeansOfType(com.sports.config.DataInitializer.class).size());});
+        verifyNoInteractions(users,products,categories,encoder);
+    }
+
+    @Test
+    void voucherDemoSeedIsDisabledUnlessExplicitOptInAndDevelopmentProfileBothMatch() {
+        var repository=mock(com.sports.repository.VoucherRepository.class);
+        var environment=new org.springframework.mock.env.MockEnvironment();environment.setActiveProfiles("dev");
+        var service=new VoucherService(repository,environment);
+        service.seedInitialVouchers();verifyNoInteractions(repository);
+        environment.setProperty("app.demo-data.enabled","false");service.seedInitialVouchers();verifyNoInteractions(repository);
+        environment.setProperty("app.demo-data.enabled","true");environment.setActiveProfiles("prod");
+        service.seedInitialVouchers();verifyNoInteractions(repository);
+        environment.setActiveProfiles("dev");service.seedInitialVouchers();
+        verify(repository).count();verify(repository).saveAll(org.mockito.ArgumentMatchers.argThat(values->{
+            long count=java.util.stream.StreamSupport.stream(values.spliterator(),false).count();return count==4;}));
     }
 
     @BeforeEach

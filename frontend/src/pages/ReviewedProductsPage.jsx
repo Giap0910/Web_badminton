@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import UserLayout from '../components/UserLayout';
-import { reviewApi } from '../api/reviewApi';
+import { reviewApi, readReviewList, normalizeReview, buildReviewPayload } from '../api/reviewApi';
+import ProductImage from '../components/ProductImage';
+import { formatDate } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
+import { copyProductLink } from '../components/ProductFacts';
 import {
   Star,
   Search,
@@ -23,6 +27,8 @@ import {
 
 
 const ReviewedProductsPage = () => {
+  const { token } = useAuth();
+  const requestConfig = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
   const [dataError, setDataError] = useState('');
   const [reviews, setReviews] = useState([]);
   const [pendingReviews, setPendingReviews] = useState([]);
@@ -37,39 +43,27 @@ const ReviewedProductsPage = () => {
   const [reviewText, setReviewText] = useState('');
   const [reviewSpec, setReviewSpec] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [shareMessage, setShareMessage] = useState('');
+  const mounted = useRef(true), generation = useRef(0), submissionLock = useRef(false);
 
-  useEffect(() => {
-    const fetchReviews = async () => {
+  const fetchReviews = async () => {
+    const attempt = ++generation.current; setLoading(true); setDataError('');
       try {
-        const res = await reviewApi.getMyReviews();
-        const list = Array.isArray(res) ? res : res?.data || [];
-        if (Array.isArray(list)) {
-          // Merge API data
-          const merged = list.map((item, idx) => ({
-            id: item.id || idx + 1,
-            productId: item.productId ?? null,
-            productDeleted: item.productDeleted === true,
-            productName: item.productName || 'Sản phẩm đã ngừng bán',
-            productBrand: item.productBrand || 'Chưa có thông tin',
-            productImage: item.productImageUrl || null,
-            purchasedSpec: item.purchasedSpec || '',
-            rating: item.rating || 5,
-            createdAt: item.createdAt || '24/10/2024',
-            content: item.comment || item.content || '',
-            feedbackImages: item.feedbackImages || [],
-            verifiedBuyer: item.verifiedBuyer === true,
-            likes: item.likes ?? 0,
-            officialReply: null
-          }));
-          setReviews(merged);
-        }
+        const [reviewResponse, eligibleResponse] = await Promise.all([reviewApi.getMyReviews(requestConfig), reviewApi.getEligibleProducts(requestConfig)]);
+        const list = readReviewList(reviewResponse), eligible = readReviewList(eligibleResponse);
+        if (!mounted.current || generation.current !== attempt) return;
+        setReviews(list.map(normalizeReview)); setPendingReviews(eligible);
       } catch (err) {
+        if (!mounted.current || generation.current !== attempt) return;
         setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
       } finally {
-        setLoading(false);
+        if (mounted.current && generation.current === attempt) setLoading(false);
       }
-    };
-    fetchReviews();
+  };
+  useEffect(() => {
+    mounted.current = true; fetchReviews();
+    return () => { mounted.current = false; generation.current++; };
   }, []);
 
   const handleOpenWriteReview = (item) => {
@@ -77,31 +71,32 @@ const ReviewedProductsPage = () => {
     setRatingStars(5);
     setReviewText('');
     setReviewSpec(item.purchasedSpec || '');
+    setReviewError('');
     setShowReviewModal(true);
+  };
+  const handleShareReview = async item => {
+    setShareMessage('');
+    try { await copyProductLink(item.productId, item.id); if (mounted.current) setShareMessage('Đã sao chép liên kết bài đánh giá.'); }
+    catch (error) { if (mounted.current) setShareMessage(error.message || 'Không sao chép được liên kết.'); }
   };
 
   const handleSubmitNewReview = async (e) => {
     e.preventDefault();
+    if (submissionLock.current) return;
+    submissionLock.current = true; setReviewError('');
     setSubmittingReview(true);
-
-    const payload = {
-      productId: selectedPending.productId,
-      rating: ratingStars,
-      comment: reviewText
-    };
-
     try {
-      const saved = await reviewApi.createReview(payload);
-      setReviews([{ ...selectedPending, id: saved.id, content: saved.comment || '', rating: saved.rating,
-        createdAt: saved.createdAt, feedbackImages: [], verifiedBuyer: false, likes: 0 }, ...reviews]);
+      const payload = buildReviewPayload(selectedPending, ratingStars, reviewText);
+      const saved = await reviewApi.createReview(payload, requestConfig);
+      if (!mounted.current) return;
+      const review = normalizeReview(saved?.data ?? saved);
+      generation.current++; setLoading(false);
+      setReviews(previous => [review, ...previous.filter(item => item.id !== review.id)]);
+      setPendingReviews(previous => previous.filter(item => item.productId !== selectedPending.productId));
+      setShowReviewModal(false);
     } catch (err) {
-      alert(err.response?.data?.message || 'Không thể gửi hoặc tải lại đánh giá. Vui lòng kiểm tra trước khi gửi lại.');
-      setSubmittingReview(false);
-      return;
-    }
-    setPendingReviews((prev) => prev.filter((p) => p.productId !== selectedPending.productId));
-    setSubmittingReview(false);
-    setShowReviewModal(false);
+      if (mounted.current) setReviewError(err.response?.data?.message || err.message || 'Không thể gửi đánh giá. Kiểm tra lại danh sách trước khi gửi lại.');
+    } finally { submissionLock.current = false; if (mounted.current) setSubmittingReview(false); }
   };
 
   const filteredReviews = reviews.filter((r) =>
@@ -114,7 +109,10 @@ const ReviewedProductsPage = () => {
 
   return (
     <UserLayout currentPage="Sản phẩm đã đánh giá" counts={{ reviews: reviews.length }}>
-      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
+      {dataError && <div role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}<button type="button" onClick={fetchReviews} className="ml-3 underline">Thử lại</button></div>}
+      {loading && <p role="status">Đang tải đánh giá và sản phẩm chờ nhận xét...</p>}
+      {shareMessage && <p role="status" className="text-xs text-slate-700">{shareMessage}</p>}
+      {!loading && !dataError && activeTab === 'PENDING' && pendingReviews.length === 0 && <p>Chưa có sản phẩm đủ điều kiện đánh giá.</p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & QUICK STATS CONTAINER */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200/80 flex flex-col gap-5">
@@ -124,7 +122,7 @@ const ReviewedProductsPage = () => {
                 Sản phẩm đã đánh giá
               </h1>
               <p className="text-xs text-slate-500 mt-1">
-                Xem lại đóng góp chuyên môn của bạn và tiếp tục tích lũy điểm thưởng HGClub để đổi voucher mua hàng
+                Xem lại nhận xét và đánh giá những sản phẩm bạn đã mua, đã thanh toán và nhận hàng.
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
@@ -197,7 +195,7 @@ const ReviewedProductsPage = () => {
         </div>
 
         {/* SECTION: PENDING REVIEWS BANNER (If tab is ALL or PENDING) */}
-        {(activeTab === 'ALL' || activeTab === 'PENDING') && pendingReviews.length > 0 && (
+        {!loading && !dataError && (activeTab === 'ALL' || activeTab === 'PENDING') && pendingReviews.length > 0 && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -211,8 +209,8 @@ const ReviewedProductsPage = () => {
                   className="bg-white rounded-2xl border border-amber-200/80 bg-amber-50/20 p-4 shadow-sm flex items-start justify-between gap-4"
                 >
                   <div className="flex items-start gap-3">
-                    <img
-                      src={pending.productImage}
+                    <ProductImage compact
+                      src={pending.productImageUrl}
                       alt={pending.productName}
                       className="w-14 h-14 rounded-xl object-cover bg-white border border-slate-200 p-0.5 shrink-0"
                     />
@@ -220,10 +218,6 @@ const ReviewedProductsPage = () => {
                       <span className="text-[10px] font-bold text-slate-400 uppercase">{pending.productBrand}</span>
                       <span className="text-xs font-bold text-slate-900 line-clamp-1">{pending.productName}</span>
                       <span className="text-[11px] text-slate-500 mt-0.5">{pending.purchasedSpec}</span>
-                      <span className="text-[10px] font-black text-amber-700 mt-1 inline-flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-amber-500" />
-                        {pending.rewardPoints}
-                      </span>
                     </div>
                   </div>
                   <button
@@ -240,7 +234,7 @@ const ReviewedProductsPage = () => {
         )}
 
         {/* SECTION: ALREADY REVIEWED LIST */}
-        {(activeTab === 'ALL' || activeTab === 'REVIEWED') && (
+        {!loading && !dataError && (activeTab === 'ALL' || activeTab === 'REVIEWED') && (
           <div className="flex flex-col gap-4">
             {filteredReviews.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400">
@@ -255,7 +249,7 @@ const ReviewedProductsPage = () => {
                   {/* TOP ROW: PRODUCT INFO & STARS */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <img
+                      <ProductImage compact
                         src={rev.productImage}
                         alt={rev.productName}
                         className="w-14 h-14 rounded-xl object-cover bg-slate-50 border border-slate-200 p-0.5 shrink-0"
@@ -286,11 +280,12 @@ const ReviewedProductsPage = () => {
                             className={`w-4 h-4 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`}
                           />
                         ))}
-                        <span className="text-xs font-black text-slate-900 ml-1">5.0</span>
+                        <span className="text-xs font-black text-slate-900 ml-1">{rev.rating.toFixed(1)}</span>
                       </div>
                       <span className="text-[11px] text-slate-400 flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-slate-400" />
-                        Đã đánh giá: {rev.createdAt}
+                        Đã đánh giá: {rev.createdAt ? formatDate(rev.createdAt) : 'Chưa có thời gian'}
+                        {!rev.visible && <span className="text-amber-700">Đang ẩn trên cửa hàng</span>}
                       </span>
                     </div>
                   </div>
@@ -324,7 +319,7 @@ const ReviewedProductsPage = () => {
                           <ShieldCheck className="w-4 h-4 text-secondary" />
                           {rev.officialReply.author}
                         </span>
-                        <span className="text-[11px] text-slate-400">{rev.officialReply.date}</span>
+                        {rev.officialReply.date && <span className="text-[11px] text-slate-400">{formatDate(rev.officialReply.date)}</span>}
                       </div>
                       <p className="text-xs text-slate-600 leading-relaxed font-normal">
                         {rev.officialReply.message}
@@ -334,21 +329,14 @@ const ReviewedProductsPage = () => {
 
                   {/* BOTTOM ACTION BAR */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
-                    <div className="flex items-center gap-1.5 text-emerald-700 text-[11px] font-bold">
+                    {rev.verifiedBuyer && <div className="flex items-center gap-1.5 text-emerald-700 text-[11px] font-bold">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Đã xác thực đã mua hàng tại HG Pro
-                    </div>
+                    </div>}
                     <div className="flex items-center gap-4">
                       <button
                         type="button"
-                        className="hover:text-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
-                      >
-                        <ThumbsUp className="w-3.5 h-3.5" />
-                        <span>Hữu ích ({rev.likes})</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => alert('Đã sao chép liên kết bài đánh giá')}
+                        onClick={() => handleShareReview(rev)} disabled={rev.productDeleted || !rev.visible}
                         className="hover:text-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
                       >
                         <Share2 className="w-3.5 h-3.5" />
@@ -365,19 +353,20 @@ const ReviewedProductsPage = () => {
         {/* MODAL VIẾT ĐÁNH GIÁ MỚI */}
         {showReviewModal && selectedPending && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
+            <div role="dialog" aria-modal="true" aria-labelledby="review-modal-title" className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                     <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900">Đánh giá sản phẩm</h3>
-                    <p className="text-xs text-slate-400">Nhận ngay +50 điểm HGClub</p>
+                    <h3 id="review-modal-title" className="text-base font-black text-slate-900">Đánh giá sản phẩm</h3>
+                    <p className="text-xs text-slate-400">Nhận xét từ trải nghiệm mua hàng của bạn.</p>
                   </div>
                 </div>
                 <button
                   type="button"
+                  aria-label="Đóng đánh giá sản phẩm"
                   onClick={() => setShowReviewModal(false)}
                   className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-800"
                 >
@@ -387,8 +376,8 @@ const ReviewedProductsPage = () => {
 
               <form onSubmit={handleSubmitNewReview} className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                  <img
-                    src={selectedPending.productImage}
+                  <ProductImage compact
+                    src={selectedPending.productImageUrl}
                     alt={selectedPending.productName}
                     className="w-12 h-12 rounded-xl object-cover bg-white shrink-0"
                   />
@@ -418,11 +407,7 @@ const ReviewedProductsPage = () => {
                     ))}
                   </div>
                   <span className="text-xs text-amber-600 font-bold">
-                    {ratingStars === 5
-                      ? 'Cực kỳ hài lòng (5 sao)'
-                      : ratingStars === 4
-                      ? 'Hài lòng (4 sao)'
-                      : 'Bình thường (3 sao)'}
+                    {`${ratingStars} sao`}
                   </span>
                 </div>
 
@@ -432,11 +417,13 @@ const ReviewedProductsPage = () => {
                   <textarea
                     rows={4}
                     required
+                    maxLength={2000}
                     value={reviewText}
                     onChange={(e) => setReviewText(e.target.value)}
-                    placeholder="Hãy chia sẻ cảm nhận về độ nảy, cảm giác cầm vợt, chất lượng đan cước từ xưởng HG Pro..."
+                    placeholder="Chia sẻ trải nghiệm thực tế về sản phẩm bạn đã mua..."
                     className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs p-3.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                   ></textarea>
+                  {reviewError && <p role="alert" className="text-xs text-red-700">{reviewError}</p>}
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">

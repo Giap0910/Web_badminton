@@ -30,8 +30,11 @@ public class OrderItem {
     @Column(name = "product_sku_snapshot", length = 50) private String productSkuSnapshot;
     @Column(name = "product_brand_snapshot", length = 50) private String productBrandSnapshot;
     @Column(name = "product_image_snapshot", length = 500) private String productImageSnapshot;
+    @Column(name = "category_id_snapshot") private Long categoryIdSnapshot;
     @PrePersist public void captureProduct() {
-        if (product == null || productNameSnapshot != null) return;
+        if (product == null) return;
+        if (categoryIdSnapshot == null && product.getCategory() != null) categoryIdSnapshot=product.getCategory().getId();
+        if (productNameSnapshot != null) return;
         productIdSnapshot=product.getId();productNameSnapshot=product.getName();
         productSkuSnapshot=product.getSku();productBrandSnapshot=product.getBrand();productImageSnapshot=product.getImageUrl();
     }

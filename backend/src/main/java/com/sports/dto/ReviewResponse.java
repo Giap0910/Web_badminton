@@ -16,6 +16,17 @@ public class ReviewResponse {
     private Boolean productDeleted;
     private String productImageUrl;
     private String productBrand;
+    private String productSku;
+    private Long orderId;
+    private Long orderItemId;
+    private String selectedSize;
+    private String selectedColor;
+    private String selectedWeight;
+    private String purchasedSpec;
+    private Boolean visible;
+    private Boolean verifiedPurchase;
+    private String officialReply;
+    private LocalDateTime replyUpdatedAt;
     private Long userId;
     private String username;
     private String userFullName;

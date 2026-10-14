@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 @Getter
@@ -12,6 +14,7 @@ import lombok.*;
 @AllArgsConstructor
 public class ReviewRequest {
     @NotNull(message = "ID sản phẩm không được để trống")
+    @Positive(message = "ID sản phẩm phải là số dương")
     private Long productId;
 
     @NotNull(message = "Đánh giá sao không được để trống")
@@ -20,5 +23,13 @@ public class ReviewRequest {
     private Integer rating;
 
     @NotBlank(message = "Nội dung bình luận không được để trống")
+    @Size(max = 2000, message = "Bình luận tối đa 2000 ký tự")
     private String comment;
+
+    @Positive(message = "ID dòng đơn hàng phải là số dương")
+    private Long orderItemId;
+
+    public ReviewRequest(Long productId, Integer rating, String comment) {
+        this(productId, rating, comment, null);
+    }
 }

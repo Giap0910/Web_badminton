@@ -10,8 +10,6 @@ import { shippingAddressApi } from '../api/shippingAddressApi';
 import { formatPrice } from '../utils/formatters';
 import {
   buildOrderPayload,
-  isResponseStale,
-  canonicalStringify,
   getOrCreateIdempotencyKey,
   clearStoredCheckoutIntent,
   getOrCreatePaymentLinkKey,
@@ -48,6 +46,82 @@ import {
   Sparkles,
   RefreshCw
 } from 'lucide-react';
+
+export const pendingCheckoutStorageKey = userId => `hg_checkout_submission_${userId}`;
+
+export function readPendingCheckoutSubmission(userId) {
+  if (!Number.isSafeInteger(Number(userId)) || Number(userId) <= 0) return null;
+  try {
+    const raw = sessionStorage.getItem(pendingCheckoutStorageKey(userId));
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    const validKey = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(saved?.key || '');
+    if (String(saved?.userId) !== String(userId) || !validKey || !Array.isArray(saved?.payload?.items)
+        || !saved.payload.items.length || !Array.isArray(saved.lines) || !saved.form || !Number.isFinite(Date.parse(saved.createdAt))
+        || saved.lines.some(line => typeof line.id !== 'string' || !line.id || !Number.isInteger(line.quantity) || line.quantity <= 0)) {
+      return { invalid: true };
+    }
+    return saved;
+  } catch { return { invalid: true }; }
+}
+
+export function savePendingCheckoutSubmission(snapshot) {
+  const key = pendingCheckoutStorageKey(snapshot.userId);
+  const value = JSON.stringify(snapshot);
+  sessionStorage.setItem(key, value);
+  if (sessionStorage.getItem(key) !== value) throw new Error('Không lưu được yêu cầu đặt hàng an toàn.');
+}
+
+export function clearPendingCheckoutSubmission(userId) {
+  sessionStorage.removeItem(pendingCheckoutStorageKey(userId));
+}
+
+export function createCheckoutSubmission(userId, payload, items, form) {
+  if (!Number.isSafeInteger(Number(userId)) || Number(userId) <= 0) throw new Error('Vui lòng đăng nhập lại trước khi đặt hàng.');
+  const snapshot = { userId, key: getOrCreateIdempotencyKey({ userId, payload }).key,
+    payload: JSON.parse(JSON.stringify(payload)), form: { ...form }, createdAt: new Date().toISOString(),
+    lines: items.map(item => ({ id: item.cartItemId, quantity: item.quantity })),
+    displayItems: items.map(({ product, ...item }) => ({ ...item,
+      product: { id: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl } })) };
+  savePendingCheckoutSubmission(snapshot);
+  return snapshot;
+}
+
+export function submittedCartUpdates(cart, lines) {
+  return lines.flatMap(line => {
+    const current = cart.find(item => item.cartItemId === line.id);
+    return current ? [{ id: line.id, quantity: Math.max(0, current.quantity - line.quantity) }] : [];
+  });
+}
+
+export function checkoutMayProceed(snapshot, ownerId, active) {
+  return active && String(snapshot?.userId) === String(ownerId);
+}
+
+export function checkoutAddressMatches(address, form) {
+  const values = { fullName: form.customerName, phone: form.shippingPhone,
+    provinceCode: form.provinceCode, wardCode: form.wardCode, addressDetail: form.addressDetail };
+  return Object.entries(values).every(([key, value]) =>
+    String(address[key] || '').trim() === String(value || '').trim());
+}
+
+export async function saveCheckoutAddress(snapshot, config, isActive = () => true) {
+  if (!snapshot.form?.saveInfo || !isActive()) return '';
+  try {
+    const response = await shippingAddressApi.getMyAddresses(config);
+    const addresses = response?.data ?? response;
+    if (!Array.isArray(addresses)) throw new Error('Không đọc được sổ địa chỉ.');
+    if (!isActive() || addresses.some(address => checkoutAddressMatches(address, snapshot.form))) return '';
+    const form = snapshot.form;
+    await shippingAddressApi.createAddress({ fullName: form.customerName, phone: form.shippingPhone,
+      address: [form.addressDetail, form.ward, form.province].filter(Boolean).join(', '),
+      addressDetail: form.addressDetail, province: form.province, provinceCode: form.provinceCode,
+      ward: form.ward, wardCode: form.wardCode, isDefault: addresses.length === 0 }, config);
+    return '';
+  } catch {
+    return 'Đơn hàng đã được tạo, nhưng chưa lưu được địa chỉ. Bạn có thể thêm địa chỉ trong Sổ địa chỉ.';
+  }
+}
 
 /**
  * R9-FE-001: Computes single item subtotal from snapshot.
@@ -142,8 +216,17 @@ export const calculateOrderSnapshotSubtotal = (order) => {
 };
 
 const CheckoutPage = () => {
-  const { cart, removeFromCart } = useCart();
-  const { user, profile } = useAuth();
+  const { cart, updateQuantity, removeFromCart } = useCart();
+  const { user, profile, token: checkoutToken } = useAuth();
+  const checkoutOwnerRef = useRef(user?.id);
+  const checkoutTokenRef = useRef(checkoutToken);
+  const checkoutActiveRef = useRef(true);
+  checkoutOwnerRef.current = user?.id;
+  checkoutTokenRef.current = checkoutToken;
+  useEffect(() => {
+    checkoutActiveRef.current = true;
+    return () => { checkoutActiveRef.current = false; };
+  }, []);
   const [requestedPoints, setRequestedPoints] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
@@ -551,7 +634,10 @@ const CheckoutPage = () => {
   const [province, setProvince] = useState('');
   const [ward, setWard] = useState('');
   const [provinceCode, setProvinceCode] = useState(''), [wardCode, setWardCode] = useState('');
-  const chooseAddress = value => { setProvinceCode(value.provinceCode); setWardCode(value.wardCode); setProvince(value.province); setWard(value.ward); };
+  const chooseAddress = value => {
+    if (isSubmittingRef.current || pendingSubmissionRef.current) return;
+    setProvinceCode(value.provinceCode); setWardCode(value.wardCode); setProvince(value.province); setWard(value.ward);
+  };
   const [addressDetail, setAddressDetail] = useState(user?.address || '');
   const [note, setNote] = useState('');
   const [saveInfo, setSaveInfo] = useState(true);
@@ -569,6 +655,22 @@ const CheckoutPage = () => {
 
   // Idempotency & submit guard (FIX-018)
   const isSubmittingRef = useRef(false);
+  const [pendingSubmission, setPendingSubmission] = useState(() => readPendingCheckoutSubmission(user?.id));
+  const pendingSubmissionRef = useRef(pendingSubmission);
+  const currentCartRef = useRef(cart);
+  currentCartRef.current = cart;
+  const submissionLocked = loading || Boolean(pendingSubmission);
+
+  useEffect(() => {
+    const saved = pendingSubmission?.form;
+    if (!saved) return;
+    setCustomerName(saved.customerName || ''); setShippingPhone(saved.shippingPhone || '');
+    setAddressDetail(saved.addressDetail || ''); setProvince(saved.province || ''); setWard(saved.ward || '');
+    setProvinceCode(saved.provinceCode || ''); setWardCode(saved.wardCode || '');
+    setEmail(saved.email || ''); setPaymentMethod(saved.paymentMethod || 'COD');
+    setVoucherCode(saved.voucherCode || ''); setNote(saved.note || '');
+    setRequestedPoints(saved.requestedPoints || 0); setSaveInfo(saved.saveInfo !== false);
+  }, [pendingSubmission]);
 
   // Load saved shipping addresses
   useEffect(() => {
@@ -577,6 +679,7 @@ const CheckoutPage = () => {
         const res = await shippingAddressApi.getMyAddresses();
         const addrs = Array.isArray(res) ? res : res?.data || [];
         setSavedAddresses(addrs);
+        if (isSubmittingRef.current || pendingSubmissionRef.current) return;
 
         const defaultAddr = addrs.find((a) => a.isDefault) || addrs[0];
         if (defaultAddr) {
@@ -602,14 +705,19 @@ const CheckoutPage = () => {
     0
   );
   const isFreeShipping = subtotal >= 1000000;
-  const shippingFee = subtotal === 0 || isFreeShipping ? 0 : 30000;
+  const baseShippingFee = subtotal === 0 || isFreeShipping ? 0 : 30000;
   const voucher = useCheckoutVoucher(voucherCode, subtotal, JSON.stringify(checkoutItems.map(item => [item.cartItemId, item.quantity, item.product.price])));
-  const { discountAmount, error: voucherError, success: voucherSuccess, validating: isValidatingVoucher, apply: handleApplyVoucher } = voucher;
+  const { discountAmount, shippingDiscountAmount = 0, finalShippingFee = baseShippingFee,
+    error: voucherError, success: voucherSuccess, validating: isValidatingVoucher, apply: handleApplyVoucher } = voucher;
+  const shippingFee = finalShippingFee;
   const effectiveDiscount = subtotal > 0 ? Math.min(subtotal, discountAmount) : 0;
   const maximumPoints = Math.min(Number(profile?.loyaltyPoints) || 0, Math.floor((subtotal - effectiveDiscount) / 1000));
   const redeemPoints = Math.min(Math.max(0, requestedPoints), maximumPoints);
   const pointsDiscount = redeemPoints * 100;
   const finalTotal = Math.max(0, subtotal - effectiveDiscount - pointsDiscount + shippingFee);
+  const displayItems = pendingSubmission?.displayItems || checkoutItems;
+  const orderSummary = pendingSubmission?.form?.totals || { subtotal, effectiveDiscount, shippingDiscountAmount, pointsDiscount, shippingFee, finalTotal, redeemPoints };
+  const displayedShippingFee = orderSummary.shippingFee + (orderSummary.shippingDiscountAmount || 0);
 
   // Live order payload and canonical fingerprint (continuously updated on every render)
   const currentPayload = buildOrderPayload({
@@ -624,125 +732,105 @@ const CheckoutPage = () => {
     checkoutItems,
     redeemPoints,
   });
-  const currentFingerprint = canonicalStringify(currentPayload);
-  const currentFingerprintRef = useRef(currentFingerprint);
-  currentFingerprintRef.current = currentFingerprint;
-
-  const handleSubmitOrder = async () => {
-    if (isSubmittingRef.current || loading || isValidatingVoucher) return;
+  const validateNewCheckout = () => {
     if (!['COD', 'PAYOS_VIETQR'].includes(paymentMethod)) {
-      setErrorMsg('Vui lòng chọn thanh toán COD hoặc QR PayOS/VietQR.');
-      return;
+      return 'Vui lòng chọn thanh toán COD hoặc QR PayOS/VietQR.';
     }
     if (voucherCode.trim() && !voucherSuccess) {
-      setErrorMsg('Vui lòng áp dụng lại mã giảm giá hoặc xóa mã trước khi đặt hàng.');
-      return;
+      return 'Vui lòng áp dụng lại mã giảm giá hoặc xóa mã trước khi đặt hàng.';
     }
     if (!customerName || !shippingPhone || !addressDetail || !provinceCode || !wardCode) {
-      setErrorMsg('Vui lòng điền đầy đủ Họ tên, Số điện thoại và Địa chỉ giao hàng.');
-      return;
+      return 'Vui lòng điền đầy đủ Họ tên, Số điện thoại và Địa chỉ giao hàng.';
     }
+    return checkoutItems.length ? '' : 'Không có sản phẩm nào được chọn để thanh toán.';
+  };
 
-    if (checkoutItems.length === 0) {
-      setErrorMsg('Không có sản phẩm nào được chọn để thanh toán.');
-      return;
-    }
+  const captureCheckoutSubmission = () => createCheckoutSubmission(user?.id, currentPayload, checkoutItems,
+    { customerName, shippingPhone, addressDetail, province, ward, provinceCode, wardCode, email,
+      paymentMethod, voucherCode, note, requestedPoints, saveInfo,
+      totals: { subtotal, effectiveDiscount, shippingDiscountAmount, pointsDiscount, shippingFee, finalTotal, redeemPoints } });
 
-    const payload = currentPayload;
-    const submittedFingerprint = currentFingerprint;
-
-    // FIX-018: 1 checkout intent = 1 UUID. Reuse key if unchanged; generate new UUID if changed.
-    let idempotencyKey;
+  const prepareOrderPayment = async (orderId, config) => {
     try {
-      const intent = getOrCreateIdempotencyKey(payload);
-      idempotencyKey = intent.key;
-    } catch {
-      setErrorMsg('Không thể khởi tạo mã giao dịch an toàn (Web Crypto không khả dụng). Vui lòng thử lại trên trình duyệt hiện đại.');
+      const response = await orderApi.createPaymentLink(orderId, getOrCreatePaymentLinkKey(orderId), config);
+      return { payment: response?.data ?? response, paymentError: null };
+    } catch (error) {
+      return { payment: null, paymentError: error.response?.data?.message || 'Chưa thể chuẩn bị liên kết thanh toán. Vui lòng kiểm tra lại.' };
+    }
+  };
+
+  const clearCurrentSubmission = () => {
+    clearPendingCheckoutSubmission(user?.id); clearStoredCheckoutIntent();
+    pendingSubmissionRef.current = null; setPendingSubmission(null);
+  };
+
+  const consumeSubmittedCart = snapshot => {
+    submittedCartUpdates(currentCartRef.current, snapshot.lines).forEach(line => {
+      if (line.quantity === 0) removeFromCart(line.id); else updateQuantity(line.id, line.quantity);
+    });
+  };
+
+  const acceptCreatedOrder = async (createdOrder, snapshot) => {
+    const token = checkoutTokenRef.current;
+    const isActive = () => checkoutMayProceed(snapshot, checkoutOwnerRef.current, checkoutActiveRef.current)
+      && (!token || globalThis.localStorage?.getItem('token') === token);
+    if (!isActive()) return;
+    if (!createdOrder?.id) throw new Error('Máy chủ chưa trả về mã đơn hàng hợp lệ.');
+    const addressConfig = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+    if (createdOrder.status !== 'CANCELLED') consumeSubmittedCart(snapshot);
+    sessionStorage.removeItem('hg_voucher_code');
+    const method = createdOrder.paymentMethod || snapshot.payload.paymentMethod;
+    const paymentState = method === 'COD' || createdOrder.status === 'CANCELLED' ? {} : await prepareOrderPayment(createdOrder.id, addressConfig);
+    if (!isActive()) return;
+    const addressSaveWarning = createdOrder.status === 'CANCELLED' ? ''
+      : await saveCheckoutAddress(snapshot, addressConfig, isActive);
+    if (!isActive()) return;
+    const path = createdOrder.status === 'CANCELLED' ? `/orders/${createdOrder.id}`
+      : method === 'COD' ? `/order-success/${createdOrder.id}` : `/payment/qr/${createdOrder.id}`;
+    navigate(path, { state: { order: createdOrder, ...paymentState, addressSaveWarning } });
+    clearCurrentSubmission();
+  };
+
+  const handleSubmissionFailure = error => {
+    const status = error.response?.status;
+    const definitive = [400, 403, 404, 422].includes(status);
+    if (definitive) clearCurrentSubmission();
+    const message = error.response?.data?.message;
+    setErrorMsg(typeof message === 'string' ? message : definitive
+      ? 'Yêu cầu chưa được chấp nhận. Vui lòng kiểm tra thông tin trước khi gửi lại.'
+      : 'Chưa xác nhận được kết quả đặt hàng. Yêu cầu và giỏ hàng được giữ nguyên; bấm kiểm tra lại để tránh tạo trùng đơn.');
+  };
+
+  const submitCheckoutSnapshot = async snapshot => {
+    isSubmittingRef.current = true; setLoading(true); setErrorMsg('');
+    try {
+      const token = checkoutTokenRef.current;
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+      const response = await orderApi.createOrder(snapshot.payload, snapshot.key, config);
+      await acceptCreatedOrder(response?.data ?? response, snapshot);
+    } catch (error) { handleSubmissionFailure(error); }
+    finally {
+      isSubmittingRef.current = false; setLoading(false);
+    }
+  };
+
+  const handleSubmitOrder = async () => {
+    if (isSubmittingRef.current || loading) return;
+    const pending = pendingSubmissionRef.current;
+    if (pending?.invalid) { setErrorMsg('Yêu cầu trước không đọc được. Hãy kiểm tra Lịch sử đơn hàng hoặc liên hệ cửa hàng; chưa tạo đơn mới.'); return; }
+    if (!pending && isValidatingVoucher) return;
+    const validationError = pending ? '' : validateNewCheckout();
+    if (validationError) { setErrorMsg(validationError); return; }
+    let snapshot;
+    try {
+      snapshot = pending || captureCheckoutSubmission();
+      pendingSubmissionRef.current = snapshot; setPendingSubmission(snapshot);
+    } catch (error) {
+      setErrorMsg(error.message?.includes('random') ? 'Không thể khởi tạo mã giao dịch an toàn (Web Crypto không khả dụng).'
+        : error.message || 'Không lưu được yêu cầu đặt hàng an toàn. Vui lòng kiểm tra trình duyệt.');
       return;
     }
-
-    isSubmittingRef.current = true;
-    setLoading(true);
-    setErrorMsg('');
-
-    try {
-      const res = await orderApi.createOrder(payload, idempotencyKey);
-      const createdOrder = res?.data ?? res;
-
-      if (!createdOrder?.id) throw new Error('Máy chủ chưa trả về mã đơn hàng hợp lệ.');
-
-      // STALE RESPONSE GUARD:
-      // Compare submitted fingerprint with current live fingerprint of the UI.
-      // If user altered form fields or cart items while request was in-flight, response is stale.
-      if (isResponseStale(submittedFingerprint, currentFingerprintRef.current)) {
-        return;
-      }
-
-      // Success (both 201 Created and 200 Replay) for CURRENT checkout intent:
-      // Clear persisted idempotency intent so subsequent orders don't reuse this key
-      clearStoredCheckoutIntent();
-
-      sessionStorage.removeItem('hg_voucher_code');
-      checkoutItems.forEach((item) => removeFromCart(item.cartItemId));
-
-      // Route based on payment method
-      if (paymentMethod === 'COD') {
-        navigate(`/order-success/${createdOrder.id}`, { state: { order: createdOrder } });
-      } else {
-        // PAYOS_VIETQR or electronic payment
-        let paymentAttempt = null;
-        let paymentError = null;
-        try {
-          const paymentKey = getOrCreatePaymentLinkKey(createdOrder.id);
-          const payRes = await orderApi.createPaymentLink(createdOrder.id, paymentKey);
-          paymentAttempt = payRes?.data ?? payRes;
-        } catch (payErr) {
-          // Note: DO NOT re-create order! Order has already been created and cart cleared.
-          paymentError =
-            payErr.response?.data?.message ||
-            'Chưa thể chuẩn bị liên kết thanh toán. Vui lòng kiểm tra lại.';
-        }
-
-        navigate(`/payment/qr/${createdOrder.id}`, {
-          state: {
-            order: createdOrder,
-            payment: paymentAttempt,
-            paymentError: paymentError,
-          },
-        });
-      }
-    } catch (err) {
-      // Stale response guard for errors: do not overwrite UI state with stale failure
-      if (isResponseStale(submittedFingerprint, currentFingerprintRef.current)) {
-        return;
-      }
-
-      const isConflict = err.response?.status === 409 || err.response?.data?.code === 'IDEMPOTENCY_CONFLICT';
-      const apiMessage = err.response?.data?.message;
-
-      if (isConflict) {
-        // Invalidate stored key for this conflict so subsequent submit creates a fresh UUID
-        clearStoredCheckoutIntent();
-        setErrorMsg(
-          typeof apiMessage === 'string'
-            ? apiMessage
-            : 'Yêu cầu đặt hàng bị xung đột hoặc thông tin đã thay đổi. Vui lòng kiểm tra lại thông tin và thử lại.'
-        );
-      } else {
-        // Network timeout / connection error / 5xx / 400 validation:
-        // DO NOT clear cart!
-        // DO NOT clear stored idempotency intent!
-        // Preserves key so retry with same payload reuses the same Idempotency-Key.
-        setErrorMsg(
-          typeof apiMessage === 'string'
-            ? apiMessage
-            : 'Không thể tạo đơn hàng. Giỏ hàng được giữ nguyên, vui lòng thử lại.'
-        );
-      }
-    } finally {
-      isSubmittingRef.current = false;
-      setLoading(false);
-    }
+    await submitCheckoutSnapshot(snapshot);
   };
 
   // FIX-057: Render RESUME_UNPAID_ORDER Mode
@@ -1237,11 +1325,11 @@ const CheckoutPage = () => {
                     <div className="pt-2 flex flex-col gap-1.5 text-[11px] text-slate-500">
                       <div className="flex items-center gap-2">
                         <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Cam kết 100% chính hãng BWF - Đền gấp 10 nếu giả</span>
+                        <span>Kiểm tra mẫu và biến thể trước khi đặt hàng</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Truck className="w-4 h-4 text-blue-600 shrink-0" />
-                        <span>Giao hàng hỏa tốc 2H tại Hà Nội & TP.HCM</span>
+                        <span>Phí giao hàng 30.000đ; miễn phí từ 1.000.000đ tiền hàng</span>
                       </div>
                     </div>
 
@@ -1308,11 +1396,18 @@ const CheckoutPage = () => {
           </div>
         )}
 
+        {pendingSubmission && !loading && <div role="status" className="mb-6 p-4 rounded-xl border border-amber-200 bg-amber-50 text-xs text-amber-900 space-y-2">
+          <p>{pendingSubmission.invalid ? 'Dữ liệu yêu cầu trước không hợp lệ. Chưa tạo đơn mới để tránh trùng đơn.'
+            : 'Đang giữ yêu cầu đặt hàng trước. Thông tin được khóa; bấm kiểm tra lại để nhận kết quả từ máy chủ bằng cùng mã yêu cầu.'}</p>
+          <Link to="/my-orders" className="font-bold underline">Kiểm tra lịch sử đơn hàng</Link>
+        </div>}
+
         {/* 2-Column Checkout Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* LEFT COLUMN: Customer & Delivery + Payment (~60% / 7 cols) */}
           <div className="lg:col-span-7 flex flex-col gap-6">
+            <fieldset disabled={submissionLocked} aria-busy={loading} className="min-w-0 flex flex-col gap-6">
             
             {/* SECTION 1: Customer & Delivery Info */}
             <section className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 sm:p-8 flex flex-col gap-6">
@@ -1367,19 +1462,19 @@ const CheckoutPage = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Email xác nhận hóa đơn <span className="text-red-500">*</span>
+                      Email liên hệ của tài khoản
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                       <input
                         type="email"
-                        required
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        readOnly
                         placeholder="nguyenvana@gmail.com"
                         className="w-full bg-slate-50 pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-all"
                       />
                     </div>
+                    <p className="mt-1 text-xs text-slate-500">Chưa hỗ trợ gửi email xác nhận tự động.</p>
                   </div>
                 </div>
 
@@ -1456,7 +1551,7 @@ const CheckoutPage = () => {
                 
                 {/* OPTION 1: Dynamic PayOS QR */}
                 <div
-                  onClick={() => setPaymentMethod('PAYOS_VIETQR')}
+                  onClick={() => !submissionLocked && setPaymentMethod('PAYOS_VIETQR')}
                   className={`p-4 rounded-xl border-2 cursor-pointer flex flex-col gap-3 ${paymentMethod === 'PAYOS_VIETQR' ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -1524,7 +1619,7 @@ const CheckoutPage = () => {
 
                 {/* OPTION 3: Cash On Delivery (COD) */}
                 <label
-                  onClick={() => setPaymentMethod('COD')}
+                  onClick={() => !submissionLocked && setPaymentMethod('COD')}
                   className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col gap-2 ${
                     paymentMethod === 'COD'
                       ? 'border-red-600 bg-red-50/20'
@@ -1560,13 +1655,14 @@ const CheckoutPage = () => {
 
               </div>
             </section>
+            </fieldset>
 
             {/* Main Primary CTA Button */}
             <div className="flex flex-col gap-3">
               <button
                 type="button"
                 onClick={handleSubmitOrder}
-                disabled={loading || isValidatingVoucher}
+                disabled={loading || pendingSubmission?.invalid || (!pendingSubmission && isValidatingVoucher)}
                 className="w-full py-4 px-6 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-extrabold text-base uppercase tracking-wider rounded-xl shadow-xl shadow-red-500/30 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
               >
                 {loading ? (
@@ -1577,7 +1673,7 @@ const CheckoutPage = () => {
                 ) : (
                   <>
                     <Lock className="w-5 h-5" />
-                    <span>ĐẶT HÀNG NGAY ({formatPrice(finalTotal)})</span>
+                    <span>{pendingSubmission ? 'KIỂM TRA LẠI YÊU CẦU ĐẶT HÀNG' : `ĐẶT HÀNG NGAY (${formatPrice(finalTotal)})`}</span>
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
@@ -1589,7 +1685,7 @@ const CheckoutPage = () => {
                 </p>
                 <div className="flex items-center gap-1 shrink-0 text-slate-600 font-bold">
                   <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  <span>Bảo mật PCI-DSS</span>
+                  <span>Xác minh thanh toán từ máy chủ</span>
                 </div>
               </div>
             </div>
@@ -1605,7 +1701,7 @@ const CheckoutPage = () => {
                 <div className="flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-red-600" />
                   <h3 className="text-base font-extrabold text-slate-900">
-                    Đơn hàng của bạn ({checkoutItems.length} sản phẩm)
+                    Đơn hàng của bạn ({displayItems.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm)
                   </h3>
                 </div>
                 <Link
@@ -1619,7 +1715,7 @@ const CheckoutPage = () => {
 
               {/* Items List */}
               <div className="divide-y divide-slate-100 max-h-[380px] overflow-y-auto pr-1">
-                {checkoutItems.map((item) => {
+                {displayItems.map((item) => {
                   const itemId = item.cartItemId || item.product.id;
                   const itemPrice = item.product.price || 0;
                   return (
@@ -1662,12 +1758,13 @@ const CheckoutPage = () => {
 
               {/* Voucher Input & Applied Box */}
               <div className="pt-2 flex flex-col gap-2">
-                <form onSubmit={handleApplyVoucher} className="flex gap-2">
+                <form onSubmit={event => { if (submissionLocked) event.preventDefault(); else handleApplyVoucher(event); }} className="flex gap-2">
                   <div className="relative flex-1">
                     <Tag className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     <input
                       type="text"
                       value={voucherCode}
+                      disabled={submissionLocked}
                       onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
                       placeholder="Mã giảm giá"
                       className="w-full bg-slate-50 pl-9 pr-3 py-2 rounded-xl text-xs font-bold uppercase text-slate-800 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -1675,7 +1772,7 @@ const CheckoutPage = () => {
                   </div>
                   <button
                     type="submit"
-                    disabled={isValidatingVoucher}
+                    disabled={submissionLocked || isValidatingVoucher}
                     className="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-slate-800 transition-colors shrink-0 disabled:opacity-50"
                   >
                     Áp dụng
@@ -1688,7 +1785,7 @@ const CheckoutPage = () => {
                       <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
                       <span>{voucherSuccess}</span>
                     </div>
-                    <span className="text-red-600 font-extrabold">-{formatPrice(effectiveDiscount)}</span>
+                    <span className="text-red-600 font-extrabold">-{formatPrice(shippingDiscountAmount || effectiveDiscount)}</span>
                   </div>
                 )}
                 {voucherError && (
@@ -1700,7 +1797,7 @@ const CheckoutPage = () => {
                 <label htmlFor="redeem-points" className="font-bold text-slate-900">Dùng điểm tích lũy</label>
                 <p>Khả dụng: {profile?.loyaltyPoints ?? 0} điểm. 1 điểm = 100 đồng; tối đa 10% tiền hàng sau voucher.</p>
                 <input id="redeem-points" type="number" min="0" max={maximumPoints} step="1" value={redeemPoints}
-                  disabled={maximumPoints === 0 || isValidatingVoucher}
+                  disabled={submissionLocked || maximumPoints === 0 || isValidatingVoucher}
                   onChange={event => setRequestedPoints(Math.min(maximumPoints, Math.max(0, Math.trunc(Number(event.target.value) || 0))))}
                   className="w-full rounded-lg border p-2" />
               </div>
@@ -1708,24 +1805,30 @@ const CheckoutPage = () => {
               {/* Cost Breakdown */}
               <div className="bg-slate-50 p-4 rounded-xl flex flex-col gap-2 text-xs text-slate-600 border border-slate-200/60">
                 <div className="flex justify-between">
-                  <span>Tạm tính ({checkoutItems.length} sản phẩm)</span>
-                  <span className="font-bold text-slate-900">{formatPrice(subtotal)}</span>
+                  <span>Tạm tính ({displayItems.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm)</span>
+                  <span className="font-bold text-slate-900">{formatPrice(orderSummary.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-red-600 font-semibold">
-                  <span>Giảm giá Voucher HG</span>
-                  <span>-{formatPrice(effectiveDiscount)}</span>
+                  <span>Giảm tiền hàng Voucher HG</span>
+                  <span>-{formatPrice(orderSummary.effectiveDiscount)}</span>
                 </div>
+                {orderSummary.shippingDiscountAmount > 0 && <div className="flex justify-between text-red-600 font-semibold">
+                  <span>Giảm phí vận chuyển Voucher HG</span><span>-{formatPrice(orderSummary.shippingDiscountAmount)}</span>
+                </div>}
+                {orderSummary.pointsDiscount > 0 && <div className="flex justify-between text-red-600 font-semibold">
+                  <span>Đổi điểm ({orderSummary.redeemPoints} điểm)</span><span>-{formatPrice(orderSummary.pointsDiscount)}</span>
+                </div>}
                 <div className="flex justify-between">
-                  <span>Phí vận chuyển</span>
+                  <span>{orderSummary.shippingDiscountAmount > 0 ? 'Phí vận chuyển trước ưu đãi' : 'Phí vận chuyển'}</span>
                   <span className="text-emerald-600 font-bold">
-                    {shippingFee === 0 ? '0₫ (Miễn phí HG VIP)' : formatPrice(shippingFee)}
+                    {displayedShippingFee === 0 ? '0₫ (Miễn phí)' : formatPrice(displayedShippingFee)}
                   </span>
                 </div>
                 <div className="h-px bg-slate-200 my-1"></div>
                 <div className="flex justify-between items-baseline pt-1">
                   <span className="text-sm font-black text-slate-900">Tổng thanh toán</span>
                   <span className="text-xl font-black text-red-600 tracking-tight">
-                    {formatPrice(finalTotal)}
+                    {formatPrice(orderSummary.finalTotal)}
                   </span>
                 </div>
               </div>
@@ -1734,11 +1837,11 @@ const CheckoutPage = () => {
               <div className="pt-2 flex flex-col gap-1.5 text-[11px] text-slate-500">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Cam kết 100% chính hãng BWF - Đền gấp 10 nếu giả</span>
+                  <span>Kiểm tra mẫu và biến thể trước khi đặt hàng</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Truck className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span>Giao hàng hỏa tốc 2H tại Hà Nội & TP.HCM</span>
+                  <span>Phí giao hàng 30.000đ; miễn phí từ 1.000.000đ tiền hàng</span>
                 </div>
               </div>
 

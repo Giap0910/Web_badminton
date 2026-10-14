@@ -44,4 +44,12 @@ public class AuthController {
         response.put("role", userDetails.getAuthorities().iterator().next().getAuthority());
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/logout")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String,String>> logout(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails==null) throw new org.springframework.security.authentication.BadCredentialsException("Chưa đăng nhập");
+        authService.logout(userDetails.getId());
+        return ResponseEntity.ok(Map.of("message","Đã đăng xuất và thu hồi mọi phiên của tài khoản"));
+    }
 }

@@ -12,7 +12,7 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && !config.headers.get?.('Authorization') && !config.headers.Authorization && !config.headers.authorization) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -24,11 +24,13 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    const authorization = error.config?.headers?.get?.('Authorization') || error.config?.headers?.Authorization || error.config?.headers?.authorization;
     if (error.response?.status === 401 &&
-        error.config?.headers?.Authorization === `Bearer ${localStorage.getItem('token')}`) {
+        localStorage.getItem('token') && authorization === `Bearer ${localStorage.getItem('token')}`) {
+      const expiredToken = localStorage.getItem('token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.dispatchEvent(new Event('auth:expired'));
+      window.dispatchEvent(new CustomEvent('auth:expired', { detail: { token: expiredToken } }));
     }
     return Promise.reject(error);
   }

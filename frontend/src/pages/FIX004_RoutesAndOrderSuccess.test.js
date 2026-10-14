@@ -891,6 +891,49 @@ describe('FIX-004 — Frontend Implementation & Verification', () => {
     assert.ok(!finalMarkup.includes('Đặt hàng thành công!'), 'Must NOT render paid success');
   });
 
+  test('COD đã thu tiền dùng xác nhận tiền mặt khi PayOS cũ đã kết thúc hoặc không có', async () => {
+    for (const status of [null, 'CANCELLED', 'EXPIRED', 'FAILED']) {
+      const harness = await createOrderSuccessTestHarness({
+        orderId: '509', useRealEffects: true,
+        orderData: { id: 509, status: 'COMPLETED', paymentMethod: 'COD', cashCollected: true, totalAmount: 450000 },
+        paymentData: status ? { orderId: 509, status } : null,
+      });
+      const { finalMarkup } = await harness.renderWithLifecycle();
+      assert.ok(finalMarkup.includes('Đặt hàng thành công!'), `COD đã thu với PayOS ${status} phải hiện thành công`);
+      assert.ok(finalMarkup.includes('Đã thu tiền mặt/COD'));
+      assert.ok(!finalMarkup.includes('Chờ xử lý COD'));
+      assert.ok(!finalMarkup.includes('chưa thanh toán'));
+    }
+  });
+
+  test('COD không suy đã trả từ COMPLETED; giao dịch PayOS PAID/NEEDS_REVIEW còn cần đối soát', async () => {
+    for (const status of [null, 'CANCELLED', 'EXPIRED', 'FAILED', 'PAID', 'NEEDS_REVIEW', 'PENDING', 'CREATING']) {
+      const unresolved = ['PAID', 'NEEDS_REVIEW', 'PENDING', 'CREATING'].includes(status);
+      const harness = await createOrderSuccessTestHarness({
+        orderId: '509', useRealEffects: true,
+        orderData: { id: 509, status: 'COMPLETED', paymentMethod: 'COD', cashCollected: unresolved, totalAmount: 450000 },
+        paymentData: status ? { orderId: 509, status } : null,
+      });
+      const { finalMarkup } = await harness.renderWithLifecycle();
+      assert.ok(!finalMarkup.includes('Đặt hàng thành công!'), `COD/PayOS ${status} không được xác nhận nhầm`);
+      if (['PAID', 'NEEDS_REVIEW'].includes(status)) assert.ok(finalMarkup.includes('Cần đối soát'));
+    }
+  });
+
+  test('COD đã thu vẫn chặn thành công khi xác minh giao dịch lỗi hoặc đơn đã hủy', async () => {
+    for (const status of [401, 403, 404, 503, null]) {
+      const error = status ? Object.assign(new Error('Payment lookup failed'), { response: { status } }) : null;
+      const harness = await createOrderSuccessTestHarness({
+        orderId: '509', useRealEffects: true,
+        orderData: { id: 509, status: status ? 'COMPLETED' : 'CANCELLED', paymentMethod: 'COD', cashCollected: true },
+        paymentData: null, getOrderPaymentError: error,
+      });
+      const { finalMarkup } = await harness.renderWithLifecycle();
+      assert.ok(!finalMarkup.includes('Đặt hàng thành công!'));
+      assert.ok(finalMarkup.includes(status ? 'Không thể xác minh trạng thái thanh toán' : 'Đơn hàng đã bị hủy'));
+    }
+  });
+
   test('51. Round 4 DEFECT REPRODUCTION: Order=CANCELLED / Payment=PENDING renders payment PENDING and separate order CANCELLED notice', async () => {
     const harness = await createOrderSuccessTestHarness({
       orderId: '510',

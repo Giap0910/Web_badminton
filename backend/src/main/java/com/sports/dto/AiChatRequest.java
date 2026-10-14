@@ -11,7 +11,7 @@ public class AiChatRequest {
     @Size(max = 2000, message = "Câu hỏi tối đa 2.000 ký tự")
     private String message;
     @Valid @NotNull @Size(max = 6)
-    private List<HistoryMessage> history = new ArrayList<>();
+    private List<@NotNull @Valid HistoryMessage> history = new ArrayList<>();
     public AiChatRequest(String message) { this.message = message; }
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor

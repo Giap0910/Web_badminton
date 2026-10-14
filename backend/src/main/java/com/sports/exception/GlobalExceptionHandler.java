@@ -15,13 +15,29 @@ import java.util.Map;
 public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, Object>> handleUploadSize(Exception ex, jakarta.servlet.http.HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String message = path.endsWith("/profile/avatar") ? "Ảnh đại diện tối đa 5MB"
+                : path.matches("/api/returns/[0-9]+/evidence") ? "Ảnh bằng chứng tối đa 5MB"
+                : "File vượt giới hạn tải lên; mẫu sản phẩm tối đa 1 MB";
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(Map.of("status", 413, "message", request.getRequestURI().endsWith("/profile/avatar")
-                          ? "Ảnh đại diện tối đa 5MB" : "File vượt giới hạn tải lên; mẫu sản phẩm tối đa 1 MB"));
+                .body(Map.of("status", 413, "message", message));
     }
     @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
     public ResponseEntity<Map<String, Object>> handleMissingParameter(Exception ex) {
         return handleBadRequest(new BadRequestException("Thiếu tham số bắt buộc của yêu cầu"));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleUnsupportedMediaType(Exception ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(Map.of("status", 415, "message", "Định dạng yêu cầu không được hỗ trợ; tải ảnh bằng multipart/form-data"));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleUnsupportedMethod(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        var response = ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED);
+        if (ex.getSupportedMethods() != null) response.header("Allow", String.join(", ", ex.getSupportedMethods()));
+        return response.body(Map.of("status", 405, "message", "HTTP method không phù hợp với API này"));
     }
     @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, Object>> handleQueryType(Exception ex) {
@@ -29,7 +45,7 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleStatus(org.springframework.web.server.ResponseStatusException ex) {
-        return ResponseEntity.status(ex.getStatusCode()).body(Map.of("status", ex.getStatusCode().value(),
+        return ResponseEntity.status(ex.getStatusCode()).headers(ex.getHeaders()).body(Map.of("status", ex.getStatusCode().value(),
                 "message", ex.getReason() == null ? "Không thể thực hiện thao tác" : ex.getReason()));
     }
     @ExceptionHandler({org.springframework.web.servlet.NoHandlerFoundException.class,

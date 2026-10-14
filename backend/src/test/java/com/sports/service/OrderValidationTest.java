@@ -2,6 +2,8 @@ package com.sports.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sports.controller.OrderController;
+import com.sports.controller.AdminVoucherController;
+import com.sports.controller.VoucherController;
 import com.sports.dto.*;
 import com.sports.entity.*;
 import com.sports.exception.BadRequestException;
@@ -30,7 +32,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 class OrderValidationTest {
     private OrderRepository orders;
@@ -209,7 +213,7 @@ class OrderValidationTest {
     }
 
     @Test
-    void invalidPercentageDoesNotRoundOrConsumeVoucher() {
+    void percentageRoundingToZeroDoesNotConsumeVoucher() {
         product.setPrice(BigDecimal.ONE);
         Voucher voucher = Voucher.builder().code("SALE").discountType("PERCENT")
                 .discountValue(BigDecimal.ONE).build();
@@ -250,6 +254,207 @@ class OrderValidationTest {
         assertEquals(0, new BigDecimal("120000").compareTo(response.getTotalAmount()));
         assertEquals(0, new BigDecimal("30000").compareTo(response.getShippingFee()));
         assertEquals(1, voucher.getUsedCount());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"10000, 20000, 520000", "30000, 0, 500000", "90000, 0, 500000"})
+    void shippingVoucherOnlyReducesActualServerShipping(String value, String fee, String total) {
+        product.setPrice(new BigDecimal("500000"));
+        Voucher voucher = testVoucher("SHIPPING", value);
+        when(vouchers.findByCodeForUpdate("SALE")).thenReturn(Optional.of(voucher));
+        var request = request(); request.setVoucherCode("SALE"); request.setShippingFee(BigDecimal.ZERO);
+
+        var response = service.createOrder(1L, request, UUID.randomUUID().toString()).order();
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(response.getDiscountAmount()));
+        assertEquals(0, new BigDecimal(fee).compareTo(response.getShippingFee()));
+        assertEquals(0, new BigDecimal(total).compareTo(response.getTotalAmount()));
+        assertEquals(1, voucher.getUsedCount());
+        assertEquals(199, product.getStock());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1000000", "2000000"})
+    void alreadyFreeShippingCannotConsumeShippingVoucher(String subtotal) {
+        product.setPrice(new BigDecimal(subtotal));
+        Voucher voucher = testVoucher("SHIPPING", "30000");
+        when(vouchers.findByCodeForUpdate("SALE")).thenReturn(Optional.of(voucher));
+        var request = request(); request.setVoucherCode("SALE");
+
+        assertThrows(BadRequestException.class, () -> service.createOrder(1L, request, UUID.randomUUID().toString()));
+
+        assertUnchanged(); assertEquals(0, voucher.getUsedCount());
+    }
+
+    @Test
+    void oddSubtotalPercentageRoundsDownToWholeVnd() {
+        product.setPrice(new BigDecimal("150001"));
+        Voucher voucher = testVoucher("PERCENT", "10");
+        when(vouchers.findByCodeForUpdate("SALE")).thenReturn(Optional.of(voucher));
+        var request = request(); request.setVoucherCode("SALE");
+
+        var response = service.createOrder(1L, request, UUID.randomUUID().toString()).order();
+
+        assertEquals(0, new BigDecimal("15000").compareTo(response.getDiscountAmount()));
+        assertEquals(0, new BigDecimal("165001").compareTo(response.getTotalAmount()));
+        assertEquals(1, voucher.getUsedCount());
+    }
+
+    @Test
+    void percentageCapAndLegacySubtotalContractRemainExact() {
+        Voucher voucher = testVoucher("PERCENT", "12.25");
+        voucher.setMaxDiscountAmount(new BigDecimal("10000"));
+        when(vouchers.findByCodeIgnoreCase("SALE")).thenReturn(Optional.of(voucher));
+
+        var response = voucherService().validateVoucher(new VoucherValidateRequest("SALE", new BigDecimal("150001")));
+
+        assertEquals(0, new BigDecimal("10000").compareTo(response.getDiscountAmount()));
+        assertEquals(0, new BigDecimal("140001").compareTo(response.getFinalTotal()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(response.getShippingDiscountAmount()));
+        assertEquals(0, new BigDecimal("30000").compareTo(response.getFinalShippingFee()));
+        assertEquals(0, voucher.getUsedCount()); verify(vouchers, never()).save(any());
+    }
+
+    @Test
+    void validateHttpReportsShippingSeparatelyWithoutReservingUsage() throws Exception {
+        Voucher voucher = testVoucher("SHIPPING", "30000");
+        when(vouchers.findByCodeIgnoreCase("SALE")).thenReturn(Optional.of(voucher));
+
+        voucherMvc().perform(post("/api/vouchers/validate").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"SALE\",\"orderTotal\":500000}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.discountAmount").value(0))
+                .andExpect(jsonPath("$.finalTotal").value(500000))
+                .andExpect(jsonPath("$.shippingDiscountAmount").value(30000))
+                .andExpect(jsonPath("$.finalShippingFee").value(0));
+
+        verify(vouchers, never()).save(any()); assertEquals(0, voucher.getUsedCount());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"-1", "0.5", "10000000000"})
+    void invalidVoucherTotalReturns400WithoutRepositoryLookup(String amount) throws Exception {
+        voucherMvc().perform(post("/api/vouchers/validate").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"SALE\",\"orderTotal\":" + amount + "}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(vouchers);
+    }
+
+    @Test
+    void wholeVndWithTrailingDecimalsRemainsCompatibleAtHttpBoundary() throws Exception {
+        when(vouchers.findByCodeIgnoreCase("SALE")).thenReturn(Optional.of(testVoucher("FIXED", "10000.00")));
+        when(vouchers.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        voucherMvc().perform(post("/api/vouchers/validate").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"SALE\",\"orderTotal\":500000.00}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.finalTotal").value(490000));
+        voucherMvc().perform(post("/api/admin/vouchers").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"NEW\",\"discountValue\":10000.00,\"minOrderValue\":200000.00,\"maxDiscountAmount\":10000.00}"))
+                .andExpect(status().isCreated());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"PERCENT, 0", "PERCENT, -1", "PERCENT, 100.01", "PERCENT, 1.001", "UNKNOWN, 1000", "SHIPPING, 0", "FIXED, 0.5"})
+    void invalidVoucherConfigurationIsRejectedBeforeSaving(String type, String value) {
+        VoucherDto dto = VoucherDto.builder().code("HGTEST").discountType(type).discountValue(new BigDecimal(value)).build();
+
+        assertThrows(BadRequestException.class, () -> voucherService().createVoucher(dto));
+
+        verify(vouchers, never()).save(any());
+    }
+
+    @Test
+    void createVoucherRejectsMissingValueAndDuplicateCode() {
+        VoucherDto dto = VoucherDto.builder().code("sale").discountValue(BigDecimal.TEN).build();
+        when(vouchers.findByCodeIgnoreCase("SALE")).thenReturn(Optional.of(testVoucher("FIXED", "10")));
+
+        assertThrows(BadRequestException.class, () -> voucherService().createVoucher(dto));
+        assertThrows(BadRequestException.class, () -> voucherService().createVoucher(VoucherDto.builder().code("NEW").build()));
+
+        verify(vouchers, never()).save(any());
+    }
+
+    @Test
+    void adminHttpRejectsInvalidConfigurationAndTamperedUsage() throws Exception {
+        voucherMvc().perform(post("/api/admin/vouchers").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"HGTEST\",\"discountValue\":-1}"))
+                .andExpect(status().isBadRequest());
+        Voucher voucher = editableVoucher();
+        when(vouchers.findByIdForUpdate(3L)).thenReturn(Optional.of(voucher));
+        when(vouchers.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        voucherMvc().perform(put("/api/admin/vouchers/3").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"isActive\":false,\"usedCount\":0}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.usedCount").value(4))
+                .andExpect(jsonPath("$.isActive").value(false));
+
+        assertEquals(4, voucher.getUsedCount()); verify(vouchers, never()).findById(any());
+    }
+
+    @Test
+    void partialTogglePreservesConfigurationAndExplicitNullClearsNullableFields() throws Exception {
+        Voucher voucher = editableVoucher();
+        when(vouchers.findByIdForUpdate(3L)).thenReturn(Optional.of(voucher));
+        when(vouchers.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        VoucherDto toggle = new VoucherDto(); toggle.setIsActive(false);
+
+        var result = voucherService().updateVoucher(3L, toggle);
+        assertEquals(4, result.getUsedCount()); assertEquals(10, result.getMaxUses());
+        assertNotNull(result.getExpiresAt()); assertNotNull(result.getMaxDiscountAmount()); assertFalse(result.getIsActive());
+        VoucherDto clear = new ObjectMapper().findAndRegisterModules().readValue(
+                "{\"maxUses\":null,\"maxDiscountAmount\":null,\"expiresAt\":null}", VoucherDto.class);
+        var cleared = voucherService().updateVoucher(3L, clear);
+
+        assertNull(cleared.getMaxUses()); assertNull(cleared.getMaxDiscountAmount()); assertNull(cleared.getExpiresAt());
+        assertFalse(cleared.getIsActive()); assertEquals(4, cleared.getUsedCount());
+        verify(vouchers, times(2)).findByIdForUpdate(3L); verify(vouchers, never()).findById(any());
+    }
+
+    @Test
+    void updateCannotRenameCodeOrReduceCapBelowUsageAndDoesNotMutateOnError() {
+        Voucher voucher = editableVoucher();
+        when(vouchers.findByIdForUpdate(3L)).thenReturn(Optional.of(voucher));
+        VoucherDto rename = new VoucherDto(); rename.setCode("DIFFERENT");
+        VoucherDto cap = new VoucherDto(); cap.setMaxUses(3); cap.setDescription("Không được lưu");
+
+        assertThrows(BadRequestException.class, () -> voucherService().updateVoucher(3L, rename));
+        assertThrows(BadRequestException.class, () -> voucherService().updateVoucher(3L, cap));
+
+        assertEquals("SALE", voucher.getCode()); assertEquals(10, voucher.getMaxUses());
+        assertEquals("Mô tả gốc", voucher.getDescription()); assertEquals(4, voucher.getUsedCount());
+        verify(vouchers, never()).save(any());
+    }
+
+    @Test
+    void exhaustedVoucherAndOverflowCannotIncrementUsage() {
+        Voucher voucher = testVoucher("FIXED", "10000"); voucher.setMaxUses(4); voucher.setUsedCount(4);
+        when(vouchers.findByCodeForUpdate("SALE")).thenReturn(Optional.of(voucher));
+
+        assertThrows(BadRequestException.class, () -> voucherService().reserveVoucher(new VoucherValidateRequest("SALE", new BigDecimal("500000"))));
+        voucher.setMaxUses(null); voucher.setUsedCount(Integer.MAX_VALUE);
+        assertThrows(BadRequestException.class, () -> voucherService().reserveVoucher(new VoucherValidateRequest("SALE", new BigDecimal("500000"))));
+
+        assertEquals(Integer.MAX_VALUE, voucher.getUsedCount()); verify(vouchers, never()).save(any());
+    }
+
+    private VoucherService voucherService() {
+        return new VoucherService(vouchers, new MockEnvironment());
+    }
+
+    private MockMvc voucherMvc() {
+        VoucherService handler = voucherService();
+        return MockMvcBuilders.standaloneSetup(new AdminVoucherController(handler), new VoucherController(handler))
+                .setControllerAdvice(new GlobalExceptionHandler()).build();
+    }
+
+    private Voucher testVoucher(String type, String value) {
+        return Voucher.builder().code("SALE").discountType(type).discountValue(new BigDecimal(value)).build();
+    }
+
+    private Voucher editableVoucher() {
+        return Voucher.builder().id(3L).code("SALE").description("Mô tả gốc").discountType("FIXED")
+                .discountValue(new BigDecimal("10000")).maxDiscountAmount(new BigDecimal("50000"))
+                .maxUses(10).usedCount(4).expiresAt(java.time.LocalDateTime.now().plusDays(30)).isActive(true).build();
     }
 
     @Test

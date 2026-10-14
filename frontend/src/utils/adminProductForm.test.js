@@ -71,3 +71,35 @@ test('Trạng thái hiển thị không suy từ tồn kho và hãng ngoài ph�
   assert.deepEqual(formTools.filterAdminProducts(products, '', 'ALL', 'ALL', 'ALL', 'HIDDEN').map(p => p.id), [2]);
   assert.equal(formTools.filterAdminProducts(products, ' SKU-001 ', '2', 'Kumpoo', 'IN_STOCK', 'HIDDEN').length, 1);
 });
+
+test('Sản phẩm có biến thể: PUT giữ thông số chung, không gửi lại tổ hợp hoặc tổng kho', () => {
+  for (const categoryId of [1, 2, 3, 4, 5]) {
+    const form = formTools.productToAdminForm({ ...product(categoryId), variants: [{ id: 9 }], colorName: 'Xanh',
+      availableSizes: '["M"]', weightGrip: '4U-G5', quantityPerPack: '10m' });
+    Object.assign(form, { stock: '999', colorName: 'Đỏ', availableSizes: 'L', weightGrip: '3U-G5', quantityPerPack: '200m' });
+    const payload = formTools.buildAdminProductPayload(form, categories, true);
+    for (const key of ['variants', 'stock', 'expectedStock', ...formTools.VARIANT_CHOICE_FIELDS]) assert.equal(key in payload, false, key);
+    assert.equal(payload.name, 'Sản phẩm thực tế'); assert.equal(payload.price, 100000);
+  }
+});
+
+test('Thêm tổ hợp giày/vợt/quần áo đúng lựa chọn, không tự sinh tổ hợp khác hoặc SKU', () => {
+  const shoe = formTools.buildAdminVariantPayload({ color: ' Xanh ', size: '39.5', stock: '20' }, 2);
+  assert.deepEqual(shoe, { color: 'Xanh', size: '39.5', weightGrip: null, packaging: null, stock: 20, active: true });
+  assert.equal(formTools.buildAdminVariantPayload({ weightGrip: '4U-G5', color: 'Silver/Black', stock: '0' }, 1).stock, 0);
+  assert.equal(formTools.buildAdminVariantPayload({ size: 'XXL', stock: '20' }, 3).size, 'XXL');
+  assert.equal(formTools.buildAdminVariantPayload({ packaging: '10m', stock: '20' }, 5).packaging, '10m');
+  for (const size of ['34', '42.5', '44', 'M', '']) assert.throws(() => formTools.buildAdminVariantPayload({ size, stock: '20' }, 2));
+  assert.throws(() => formTools.buildAdminVariantPayload({ stock: '20' }, 1), /trọng lượng/);
+  assert.throws(() => formTools.buildAdminVariantPayload({ stock: '20' }, 3), /kích cỡ/);
+  for (const stock of ['', '-1', '1.5', '1000001']) assert.throws(() => formTools.buildAdminVariantPayload({ size: '40', stock }, 2));
+});
+
+test('Sửa kho biến thể gửi expectedStock, chặn legacy và tắt tổ hợp đang giữ chỗ', () => {
+  const variant = { id: 5, stock: 20, reservedStock: 0, active: true, legacy: false };
+  assert.deepEqual(formTools.buildAdminVariantStockPayload(variant, '0', false), { stock: 0, expectedStock: 20, active: false });
+  assert.throws(() => formTools.buildAdminVariantStockPayload({ ...variant, legacy: true }, '20', true), /cũ cần đối soát/);
+  assert.throws(() => formTools.buildAdminVariantStockPayload({ ...variant, reservedStock: 1 }, '20', false), /đang giữ chỗ/);
+  assert.deepEqual(formTools.buildAdminVariantStockPayload({ ...variant, reservedStock: 1 }, '19', true), { stock: 19, expectedStock: 20, active: true });
+  assert.throws(() => formTools.buildAdminVariantStockPayload(variant, '', true));
+});

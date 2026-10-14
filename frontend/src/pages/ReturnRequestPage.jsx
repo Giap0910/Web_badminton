@@ -1,503 +1,275 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import UserLayout from '../components/UserLayout';
-import { returnApi } from '../api/returnApi';
-import { orderApi } from '../api/orderApi';
-import {
-  RotateCcw,
-  Plus,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Loader2,
-  ShieldCheck,
-  Image,
-  FileText,
-  Calendar,
-  Check,
-  X,
-  PhoneCall,
-  Search,
-  UploadCloud,
-  ChevronRight,
-  ExternalLink,
-  Award
-} from 'lucide-react';
+import ProductImage from '../components/ProductImage';
+import OrderItemOptions from '../components/OrderItemOptions';
+import { isEligibleReturnLine, returnApi } from '../api/returnApi';
+import { formatDate } from '../utils/formatters';
+import { formatOrderItemOptionsText } from '../utils/orderItemOptions';
+import { Plus, RotateCcw, Loader2, X, ShieldCheck } from 'lucide-react';
 
+export const WARRANTY_STATUSES = { PENDING: 'Chờ xét duyệt', APPROVED: 'Đã duyệt đổi sản phẩm',
+  REJECTED: 'Đã từ chối', COMPLETED: 'Đã đổi sản phẩm' };
 
-const ReturnRequestPage = () => {
-  const [dataError, setDataError] = useState('');
+export function readWarrantyList(response) {
+  const list = response?.data ?? response;
+  if (!Array.isArray(list)) throw new Error('Danh sách bảo hành không hợp lệ.');
+  return list;
+}
+
+export function normalizeWarrantyRequest(item) {
+  return { ...item, productName: item.productName || 'Xem sản phẩm trong đơn hàng',
+    productImage: item.productImageUrl || null, statusLabel: WARRANTY_STATUSES[item.status] || 'Chưa rõ trạng thái',
+    size: item.size || item.selectedSize || null, color: item.color || item.selectedColor || null,
+    weightGrip: item.weightGrip || item.selectedWeight || null,
+    evidenceAvailable: item.evidenceAvailable === true };
+}
+
+export function buildWarrantyRequestPayload(form, eligibleItems) {
+  const item = eligibleItems.find(line => isEligibleReturnLine(line) && String(line.orderItemId) === String(form.orderItemId));
+  if (!item) throw new Error('Vui lòng chọn mặt hàng đủ điều kiện bảo hành từ máy chủ.');
+  const quantity = Number(form.quantity);
+  if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > Math.min(item.remainingQuantity, 100))
+    throw new Error('Số lượng yêu cầu tối đa 100 và không được vượt số lượng còn đủ điều kiện bảo hành.');
+  const reason = String(form.reason || '').trim();
+  const serialNumber = String(form.serialNumber || '').trim();
+  if (!reason || reason.length > 2000) throw new Error('Mô tả tình trạng phải từ 1 đến 2.000 ký tự.');
+  if (serialNumber.length > 100) throw new Error('Serial không được vượt 100 ký tự.');
+  return { orderId: item.orderId, orderItemId: item.orderItemId, quantity, reason, serialNumber: serialNumber || null };
+}
+
+export function validateWarrantyEvidence(file) {
+  if (!file || !['image/jpeg', 'image/png'].includes(file.type) || !Number.isInteger(file.size) || file.size < 1 || file.size > 5 * 1024 * 1024)
+    throw new Error('Ảnh minh chứng phải là JPG hoặc PNG, dung lượng tối đa 5MB.');
+  return file;
+}
+
+export async function submitWarrantyRequest(payload, file, existingRequest, onCreated) {
+  if (file) validateWarrantyEvidence(file);
+  let request = existingRequest;
+  if (!request) {
+    request = (await returnApi.createReturnRequest(payload));
+    request = request?.data ?? request;
+    if (!Number.isSafeInteger(request?.id) || request.id < 1) throw new Error('Chưa nhận được mã phiếu bảo hành.');
+    onCreated(request);
+  }
+  if (file) await returnApi.uploadEvidence(request.id, file);
+  return request;
+}
+
+export function WarrantyFormFields({ form, eligibleItems, disabled, onChange }) {
+  const selected = eligibleItems.find(item => String(item.orderItemId) === String(form.orderItemId));
+  return <fieldset disabled={disabled} className="space-y-3 disabled:opacity-70">
+    <label className="block text-xs font-bold">Sản phẩm đủ điều kiện bảo hành<select required aria-label="Sản phẩm bảo hành" value={form.orderItemId}
+      onChange={event => onChange('orderItemId', event.target.value)} className="mt-1 block w-full rounded-xl border p-3 bg-slate-50">
+      <option value="">Chọn mặt hàng đã giao thành công</option>{eligibleItems.filter(isEligibleReturnLine).map(item => <option key={item.orderItemId} value={item.orderItemId}>
+        {`Đơn #${item.orderId} · ${item.productName} · ${formatOrderItemOptionsText(item)} · Còn ${item.remainingQuantity}`}</option>)}
+    </select></label>
+    {selected && <p className="text-xs text-slate-600">Hạn bảo hành: {formatDate(selected.warrantyDeadline)}. Còn {selected.remainingQuantity} sản phẩm có thể yêu cầu.</p>}
+    <label className="block text-xs font-bold">Số lượng<input required aria-label="Số lượng bảo hành" type="number" min="1" max={Math.min(selected?.remainingQuantity || 1, 100)} step="1"
+      value={form.quantity} onChange={event => onChange('quantity', event.target.value)} className="mt-1 block w-full rounded-xl border p-3 bg-slate-50" /></label>
+    <label className="block text-xs font-bold">Serial / mã tem phân phối (nếu có)<input aria-label="Serial bảo hành" maxLength={100} value={form.serialNumber}
+      onChange={event => onChange('serialNumber', event.target.value)} className="mt-1 block w-full rounded-xl border p-3 bg-slate-50" /></label>
+    <label className="block text-xs font-bold">Mô tả chi tiết tình trạng<textarea required aria-label="Lý do bảo hành" maxLength={2000} rows={3} value={form.reason}
+      onChange={event => onChange('reason', event.target.value)} className="mt-1 block w-full rounded-xl border p-3 bg-slate-50" /></label>
+  </fieldset>;
+}
+
+function EvidenceControls({ request, onSaved }) {
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [preview, setPreview] = useState('');
+  const lock = useRef(false);
+  const mounted = useRef(true);
+  const previewRef = useRef('');
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; if (previewRef.current) URL.revokeObjectURL(previewRef.current); }; }, []);
+  const perform = async operation => {
+    if (lock.current) return;
+    lock.current = true; setBusy(true); setError('');
+    try { await operation(); }
+    catch (failure) { if (mounted.current) setError(failure.response?.data?.message || failure.message || 'Không xử lý được minh chứng.'); }
+    finally { lock.current = false; if (mounted.current) setBusy(false); }
+  };
+  const view = () => perform(async () => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    previewRef.current = ''; setPreview('');
+    const result = await returnApi.getEvidence(request.id); const blob = result?.data ?? result;
+    if (!mounted.current) return;
+    if (!(blob instanceof Blob) || !['image/jpeg', 'image/png'].includes(blob.type)) throw new Error('Máy chủ không trả dữ liệu ảnh hợp lệ.');
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    previewRef.current = URL.createObjectURL(blob); setPreview(previewRef.current);
+  });
+  const upload = () => perform(async () => {
+    await returnApi.uploadEvidence(request.id, validateWarrantyEvidence(file));
+    if (!mounted.current) return;
+    setFile(null); if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    previewRef.current = ''; setPreview(''); await onSaved();
+  });
+  return <div className="text-xs space-y-2">
+    {request.evidenceAvailable && <button type="button" disabled={busy} onClick={view} className="text-blue-700 underline">Xem ảnh minh chứng riêng tư</button>}
+    {preview && <img src={preview} alt="Minh chứng bảo hành" className="max-h-56 rounded-xl border" />}
+    {request.status === 'PENDING' && <div className="flex flex-wrap gap-2 items-center">
+      <input type="file" accept="image/jpeg,image/png" aria-label={`Ảnh minh chứng RMA ${request.id}`} disabled={busy} onChange={event => setFile(event.target.files?.[0] || null)} />
+      <button type="button" disabled={busy || !file} onClick={upload} className="rounded-lg border px-3 py-2 text-blue-700">{busy ? 'Đang tải...' : 'Gửi ảnh minh chứng'}</button>
+    </div>}{error && <p role="alert" className="text-red-700">{error}</p>}
+  </div>;
+}
+
+export function WarrantyRequestCard({ request, onSaved }) {
+  const item = normalizeWarrantyRequest(request);
+  return <article className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3"><div><strong>RMA #{item.id}</strong>
+      <span className="block text-xs text-slate-500">Ngày gửi: {formatDate(item.createdAt)}</span></div>
+      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">{item.statusLabel}</span></div>
+    <div className="flex gap-3"><div className="w-16 h-16 shrink-0"><ProductImage compact src={item.productImage} alt={item.productName} className="h-full w-full rounded-xl object-contain" /></div>
+      <div className="space-y-1 text-xs"><strong>{item.productName}</strong><OrderItemOptions item={item} />
+        <p>Số lượng yêu cầu: {item.quantity ?? 'Chưa có thông tin'}</p>{item.serialNumber && <p>Serial: {item.serialNumber}</p>}
+        <Link to={`/orders/${item.orderId}`} className="text-blue-700 underline">Xem đơn #{item.orderId}</Link></div></div>
+    <p className="rounded-xl bg-slate-50 p-3 text-sm whitespace-pre-wrap break-words">{item.reason}</p>
+    {item.adminNote && <p className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs whitespace-pre-wrap break-words">Phản hồi của cửa hàng: {item.adminNote}</p>}
+    {item.status === 'COMPLETED' && <p className="text-xs text-emerald-700">Cửa hàng đã hoàn tất đổi sản phẩm theo phiếu bảo hành.</p>}
+    {item.replacementProductName && <div className="rounded-xl border bg-slate-50 p-3 text-xs space-y-1">
+      <p>Sản phẩm đổi: <strong>{item.replacementProductName}</strong>{item.replacementSku ? ` · ${item.replacementSku}` : ''}</p>
+      <OrderItemOptions item={{ size: item.replacementSize, color: item.replacementColor, weightGrip: item.replacementWeightGrip }} />
+      {item.completedAt && <p>Hoàn tất: {formatDate(item.completedAt)}</p>}
+    </div>}
+    <EvidenceControls request={item} onSaved={onSaved} />
+  </article>;
+}
+
+const blankForm = () => ({ orderItemId: '', quantity: '1', reason: '', serialNumber: '' });
+
+export default function ReturnRequestPage() {
   const [searchParams] = useSearchParams();
   const preselectedOrderId = searchParams.get('orderId');
-
   const [returnRequests, setReturnRequests] = useState([]);
-  const [paidOrders, setPaidOrders] = useState([]);
+  const [eligibleItems, setEligibleItems] = useState([]);
+  const [eligibilityReasons, setEligibilityReasons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [eligibleLoading, setEligibleLoading] = useState(true);
+  const [dataError, setDataError] = useState('');
+  const [eligibleError, setEligibleError] = useState('');
   const [activeTab, setActiveTab] = useState('ALL');
-
-  // Modal Creation State
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState(preselectedOrderId || '');
-  const [selectedProduct, setSelectedProduct] = useState('Vợt Yonex Astrox 100ZZ Kurenai (4U/G5)');
-  const [reasonCategory, setReasonCategory] = useState('Bảo hành khung vợt 90 ngày (Lỗi NSX/Nứt ngầm)');
-  const [reasonDetail, setReasonDetail] = useState('');
-  const [serialNumber, setSerialNumber] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(Boolean(preselectedOrderId));
+  const [form, setForm] = useState(blankForm);
+  const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [submissionSnapshot, setSubmissionSnapshot] = useState(null);
+  const [createdRequest, setCreatedRequest] = useState(null);
+  const mounted = useRef(true);
+  const listGeneration = useRef(0);
+  const eligibleGeneration = useRef(0);
+  const submissionLock = useRef(false);
+  const payloadRef = useRef(null);
+  const createdRef = useRef(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [returnsRes, ordersRes] = await Promise.all([
-          returnApi.getMyReturns(),
-          orderApi.getMyOrders(),
-        ]);
-        const returnsList = Array.isArray(returnsRes) ? returnsRes : returnsRes?.data || [];
-        if (Array.isArray(returnsList)) {
-          const formatted = returnsList.map((item, idx) => ({
-            id: item.id || idx + 1,
-            rmaCode: `#RMA-${item.id}`,
-            createdAt: item.createdAt || '',
-            status: item.status || 'IN_REVIEW',
-            statusLabel: item.status || 'Chưa rõ',
-            productName: item.productName || 'Vợt Cầu Lông Yonex Astrox 100ZZ Kurenai (4U/G5)',
-            productImage: item.productImage || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=400&q=80',
-            serialNumber: item.serialNumber || '',
-            reasonCategory: 'Bảo hành khung vợt 90 ngày',
-            reasonDetail: item.reason || '',
-            evidenceImages: item.imageUrl ? [item.imageUrl] : [],
-            timelineStep: item.status === 'COMPLETED' ? 4 : 3,
-            technicianNote: ''
-          }));
-          setReturnRequests(formatted);
-        }
-
-        const ordersList = Array.isArray(ordersRes) ? ordersRes : ordersRes?.data || [];
-        setPaidOrders(ordersList);
-      } catch (err) {
-        setDataError(err.response?.data?.message || 'Không thể tải dữ liệu từ máy chủ. Vui lòng thử lại.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-
-    if (preselectedOrderId) {
-      setShowCreateModal(true);
-    }
-  }, [preselectedOrderId]);
-
-  const handleCreateRequest = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-
+  const loadReturns = async () => {
+    const generation = ++listGeneration.current; setLoading(true); setDataError('');
     try {
-      if (!selectedOrderId) throw new Error('Vui lòng chọn đơn hàng thực tế.');
-      await returnApi.createReturnRequest({
-        orderId: Number(selectedOrderId),
-        reason: `${reasonCategory}: ${reasonDetail}`,
-        imageUrl: null
-      });
-      const list = await returnApi.getMyReturns();
-      setReturnRequests((Array.isArray(list) ? list : []).map((item) => ({
-        ...item, rmaCode: `#RMA-${item.id}`, productName: item.productName || 'Xem trong đơn hàng',
-        statusLabel: item.status, reasonDetail: item.reason || '', evidenceImages: [],
-        technicianNote: '', serialNumber: '', timelineStep: 1
-      })));
-    } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Không thể gửi yêu cầu đổi trả.');
-      setSubmitting(false);
-      return;
-    }
-    setSubmitting(false);
-    setShowCreateModal(false);
-    setReasonDetail('');
-    setSerialNumber('');
-    setSuccessMsg('Tạo phiếu yêu cầu đổi trả & bảo hành thành công!');
-    setTimeout(() => setSuccessMsg(''), 4000);
+      const items = readWarrantyList(await returnApi.getMyReturns());
+      if (mounted.current && generation === listGeneration.current) setReturnRequests(items);
+    } catch (failure) {
+      if (mounted.current && generation === listGeneration.current) {
+        if ([401, 403].includes(failure.response?.status)) setReturnRequests([]);
+        setDataError(failure.response?.data?.message || 'Không tải được phiếu bảo hành. Vui lòng thử lại.');
+      }
+    } finally { if (mounted.current && generation === listGeneration.current) setLoading(false); }
   };
-
-  const filteredReturns = returnRequests.filter((r) => {
-    if (activeTab === 'ALL') return true;
-    if (activeTab === 'RECEIVED') return r.status === 'RECEIVED';
-    if (activeTab === 'IN_REVIEW') return r.status === 'IN_REVIEW';
-    if (activeTab === 'COMPLETED') return r.status === 'COMPLETED';
-    return true;
-  });
-
-  return (
-    <UserLayout currentPage="Yêu cầu đổi trả & bảo hành" counts={{ returns: returnRequests.length }}>
-      {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
-      <div className="flex flex-col gap-6">
-        {/* HEADER STRIP WITH TITLE & TRIGGER CTA */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200/80">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-[#131b2e] flex items-center justify-center text-white shadow-sm">
-              <ShieldCheck className="w-5 h-5 text-secondary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-slate-900">Yêu cầu đổi trả & bảo hành</h2>
-                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-black">
-                  {returnRequests.length} yêu cầu
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Theo dõi sát sao tình trạng thẩm định phòng lab BWF và tiến độ gửi sản phẩm thay thế
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-secondary text-white hover:bg-secondary/90 transition-all text-xs font-bold shadow-md hover:shadow-lg active:scale-95 shrink-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tạo yêu cầu mới</span>
-          </button>
-        </div>
-
-        {successMsg && (
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
-        {/* QUICK STATS & PROMO BANNER ROW */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/70 flex flex-col justify-between">
-            <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Yêu cầu hoàn tất</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-slate-900">02</span>
-              <span className="text-[11px] text-emerald-700 font-bold">Tỷ lệ hài lòng 100%</span>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/70 flex flex-col justify-between">
-            <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Đang thẩm định phòng lab</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-secondary">01</span>
-              <span className="text-[11px] text-slate-400">Phản hồi trong 24h</span>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-[#131b2e] to-[#00174b] text-white p-4 rounded-2xl shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-black tracking-wider text-blue-200">HG Lab Tech</span>
-              <PhoneCall className="w-4 h-4 text-secondary" />
-            </div>
-            <div className="mt-1">
-              <span className="text-xs font-bold block text-slate-200">Hotline Kỹ Thuật Bảo Hành</span>
-              <span className="text-sm font-black text-white">1900 6886 (Nhánh 2)</span>
-            </div>
-          </div>
-        </div>
-
-        {/* TAB FILTERS */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <button
-            type="button"
-            onClick={() => setActiveTab('ALL')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'ALL'
-                ? 'bg-[#131b2e] text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
-            }`}
-          >
-            Tất cả ({returnRequests.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('RECEIVED')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'RECEIVED'
-                ? 'bg-[#131b2e] text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
-            }`}
-          >
-            Chờ tiếp nhận (1)
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('IN_REVIEW')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'IN_REVIEW'
-                ? 'bg-[#131b2e] text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
-            }`}
-          >
-            Đang thẩm định khung vợt (1)
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('COMPLETED')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === 'COMPLETED'
-                ? 'bg-[#131b2e] text-white shadow-sm'
-                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
-            }`}
-          >
-            Đã đổi mới / Hoàn tất (2)
-          </button>
-        </div>
-
-        {/* RETURN CARDS LIST */}
-        <div className="flex flex-col gap-5">
-          {filteredReturns.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 md:p-7 flex flex-col gap-5 hover:border-slate-300 transition-all"
-            >
-              {/* TOP STRIP: RMA CODE & STATUS */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-base font-black text-slate-900">{item.rmaCode}</span>
-                  <span className="text-slate-300 text-xs">|</span>
-                  <span className="text-xs text-slate-500 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    Ngày gửi: {item.createdAt}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {item.status === 'IN_REVIEW' && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 font-bold text-xs">
-                      <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                      {item.statusLabel}
-                    </span>
-                  )}
-                  {item.status === 'COMPLETED' && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      {item.statusLabel}
-                    </span>
-                  )}
-                  {item.status === 'RECEIVED' && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
-                      <Clock className="w-3.5 h-3.5 text-slate-500" />
-                      {item.statusLabel}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* PRODUCT INFO & REASON */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                <div className="lg:col-span-4 flex items-start gap-3.5">
-                  <img
-                    src={item.productImage}
-                    alt={item.productName}
-                    className="w-16 h-16 rounded-xl object-cover bg-slate-100 border border-slate-200 shrink-0"
-                  />
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-900 line-clamp-2">{item.productName}</span>
-                    <span className="text-[11px] text-slate-400 font-mono mt-0.5">{item.serialNumber}</span>
-                    <span className="text-[10px] bg-red-50 text-secondary px-2 py-0.5 rounded font-bold w-fit mt-1">
-                      {item.reasonCategory}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="lg:col-span-8 flex flex-col gap-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <span className="text-xs font-bold text-slate-800">Mô tả tình trạng từ khách hàng:</span>
-                  <p className="text-xs text-slate-600 leading-relaxed font-normal">
-                    {item.reasonDetail}
-                  </p>
-
-                  {item.evidenceImages && item.evidenceImages.length > 0 && (
-                    <div className="flex items-center gap-2 mt-1">
-                      {item.evidenceImages.map((img, idx) => (
-                        <img
-                          key={idx}
-                          src={img}
-                          alt="Minh chứng"
-                          className="w-12 h-12 rounded-lg object-cover border border-slate-200"
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 4-STEP PROGRESS TIMELINE */}
-              <div className="pt-2">
-                <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold ${
-                      item.timelineStep >= 1 ? 'bg-emerald-600' : 'bg-slate-200 text-slate-400'
-                    }`}>
-                      <Check className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-800">1. Tiếp nhận</span>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold ${
-                      item.timelineStep >= 2 ? 'bg-emerald-600' : 'bg-slate-200 text-slate-400'
-                    }`}>
-                      {item.timelineStep >= 2 ? <Check className="w-3.5 h-3.5" /> : '2'}
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-800">2. Thu hồi xưởng</span>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold ${
-                      item.timelineStep >= 3 ? (item.timelineStep === 3 ? 'bg-blue-600' : 'bg-emerald-600') : 'bg-slate-200 text-slate-400'
-                    }`}>
-                      {item.timelineStep > 3 ? <Check className="w-3.5 h-3.5" /> : '3'}
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-800">3. Thẩm định BWF</span>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold ${
-                      item.timelineStep >= 4 ? 'bg-emerald-600' : 'bg-slate-200 text-slate-400'
-                    }`}>
-                      {item.timelineStep >= 4 ? <Check className="w-3.5 h-3.5" /> : '4'}
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-800">4. Đổi mới 100%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* TECHNICIAN COMMENT BOX */}
-              {item.technicianNote && (
-                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
-                  <Award className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-blue-900">Ý kiến chuyên viên HG Lab:</span>
-                    <span className="text-xs text-blue-800 leading-relaxed mt-0.5 font-normal">
-                      {item.technicianNote}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* MODAL: TẠO YÊU CẦU ĐỔI TRẢ & BẢO HÀNH */}
-        {showCreateModal && (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-red-50 text-secondary flex items-center justify-center">
-                    <RotateCcw className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">Tạo yêu cầu đổi trả & bảo hành</h3>
-                    <p className="text-xs text-slate-400">Áp dụng cho đơn hàng trong vòng 90 ngày</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-800"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateRequest} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-900">
-                    Chọn đơn hàng áp dụng <span className="text-secondary">*</span>
-                  </label>
-                  <select
-                    value={selectedOrderId}
-                    onChange={(e) => setSelectedOrderId(e.target.value)}
-                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
-                  >
-                    <option value="">Chọn đơn hàng của bạn</option>
-                    {paidOrders.map((order) => <option key={order.id} value={order.id}>Đơn #{order.id}</option>)}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-900">
-                    Loại yêu cầu <span className="text-secondary">*</span>
-                  </label>
-                  <select
-                    value={reasonCategory}
-                    onChange={(e) => setReasonCategory(e.target.value)}
-                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
-                  >
-                    <option value="Bảo hành khung vợt 90 ngày (Lỗi NSX/Nứt ngầm)">
-                      Bảo hành khung vợt 90 ngày (Lỗi NSX / Nứt ngầm khi căng cước)
-                    </option>
-                    <option value="Đổi size giày 7 ngày miễn phí tận nhà">
-                      Đổi size giày 7 ngày miễn phí tận nhà (Kích ngón / Không vừa)
-                    </option>
-                    <option value="Bảo hành phụ kiện đan cước / Lót gen BWF">
-                      Bảo hành phụ kiện đan cước / Lót gen xưởng BWF
-                    </option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-900">
-                    Mã Serial khung vợt / Mã tem phân phối
-                  </label>
-                  <input
-                    type="text"
-                    value={serialNumber}
-                    onChange={(e) => setSerialNumber(e.target.value)}
-                    placeholder="Ví dụ: YNX-892410-JP hoặc xem trên chóp cán vợt"
-                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner font-mono"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-900">
-                    Mô tả chi tiết sự cố <span className="text-secondary">*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    required
-                    value={reasonDetail}
-                    onChange={(e) => setReasonDetail(e.target.value)}
-                    placeholder="Mô tả cụ thể góc nứt trên mặt vợt, mức cân cước lúc gặp lỗi, hoặc tình trạng kích size giày..."
-                    className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs p-3.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
-                  ></textarea>
-                </div>
-
-                {/* IMAGE UPLOAD SIMULATION */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-slate-900">Ảnh chụp vết nứt / Tem phân phối</label>
-                  <div className="border-2 border-dashed border-slate-200 hover:border-slate-400 rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-slate-50">
-                    <UploadCloud className="w-8 h-8 text-slate-400 mb-1" />
-                    <span className="text-xs font-bold text-slate-700">Tải ảnh chụp vết nứt hoặc tem bảo hành</span>
-                    <span className="text-[11px] text-slate-400">Định dạng JPG, PNG tối đa 10MB</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
-                  >
-                    Hủy bỏ
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-6 py-2.5 rounded-xl bg-secondary text-white hover:bg-secondary/90 text-xs font-bold shadow-sm active:scale-95 disabled:opacity-50"
-                  >
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Gửi yêu cầu'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+  const loadEligibleItems = async () => {
+    const generation = ++eligibleGeneration.current; setEligibleLoading(true); setEligibleError('');
+    try {
+      const items = readWarrantyList(await returnApi.getEligibleItems(preselectedOrderId ? { params: { orderId: preselectedOrderId } } : {}));
+      if (mounted.current && generation === eligibleGeneration.current) {
+        setEligibleItems(items.filter(isEligibleReturnLine));
+        setEligibilityReasons(items.filter(item => !isEligibleReturnLine(item)).map(item => ({ id: item.orderItemId, name: item.productName, reason: item.ineligibleReason })));
+      }
+    } catch (failure) {
+      if (mounted.current && generation === eligibleGeneration.current) {
+        setEligibleItems([]); setEligibilityReasons([]); setEligibleError(failure.response?.data?.message || 'Không kiểm tra được điều kiện bảo hành. Vui lòng thử lại.');
+      }
+    } finally { if (mounted.current && generation === eligibleGeneration.current) setEligibleLoading(false); }
+  };
+  const refresh = () => Promise.all([loadReturns(), loadEligibleItems()]);
+  useEffect(() => { mounted.current = true; refresh(); return () => { mounted.current = false; listGeneration.current++; eligibleGeneration.current++; }; }, []);
+  useEffect(() => {
+    if (preselectedOrderId && !payloadRef.current && !form.orderItemId) {
+      const item = eligibleItems.find(line => String(line.orderId) === String(preselectedOrderId));
+      if (item) setForm(previous => ({ ...previous, orderItemId: String(item.orderItemId) }));
+    }
+  }, [eligibleItems, preselectedOrderId]);
+  const openNew = () => {
+    if (payloadRef.current && !createdRef.current) { setShowCreateModal(true); return; }
+    setForm(blankForm()); setFile(null); setFormError(''); setSuccessMsg('');
+    payloadRef.current = null; createdRef.current = null; setSubmissionSnapshot(null); setCreatedRequest(null); setShowCreateModal(true);
+    loadEligibleItems();
+  };
+  const onCreated = request => {
+    createdRef.current = request; if (!mounted.current) return; setCreatedRequest(request);
+    listGeneration.current++; setLoading(false);
+    setReturnRequests(previous => [request, ...previous.filter(item => item.id !== request.id)]);
+  };
+  const handleCreateRequest = async (event) => {
+    event.preventDefault(); if (submissionLock.current) return;
+    let payload;
+    try { if (file) validateWarrantyEvidence(file); payload = payloadRef.current || buildWarrantyRequestPayload(form, eligibleItems); }
+    catch (failure) { setFormError(failure.message); return; }
+    payloadRef.current = payload; setSubmissionSnapshot(payload); submissionLock.current = true; setSubmitting(true); setFormError('');
+    try {
+      await submitWarrantyRequest(payload, file, createdRef.current, onCreated);
+      if (!mounted.current) return;
+      setShowCreateModal(false); payloadRef.current = null; createdRef.current = null; setSubmissionSnapshot(null); setCreatedRequest(null);
+      setForm(blankForm()); setFile(null); setSuccessMsg('Đã gửi phiếu bảo hành. Theo dõi kết quả xét duyệt từ cửa hàng.'); await refresh();
+    } catch (failure) {
+      if (!mounted.current) return;
+      if (!createdRef.current && [400, 403, 404, 409, 422].includes(failure.response?.status)) { payloadRef.current = null; setSubmissionSnapshot(null); loadEligibleItems(); }
+      setFormError(createdRef.current ? `Phiếu RMA #${createdRef.current.id} đã được tạo. ${failure.response?.data?.message || 'Chưa gửi được ảnh minh chứng.'} Bấm gửi lại ảnh cho phiếu này.`
+        : failure.response?.data?.message || 'Chưa xác định được kết quả gửi phiếu. Kiểm tra lại cùng yêu cầu để tránh trùng.');
+    } finally { submissionLock.current = false; if (mounted.current) setSubmitting(false); }
+  };
+  const filtered = returnRequests.filter(item => activeTab === 'ALL' || item.status === activeTab);
+  const count = status => returnRequests.filter(item => item.status === status).length;
+  return <UserLayout currentPage="Yêu cầu bảo hành" counts={{ returns: returnRequests.length }}>
+    <div className="space-y-5">
+      <div className="rounded-2xl border bg-white p-6 shadow-sm flex flex-wrap justify-between items-center gap-4">
+        <div><h1 className="text-xl font-black flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-secondary" />Yêu cầu bảo hành</h1>
+          <p className="text-xs text-slate-600 mt-2">Bảo hành 1 đổi 1 trong 90 ngày từ ngày giao thành công được xác nhận; áp dụng cho vợt, giày, quần áo và túi. Phụ kiện không có ưu đãi bảo hành này.</p></div>
+        <button type="button" onClick={openNew} disabled={submitting} className="rounded-xl bg-secondary text-white font-bold text-xs px-4 py-3 flex items-center gap-2"><Plus className="w-4 h-4" />Tạo yêu cầu mới</button>
       </div>
-    </UserLayout>
-  );
-};
-
-export default ReturnRequestPage;
+      {successMsg && <p role="status" className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">{successMsg}</p>}
+      {dataError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{dataError} <button type="button" disabled={loading} onClick={loadReturns} className="underline">Thử lại</button></p>}
+      <div className="grid sm:grid-cols-3 gap-3">{[['PENDING', 'Chờ xét duyệt'], ['APPROVED', 'Đã duyệt'], ['COMPLETED', 'Đã đổi sản phẩm']].map(([status, label]) =>
+        <div key={status} className="rounded-xl border bg-white p-4"><p className="text-xs text-slate-600">{label}</p><strong className="text-2xl">{loading ? '—' : count(status)}</strong></div>)}</div>
+      <div className="flex flex-wrap gap-2">{[['ALL', 'Tất cả'], ...Object.entries(WARRANTY_STATUSES)].map(([status, label]) =>
+        <button key={status} type="button" onClick={() => setActiveTab(status)} className={`rounded-full px-4 py-2 text-xs font-bold ${activeTab === status ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}`}>
+          {label} ({status === 'ALL' ? returnRequests.length : count(status)})</button>)}</div>
+      {loading ? <p role="status" className="text-sm text-slate-600 flex gap-2"><Loader2 className="w-4 h-4 animate-spin" />Đang tải phiếu bảo hành...</p>
+        : filtered.length === 0 ? <p className="rounded-xl border bg-white p-6 text-sm text-slate-600">Chưa có phiếu bảo hành trong mục này.</p>
+          : filtered.map(request => <WarrantyRequestCard key={request.id} request={request} onSaved={refresh} />)}
+    </div>
+    {showCreateModal && <div className="fixed inset-0 z-50 bg-slate-900/60 p-4 flex justify-center items-center">
+      <div role="dialog" aria-modal="true" aria-labelledby="warranty-modal-title" className="rounded-3xl bg-white border shadow-xl max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto space-y-4">
+        <div className="flex justify-between items-center"><h2 id="warranty-modal-title" className="font-black flex gap-2"><RotateCcw className="w-5 h-5" />Tạo yêu cầu bảo hành</h2>
+          <button type="button" aria-label="Đóng yêu cầu bảo hành" disabled={submitting} onClick={() => setShowCreateModal(false)}><X className="w-5 h-5" /></button></div>
+        {eligibleLoading && <p role="status" className="text-xs text-slate-600">Đang kiểm tra mặt hàng đủ điều kiện...</p>}
+        {eligibleError && <p role="alert" className="text-xs text-red-700">{eligibleError} <button type="button" onClick={loadEligibleItems} className="underline">Thử lại</button></p>}
+        {!eligibleLoading && !eligibleError && eligibleItems.length === 0 && !createdRequest && <p className="text-xs text-slate-600">Chưa có mặt hàng đủ điều kiện hoặc đã hết hạn/số lượng có thể bảo hành.</p>}
+        {!eligibleLoading && eligibilityReasons.length > 0 && <ul className="text-xs text-slate-600 space-y-1">{eligibilityReasons.map(item =>
+          <li key={item.id}>{item.name}: {item.reason || 'Chưa đủ điều kiện bảo hành.'}</li>)}</ul>}
+        <form onSubmit={handleCreateRequest} className="space-y-4">
+          <WarrantyFormFields form={form} eligibleItems={eligibleItems} disabled={submitting || Boolean(submissionSnapshot) || eligibleLoading || Boolean(eligibleError)}
+            onChange={(key, value) => setForm(previous => ({ ...previous, [key]: value, ...(key === 'orderItemId' ? { quantity: '1' } : {}) }))} />
+          <label className="block text-xs font-bold">Ảnh minh chứng riêng tư (tùy chọn, JPG/PNG tối đa 5MB)<input type="file" accept="image/jpeg,image/png" aria-label="Ảnh minh chứng bảo hành"
+            disabled={submitting} onChange={event => setFile(event.target.files?.[0] || null)} className="mt-2 block w-full" /></label>
+          {formError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-xs text-red-700">{formError}</p>}
+          {submissionSnapshot && !createdRequest && !submitting && <p className="text-xs text-amber-800">Yêu cầu trước chưa có kết quả chắc chắn. Kiểm tra lại sẽ giữ nguyên mặt hàng, số lượng, lý do và serial.</p>}
+          <button type="submit" disabled={submitting || (!submissionSnapshot && (eligibleLoading || Boolean(eligibleError) || eligibleItems.length === 0)) || Boolean(createdRequest && !file)}
+            className="w-full rounded-xl bg-secondary text-white font-bold text-xs p-3 disabled:opacity-50">
+            {submitting ? 'Đang gửi...' : createdRequest ? 'Gửi lại ảnh cho phiếu đã tạo' : submissionSnapshot ? 'Kiểm tra lại yêu cầu đã gửi' : 'Gửi yêu cầu'}</button>
+        </form>
+      </div>
+    </div>}
+  </UserLayout>;
+}

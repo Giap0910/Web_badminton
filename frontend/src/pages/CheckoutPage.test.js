@@ -1,532 +1,335 @@
-/**
- * @file CheckoutPage.test.js
- * @description NOTE: This file is a Node.js unit lifecycle & logic harness test suite.
- * It tests the idempotency state machine, payload building, and stale-response guard algorithms in isolation.
- * For the REAL mounted DOM component runtime tests that import CheckoutPage.jsx and mount via React 18 createRoot,
- * see CheckoutPage.test.jsx (executed via `node run-component-tests.js`).
- */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { orderApi } from '../api/orderApi.js';
-import {
-  buildOrderPayload,
-  isResponseStale,
-  getOrCreateIdempotencyKey,
-  getStoredCheckoutIntent,
-  clearStoredCheckoutIntent,
-  IDEMPOTENCY_STORAGE_KEY
-} from '../utils/idempotency.js';
+import fs from 'node:fs';
+import { buildOrderPayload, getOrCreateIdempotencyKey, clearStoredCheckoutIntent, getOrCreatePaymentLinkKey } from '../utils/idempotency.js';
+import { formatPrice } from '../utils/formatters.js';
 
-// Setup Mock SessionStorage for Node environment
-class MockSessionStorage {
-  constructor() {
-    this.store = {};
-  }
-  getItem(key) {
-    return Object.prototype.hasOwnProperty.call(this.store, key) ? this.store[key] : null;
-  }
-  setItem(key, value) {
-    this.store[key] = String(value);
-  }
-  removeItem(key) {
-    delete this.store[key];
-  }
-  clear() {
-    this.store = {};
-  }
+class Storage {
+  values = new Map();
+  getItem(key) { return this.values.get(key) ?? null; }
+  setItem(key, value) { this.values.set(key, String(value)); }
+  removeItem(key) { this.values.delete(key); }
+  clear() { this.values.clear(); }
 }
+globalThis.sessionStorage = new Storage();
+const source = fs.readFileSync(new URL('./CheckoutPage.jsx', import.meta.url), 'utf8');
+const start = source.indexOf('export const pendingCheckoutStorageKey');
+const helpers = source.slice(start, source.indexOf('/**', start)).replaceAll('export ', '');
+const handlerStart = source.indexOf('  const handleSubmitOrder =');
+const implementation = source.slice(source.indexOf('  const validateNewCheckout ='),
+  source.indexOf('\n  };', handlerStart) + '\n  };'.length);
 
-globalThis.sessionStorage = new MockSessionStorage();
-
-const sampleCartItem = {
-  cartItemId: 'item-101',
-  product: {
-    id: 101,
-    name: 'Vợt Cầu Lông Yonex Astrox 88D Pro',
-    price: 3890000,
-    stock: 10
-  },
-  quantity: 1,
-  selectedWeight: '4U',
-  selectedGrip: 'G5',
-  stringingService: 'Căng cước 10.5kg',
-  stringTension: '10.5kg'
-};
-
-/**
- * Creates an execution harness simulating CheckoutPage component's exact state,
- * refs, and handleSubmitOrder lifecycle.
- */
-function createCheckoutComponentHarness(initialState = {}) {
-  const state = {
-    customerName: initialState.customerName || 'Nguyễn Văn A',
-    shippingPhone: initialState.shippingPhone || '0901234567',
-    addressDetail: initialState.addressDetail || '123 Phố Huế, Hai Bà Trưng, Hà Nội',
-    note: initialState.note || 'Giao giờ hành chính',
-    paymentMethod: initialState.paymentMethod || 'COD',
-    voucherCode: initialState.voucherCode || '',
-    voucherSuccess: initialState.voucherSuccess || null,
-    checkoutItems: initialState.checkoutItems || [sampleCartItem],
-    loading: false,
-    errorMsg: '',
-    removedFromCart: [],
-    navigatedTo: null,
-    navigatedState: null
-  };
-
-  // Component refs (matching lines 150-155 of CheckoutPage.jsx)
+function production(scope) {
+  return new Function(...Object.keys(scope), helpers + '\n' + implementation
+    + '\nreturn { submit: handleSubmitOrder, read: readPendingCheckoutSubmission };')(...Object.values(scope));
+}
+function harness(overrides = {}) {
+  const item = { cartItemId: 'variant-277', product: { id: 4, price: 4350000 }, variantId: 277, quantity: 1 };
+  const state = { user: { id: 51 }, customerName: 'Nguyễn Văn A', shippingPhone: '0901234567',
+    addressDetail: 'Số 1', province: 'Hà Nội', ward: 'Phường Ba Đình', provinceCode: '01', wardCode: '00001',
+    paymentMethod: 'COD', voucherCode: '', voucherSuccess: false, checkoutItems: [item],
+    email: '', note: '', requestedPoints: 0, saveInfo: false, loading: false, isValidatingVoucher: false,
+    subtotal: 4350000, effectiveDiscount: 0, shippingDiscountAmount: 0, pointsDiscount: 0, shippingFee: 0, finalTotal: 4350000, redeemPoints: 0,
+    ...overrides, removed: [], updated: [], navigation: null, error: '' };
+  const currentCartRef = { current: state.checkoutItems };
+  const pendingSubmissionRef = { current: null };
   const isSubmittingRef = { current: false };
-  const currentFingerprintRef = { current: '' };
+  const checkoutOwnerRef = { current: state.user.id };
+  const checkoutTokenRef = { current: null };
+  const checkoutActiveRef = { current: true };
+  const api = { createOrder: async () => ({ id: 301 }), createPaymentLink: async () => ({ status: 'PENDING' }) };
+  const addresses = { getMyAddresses: async () => ({ data: [] }), createAddress: async () => ({ id: 1 }) };
+  const scope = () => ({ ...state, currentPayload: buildOrderPayload(state), currentCartRef, pendingSubmissionRef,
+    isSubmittingRef, checkoutOwnerRef, checkoutTokenRef, checkoutActiveRef, shippingAddressApi: addresses,
+    getOrCreateIdempotencyKey, clearStoredCheckoutIntent, getOrCreatePaymentLinkKey, orderApi: api,
+    navigate: (route, options) => { state.navigation = { route, ...options }; },
+    removeFromCart: id => state.removed.push(id), updateQuantity: (id, quantity) => state.updated.push({ id, quantity }),
+    setLoading: value => { state.loading = value; }, setErrorMsg: value => { state.error = value; },
+    setPendingSubmission: value => { state.pending = value; } });
+  pendingSubmissionRef.current = production(scope()).read(state.user.id);
+  return { state, api, addresses, checkoutOwnerRef, checkoutTokenRef, checkoutActiveRef, currentCartRef, pendingSubmissionRef,
+    submit: () => production(scope()).submit(), change: patch => Object.assign(state, patch) };
+}
+const failure = status => Object.assign(new Error('Kết quả chưa rõ'), { response: { status, data: { message: 'Kết quả chưa rõ' } } });
+const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 
-  // Helper calculating live payload & fingerprint on every render (lines 160-175)
-  function computeLiveState() {
-    const payload = buildOrderPayload({
-      customerName: state.customerName,
-      shippingPhone: state.shippingPhone,
-      addressDetail: state.addressDetail,
-      note: state.note,
-      paymentMethod: state.paymentMethod,
-      checkoutItems: state.checkoutItems
-    });
-    const fingerprint = JSON.stringify(payload);
-    currentFingerprintRef.current = fingerprint;
-    return { payload, fingerprint };
-  }
+for (const wrapped of [false, true]) test('Đơn đã tạo hoặc replay: chấp nhận đúng ID (' + wrapped + ')', async () => {
+  sessionStorage.clear();
+  const h = harness();
+  h.api.createOrder = async () => wrapped ? { data: { id: 301 } } : { id: 301 };
+  await h.submit();
+  assert.equal(h.state.navigation.route, '/order-success/301');
+  assert.deepEqual(h.state.removed, ['variant-277']);
+  assert.equal(sessionStorage.getItem('hg_checkout_submission_51'), null);
+});
 
-  // Initial render calculation
-  computeLiveState();
+test('Nhấp liên tiếp chỉ gửi một yêu cầu trong khi đang chờ', async () => {
+  sessionStorage.clear(); const h = harness(); const d = deferred(); let count = 0;
+  h.api.createOrder = () => { count++; return d.promise; };
+  const first = h.submit(); const second = h.submit();
+  assert.equal(count, 1); d.resolve({ id: 302 }); await Promise.all([first, second]);
+  assert.equal(h.state.navigation.route, '/order-success/302');
+});
 
-  // Navigation mock
-  const navigate = (path, options) => {
-    state.navigatedTo = path;
-    state.navigatedState = options?.state || null;
-  };
+test('UI đổi trong khi chờ vẫn nhận đơn đã tạo và không tạo đơn thứ hai', async () => {
+  sessionStorage.clear(); const h = harness(); const d = deferred(); let count = 0;
+  h.api.createOrder = () => { count++; return d.promise; };
+  const pending = h.submit(); h.change({ paymentMethod: 'PAYOS_VIETQR', addressDetail: 'Địa chỉ khác' });
+  await h.submit(); d.resolve({ id: 303, paymentMethod: 'COD' }); await pending;
+  assert.equal(count, 1); assert.equal(h.state.navigation.route, '/order-success/303');
+});
 
-  // Cart action mock
-  const removeFromCart = (cartItemId) => {
-    state.removedFromCart.push(cartItemId);
-  };
+for (const status of [undefined, 401, 409, 500, 503]) test('Kết quả chưa rõ ' + status + ': reload dùng cùng payload/key', async () => {
+  sessionStorage.clear(); const h = harness(); let first;
+  h.api.createOrder = async (payload, key) => { first = { payload, key }; throw status ? failure(status) : new Error('Timeout'); };
+  await h.submit();
+  assert.equal(h.state.navigation, null); assert.deepEqual(h.state.removed, []);
+  assert.ok(sessionStorage.getItem('hg_checkout_submission_51'));
+  const replay = harness({ shippingPhone: '0909999999', paymentMethod: 'PAYOS_VIETQR' });
+  let recovered;
+  replay.api.createOrder = async (payload, key) => { recovered = { payload, key }; return { id: 304 }; };
+  await replay.submit(); assert.deepEqual(recovered, first);
+  assert.equal(replay.state.navigation.route, '/order-success/304');
+});
 
-  /**
-   * Component's handleSubmitOrder implementation (exact match to lines 180-270)
-   */
-  async function handleSubmitOrder() {
-    if (isSubmittingRef.current || state.loading) return;
-    if (state.voucherCode.trim() && !state.voucherSuccess) {
-      state.errorMsg = 'Vui lòng áp dụng lại mã giảm giá hoặc xóa mã trước khi đặt hàng.';
-      return;
-    }
-    if (!state.customerName || !state.shippingPhone || !state.addressDetail) {
-      state.errorMsg = 'Vui lòng điền đầy đủ Họ tên, Số điện thoại và Địa chỉ giao hàng.';
-      return;
-    }
+for (const status of [400, 403, 404, 422]) test('Máy chủ từ chối dứt điểm ' + status + ': giữ giỏ và mở sửa thông tin', async () => {
+  sessionStorage.clear(); const h = harness(); h.api.createOrder = async () => { throw failure(status); };
+  await h.submit();
+  assert.equal(sessionStorage.getItem('hg_checkout_submission_51'), null);
+  assert.deepEqual(h.state.removed, []); assert.equal(h.pendingSubmissionRef.current, null);
+});
 
-    if (state.checkoutItems.length === 0) {
-      state.errorMsg = 'Không có sản phẩm nào được chọn để thanh toán.';
-      return;
-    }
+test('Snapshot hỏng không tự bỏ key hoặc tạo đơn mới', async () => {
+  sessionStorage.clear(); sessionStorage.setItem('hg_checkout_submission_51', '{hỏng');
+  const h = harness(); let count = 0; h.api.createOrder = async () => { count++; return { id: 305 }; };
+  await h.submit(); assert.equal(count, 0); assert.match(h.state.error, /Yêu cầu trước không đọc được/);
+  assert.equal(sessionStorage.getItem('hg_checkout_submission_51'), '{hỏng');
+});
 
-    const { payload, fingerprint: currentFingerprint } = computeLiveState();
-    const submittedFingerprint = currentFingerprint;
+test('Snapshot gắn tài khoản không được replay bởi tài khoản khác', async () => {
+  sessionStorage.clear(); const h = harness(); h.api.createOrder = async () => { throw new Error('Timeout'); }; await h.submit();
+  const other = harness({ user: { id: 52 } }); let sent;
+  other.api.createOrder = async (payload, key) => { sent = key; return { id: 306 }; }; await other.submit();
+  const old = JSON.parse(sessionStorage.getItem('hg_checkout_submission_51'));
+  assert.notEqual(sent, old.key); assert.ok(old.payload.items.length);
+});
 
-    let idempotencyKey;
-    try {
-      const intent = getOrCreateIdempotencyKey(payload);
-      idempotencyKey = intent.key;
-    } catch {
-      state.errorMsg =
-        'Không thể khởi tạo mã giao dịch an toàn (Web Crypto không khả dụng). Vui lòng thử lại trên trình duyệt hiện đại.';
-      return;
-    }
+test('Hết thời gian lưu key không làm xoay key của snapshot chưa rõ kết quả', async () => {
+  sessionStorage.clear(); const h = harness(); let key;
+  h.api.createOrder = async (payload, value) => { key = value; throw new Error('Timeout'); }; await h.submit();
+  const snapshot = JSON.parse(sessionStorage.getItem('hg_checkout_submission_51'));
+  snapshot.createdAt = '2020-01-01T00:00:00.000Z';
+  sessionStorage.setItem('hg_checkout_submission_51', JSON.stringify(snapshot));
+  const replay = harness(); replay.api.createOrder = async (payload, value) => { assert.equal(value, key); return { id: 307 }; };
+  await replay.submit(); assert.equal(replay.state.navigation.route, '/order-success/307');
+});
 
-    isSubmittingRef.current = true;
-    state.loading = true;
-    state.errorMsg = '';
+test('Lỗi tạo liên kết QR không tạo lại đơn và vẫn mở trang QR với lỗi thật', async () => {
+  sessionStorage.clear(); const h = harness({ paymentMethod: 'PAYOS_VIETQR' }); let orders = 0, links = 0;
+  h.api.createOrder = async () => { orders++; return { id: 308, paymentMethod: 'PAYOS_VIETQR' }; };
+  h.api.createPaymentLink = async () => { links++; throw failure(503); };
+  await h.submit();
+  assert.equal(orders, 1); assert.equal(links, 1); assert.equal(h.state.navigation.route, '/payment/qr/308');
+  assert.equal(h.state.navigation.state.payment, null); assert.match(h.state.navigation.state.paymentError, /Kết quả chưa rõ/);
+});
 
-    try {
-      const res = await orderApi.createOrder(payload, idempotencyKey);
-      const createdOrder = res?.data ?? res;
+test('Đơn replay đã hủy mở chi tiết, không tạo QR', async () => {
+  sessionStorage.clear(); const h = harness({ paymentMethod: 'PAYOS_VIETQR' }); let links = 0;
+  h.api.createOrder = async () => ({ id: 309, status: 'CANCELLED' }); h.api.createPaymentLink = async () => { links++; };
+  await h.submit(); assert.equal(links, 0); assert.equal(h.state.navigation.route, '/orders/309');
+});
 
-      if (!createdOrder?.id) throw new Error('Máy chủ chưa trả về mã đơn hàng hợp lệ.');
+test('Giỏ thay đổi trong khi chờ chỉ trừ số lượng đã đặt', async () => {
+  sessionStorage.clear(); const h = harness(); const d = deferred(); h.api.createOrder = () => d.promise;
+  const waiting = h.submit(); h.currentCartRef.current = [{ ...h.state.checkoutItems[0], quantity: 4 }];
+  d.resolve({ id: 310 }); await waiting;
+  assert.deepEqual(h.state.updated, [{ id: 'variant-277', quantity: 3 }]); assert.deepEqual(h.state.removed, []);
+});
 
-      // STALE RESPONSE GUARD
-      if (isResponseStale(submittedFingerprint, currentFingerprintRef.current)) {
-        return;
-      }
+test('Không lưu được snapshot thì không gửi yêu cầu', async () => {
+  sessionStorage.clear(); const original = sessionStorage.setItem;
+  sessionStorage.setItem = () => { throw new Error('Storage unavailable'); };
+  try { const h = harness(); let count = 0; h.api.createOrder = async () => { count++; };
+    await h.submit(); assert.equal(count, 0); assert.match(h.state.error, /Storage unavailable/);
+  } finally { sessionStorage.setItem = original; }
+});
 
-      // Success (both 201 Created and 200 Replay) for CURRENT checkout intent:
-      clearStoredCheckoutIntent();
-      state.checkoutItems.forEach((item) => removeFromCart(item.cartItemId));
+test('Không có Web Crypto thì không gửi đơn', async () => {
+  sessionStorage.clear(); const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+  Object.defineProperty(globalThis, 'crypto', { configurable: true, value: undefined });
+  try { const h = harness(); let count = 0; h.api.createOrder = async () => { count++; };
+    await h.submit(); assert.equal(count, 0); assert.match(h.state.error, /Web Crypto/);
+  } finally { Object.defineProperty(globalThis, 'crypto', descriptor); }
+});
 
-      if (state.paymentMethod === 'COD') {
-        navigate(`/order-success/${createdOrder.id}`, { state: { order: createdOrder } });
-      } else {
-        navigate(`/payment/qr/${createdOrder.id}`, { state: { order: createdOrder } });
-      }
-    } catch (err) {
-      // Stale response guard for errors
-      if (isResponseStale(submittedFingerprint, currentFingerprintRef.current)) {
-        return;
-      }
+test('Form khóa thông tin, voucher, điểm và phương thức khi đang chờ', () => {
+  assert.match(source, /const submissionLocked = loading \|\| Boolean\(pendingSubmission\)/);
+  assert.match(source, /<fieldset disabled=\{submissionLocked\}/);
+  assert.match(source, /if \(isSubmittingRef.current \|\| pendingSubmissionRef.current\) return/);
+});
 
-      const isConflict = err.response?.status === 409 || err.response?.data?.code === 'IDEMPOTENCY_CONFLICT';
-      const apiMessage = err.response?.data?.message;
+const voucherSource = fs.readFileSync(new URL('../components/useCheckoutVoucher.jsx', import.meta.url), 'utf8')
+  .replace(/^import .*;\r?\n/gm, '').replaceAll('export default ', '').replaceAll('export ', '');
 
-      if (isConflict) {
-        clearStoredCheckoutIntent();
-        state.errorMsg =
-          typeof apiMessage === 'string'
-            ? apiMessage
-            : 'Yêu cầu đặt hàng bị xung đột hoặc thông tin đã thay đổi. Vui lòng kiểm tra lại thông tin và thử lại.';
-      } else {
-        state.errorMsg =
-          typeof apiMessage === 'string'
-            ? apiMessage
-            : 'Không thể tạo đơn hàng. Giỏ hàng được giữ nguyên, vui lòng thử lại.';
-      }
-    } finally {
-      isSubmittingRef.current = false;
-      state.loading = false;
-    }
-  }
-
-  // Simulate user changing form field
-  function updateField(field, value) {
-    state[field] = value;
-    computeLiveState(); // re-render updates live fingerprint ref
-  }
-
-  return {
-    state,
-    isSubmittingRef,
-    currentFingerprintRef,
-    handleSubmitOrder,
-    updateField,
-    computeLiveState
-  };
+function voucherHarness(api) {
+  const slots = []; const effects = []; const waiting = []; const timers = new Map(); let cursor = 0; let timerId = 0;
+  const useState = initial => { const index = cursor++; if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial;
+    return [slots[index], value => { slots[index] = typeof value === 'function' ? value(slots[index]) : value; }]; };
+  const useRef = value => { const index = cursor++; return slots[index] ??= { current: value }; };
+  const useEffect = (effect, deps) => { const index = cursor++; const old = effects[index];
+    if (!old || deps.some((dep, i) => !Object.is(dep, old.deps[i]))) { effects[index] = { deps, cleanup: old?.cleanup };
+      waiting.push(() => { old?.cleanup?.(); effects[index].cleanup = effect(); }); } };
+  const factory = new Function('useState', 'useRef', 'useEffect', 'voucherApi', 'formatPrice', 'setTimeout', 'clearTimeout', voucherSource
+    + '\nreturn { useCheckoutVoucher, checkoutVoucherQuote };');
+  const actual = factory(useState, useRef, useEffect, api, formatPrice,
+    callback => { timers.set(++timerId, callback); return timerId; }, id => timers.delete(id));
+  const render = (...args) => { cursor = 0; actual.useCheckoutVoucher(...args); waiting.splice(0).forEach(effect => effect());
+    cursor = 0; return actual.useCheckoutVoucher(...args); };
+  return { render, quote: actual.checkoutVoucherQuote, unmount: () => effects.forEach(effect => effect?.cleanup?.()),
+    timer: () => { const [id, callback] = [...timers.entries()].at(-1) || []; timers.delete(id); return callback?.(); } };
 }
 
-// =========================================================================
-// TEST A — STALE 201
-// =========================================================================
-test('TEST A — Stale 201: response for payload X when UI changed to Y does not clear cart Y or navigate', async () => {
-  sessionStorage.clear();
-  const harness = createCheckoutComponentHarness();
+function actualCheckoutTotals(voucher, pendingSubmission = null, requestedPoints = 0) {
+  const body = source.slice(source.indexOf('  const subtotal = checkoutItems.reduce('), source.indexOf('  // Live order payload'));
+  const scope = { checkoutItems: [{ cartItemId: 'line-1', quantity: 1, product: { id: 7, price: 400000 } }],
+    voucherCode: voucher.appliedVoucher?.code || '', useCheckoutVoucher: () => voucher,
+    profile: { loyaltyPoints: 1000 }, requestedPoints, pendingSubmission };
+  return new Function(...Object.keys(scope), body + '\nreturn { shippingFee, displayedShippingFee, maximumPoints, finalTotal, orderSummary, effectiveDiscount };')(...Object.values(scope));
+}
 
-  let resolveOrderApi;
-  const pendingPromise = new Promise((resolve) => {
-    resolveOrderApi = resolve;
-  });
+function actualCartTotals(voucher) {
+  const cartSource = fs.readFileSync(new URL('./CartPage.jsx', import.meta.url), 'utf8');
+  const body = cartSource.slice(cartSource.indexOf('  const selectedSubtotal = cart'), cartSource.indexOf('  const handleRemoveCoupon'));
+  const scope = { cart: [{ cartItemId: 'line-1', quantity: 1, product: { id: 7, price: 400000 } }],
+    selectedItemIds: new Set(['line-1']), couponCode: voucher.appliedVoucher?.code || '', useCheckoutVoucher: () => voucher };
+  return new Function(...Object.keys(scope), body + '\nreturn { shippingFee, displayedShippingFee, finalTotal, effectiveDiscount, shippingDiscountAmount };')(...Object.values(scope));
+}
 
-  let capturedKey = null;
-  let capturedPayload = null;
-  orderApi.createOrder = (payload, key) => {
-    capturedPayload = payload;
-    capturedKey = key;
-    return pendingPromise;
-  };
-
-  // User submits order for payload X
-  const submitPromise = harness.handleSubmitOrder();
-  assert.ok(capturedKey, 'Idempotency key must be attached to in-flight request');
-  assert.equal(harness.isSubmittingRef.current, true, 'isSubmittingRef must be true while in-flight');
-
-  // While request X is pending, user modifies note and shipping phone -> changes to payload Y
-  harness.updateField('note', 'Giao sau 18h tối (Sửa đổi)');
-  harness.updateField('shippingPhone', '0909999999');
-
-  // Verify that live fingerprint ref was updated to Y while submitted was X
-  assert.notEqual(
-    JSON.stringify(capturedPayload),
-    harness.currentFingerprintRef.current,
-    'Live fingerprint must reflect changes to Y'
-  );
-
-  // Server responds with 201 Created for old payload X
-  resolveOrderApi({ id: 1001, orderCode: 'ORD-STALE-201' });
-  await submitPromise;
-
-  // Assertions for Test A:
-  assert.equal(harness.state.removedFromCart.length, 0, 'Cart Y must NOT be cleared by stale 201');
-  assert.equal(harness.state.navigatedTo, null, 'Must NOT navigate for stale 201');
-  assert.equal(harness.state.customerName, 'Nguyễn Văn A', 'Form Y must not be reset');
-  assert.equal(harness.state.note, 'Giao sau 18h tối (Sửa đổi)', 'Form Y value must remain intact');
+test('SHIPPING production: Cart và Checkout cùng giảm ship, không trừ tiền hàng hoặc sai mức đổi điểm', async () => {
+  sessionStorage.clear(); let request;
+  const h = voucherHarness({ validateVoucher: async (code, orderTotal) => { request = { code, orderTotal };
+    return { valid: true, code: 'FREESHIP', discountAmount: 0, shippingDiscountAmount: 30000, finalShippingFee: 0 }; } });
+  h.render('FREESHIP', 400000, 'line-1'); await h.timer(); const voucher = h.render('FREESHIP', 400000, 'line-1');
+  assert.deepEqual(request, { code: 'FREESHIP', orderTotal: 400000 });
+  assert.equal(voucher.discountAmount, 0); assert.equal(voucher.finalShippingFee, 0); assert.match(voucher.success, /phí vận chuyển/);
+  assert.equal(actualCartTotals(voucher).finalTotal, 400000); assert.equal(actualCheckoutTotals(voucher).finalTotal, 400000);
+  assert.equal(actualCartTotals(voucher).displayedShippingFee, 30000);
+  assert.equal(actualCheckoutTotals(voucher).displayedShippingFee, 30000);
+  assert.equal(400000 - actualCartTotals(voucher).effectiveDiscount + actualCartTotals(voucher).displayedShippingFee - voucher.shippingDiscountAmount, actualCartTotals(voucher).finalTotal);
+  assert.equal(400000 - actualCheckoutTotals(voucher).effectiveDiscount + actualCheckoutTotals(voucher).displayedShippingFee - voucher.shippingDiscountAmount, actualCheckoutTotals(voucher).finalTotal);
+  assert.equal(actualCheckoutTotals(voucher, null, 500).maximumPoints, 400);
+  assert.equal(actualCheckoutTotals(voucher, null, 500).finalTotal, 360000);
 });
 
-// =========================================================================
-// TEST B — STALE 200 REPLAY
-// =========================================================================
-test('TEST B — Stale 200 Replay: replay response for payload X does not overwrite state of intent Y', async () => {
-  sessionStorage.clear();
-  const harness = createCheckoutComponentHarness();
-
-  let resolveOrderApi;
-  const pendingPromise = new Promise((resolve) => {
-    resolveOrderApi = resolve;
-  });
-
-  orderApi.createOrder = () => pendingPromise;
-
-  const submitPromise = harness.handleSubmitOrder();
-
-  // User alters address detail while request is pending
-  harness.updateField('addressDetail', '456 Phố Bà Triệu, Hà Nội (Địa chỉ mới)');
-
-  // Server returns 200 OK replay for old request X
-  resolveOrderApi({ id: 1002, orderCode: 'ORD-STALE-200-REPLAY' });
-  await submitPromise;
-
-  // Assertions for Test B:
-  assert.equal(harness.state.removedFromCart.length, 0, 'Cart Y must NOT be cleared by stale 200 replay');
-  assert.equal(harness.state.navigatedTo, null, 'Must NOT navigate for stale 200 replay');
-  assert.equal(harness.state.addressDetail, '456 Phố Bà Triệu, Hà Nội (Địa chỉ mới)');
+test('FIXED/legacy production: chỉ giảm hàng, không miễn phí ship và Cart/Checkout khớp tổng', async () => {
+  sessionStorage.clear(); const h = voucherHarness({ validateVoucher: async () => ({ valid: true, code: 'HG10K', discountAmount: 10000 }) });
+  h.render('HG10K', 400000, 'line-1'); await h.timer(); const voucher = h.render('HG10K', 400000, 'line-1');
+  assert.equal(voucher.shippingDiscountAmount, 0); assert.equal(voucher.finalShippingFee, 30000);
+  assert.equal(actualCartTotals(voucher).finalTotal, 420000); assert.equal(actualCheckoutTotals(voucher).finalTotal, 420000);
+  assert.equal(actualCheckoutTotals(voucher, null, 500).maximumPoints, 390);
+  assert.equal(actualCheckoutTotals(voucher, null, 500).finalTotal, 381000);
 });
 
-// =========================================================================
-// TEST C — NORMAL 201 SUCCESS
-// =========================================================================
-test('TEST C — Normal 201 Success: payload unchanged -> normal success flow', async () => {
-  sessionStorage.clear();
-  const harness = createCheckoutComponentHarness();
-
-  orderApi.createOrder = async (payload, key) => ({
-    id: 1003,
-    orderCode: 'ORD-NORMAL-201'
-  });
-
-  await harness.handleSubmitOrder();
-
-  assert.equal(harness.state.removedFromCart.length, 1, 'Purchased cart item must be removed from cart');
-  assert.equal(harness.state.removedFromCart[0], sampleCartItem.cartItemId);
-  assert.equal(harness.state.navigatedTo, '/order-success/1003', 'Must navigate to order-success');
-  assert.equal(getStoredCheckoutIntent(), null, 'Stored checkout intent must be cleared');
-  assert.equal(harness.state.loading, false);
+test('Hook thật loại response chậm khi giỏ/code đổi, xóa discount cũ ngay từ render', async () => {
+  sessionStorage.clear(); const slow = deferred();
+  const h = voucherHarness({ validateVoucher: async code => code === 'OLD' ? slow.promise : { valid: true, code, discountAmount: 10000 } });
+  h.render('OLD', 400000, 'line-A'); const first = h.timer();
+  const changed = h.render('NEW', 400000, 'line-B'); assert.equal(changed.discountAmount, 0); assert.equal(changed.validating, true);
+  await h.timer(); slow.resolve({ valid: true, code: 'OLD', discountAmount: 200000 }); await first;
+  const actual = h.render('NEW', 400000, 'line-B'); assert.equal(actual.discountAmount, 10000); assert.equal(actual.appliedVoucher.code, 'NEW');
+  assert.equal(sessionStorage.getItem('hg_voucher_code'), 'NEW');
 });
 
-// =========================================================================
-// TEST D — NORMAL 200 REPLAY
-// =========================================================================
-test('TEST D — Normal 200 Replay: same payload replay -> treated as success', async () => {
-  sessionStorage.clear();
-  const harness = createCheckoutComponentHarness();
-
-  orderApi.createOrder = async (payload, key) => ({
-    id: 1004,
-    orderCode: 'ORD-NORMAL-200'
-  });
-
-  await harness.handleSubmitOrder();
-
-  assert.equal(harness.state.errorMsg, '', 'No error should be displayed for 200 replay');
-  assert.equal(harness.state.removedFromCart.length, 1, 'Cart items removed on 200 replay');
-  assert.equal(harness.state.navigatedTo, '/order-success/1004', 'Navigated to success route');
-  assert.equal(getStoredCheckoutIntent(), null, 'Stored checkout intent cleared');
+test('Hook thật cùng key: yêu cầu cũ trả sau không ghi đè xác thực mới, unmount không nhận response', async () => {
+  sessionStorage.clear(); const old = deferred(); const latest = deferred(); let calls = 0;
+  const h = voucherHarness({ validateVoucher: () => ++calls === 1 ? old.promise : latest.promise });
+  const initial = h.render('HG10K', 400000, 'line-1'); const first = initial.apply(); const second = initial.apply();
+  latest.resolve({ valid: true, code: 'HG10K', discountAmount: 10000 }); await second;
+  old.resolve({ valid: true, code: 'HG10K', discountAmount: 200000 }); await first;
+  assert.equal(h.render('HG10K', 400000, 'line-1').discountAmount, 10000);
+  const afterUnmount = deferred(); const unmounted = voucherHarness({ validateVoucher: () => afterUnmount.promise });
+  unmounted.render('LATE', 400000, 'line-2'); const pending = unmounted.timer(); unmounted.unmount();
+  afterUnmount.resolve({ valid: true, code: 'LATE', discountAmount: 30000 }); await pending;
+  assert.notEqual(sessionStorage.getItem('hg_voucher_code'), 'LATE');
 });
 
-// =========================================================================
-// TEST E — DOUBLE CLICK
-// =========================================================================
-test('TEST E — Double Click: synchronous guard prevents duplicate submission and multiple intents', async () => {
-  sessionStorage.clear();
-  const harness = createCheckoutComponentHarness();
-
-  let callCount = 0;
-  const capturedKeys = [];
-  orderApi.createOrder = async (payload, key) => {
-    callCount++;
-    capturedKeys.push(key);
-    await new Promise((r) => setTimeout(r, 20));
-    return { id: 1005 };
-  };
-
-  // Rapid double click
-  const click1 = harness.handleSubmitOrder();
-  const click2 = harness.handleSubmitOrder();
-
-  await Promise.all([click1, click2]);
-
-  assert.equal(callCount, 1, 'createOrder must be called exactly once');
-  assert.equal(capturedKeys.length, 1);
+test('Hook lỗi voucher miễn ship đơn vốn miễn ship: giữ tổng, báo đúng lỗi, không giữ mã cũ', async () => {
+  sessionStorage.clear(); sessionStorage.setItem('hg_voucher_code', 'OLD');
+  const h = voucherHarness({ validateVoucher: async () => { throw { response: { data: { message: 'Đơn hàng đã được miễn phí vận chuyển' } } }; } });
+  h.render('FREESHIP', 1000000, 'line-1'); await h.timer(); const actual = h.render('FREESHIP', 1000000, 'line-1');
+  assert.equal(actual.discountAmount, 0); assert.equal(actual.shippingDiscountAmount, 0); assert.equal(actual.finalShippingFee, 0);
+  assert.match(actual.error, /đã được miễn phí/); assert.equal(sessionStorage.getItem('hg_voucher_code'), null);
 });
 
-// =========================================================================
-// TEST F — TIMEOUT / NETWORK ERROR & RETRY
-// =========================================================================
-test('TEST F — Timeout: network error preserves cart and key; retry reuses same key', async () => {
-  sessionStorage.clear();
-  const harness = createCheckoutComponentHarness();
-
-  let attempt = 0;
-  const recordedKeys = [];
-
-  orderApi.createOrder = async (payload, key) => {
-    attempt++;
-    recordedKeys.push(key);
-    if (attempt === 1) {
-      const err = new Error('Network timeout');
-      err.code = 'ECONNABORTED';
-      throw err;
-    }
-    return { id: 1006 };
-  };
-
-  // Attempt 1: Network timeout
-  await harness.handleSubmitOrder();
-
-  assert.equal(harness.state.removedFromCart.length, 0, 'Cart must NOT be cleared on timeout');
-  assert.equal(harness.state.navigatedTo, null, 'Must NOT navigate on timeout');
-  assert.match(harness.state.errorMsg, /Không thể tạo đơn hàng\. Giỏ hàng được giữ nguyên/);
-
-  const storedIntent = getStoredCheckoutIntent();
-  assert.ok(storedIntent, 'Stored intent must be preserved on timeout');
-  assert.equal(storedIntent.key, recordedKeys[0]);
-
-  // Attempt 2: User clicks retry with unchanged payload
-  await harness.handleSubmitOrder();
-
-  assert.equal(attempt, 2, 'Two attempts made');
-  assert.equal(recordedKeys[1], recordedKeys[0], 'Retry must send the EXACT SAME Idempotency-Key');
-  assert.equal(harness.state.navigatedTo, '/order-success/1006', 'Retry success navigates to order-success');
+test('Snapshot chưa rõ kết quả giữ cả giảm ship/tổng dù giá, giỏ hoặc voucher hiện tại đổi', async () => {
+  sessionStorage.clear(); const h = harness({ subtotal: 400000, effectiveDiscount: 0, shippingDiscountAmount: 30000,
+    shippingFee: 0, finalTotal: 400000, voucherCode: 'FREESHIP', voucherSuccess: 'valid' });
+  h.api.createOrder = async () => { throw new Error('Timeout'); }; await h.submit();
+  const snapshot = JSON.parse(sessionStorage.getItem('hg_checkout_submission_51'));
+  assert.equal(snapshot.form.totals.shippingDiscountAmount, 30000);
+  const quote = { discountAmount: 0, shippingDiscountAmount: 0, finalShippingFee: 30000 };
+  const current = actualCheckoutTotals(quote, snapshot);
+  assert.equal(current.finalTotal, 430000); assert.equal(current.orderSummary.finalTotal, 400000);
+  assert.equal(current.orderSummary.shippingDiscountAmount, 30000);
+  assert.equal(current.displayedShippingFee, 30000);
 });
 
-// =========================================================================
-// TEST G — RELOAD SAME PAYLOAD
-// =========================================================================
-test('TEST G — Reload Same Payload: recovers persisted key from sessionStorage', async () => {
-  sessionStorage.clear();
-
-  // Initial session generates and stores intent A
-  const harness1 = createCheckoutComponentHarness();
-  const { payload } = harness1.computeLiveState();
-  const initialIntent = getOrCreateIdempotencyKey(payload);
-  const keyA = initialIntent.key;
-
-  // Page reload simulated: harness2 mounts fresh, reads same cart and form state
-  const harness2 = createCheckoutComponentHarness();
-
-  let usedKey = null;
-  orderApi.createOrder = async (p, key) => {
-    usedKey = key;
-    return { id: 1007 };
-  };
-
-  await harness2.handleSubmitOrder();
-
-  assert.equal(usedKey, keyA, 'Reloaded page submit must reuse persisted Idempotency-Key from sessionStorage');
+test('Lưu địa chỉ khi đơn đã tạo: dữ liệu lấy từ yêu cầu đã chụp', async () => {
+  sessionStorage.clear(); const h = harness({ saveInfo: true }); const d = deferred(); const saved = [];
+  h.api.createOrder = () => d.promise;
+  h.addresses.createAddress = async body => { saved.push(body); return { id: 4 }; };
+  const task = h.submit(); h.change({ addressDetail: 'Địa chỉ vừa thay' });
+  d.resolve({ id: 601 }); await task;
+  assert.equal(saved.length, 1); assert.equal(saved[0].addressDetail, 'Số 1');
+  assert.equal(saved[0].isDefault, true); assert.equal(h.state.navigation.route, '/order-success/601');
+});
+test('Địa chỉ đã lưu thì không tạo lại', async () => {
+  sessionStorage.clear(); const h = harness({ saveInfo: true }); let creates = 0;
+  h.addresses.getMyAddresses = async () => [{ fullName: 'Nguyễn Văn A', phone: '0901234567',
+    provinceCode: '01', wardCode: '00001', addressDetail: 'Số 1' }];
+  h.addresses.createAddress = async () => { creates++; };
+  await h.submit(); assert.equal(creates, 0); assert.equal(h.state.navigation.route, '/order-success/301');
+});
+test('Lỗi lưu địa chỉ không làm mất đơn đã tạo hoặc tạo đơn thứ hai', async () => {
+  sessionStorage.clear(); const h = harness({ saveInfo: true }); let orders = 0;
+  h.api.createOrder = async () => { orders++; return { id: 602 }; };
+  h.addresses.getMyAddresses = async () => { throw new Error('Không kết nối'); };
+  await h.submit(); assert.equal(orders, 1); assert.equal(h.state.navigation.route, '/order-success/602');
+  assert.match(h.state.navigation.state.addressSaveWarning, /Đơn hàng đã được tạo/);
+  assert.equal(sessionStorage.getItem('hg_checkout_submission_51'), null);
+});
+test('Không tích lưu thông tin thì không gọi API địa chỉ', async () => {
+  sessionStorage.clear(); const h = harness({ saveInfo: false }); let calls = 0;
+  h.addresses.getMyAddresses = async () => { calls++; return []; };
+  await h.submit(); assert.equal(calls, 0);
+});
+test('Đổi tài khoản lúc đang tạo đơn không sửa giỏ hoặc điều hướng tài khoản mới', async () => {
+  sessionStorage.clear(); const h = harness({ saveInfo: true }); const d = deferred();
+  h.api.createOrder = () => d.promise; const task = h.submit();
+  h.checkoutOwnerRef.current = 52; d.resolve({ id: 603 }); await task;
+  assert.deepEqual(h.state.removed, []); assert.equal(h.state.navigation, null);
+  assert.ok(sessionStorage.getItem('hg_checkout_submission_51'));
+});
+test('Rời checkout khi đang tải sổ địa chỉ không tạo địa chỉ hoặc điều hướng', async () => {
+  sessionStorage.clear(); const h = harness({ saveInfo: true }); const d = deferred(); let creates = 0;
+  h.addresses.getMyAddresses = () => d.promise; h.addresses.createAddress = async () => { creates++; };
+  const task = h.submit(); await new Promise(resolve => setImmediate(resolve));
+  h.checkoutActiveRef.current = false; d.resolve([]); await task;
+  assert.equal(creates, 0); assert.equal(h.state.navigation, null);
+  assert.ok(sessionStorage.getItem('hg_checkout_submission_51'));
 });
 
-// =========================================================================
-// TEST H — PAYLOAD CHANGE AFTER RELOAD
-// =========================================================================
-test('TEST H — Changed Payload After Reload: produces new UUID key', async () => {
-  sessionStorage.clear();
-
-  // Session has persisted key A for payload X
-  const harness1 = createCheckoutComponentHarness({ shippingPhone: '0901111111' });
-  const { payload: payloadX } = harness1.computeLiveState();
-  const intentX = getOrCreateIdempotencyKey(payloadX);
-  const keyA = intentX.key;
-
-  // User reloads and changes phone to 0902222222 (payload Y)
-  const harness2 = createCheckoutComponentHarness({ shippingPhone: '0902222222' });
-
-  let usedKey = null;
-  orderApi.createOrder = async (p, key) => {
-    usedKey = key;
-    return { id: 1008 };
-  };
-
-  await harness2.handleSubmitOrder();
-
-  assert.notEqual(usedKey, keyA, 'Changed payload after reload must generate a brand new Idempotency-Key');
-  assert.match(
-    usedKey,
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    'New key must be valid RFC4122 v4 UUID'
-  );
-});
-
-// =========================================================================
-// TEST I — NO WEB CRYPTO AT COMPONENT LEVEL
-// =========================================================================
-test('TEST I — No Web Crypto: controlled error displayed, submit blocked safely, no request sent', async () => {
-  sessionStorage.clear();
-  const harness = createCheckoutComponentHarness();
-
-  let orderApiCalled = false;
-  orderApi.createOrder = async () => {
-    orderApiCalled = true;
-    return { id: 1009 };
-  };
-
-  // Temporarily disable global crypto
-  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+test('Đổi token khi tải địa chỉ giữ token cũ và không gửi POST dưới phiên mới', async () => {
+  sessionStorage.clear(); const h = harness({ saveInfo: true }); const d = deferred();
+  const original = globalThis.localStorage; const storage = new Storage(); storage.setItem('token', 'session-A');
+  globalThis.localStorage = storage; let headers; let creates = 0;
+  h.checkoutTokenRef.current = 'session-A';
+  h.addresses.getMyAddresses = config => { headers = config.headers; return d.promise; };
+  h.addresses.createAddress = async () => { creates++; };
   try {
-    Object.defineProperty(globalThis, 'crypto', {
-      value: undefined,
-      configurable: true,
-      writable: true
-    });
-
-    await harness.handleSubmitOrder();
-
-    assert.equal(orderApiCalled, false, 'createOrder must NOT be called when crypto is missing');
-    assert.equal(harness.state.removedFromCart.length, 0, 'Cart must NOT be cleared');
-    assert.equal(harness.state.navigatedTo, null, 'Must NOT navigate');
-    assert.match(
-      harness.state.errorMsg,
-      /Web Crypto không khả dụng/,
-      'User-friendly error banner must be displayed'
-    );
-  } finally {
-    // Restore global crypto
-    if (originalDescriptor) {
-      Object.defineProperty(globalThis, 'crypto', originalDescriptor);
-    } else {
-      delete globalThis.crypto;
-    }
-  }
-});
-
-// =========================================================================
-// TEST J — 409 IDEMPOTENCY_CONFLICT
-// =========================================================================
-test('TEST J — 409 Conflict: preserves cart, invalidates stored key for next submission', async () => {
-  sessionStorage.clear();
-  const harness = createCheckoutComponentHarness();
-
-  let attempt = 0;
-  const usedKeys = [];
-
-  orderApi.createOrder = async (payload, key) => {
-    attempt++;
-    usedKeys.push(key);
-    if (attempt === 1) {
-      const error = new Error('Conflict');
-      error.response = {
-        status: 409,
-        data: {
-          code: 'IDEMPOTENCY_CONFLICT',
-          message: 'Yêu cầu đặt hàng bị xung đột hoặc thông tin đã thay đổi. Vui lòng kiểm tra lại thông tin và thử lại.'
-        }
-      };
-      throw error;
-    }
-    return { id: 1010 };
-  };
-
-  // Attempt 1: Server rejects with 409
-  await harness.handleSubmitOrder();
-
-  assert.equal(harness.state.removedFromCart.length, 0, 'Cart must NOT be cleared on 409 conflict');
-  assert.equal(harness.state.navigatedTo, null, 'Must NOT navigate on 409 conflict');
-  assert.match(harness.state.errorMsg, /Yêu cầu đặt hàng bị xung đột/);
-  assert.equal(getStoredCheckoutIntent(), null, 'Stored key must be invalidated from storage on 409');
-
-  // Attempt 2: User re-submits after conflict -> must generate fresh UUID
-  await harness.handleSubmitOrder();
-
-  assert.equal(attempt, 2);
-  assert.notEqual(usedKeys[1], usedKeys[0], 'Subsequent submit after conflict must generate a fresh UUID');
-  assert.equal(harness.state.navigatedTo, '/order-success/1010');
+    const task = h.submit(); await new Promise(resolve => setImmediate(resolve));
+    storage.setItem('token', 'session-B'); d.resolve([]); await task;
+    assert.equal(headers.Authorization, 'Bearer session-A'); assert.equal(creates, 0);
+    assert.equal(h.state.navigation, null);
+  } finally { globalThis.localStorage = original; }
 });

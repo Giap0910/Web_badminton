@@ -18,6 +18,14 @@ public class ProductVariantDto {
     private Boolean active;
     private Boolean legacy;
     private Boolean inStock;
+    @JsonIgnore @Setter(AccessLevel.NONE) private boolean colorSupplied;
+    @JsonIgnore @Setter(AccessLevel.NONE) private boolean sizeSupplied;
+    @JsonIgnore @Setter(AccessLevel.NONE) private boolean weightGripSupplied;
+    @JsonIgnore @Setter(AccessLevel.NONE) private boolean packagingSupplied;
+    @JsonSetter("color") public void setColor(String value) { color=value;colorSupplied=true; }
+    @JsonSetter("size") public void setSize(String value) { size=value;sizeSupplied=true; }
+    @JsonSetter("weightGrip") public void setWeightGrip(String value) { weightGrip=value;weightGripSupplied=true; }
+    @JsonSetter("packaging") public void setPackaging(String value) { packaging=value;packagingSupplied=true; }
     @JsonGetter("stock") public Integer publicStock() { return administrator() ? stock : null; }
     @JsonGetter("reservedStock") public Integer publicReservedStock() { return administrator() ? reservedStock : null; }
     private boolean administrator() {

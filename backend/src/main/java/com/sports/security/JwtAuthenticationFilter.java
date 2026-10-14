@@ -38,6 +38,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String username = tokenProvider.getUsernameFromJwt(jwt);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                if (!(userDetails instanceof CustomUserDetails current)
+                        || !java.util.Objects.equals(current.getId(),tokenProvider.getUserIdFromJwt(jwt))
+                        || current.getTokenVersion()!=tokenProvider.getTokenVersionFromJwt(jwt)) {
+                    throw new org.springframework.security.authentication.BadCredentialsException("Phiên đăng nhập đã được thu hồi");
+                }
                 if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
                     throw new org.springframework.security.authentication.DisabledException("Tài khoản đã bị khóa");
                 }

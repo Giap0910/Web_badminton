@@ -53,9 +53,7 @@ class PaymentLinkIntegrationTest {
     static void stop() throws Exception {
         if (context != null) context.close();
         if (!SCHEMA.matches("fix002_test_[0-9a-f]{32}")) throw new IllegalStateException();
-        try (var connection = connect(); var statement = connection.createStatement()) {
-            statement.execute("DROP DATABASE `" + SCHEMA + "`");
-        }
+        System.out.println("Retained test database: " + SCHEMA);
     }
 
     private static Connection connect() throws SQLException {

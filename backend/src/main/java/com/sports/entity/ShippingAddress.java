@@ -43,6 +43,8 @@ public class ShippingAddress {
     private String ward;
     @Column(name = "address_detail", columnDefinition = "TEXT")
     private String addressDetail;
+    @Column(columnDefinition="TEXT") private String note;
+    @Column(length=30) private String tag;
 
 
     @Column(name = "is_default", nullable = false)

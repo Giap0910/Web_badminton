@@ -3,13 +3,17 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getOrderStatusLabel } from '../utils/formatters';
 import UserLayout from '../components/UserLayout';
 import { orderApi } from '../api/orderApi.js';
+import { isEligibleReturnLine, returnApi } from '../api/returnApi.js';
 import OrderItemOptions from '../components/OrderItemOptions';
+import ProductImage from '../components/ProductImage';
 import {
   formatReviewReason,
   getPaymentStatusInfo,
 } from '../utils/paymentFormatters.js';
 
 export { getPaymentStatusInfo };
+export const canRequestOrderWarranty = (order, items) => order?.status === 'COMPLETED'
+  && items.some(item => String(item.orderId) === String(order.id) && isEligibleReturnLine(item));
 import {
   Clock,
   QrCode,
@@ -42,10 +46,46 @@ const OrderDetailPage = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [copiedField, setCopiedField] = useState(null);
   const [actionError, setActionError] = useState('');
+  const [orderError, setOrderError] = useState('');
+  const [warrantyItems, setWarrantyItems] = useState([]);
+  const [warrantyLoading, setWarrantyLoading] = useState(false);
+  const [warrantyError, setWarrantyError] = useState('');
+  const [warrantyNote, setWarrantyNote] = useState('');
+  const [warrantyRetry, setWarrantyRetry] = useState(0);
   const navigate = useNavigate();
 
   const activeOrderPaymentIdRef = useRef(null);
   const isMountedRef = useRef(true);
+  const currentOrderIdRef = useRef(id);
+  currentOrderIdRef.current = id;
+  const orderFetchGenerationRef = useRef(0);
+  const paymentFetchGenerationRef = useRef(0);
+  const warrantyFetchGenerationRef = useRef(0);
+  const currentOrderRef = useRef(order);
+  currentOrderRef.current = order;
+
+  const fetchWarrantyEligibility = async (signal) => {
+    const targetId = String(id); const generation = ++warrantyFetchGenerationRef.current;
+    const active = () => isMountedRef.current && !signal?.aborted && String(currentOrderIdRef.current) === targetId
+      && warrantyFetchGenerationRef.current === generation;
+    setWarrantyLoading(true); setWarrantyError('');
+    try {
+      const response = await returnApi.getEligibleItems({ signal, params: { orderId: targetId } }); const items = response?.data ?? response;
+      if (!active()) return;
+      if (!Array.isArray(items)) throw new Error('Dữ liệu điều kiện bảo hành không hợp lệ.');
+      const orderItems = items.filter(item => String(item.orderId) === targetId);
+      setWarrantyItems(orderItems.filter(isEligibleReturnLine));
+      setWarrantyNote(orderItems.filter(item => !isEligibleReturnLine(item)).map(item => item.ineligibleReason).filter(Boolean).join(' · '));
+    } catch (failure) {
+      if (active()) { setWarrantyItems([]); setWarrantyNote(''); setWarrantyError(failure.response?.data?.message || 'Không kiểm tra được điều kiện bảo hành.'); }
+    } finally { if (active()) setWarrantyLoading(false); }
+  };
+  useEffect(() => {
+    setWarrantyItems([]); setWarrantyError(''); setWarrantyNote(''); setWarrantyLoading(false);
+    if (order?.status !== 'COMPLETED' || String(order.id) !== String(id)) return;
+    const controller = new AbortController(); fetchWarrantyEligibility(controller.signal);
+    return () => { controller.abort(); warrantyFetchGenerationRef.current++; };
+  }, [id, order?.status, warrantyRetry]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -55,17 +95,21 @@ const OrderDetailPage = () => {
   }, []);
 
   const fetchPaymentOnly = async (targetOrderId) => {
+    if (!isMountedRef.current || String(currentOrderIdRef.current) !== String(targetOrderId)) return;
+    const generation = ++paymentFetchGenerationRef.current;
+    const active = () => isMountedRef.current && String(currentOrderIdRef.current) === String(targetOrderId)
+      && paymentFetchGenerationRef.current === generation;
     activeOrderPaymentIdRef.current = targetOrderId;
     setPaymentLoading(true);
     setPaymentError(null);
     try {
       const payRes = await orderApi.getOrderPayment(targetOrderId);
-      if (activeOrderPaymentIdRef.current !== targetOrderId || !isMountedRef.current) return;
+      if (!active()) return;
       const payData = payRes?.data ?? payRes;
       setPayment(payData || null);
       setPaymentError(null);
     } catch (payErr) {
-      if (activeOrderPaymentIdRef.current !== targetOrderId || !isMountedRef.current) return;
+      if (!active()) return;
       const status = payErr.response?.status;
       if (status === 404) {
         // 404 is a valid state meaning no payment record yet
@@ -79,39 +123,48 @@ const OrderDetailPage = () => {
         );
       }
     } finally {
-      if (activeOrderPaymentIdRef.current === targetOrderId && isMountedRef.current) {
+      if (active()) {
         setPaymentLoading(false);
       }
     }
   };
 
   const fetchOrderAndPayment = async () => {
+    if (!isMountedRef.current || String(currentOrderIdRef.current) !== String(id)) return;
+    const targetId = id;
+    const generation = ++orderFetchGenerationRef.current;
+    const active = () => isMountedRef.current && String(currentOrderIdRef.current) === String(targetId)
+      && orderFetchGenerationRef.current === generation;
     try {
-      const res = await orderApi.getOrderById(id);
+      const res = await orderApi.getOrderById(targetId);
       const data = res?.data ?? res;
-      if (!isMountedRef.current) return;
+      if (!active()) return;
+      if (!data || String(data.id) !== String(targetId)) throw new Error('Dữ liệu đơn hàng không khớp mã yêu cầu.');
       setOrder(data);
-      if (data) {
-        setTimeLeft(data.timeRemainingSeconds || 0);
-      }
-
-      // Fetch payment record independently with separate error/empty states
-      fetchPaymentOnly(id);
+      setOrderError(''); setTimeLeft(data.timeRemainingSeconds || 0);
+      fetchPaymentOnly(targetId);
     } catch (err) {
-      console.error('Lỗi khi tải thông tin đơn hàng:', err);
+      if (!active()) return;
+      const status = err.response?.status;
+      if ([401, 403, 404].includes(status)) { setOrder(null); setPayment(null); }
+      setOrderError(err.response?.data?.message || (status === 404 ? 'Không tìm thấy đơn hàng.'
+        : status === 403 ? 'Bạn không có quyền xem đơn hàng này.' : 'Không tải được đơn hàng. Vui lòng kiểm tra kết nối và thử lại.'));
     } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
+      if (active()) setLoading(false);
     }
   };
 
   useEffect(() => {
+    setOrder(null); setPayment(null); setOrderError(''); setPaymentError(null);
+    setLoading(true); setPaymentLoading(true); setTimeLeft(0); setActionError('');
     fetchOrderAndPayment();
+    return () => { orderFetchGenerationRef.current++; paymentFetchGenerationRef.current++; activeOrderPaymentIdRef.current = null; };
+  }, [id]);
+
+  useEffect(() => {
+    if (order?.status !== 'PENDING') return;
     const interval = setInterval(() => {
-      if (order?.status === 'PENDING') {
-        fetchOrderAndPayment();
-      }
+      if (currentOrderRef.current?.status === 'PENDING') fetchOrderAndPayment();
     }, 5000);
     return () => clearInterval(interval);
   }, [id, order?.status]);
@@ -141,17 +194,15 @@ const OrderDetailPage = () => {
       return;
     }
     setActionError('');
+    const targetId = order.id;
     try {
-      const res = await orderApi.cancelOrder(order.id);
+      const res = await orderApi.cancelOrder(targetId);
+      if (!isMountedRef.current || String(currentOrderIdRef.current) !== String(targetId)) return;
+      orderFetchGenerationRef.current++;
       setOrder(res?.data ?? res);
-      // Refresh payment status as well
-      try {
-        const payRes = await orderApi.getOrderPayment(order.id);
-        setPayment(payRes?.data ?? payRes);
-      } catch {
-        // Ignore payment fetch errors
-      }
+      fetchPaymentOnly(targetId);
     } catch (err) {
+      if (!isMountedRef.current || String(currentOrderIdRef.current) !== String(targetId)) return;
       setActionError(err.response?.data?.message || 'Không thể hủy đơn');
     }
   };
@@ -168,7 +219,7 @@ const OrderDetailPage = () => {
 
   if (loading) {
     return (
-      <UserLayout title="Chi Tiết Đơn Hàng">
+      <UserLayout currentPage="Chi tiết đơn hàng">
         <div className="py-24 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-secondary mx-auto mb-3" />
           <p className="text-xs font-bold text-slate-500">Đang tải thông tin đơn hàng...</p>
@@ -179,9 +230,10 @@ const OrderDetailPage = () => {
 
   if (!order) {
     return (
-      <UserLayout title="Chi Tiết Đơn Hàng">
+      <UserLayout currentPage="Chi tiết đơn hàng">
         <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-4">
-          <h2 className="text-base font-bold text-slate-900">Không tìm thấy đơn hàng!</h2>
+          <h2 role="alert" className="text-base font-bold text-slate-900">{orderError || 'Không tìm thấy đơn hàng!'}</h2>
+          <button type="button" onClick={() => { setLoading(true); fetchOrderAndPayment(); }} className="block mx-auto text-xs font-bold text-secondary underline">Thử tải lại</button>
           <Link to="/my-orders" className="text-xs font-bold text-secondary hover:underline">
             Quay lại danh sách đơn hàng
           </Link>
@@ -201,10 +253,12 @@ const OrderDetailPage = () => {
 
   return (
     <UserLayout
-      title={`Chi Tiết Đơn Hàng #${order.id}`}
-      subtitle={`Ngày đặt: ${new Date(order.createdAt).toLocaleString('vi-VN')} • Mã PayOS: ${order.payosOrderCode || 'N/A'}`}
+      currentPage={`Chi tiết đơn hàng #${order.id}`}
     >
       <div className="space-y-6">
+        {orderError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
+          <p>{orderError}</p><button type="button" onClick={fetchOrderAndPayment} className="mt-2 font-bold underline">Thử tải lại dữ liệu</button>
+        </div>}
         {/* Top Action Back Link & Status Badges */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <Link
@@ -429,10 +483,10 @@ const OrderDetailPage = () => {
               {(order.items || []).map((item) => (
                 <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <img
+                    <ProductImage compact
                       src={item.productImageUrl}
                       alt={item.productName}
-                      className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-100 p-1 object-contain shrink-0"
+                      className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-100 p-1 shrink-0"
                     />
                     <div className="min-w-0 space-y-0.5">
                       <span className="text-[10px] font-black uppercase text-slate-400">{item.productBrand}</span>
@@ -457,7 +511,7 @@ const OrderDetailPage = () => {
             <div className="text-xs text-slate-500 space-y-1">
               <div className="flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Bảo hành chính hãng 1 đổi 1 và bảo hành đứt cước 24h.</span>
+                <span>Bảo hành 1 đổi 1 trong 90 ngày cho vợt, giày, quần áo và balo/bao vợt đủ điều kiện; phụ kiện không áp dụng.</span>
               </div>
             </div>
 
@@ -485,14 +539,18 @@ const OrderDetailPage = () => {
         </div>
 
         {/* Action Row */}
-        {order.status === 'PAID' && (
+        {warrantyLoading && <p role="status" className="text-xs text-slate-600">Đang kiểm tra điều kiện bảo hành...</p>}
+        {warrantyError && <p role="alert" className="text-xs text-red-700">{warrantyError}
+          <button type="button" onClick={() => setWarrantyRetry(value => value + 1)} className="ml-2 underline">Thử lại</button></p>}
+        {!warrantyLoading && warrantyNote && !canRequestOrderWarranty(order, warrantyItems) && <p className="text-xs text-slate-600">Bảo hành: {warrantyNote}</p>}
+        {canRequestOrderWarranty(order, warrantyItems) && (
           <div className="flex justify-end">
             <Link
               to={`/returns?orderId=${order.id}`}
               className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors"
             >
               <RotateCcw className="w-4 h-4 text-slate-500" />
-              <span>Gửi yêu cầu Đổi trả / Bảo hành</span>
+              <span>Gửi yêu cầu bảo hành 1 đổi 1</span>
             </Link>
           </div>
         )}
