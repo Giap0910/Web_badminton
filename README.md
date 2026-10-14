@@ -1,4 +1,90 @@
-# SmashZone Badminton - Hệ Thống Fullstack Tích Hợp AI
+# HG Badminton — Cửa hàng cầu lông Fullstack
+
+## Trạng thái hiện hành — cập nhật 14/10/2026
+
+HG Badminton là đồ án cửa hàng cầu lông gồm giao diện khách hàng, quản trị, Backend Java và Database local. Phần hướng dẫn dưới đây là mốc hiện hành; các đặc tả, tài khoản mẫu và số liệu kiểm thử ngày 24/09/2026 ở phía sau được giữ làm lịch sử, không thay cho hợp đồng API mới.
+
+### Chạy dự án local
+
+1. Mở XAMPP và bật dịch vụ Database ở cổng 3306. Máy đang dùng **MariaDB 10.4**, dù XAMPP đặt tên nút là MySQL. Chưa xác minh chạy trên MySQL 8 riêng.
+2. Từ thư mục gốc dự án, chạy `run-backend.bat --check` và `run-frontend.bat --check` để kiểm tra trước; không khởi động server hoặc sửa Database. Sau đó dùng `run-backend.bat` cho cổng 8080 và `run-frontend.bat` cho cổng 5173. Backend cần Java qua JAVA_HOME/PATH và Maven trong PATH; Frontend cần Node/npm trong PATH, đã có node_modules. Nếu thiếu thư viện, launcher chỉ hướng dẫn `npm install --ignore-scripts`, không tự cài.
+3. Mở `http://localhost:5173/` cho khách hàng hoặc `http://localhost:5173/admin` cho tài khoản `ROLE_ADMIN`. Không dùng tài khoản/mật khẩu mẫu trong phần lịch sử để suy ra tài khoản đang hoạt động.
+
+Không chạy `schema.sql`, `data.sql`, seed hoặc migration tự động lên Database đang bán hàng. Backend local phải khởi chạy với `spring.jpa.hibernate.ddl-auto=validate` và `spring.sql.init.mode=never`; schema và dữ liệu được chuẩn bị riêng, có backup trước khi áp dụng. Cấu hình YAML mặc định còn chứa `update`/`always`, nên không dùng lệnh `java -jar` trần thay cho launcher đã chuẩn bị.
+
+Java 17, Spring Boot 3.2.5, React 18.3, Vite 6, Tailwind CSS 4.3.3 và React Router 7.18.4 là công nghệ hiện hành. Frontend cần Node.js từ 20 trở lên; máy kiểm tra dùng Node 24. Trình duyệt tối thiểu: Chrome 111, Firefox 128 hoặc Safari 16.4. Khóa JWT, PayOS và AI chỉ đặt ở cấu hình Backend; không chép vào README, Frontend, ảnh chụp hoặc Git. Đổi mật khẩu và khóa/mở khóa tài khoản thu hồi JWT cũ; sau đổi mật khẩu cần đăng nhập lại.
+
+Launcher Backend dùng đường dẫn `%~dp0` theo vị trí dự án, đọc whitelist từ `backend/.env` vào môi trường **tiến trình**, không sửa file cấu hình; gồm JWT/PayOS/AI/CORS và SPRING_DATASOURCE_* được hỗ trợ. Backend build package với skipTests để chạy; lệnh launcher không thay kiểm thử hồi quy riêng. UTF-8, timezone Asia/Ho_Chi_Minh và MariaDBDialect được đặt khi chạy. Frontend bind 127.0.0.1:5173 với strictPort; cổng bận thì báo lỗi, không tự đổi sang 5174.
+
+`DataInitializer` chỉ chạy khi bật rõ `app.demo-data.enabled=true`; thiếu cấu hình mặc định **không chạy**. Không bật demo trên Database hiện hành vì có thể thêm dữ liệu/tài khoản mẫu. Dịch vụ SQL init/DDL vẫn cần các cờ an toàn ở launcher; demo opt-in không thay cho `init.mode=never`.
+
+### Chuẩn bị chuyển sang môi trường riêng
+
+Khôi phục bản sao Database vào **schema mới**, đối chiếu migration và số liệu trước khi chạy; không import snapshot vào Database hiện hành. Tạo tài khoản Database giới hạn cho schema mới và cấu hình SPRING_DATASOURCE_URL/USERNAME/PASSWORD tại máy đích. Chuẩn bị JWT và khóa dịch vụ riêng; `.env` không nằm trong gói source hoặc Git. Chạy launcher với validate/never và không bật demo/seed.
+
+Ảnh đại diện và minh chứng RMA là file trong `backend/storage/avatars` và `backend/storage/returns`, ngoài dữ liệu SQL. Khi cần giữ ảnh phải sao chép cả storage tương ứng, giữ quyền truy cập nội bộ; không đưa bằng chứng riêng tư vào public Product media. File ảnh Product chưa được duyệt không được tải từ website ngoài để lấp placeholder. Bản sao source tự nó không có Database, credentials hoặc storage.
+
+Đã kiểm tra cài thư viện, build và chạy Backend trên Database bản sao trong thư mục nguồn riêng tại cùng máy. Đây là mô phỏng môi trường tách biệt, chưa phải nghiệm thu một máy vật lý mới hoặc MySQL 8. Sau nâng thư viện, Frontend hiện hành cũng đã build và chạy local đạt; chưa lặp lại toàn bộ quy trình chuyển máy với bộ thư viện mới.
+
+### Chức năng hiện có
+
+- Lần đối chiếu Database gần nhất ngày 14/10/2026 ghi nhận **268 sản phẩm quản trị, 189 công khai và 887 dòng biến thể**; số dòng biến thể gồm cả dòng cũ không còn bán. Có 27 đơn, 11 giao dịch và 7 tài khoản. Đây là số liệu tại thời điểm kiểm tra, không phải số cố định của hệ thống. Catalog công khai giới hạn 5 danh mục và 6 hãng Yonex, Victor, Li-Ning, Mizuno, Kawasaki, Fleet; dữ liệu cũ ngoài phạm vi vẫn được giữ trong quản trị. Tồn biến thể được khởi tạo theo mức 20 hàng **giả lập do Phong yêu cầu**, không phải kiểm kê thực tế; tồn hiện hành thay đổi theo giao dịch.
+- Giỏ hàng và checkout giữ voucher, đặt đúng biến thể, tiếp tục đúng đơn chưa hoàn tất. COD chỉ ghi đã thanh toán sau xác nhận thu tiền; QR không suy trạng thái thanh toán từ trang chuyển hướng.
+- Voucher FIXED/PERCENT giảm tiền hàng; SHIPPING giảm riêng phí vận chuyển. Điểm dựa trên tiền hàng đã thu và xác minh: mỗi 10.000 đồng được 1 điểm, đổi 1 điểm bằng 100 đồng, tối đa 10% tiền hàng sau voucher. Đánh giá không cộng điểm.
+- Quản trị sửa tồn theo biến thể, nhập Excel 5 sheet, ẩn/hiện và xóa sản phẩm có bảo toàn lịch sử; chặn xóa khi còn giao dịch hoặc bảo hành đang xử lý.
+- Đánh giá chỉ được tạo sau khi thanh toán và hoàn tất đơn, một lần mỗi khách/sản phẩm kể cả đánh giá đã ẩn. Admin có thể ẩn/hiện và phản hồi; nhãn đã mua dựa trên bằng chứng thanh toán hiện tại.
+- Bảo hành 1 đổi 1 trong 90 ngày cho vợt, giày, quần áo, balo/bao vợt; phụ kiện không áp dụng. Yêu cầu gắn đúng dòng đã mua; hoàn tất đổi hàng trừ tồn của hàng thay thế một lần, không đưa hàng lỗi lại kho bán hoặc dựng hoàn tiền giả.
+- Hồ sơ lưu ngày sinh/giới tính, ảnh đại diện; sổ địa chỉ dùng tỉnh/thành phố và phường/xã theo dữ liệu dự án. Quản trị khách hàng hiển thị điểm và thống kê thật, không dựng cấp VIP.
+- Dashboard và Excel/CSV dùng cùng cơ sở thu tiền, có top 5 sản phẩm bán chạy theo số lượng và snapshot sản phẩm đã ngừng bán. Tiền hàng trong xếp hạng là giá từng dòng trước voucher/điểm, không phải doanh thu thuần theo SKU.
+- Trang cài đặt giữ 4 tab, chỉ đọc chính sách từ Backend. Thông tin liên hệ chưa được xác minh hiển thị thiếu thông tin; không nhận khóa PayOS hoặc có nút lưu cấu hình giả.
+
+- Danh sách sản phẩm hỗ trợ tìm kiếm, lọc, sắp xếp và phân trang; gợi ý khi gõ tên, SKU hoặc hãng, không dùng giá làm từ khóa. Các thẻ danh mục nổi bật hiển thị 20+ theo yêu cầu.
+- Chi tiết sản phẩm tách mô tả, thông số và đánh giá; chọn màu, size/trọng lượng/quy cách theo dữ liệu biến thể, chặn lựa chọn hết hàng. Khách chỉ thấy còn/hết hàng; admin xem tồn từng biến thể. Nhãn NEW có thời hạn 14 ngày theo ngày về hàng được lưu.
+- Tìm kiếm đơn hàng khớp mã HG/PayOS, tên, SKU và hãng của các mặt hàng. Tìm kiếm đánh giá áp dụng cả danh sách đã đánh giá và chờ đánh giá.
+- Voucher BWF50K chỉ tính điều kiện và giảm giá trên tiền vợt/giày đủ điều kiện; Backend đối chiếu giỏ thực. Voucher có lịch sử dùng không được xóa hoặc tạo lại để đặt lại lượt dùng.
+- Chi tiết/kết quả đơn hiển thị tiền đổi điểm từ snapshot đơn và tổng do Backend cung cấp. Đơn đã hủy không mời tiếp tục thanh toán. Phím Ctrl/Cmd+K không lấy focus khỏi hộp thoại quản trị; thao tác API/clipboard thất bại không báo thành công giả.
+
+### AI, hình ảnh và thanh toán còn giới hạn
+
+Backend hỗ trợ chọn `AI_PROVIDER=openai` hoặc `gemini`. Mặc định trong mã hiện là `gpt-5.4-mini`; nhánh Gemini dùng tên cấu hình `gemini-3.8-flash`. Đây là chuỗi cấu hình của dự án, không xác nhận tài khoản có quyền truy cập hoặc nhà cung cấp đang phục vụ model đó. Frontend đọc `provider`, `model`, `fallback` từ response để hiển thị đúng. Khi thiếu khóa, lỗi quota hoặc phản hồi ngoài schema, dịch vụ trả tư vấn theo quy tắc `RULE_BASED`, `fallback=true`, với sản phẩm đang có trong catalog; không nhận là trả lời của GPT/Gemini.
+
+AI có giới hạn local: tối đa 6 câu hỏi/phút theo IP và tài khoản, một yêu cầu đang xử lý mỗi nhóm, 30 câu hỏi/phút và 2 yêu cầu đồng thời cho một tiến trình Backend. Khi bị chặn trả HTTP429 và `Retry-After: 60`. Giới hạn này nằm trong bộ nhớ một tiến trình, chưa phải cơ chế quota phân tán. Không lưu nội dung chat mới vào Database; email/số điện thoại được che theo mẫu trước khi gửi upstream, chưa bảo đảm che mọi dữ liệu cá nhân.
+
+Mỗi sản phẩm có 4 **ô** ảnh với ảnh nhỏ bên trái; hiện là “Hình ảnh đang cập nhật”. Chưa có 4 ảnh thật được cấp quyền. API upload Product media chưa được mở. Upload ảnh đại diện và minh chứng bảo hành là hai luồng riêng, không thay cho ảnh sản phẩm.
+
+PayOS thật vẫn có lỗi kênh **214**, Backend trả `503 / PAYOS_CHANNEL_UNAVAILABLE`; cần Phong xử lý tài khoản PayOS trước khi nghiệm thu tạo QR và nhận tiền thật. Chế độ MOCK chỉ dùng môi trường kiểm thử được xác minh, không tính vào bằng chứng thu tiền thật, điểm, đánh giá hoặc doanh thu.
+
+### Tài liệu, kiểm thử và phục hồi
+
+Hợp đồng tích hợp đang hoạt động: [docs/product-api-contract.md](./docs/product-api-contract.md), đặc biệt mục 13 cập nhật 14/10/2026. Source và snapshot Database trước các nhóm được giữ trong `backups/project-completion-20261013/`; hồ sơ catalog trước đó vẫn nằm trong `backups/catalog-completion-20261013/`. Không xóa hoặc chạy rollback trực tiếp khi đã có đơn phát sinh sau snapshot; kiểm tra trên Database phục hồi riêng và đối soát giao dịch trước.
+
+Nhóm 1–5 có kiểm thử Backend, SSR Frontend, build, Database clone và API local. SSR không thay kiểm tra trực quan bằng trình duyệt; chưa tuyên bố đã nghiệm thu mọi màn hình, PayOS thật, AI trả lời thật hoặc an toàn OWASP toàn diện. Coverage/fuzz ngày 24/09/2026 bên dưới chỉ có hiệu lực với phiên bản và phạm vi đã ghi lúc đó.
+
+**Kiểm thử hiện hành ngày 14/10/2026:** 677/677 ca Frontend trên 25 file kiểm thử JavaScript đạt, không bỏ qua; build đạt. Lượt Maven mặc định cuối ghi nhận 789 mục: **631 thực thi đạt**, **158 bỏ qua** (156 integration cần cờ/môi trường Database riêng và 2 ca symlink Windows), 0 failure/error. Không cộng các lượt chạy lặp hoặc coi ca bỏ qua là đã đạt. AI có 43 ca gateway giả lập cho hai provider, gồm chuyển danh mục theo câu hỏi hiện tại, áo/quần cầu lông và phủ định giày để chọn vợt; quấn cán vẫn thuộc phụ kiện.
+
+Backend local sau restart đạt 31 kiểm tra API cho cả admin/user; số sản phẩm, biến thể, đơn, tài khoản, tổng tồn và tổng tiền không đổi. Bản nguồn sạch có 352 file đối chiếu, cài dependency độc lập, build cả hai phần và chạy trên Database bản sao ở cổng 8081: 31 kiểm tra quyền/API, 34 kiểm tra nghiệp vụ, nhập Excel 5 danh mục/5 bản nháp và chặn nhập trùng đều đạt; hồ sơ, đánh giá và RMA còn đúng sau restart. Đây là mô phỏng trên cùng máy, chưa phải kiểm tra máy vật lý khác. Các dữ liệu kiểm thử được giữ, không đưa vào cửa hàng.
+
+Bằng chứng các vòng trước: `backups/project-completion-20261013/group6-verification.json`. Báo cáo vòng mới: [docs/fix/ACADEMIC_DEMO_READINESS.md](./docs/fix/ACADEMIC_DEMO_READINESS.md). Đã kiểm tra trình duyệt cả phiên admin và khách hàng, desktop và mobile: tìm kiếm, danh mục/chi tiết, chọn size, bốn ô ảnh, dashboard, hồ sơ/ngày sinh sau reload và hộp nhập Excel. Những tình huống không có trong tài khoản thật được kiểm bằng fixture; không tạo đơn hoặc xác nhận thu tiền trên Database chính trong vòng này. Không nhận là mọi màn hình hoặc mọi tình huống đều được nghiệm thu.
+
+### Giới hạn và việc còn cần xác minh
+
+- Chưa có ảnh sản phẩm thật kèm quyền sử dụng; bốn ô placeholder không phải bốn ảnh đúng mẫu đã nghiệm thu.
+- Kênh PayOS thật đang lỗi 214; chưa nghiệm thu tạo QR/nhận tiền thật. Không dùng kết quả MOCK làm bằng chứng thanh toán.
+- Model AI được cấu hình không bảo đảm nhà cung cấp cho phép truy cập; vòng sửa dùng gateway giả lập, chưa nghiệm thu trả lời AI thật. Chưa triển khai nâng model mới.
+- Dataset địa chỉ hai cấp còn cần đối chiếu nguồn chính thức, đặc biệt các nhãn Quảng Ninh/Bắc Ninh/Đồng Nai hiện được hiển thị là thành phố. Không coi toàn bộ dataset đã xác minh.
+- Tồn ban đầu là giả lập; hotline, địa chỉ liên hệ và email cửa hàng chưa được xác minh. Chính sách bảo hành/điểm là quy tắc cửa hàng đã duyệt trong dự án.
+- Chưa chạy 156 integration có điều kiện trong lượt cuối, hai ca symlink bị giới hạn Windows; chưa chạy chiến dịch fuzz sinh dữ liệu mới trong vòng này. Không có script lint Frontend riêng, nên không báo lint đạt.
+- Chưa nghiệm thu trên máy vật lý khác, MySQL 8 riêng hoặc triển khai công khai. Audit npm bằng không không thay đánh giá bảo mật toàn hệ thống. Danh sách 10 lỗi ban đầu còn cần đối chiếu từng mục với sáu nhóm sửa; không tuyên bố 10/10 đã nghiệm thu chỉ từ số nhóm.
+
+Hotfix nhóm 6: bộ chọn hàng đổi RMA dùng `catalogScope=all` có quyền ADMIN, thay giá trị `admin` không được Backend hỗ trợ. Kiểm thử tập trung quản trị + đăng ký/dashboard đạt **54/54**, log `backups/project-completion-20261013/group6-admin-rma.log`. Đây là kết quả tập trung, chưa thay gate toàn dự án.
+
+Đợt cập nhật thư viện ngày 14/10 đã đạt **677/677 kiểm thử Frontend**, build đạt; npm audit qua registry chính thức ghi nhận **0 cảnh báo**, cả toàn bộ dependency và riêng runtime. Giữ màu HEX, bo góc, bóng đổ và khoảng cách dòng banner cũ; sửa tương thích SSR trong các file kiểm thử hiện có. Audit bằng không chỉ phản ánh dependency tại thời điểm kiểm tra, không thay nghiệm thu bảo mật toàn ứng dụng. Ảnh thật và PayOS thật vẫn hoãn.
+
+Trong bước chuẩn bị Database riêng, bảng quyền hệ thống `mysql.db` đã cần sửa theo phê duyệt của Phong. CHECK sau sửa đạt, nhưng 6 dòng grant bị hỏng không được phục hồi (6→0); file `db.*` trước sửa được giữ trong `backups/project-completion-20261013/mysql-privileges-before-repair`. Kết nối cửa hàng vẫn đọc được 263 sản phẩm và tạo tài khoản giới hạn cho schema mới đã thực hiện được. Cần đối soát các quyền hệ thống cũ từ backup; đây là vấn đề bảng quyền MariaDB, không có bằng chứng mất dữ liệu catalog. Chưa kết luận mọi tài khoản hoặc dịch vụ phụ thuộc quyền cũ đều đã được kiểm tra.
+
+## Lịch sử tài liệu và minh chứng trước mốc 14/10/2026
+
+Các nội dung phía dưới được giữ để đối chiếu tiến trình đồ án. Khi khác với phần hiện hành hoặc hợp đồng API mục 13, ưu tiên thông tin cập nhật 14/10/2026. Những mô tả “Enterprise”, bảo mật toàn diện, MySQL 8, AI 1.5, seed/tài khoản mẫu và đường dẫn runtime cố định là mô tả ban đầu, không phải xác nhận triển khai hiện tại.
 
 > **Dự án Shop Badminton Fullstack Tích Hợp AI** được thiết kế và xây dựng theo chuẩn kiến trúc cấp cao (Enterprise Senior Architecture) và bảo mật nghiêm ngặt theo tiêu chuẩn OWASP Top 10.
 
