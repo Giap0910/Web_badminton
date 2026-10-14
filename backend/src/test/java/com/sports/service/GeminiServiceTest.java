@@ -15,6 +15,58 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
 class GeminiServiceTest {
+    @Test void exactModelRangeAndColorNeverFallBackToUnrelatedProducts() {
+        Product racket = Product.builder().name("Yonex Nanoflare 1000Z").brand("Yonex")
+                .price(new BigDecimal("4390000")).variants(List.of(ProductVariant.builder().color("Vàng").stock(20).build())).build();
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", racket, "1000 z"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", racket, "9999z"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", racket, "tam 3 - 4 trieu"));
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", racket, "tu 4 den 5 trieu mau vang"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", racket, "mau do"));
+    }
+    @Test void recommendationTextCannotDisplayInventedPriceOrTechnology() {
+        var response = AiChatResponse.builder().reply("Giày 1 đồng có công nghệ bịa").recommendedProductIds(List.of(2L)).build();
+        ReflectionTestUtils.invokeMethod(service, "enrich", response, List.of(Product.builder().id(2L).build()));
+        assertEquals(List.of(2L), response.getRecommendedProductIds());
+        assertFalse(response.getReply().contains("1 đồng"));
+        assertFalse(response.getReply().contains("công nghệ bịa"));
+        assertEquals(1, response.getRecommendedProducts().size());
+    }
+    @Test void vagueRequestAsksBeforeRecommendingAndImpossibleBudgetDoesNotRelax() {
+        var vague = service.chatWithAi(null, new AiChatRequest("Tìm vợt tốt"));
+        assertTrue(vague.getRecommendedProductIds().isEmpty());
+        assertTrue(vague.getReply().contains("khoảng giá"));
+        var impossible = service.chatWithAi(null, new AiChatRequest("Giày Yonex dưới 100k"));
+        assertTrue(impossible.getRecommendedProductIds().isEmpty());
+        assertTrue(impossible.getReply().contains("không tự thay"));
+    }
+    @Test void rankingUsesKnownFactsWithoutInventingMissingSpecifications() {
+        Product attack = Product.builder().balancePoint("Head-Heavy").stiffness("Stiff").build();
+        Product defense = Product.builder().balancePoint("Head-Light").stiffness("Flexible").build();
+        assertEquals(10, (int) ReflectionTestUtils.invokeMethod(service, "suitability", attack, "tan cong smash"));
+        assertEquals(15, (int) ReflectionTestUtils.invokeMethod(service, "suitability", defense, "phong thu nguoi moi"));
+        assertEquals(0, (int) ReflectionTestUtils.invokeMethod(service, "suitability", Product.builder().build(), "tan cong nguoi moi"));
+    }
+    @Test void strictBudgetBrandAndAvailableSizeAreEnforced() {
+        Product shoe = Product.builder().brand("Yonex").price(new BigDecimal("1500000"))
+                .variants(List.of(ProductVariant.builder().size("40").stock(20).build(),
+                        ProductVariant.builder().size("41").stock(0).build())).build();
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", shoe, "yonex duoi 2 trieu size 40"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", shoe, "yonex duoi 1 trieu"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", shoe, "victor size 40"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", shoe, "yonex size 41"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", shoe, "duoi 1,5 trieu"));
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service, "matchesRequirements", shoe, "toi da 1,5 trieu"));
+    }
+    @Test void modelSpacingAndBrandAliasesHaveConsistentRanking() {
+        Product model = Product.builder().name("Vợt Yonex Nanoflare 1000Z").brand("Yonex").build();
+        int exact = ReflectionTestUtils.invokeMethod(service, "relevance", model, "1000z");
+        int spaced = ReflectionTestUtils.invokeMethod(service, "relevance", model, "1000 z");
+        assertTrue(exact >= 100);
+        assertTrue(spaced >= 100);
+        assertEquals("lining", ReflectionTestUtils.invokeMethod(service, "normalize", "Li-Ning"));
+        assertEquals("lining", ReflectionTestUtils.invokeMethod(service, "normalize", "Li Ning"));
+    }
     ProductRepository repository;
     ProductService products;
     GeminiService service;
@@ -144,6 +196,9 @@ class GeminiServiceTest {
     }
 
     @Test void removingNegatedMentionKeepsLaterPositiveMentionOfSameCategory() {
+        Product victor = Product.builder().id(2L).name("Giày Victor").brand("Victor").stock(20)
+                .category(Category.builder().name("Giày Cầu Lông").build()).build();
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(victor));
         var request = new AiChatRequest("Không cần giày Yonex, tôi muốn giày Victor");
 
         var response = service.chatWithAi(null, request);
@@ -152,7 +207,7 @@ class GeminiServiceTest {
     }
 
     private void catalogWithCategory(Long id, String category) {
-        Product product = Product.builder().id(id).name(category).stock(20)
+        Product product = Product.builder().id(id).name(category).brand("Yonex").stock(20)
                 .category(Category.builder().name(category).build()).build();
         when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(product));
         when(products.getProductById(id)).thenReturn(ProductDto.builder().id(id).inStock(true).build());
@@ -197,7 +252,7 @@ class GeminiServiceTest {
 
         var response = service.chatWithAi(null, request);
 
-        assertEquals(List.of(3L, 1L), response.getRecommendedProductIds());
+        assertEquals(List.of(3L), response.getRecommendedProductIds());
     }
 
     @Test void openAiUsesRealCatalogHistoryAndRejectsInventedIds() {

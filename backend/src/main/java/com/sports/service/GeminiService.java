@@ -51,7 +51,9 @@ public class GeminiService {
         List<String> keys = admission.enter(userId, remoteAddress);
         try {
             List<Product> products = selectProducts(request);
-            AiChatResponse response = answer(privateRequest(request), products);
+            String clarification = clarification(request, products);
+            AiChatResponse response = clarification == null ? answer(privateRequest(request), products)
+                    : AiChatResponse.builder().reply(clarification).provider("RULE_BASED").fallback(true).build();
             enrich(response, products);
             return response;
         } finally { admission.leave(keys); }
@@ -65,6 +67,17 @@ public class GeminiService {
                 || message.getText().isBlank() || message.getText().length() > 2000
                 || !Set.of("user", "model").contains(message.getRole() == null ? "" : message.getRole()))
             throw new com.sports.exception.BadRequestException("Tin nhắn lịch sử không hợp lệ");
+    }
+
+    private String clarification(AiChatRequest request, List<Product> products) {
+        if (products.isEmpty()) return "Chưa có sản phẩm còn hàng đáp ứng các điều kiện bạn đưa ra. "
+                + "Bạn muốn đổi ngân sách, hãng hoặc kích cỡ nào? Tôi không tự thay điều kiện của bạn.";
+        String query = normalize(request.getMessage());
+        boolean general = query.matches("(?:toi (?:can|muon) |tim |tu van )(?:san pham|vot|giay|quan ao|balo)(?: tot)?");
+        if (general && request.getHistory().stream().noneMatch(m -> "user".equals(m.getRole())))
+            return "Bạn muốn tìm trong khoảng giá bao nhiêu? Với vợt, cho biết lối chơi và kinh nghiệm; "
+                    + "với giày/quần áo, cho biết size và màu mong muốn để tôi lọc đúng sản phẩm.";
+        return null;
     }
 
     private AiChatRequest privateRequest(AiChatRequest request) {
@@ -154,7 +167,8 @@ public class GeminiService {
         String category = conversationCategory(request);
         return stock.stream().filter(this::availableProduct)
                 .filter(p -> category == null || normalize(p.getCategory().getName()).contains(category))
-                .sorted(Comparator.<Product>comparingInt(p -> relevance(p, query)).reversed()
+                .filter(p -> matchesRequirements(p, query))
+                .sorted(Comparator.<Product>comparingInt(p -> relevance(p, query) + suitability(p, query)).reversed()
                         .thenComparing(Comparator.<Product>comparingInt(p -> relevance(p, history)).reversed())
                         .thenComparing(Product::getId)).limit(12).toList();
     }
@@ -170,6 +184,56 @@ public class GeminiService {
             if (category != null) return category;
         }
         return null;
+    }
+
+    private boolean matchesRequirements(Product product, String query) {
+        query = query.replaceAll("khong\\s+(?:can|muon|mua|tim)[^,;]*[,;]", " ");
+        if (!matchesModel(product, query) || !matchesPriceRange(product, query)) return false;
+        for (String brand : List.of("yonex", "victor", "lining", "mizuno", "kawasaki", "fleet")) {
+            if (query.contains(brand) && !normalize(Objects.toString(product.getBrand(), "")).equals(brand)) return false;
+        }
+        var budget = java.util.regex.Pattern.compile("(duoi|toi da|khong qua)\\s+(\\d+(?:[.,]\\d+)?)\\s*(trieu|tr|k|nghin)").matcher(query);
+        if (budget.find()) {
+            var amount = new java.math.BigDecimal(budget.group(2).replace(',', '.'));
+            var limit = amount.multiply(new java.math.BigDecimal(budget.group(3).startsWith("tr") ? "1000000" : "1000"));
+            if (product.getPrice() == null || product.getPrice().compareTo(limit) > 0
+                    || (budget.group(1).equals("duoi") && product.getPrice().compareTo(limit) == 0)) return false;
+        }
+        var size = java.util.regex.Pattern.compile("\\bsize\\s+(\\d+(?:[.,]\\d+)?|xxl|xl|xs|s|m|l)\\b").matcher(query);
+        var weight = java.util.regex.Pattern.compile("\\b[2-6]u(?:[ -]*g[4-6])?\\b").matcher(query);
+        String requestedSize = size.find() ? size.group(1).replace(',', '.') : null;
+        String requestedWeight = weight.find() ? weight.group().replaceAll("[ -]", "") : null;
+        var color = java.util.regex.Pattern.compile("\\bmau\\s+(do|den|trang|hong|vang|xanh(?:\\s+(?:duong|la|lam))?)\\b").matcher(query);
+        String requestedColor = color.find() ? color.group(1) : null;
+        if (requestedSize == null && requestedWeight == null && requestedColor == null) return true;
+        return product.getVariants() != null && product.getVariants().stream().filter(this::availableVariant)
+                .anyMatch(v -> (requestedSize == null || requestedSize.equalsIgnoreCase(v.getSize()))
+                        && (requestedColor == null || normalize(Objects.toString(v.getColor(), "")).contains(requestedColor))
+                        && (requestedWeight == null || normalize(Objects.toString(v.getWeightGrip(), ""))
+                        .replaceAll("[ -]", "").startsWith(requestedWeight)));
+    }
+
+    private boolean matchesModel(Product product, String query) {
+        String facts = normalize(Objects.toString(product.getName(), "") + " "
+                + Objects.toString(product.getManufacturerCode(), "") + " " + Objects.toString(product.getSku(), ""))
+                .replaceAll("[^a-z0-9]", "");
+        var model = java.util.regex.Pattern.compile("\\b(?:[a-z]+)?\\d{2,}[ -]*[a-z]+\\b").matcher(query);
+        while (model.find()) {
+            String code = model.group().replaceAll("[^a-z0-9]", "");
+            if (code.endsWith("trieu") || code.endsWith("nghin") || code.endsWith("k") || code.endsWith("tr")) continue;
+            if (!facts.contains(code)) return false;
+        }
+        return true;
+    }
+
+    private boolean matchesPriceRange(Product product, String query) {
+        var range = java.util.regex.Pattern.compile("(?:tu|tam|khoang)\\s+(\\d+(?:[.,]\\d+)?)\\s*(?:-|den)\\s*(\\d+(?:[.,]\\d+)?)\\s*(trieu|tr|k|nghin)").matcher(query);
+        if (!range.find()) return true;
+        if (product.getPrice() == null) return false;
+        var unit = new java.math.BigDecimal(range.group(3).startsWith("tr") ? "1000000" : "1000");
+        var min = new java.math.BigDecimal(range.group(1).replace(',', '.')).multiply(unit);
+        var max = new java.math.BigDecimal(range.group(2).replace(',', '.')).multiply(unit);
+        return min.compareTo(max) <= 0 && product.getPrice().compareTo(min) >= 0 && product.getPrice().compareTo(max) <= 0;
     }
 
     private boolean availableProduct(Product product) {
@@ -201,13 +265,31 @@ public class GeminiService {
     }
 
     private int relevance(Product p, String query) {
+        String name = normalize(p.getName());
+        String compactQuery = query.replaceAll("[^a-z0-9]", "");
+        String compactName = name.replaceAll("[^a-z0-9]", "");
+        int modelScore = compactQuery.length() >= 4 && compactName.contains(compactQuery) ? 100 : 0;
         String facts = normalize(p.getName() + " " + p.getBrand() + " " + p.getPlayStyle() + " " + p.getBalancePoint());
-        return (int) Arrays.stream(query.split("\\s+")).distinct().filter(w -> w.length() > 2 && facts.contains(w)).count();
+        return modelScore + (int) Arrays.stream(query.split("\\s+")).distinct()
+                .filter(w -> w.length() > 2 && facts.contains(w)).count();
+    }
+
+    private int suitability(Product product, String query) {
+        String balance = normalize(Objects.toString(product.getBalancePoint(), ""));
+        String stiffness = normalize(Objects.toString(product.getStiffness(), ""));
+        int score = 0;
+        if ((query.contains("tan cong") || query.contains("smash"))
+                && (balance.contains("head-heavy") || balance.contains("nang dau"))) score += 10;
+        if ((query.contains("phong thu") || query.contains("phan tat"))
+                && (balance.contains("head-light") || balance.contains("nhe dau"))) score += 10;
+        if (query.contains("toan dien") && (balance.contains("even") || balance.contains("can bang"))) score += 10;
+        if (query.contains("nguoi moi") && (stiffness.contains("flexible") || stiffness.contains("medium"))) score += 5;
+        return score;
     }
 
     private String normalize(String value) {
         return Normalizer.normalize(value.toLowerCase(Locale.ROOT).replace('đ', 'd'), Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
+                .replaceAll("\\p{M}", "").replaceAll("li[\\s-]+ning", "lining").trim();
     }
 
     private AiChatResponse callGemini(AiChatRequest request, List<Product> products) {
@@ -304,6 +386,14 @@ public class GeminiService {
         }
         response.setRecommendedProducts(details);
         response.setRecommendedProductIds(details.stream().map(ProductDto::getId).toList());
+        if (!response.isFallback() && !response.getRecommendedProductIds().isEmpty()) {
+            response.setReply("Các sản phẩm còn hàng đáp ứng bộ lọc của bạn được hiển thị bên dưới. "
+                    + "Tên, giá và lựa chọn lấy trực tiếp từ cửa hàng; mở chi tiết để kiểm tra thông số trước khi chọn.");
+        } else if (!response.isFallback() && !ids.isEmpty()) {
+            response.setReply("Sản phẩm vừa được đề xuất không còn khả dụng. Vui lòng tìm lại để lấy tình trạng mới nhất.");
+        } else if (!response.isFallback()) {
+            response.setReply("Vui lòng cung cấp thêm ngân sách, kích cỡ hoặc mã mẫu để tôi tìm đúng sản phẩm.");
+        }
     }
 
     static final class Admission {
