@@ -14,6 +14,46 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AdminReportAndCashTest {
+    @Test void paymentDtosUseAttemptCreationDateAndKeepProviderCodeSeparateFromInternalOrderId() throws Exception {
+        var order = Order.builder().id(9L).createdAt(LocalDateTime.of(2026, 10, 1, 10, 0)).build();
+        var attempt = new PaymentAttempt(); attempt.setId(12L); attempt.setOrder(order); attempt.setOrderCode(1000000009L);
+        var created = LocalDateTime.of(2026, 10, 14, 8, 20, 30); attempt.setCreatedAt(created);
+        var admin = com.sports.dto.AdminPaymentDto.from(attempt);
+        var customer = com.sports.dto.PaymentAttemptResponse.from(attempt);
+        assertEquals(created, admin.getCreatedAt()); assertEquals(created, customer.createdAt());
+        assertEquals(9L, admin.getOrderId()); assertEquals(1000000009L, admin.getOrderCode());
+        assertEquals(9L, customer.orderId()); assertEquals(1000000009L, customer.orderCode());
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules()
+                .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        assertEquals("2026-10-14T08:20:30", mapper.valueToTree(admin).path("createdAt").asText());
+        assertEquals("2026-10-14T08:20:30", mapper.valueToTree(customer).path("createdAt").asText());
+    }
+
+    @Test void paymentDtosLeaveHistoricalUnknownCreationDateNullAndPreserveBothOldConstructors() {
+        var attempt = new PaymentAttempt();
+        attempt.setOrder(Order.builder().id(9L).createdAt(LocalDateTime.now()).build()); attempt.setPaidAt(LocalDateTime.now());
+        assertNull(com.sports.dto.AdminPaymentDto.from(attempt).getCreatedAt());
+        assertNull(com.sports.dto.PaymentAttemptResponse.from(attempt).createdAt());
+        var shortDto = new com.sports.dto.PaymentAttemptResponse(12L, 9L, "PAYOS", 1000000009L, null,
+                BigDecimal.TEN, "VND", PaymentAttempt.Status.PENDING, null, null, null, null, null, null);
+        var modeDto = new com.sports.dto.PaymentAttemptResponse(12L, 9L, "PAYOS", 1000000009L, null,
+                BigDecimal.TEN, "VND", PaymentAttempt.Status.PENDING, null, null, null, null, null, null, "MOCK", "PENDING");
+        assertNull(shortDto.createdAt()); assertEquals("REAL", shortDto.paymentMode());
+        assertNull(modeDto.createdAt()); assertEquals("MOCK", modeDto.paymentMode()); assertEquals("PENDING", modeDto.mockProviderStatus());
+    }
+
+    @Test void adminPaymentSortUsesAttemptCreationDateWithDeterministicIdTieBreaker() {
+        var repository = mock(PaymentAttemptRepository.class);
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Sort.class)))
+                .thenReturn(List.of());
+        var service = new AdminPaymentService(repository);
+        service.list(null, null, "", null, "createdAt", "desc");
+        var sort = org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Sort.class);
+        verify(repository).findAll(any(org.springframework.data.jpa.domain.Specification.class), sort.capture());
+        assertEquals(org.springframework.data.domain.Sort.Direction.DESC, sort.getValue().getOrderFor("createdAt").getDirection());
+        assertNotNull(sort.getValue().getOrderFor("id")); assertNull(sort.getValue().getOrderFor("order.createdAt"));
+    }
+
     @Test void cancelledOrderKeepsUnconfirmedPaymentAttemptSeparate() {
         var order = Order.builder().id(9L).status(OrderStatus.CANCELLED).paymentMethod("PAYOS_VIETQR").build();
         var attempt = new PaymentAttempt();

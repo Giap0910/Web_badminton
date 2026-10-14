@@ -10,6 +10,38 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ProductSuggestionsTest {
+    @Test void vietnameseSuggestionsMatchAccentsCaseDecomposedUnicodeAndLetterDWithoutMatchingPrices() {
+        var repository = mock(ProductRepository.class);
+        var service = new ProductService(repository, mock(CategoryRepository.class),
+                mock(ReviewService.class), mock(ProductImageRepository.class));
+        var racket = product(2L, "Vợt Yonex Astrox 88D Pro Đỏ", "HG-RACKET-002");
+        var shoe = product(3L, "Giày Yonex Power Cushion", "HG-SHOE-003");
+        var shirt = product(4L, "Áo thi đấu Victor", "HG-CLOTHING-004");
+        when(repository.findAll(any(Specification.class))).thenReturn(List.of(racket, shoe, shirt));
+        for (var term : List.of("vot", "VỢT", "vợt", "  VoT  ",
+                java.text.Normalizer.normalize("VỢT", java.text.Normalizer.Form.NFD))) {
+            assertEquals(List.of(2L), service.getSuggestions(term).stream().map(p -> p.getId()).toList(), term);
+        }
+        for (var term : List.of("giay", "GIÀY", java.text.Normalizer.normalize("Giày", java.text.Normalizer.Form.NFD)))
+            assertEquals(List.of(3L), service.getSuggestions(term).stream().map(p -> p.getId()).toList(), term);
+        for (var term : List.of("do", "ĐỎ", "đỏ", "  Do  "))
+            assertEquals(List.of(2L), service.getSuggestions(term).stream().map(p -> p.getId()).toList(), term);
+        assertTrue(service.getSuggestions("100000").isEmpty());
+    }
+
+    @Test void normalizedProductTextPreservesBrandAliasesSkuMatchesAndSuggestionBounds() {
+        var repository = mock(ProductRepository.class);
+        var service = new ProductService(repository, mock(CategoryRepository.class),
+                mock(ReviewService.class), mock(ProductImageRepository.class));
+        var racket = product(2L, java.text.Normalizer.normalize("Vợt Axforce", java.text.Normalizer.Form.NFD), "HG-RACKET-002");
+        racket.setBrand("Lining");
+        when(repository.findAll(any(Specification.class))).thenReturn(List.of(racket));
+        for (var term : List.of("vot", "VỢT", "lining", "LI-NING", "hg-racket-002"))
+            assertEquals(List.of(2L), service.getSuggestions(term).stream().map(p -> p.getId()).toList(), term);
+        for (var term : List.of("", "   ", "đ", "y", "v".repeat(201))) assertTrue(service.getSuggestions(term).isEmpty(), term);
+        assertTrue(service.getSuggestions(null).isEmpty());
+    }
+
     @Test void shortNumericQueryPrioritizesModelNameAndIgnoresDescription() {
         var repository = mock(ProductRepository.class);
         var service = new ProductService(repository, mock(CategoryRepository.class),

@@ -66,6 +66,140 @@ class GeminiServiceTest {
         server.verify();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "openai, Bây giờ tôi cần vợt Yonex", "gemini, Bây giờ tôi cần vợt Yonex",
+            "openai, 'Không cần giày nữa, tôi muốn mua vợt Yonex'",
+            "gemini, 'Không cần giày nữa, tôi muốn mua vợt Yonex'"})
+    void currentRacketQuestionOverridesOldShoeHistoryForBothProviders(String provider, String question) {
+        ReflectionTestUtils.setField(service, "provider", provider);
+        ReflectionTestUtils.setField(service, "openAiKey", "test-openai");
+        ReflectionTestUtils.setField(service, "apiKey", "test-gemini");
+        when(products.getProductById(1L)).thenReturn(ProductDto.builder().id(1L).inStock(true).build());
+        var server = MockRestServiceServer.bindTo((RestTemplate) ReflectionTestUtils.getField(service, "restTemplate")).build();
+        String instructionPath = "gemini".equals(provider) ? "$.systemInstruction.parts[0].text" : "$.instructions";
+        String body = "gemini".equals(provider)
+                ? "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"{\\\"reply\\\":\\\"Vợt đang bán\\\",\\\"recommendedProductIds\\\":[1,2]}\"}]}}]}"
+                : "{\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"reply\\\":\\\"Vợt đang bán\\\",\\\"recommendedProductIds\\\":[1,2]}\"}]}]}";
+        server.expect(anything()).andExpect(jsonPath(instructionPath).value(org.hamcrest.Matchers.allOf(
+                org.hamcrest.Matchers.containsString("Vợt Yonex"), org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Giày Yonex")))))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+        var request = new AiChatRequest(question);
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Tôi cần giày Yonex"),
+                new AiChatRequest.HistoryMessage("model", "Bạn có thể chọn giày Yonex")));
+
+        var response = service.chatWithAi(null, request);
+
+        assertEquals(List.of(1L), response.getRecommendedProductIds());
+        assertFalse(response.isFallback()); verify(products, never()).getProductById(2L); server.verify();
+    }
+
+    @Test void currentShoeQuestionOverridesOldRacketHistory() {
+        var request = new AiChatRequest("Tôi cần giày Yonex");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Tôi cần vợt")));
+
+        var response = service.chatWithAi(null, request);
+
+        assertEquals(List.of(2L), response.getRecommendedProductIds());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "áo cầu lông", "quần cầu lông", "áo thi đấu", "quần thi đấu", "áo Yonex", "quần Yonex"})
+    void currentApparelAliasOverridesOldShoeCategory(String clothing) {
+        catalogWithCategory(3L, "Quần Áo Thi Đấu");
+        var request = new AiChatRequest("Tôi cần " + clothing);
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Tôi cần giày Yonex")));
+
+        var response = service.chatWithAi(null, request);
+
+        assertEquals(List.of(3L), response.getRecommendedProductIds());
+        verify(products, never()).getProductById(2L);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "Không muốn giày nữa, tôi cần vợt", "Không mua giày, tôi cần vợt",
+            "Không tìm giày, tôi cần vợt", "Không muốn mua giày cầu lông, tôi cần vợt",
+            "Không cần đôi giày, tôi cần vợt"})
+    void explicitNegationDoesNotTakePriorityOverPositiveCurrentCategory(String question) {
+        when(products.getProductById(1L)).thenReturn(ProductDto.builder().id(1L).inStock(true).build());
+        var request = new AiChatRequest(question);
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Giày Yonex")));
+
+        var response = service.chatWithAi(null, request);
+
+        assertEquals(List.of(1L), response.getRecommendedProductIds());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "Tôi cần quấn cán", "Không cần quần áo, tôi muốn quấn cán", "Không cần áo thi đấu, tôi muốn phụ kiện"})
+    void gripAccessoriesDoNotMatchApparelKeywords(String question) {
+        catalogWithCategory(5L, "Phụ Kiện Cầu Lông");
+
+        var response = service.chatWithAi(null, new AiChatRequest(question));
+
+        assertEquals(List.of(5L), response.getRecommendedProductIds());
+    }
+
+    @Test void removingNegatedMentionKeepsLaterPositiveMentionOfSameCategory() {
+        var request = new AiChatRequest("Không cần giày Yonex, tôi muốn giày Victor");
+
+        var response = service.chatWithAi(null, request);
+
+        assertEquals(List.of(2L), response.getRecommendedProductIds());
+    }
+
+    private void catalogWithCategory(Long id, String category) {
+        Product product = Product.builder().id(id).name(category).stock(20)
+                .category(Category.builder().name(category).build()).build();
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(product));
+        when(products.getProductById(id)).thenReturn(ProductDto.builder().id(id).inStock(true).build());
+    }
+
+    @Test void followupUsesMostRecentUserCategoryAndIgnoresAssistantCategory() {
+        when(products.getProductById(1L)).thenReturn(ProductDto.builder().id(1L).inStock(true).build());
+        var request = new AiChatRequest("Tư vấn mẫu dưới hai triệu");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Tôi cần giày"),
+                new AiChatRequest.HistoryMessage("model", "Giày Yonex"),
+                new AiChatRequest.HistoryMessage("user", "Chuyển sang vợt Yonex"),
+                new AiChatRequest.HistoryMessage("model", "Bạn có thể tham khảo giày Yonex")));
+
+        var response = service.chatWithAi(null, request);
+
+        assertEquals(List.of(1L), response.getRecommendedProductIds());
+        verify(products, never()).getProductById(2L);
+    }
+
+    @Test void assistantOnlyCategoryDoesNotRestrictCustomersGeneralQuestion() {
+        when(products.getProductById(1L)).thenReturn(ProductDto.builder().id(1L).inStock(true).build());
+        var request = new AiChatRequest("Tôi muốn trang bị Yonex");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("model", "Bạn cần giày Yonex?")));
+
+        var response = service.chatWithAi(null, request);
+
+        assertEquals(List.of(1L, 2L), response.getRecommendedProductIds());
+    }
+
+    @Test void currentBrandRanksAboveOlderUserContextAndAssistantRecommendations() {
+        Product yonex = Product.builder().id(1L).name("Vợt Yonex Astrox").brand("Yonex").stock(20)
+                .playStyle("Tấn công").balancePoint("Nặng đầu")
+                .category(Category.builder().name("Vợt Cầu Lông").build()).build();
+        Product victor = Product.builder().id(3L).name("Vợt Victor").brand("Victor").stock(20)
+                .category(Category.builder().name("Vợt Cầu Lông").build()).build();
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(yonex, victor));
+        when(products.getProductById(1L)).thenReturn(ProductDto.builder().id(1L).inStock(true).build());
+        when(products.getProductById(3L)).thenReturn(ProductDto.builder().id(3L).inStock(true).build());
+        var request = new AiChatRequest("Vợt Victor");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Vợt Yonex Astrox tấn công nặng đầu"),
+                new AiChatRequest.HistoryMessage("model", "Vợt Yonex Astrox dành cho tấn công nặng đầu")));
+
+        var response = service.chatWithAi(null, request);
+
+        assertEquals(List.of(3L, 1L), response.getRecommendedProductIds());
+    }
+
     @Test void openAiUsesRealCatalogHistoryAndRejectsInventedIds() {
         ReflectionTestUtils.setField(service, "openAiKey", "test-openai");
         var server = MockRestServiceServer.bindTo((RestTemplate) ReflectionTestUtils.getField(service, "restTemplate")).build();
@@ -137,6 +271,21 @@ class GeminiServiceTest {
 
     private ProductVariant choice(String size,int stock,boolean active,boolean legacy) {
         return ProductVariant.builder().size(size).stock(stock).active(active).legacy(legacy).build();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"0,true,false", "20,false,false", "20,true,true"})
+    void categorySwitchDoesNotRecommendUnavailableOrHistoricalVariants(int stock, boolean active, boolean legacy) {
+        Product racket = Product.builder().id(1L).name("Vợt Yonex").stock(20)
+                .category(Category.builder().name("Vợt Cầu Lông").build())
+                .variants(List.of(choice(null, stock, active, legacy))).build();
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(racket));
+        var request = new AiChatRequest("Tôi cần vợt");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Tôi cần giày")));
+
+        var response = service.chatWithAi(null, request);
+
+        assertTrue(response.getRecommendedProductIds().isEmpty()); verifyNoInteractions(products);
     }
 
     @Test void freshDetailStockCheckDropsRecommendationsThatJustSoldOut() {

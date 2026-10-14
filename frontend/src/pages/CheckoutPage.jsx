@@ -706,7 +706,8 @@ const CheckoutPage = () => {
   );
   const isFreeShipping = subtotal >= 1000000;
   const baseShippingFee = subtotal === 0 || isFreeShipping ? 0 : 30000;
-  const voucher = useCheckoutVoucher(voucherCode, subtotal, JSON.stringify(checkoutItems.map(item => [item.cartItemId, item.quantity, item.product.price])));
+  const voucher = useCheckoutVoucher(voucherCode, subtotal,
+    JSON.stringify(checkoutItems.map(item => [item.cartItemId, item.quantity, item.product.price])), checkoutItems);
   const { discountAmount, shippingDiscountAmount = 0, finalShippingFee = baseShippingFee,
     error: voucherError, success: voucherSuccess, validating: isValidatingVoucher, apply: handleApplyVoucher } = voucher;
   const shippingFee = finalShippingFee;
@@ -876,7 +877,7 @@ const CheckoutPage = () => {
             {!resumeError && (
               <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-1.5 rounded-full text-slate-600 text-xs font-semibold shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                <span>Đang xử lý đơn hàng #{resumeOrderId}</span>
+                <span>Đang xử lý đơn hàng #HG-{resumeOrderId}</span>
               </div>
             )}
           </div>
@@ -885,7 +886,7 @@ const CheckoutPage = () => {
           {resumeLoading && (
             <div data-testid="resume-loading-state" className="min-h-[400px] flex flex-col items-center justify-center p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
               <Loader2 className="w-8 h-8 animate-spin text-red-600 mb-3" />
-              <p className="text-sm font-bold text-slate-700">Đang tải thông tin đơn hàng #{resumeOrderId}...</p>
+              <p className="text-sm font-bold text-slate-700">Đang tải thông tin đơn hàng #HG-{resumeOrderId}...</p>
               <p className="text-xs text-slate-400 mt-1">Vui lòng chờ trong giây lát</p>
             </div>
           )}
@@ -896,7 +897,7 @@ const CheckoutPage = () => {
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
                 <AlertCircle className="w-6 h-6" />
               </div>
-              <h2 className="text-lg font-bold text-slate-900">Không thể tải thông tin đơn hàng #{resumeOrderId}</h2>
+              <h2 className="text-lg font-bold text-slate-900">Không thể tải thông tin đơn hàng #HG-{resumeOrderId}</h2>
               <p className="text-sm text-slate-600 leading-relaxed">{resumeError}</p>
               <div className="flex items-center gap-3 mt-2">
                 <button
@@ -930,10 +931,10 @@ const CheckoutPage = () => {
                   </div>
                   <div>
                     <h2 className="text-base font-extrabold text-blue-950">
-                      Đang tiếp tục đơn hàng #{resumeContext.order?.id}
+                      Đang tiếp tục đơn hàng #HG-{resumeContext.order?.id}
                     </h2>
                     <p className="text-xs text-blue-700 mt-0.5 font-medium">
-                      Mã tham chiếu: <span className="font-bold">{resumeContext.order?.orderCode || resumeContext.order?.id}</span> • Trạng thái: <span className="font-bold">{resumeContext.order?.status}</span>
+                      {resumeContext.order?.payosOrderCode && <>Mã PayOS: <span className="font-bold">{resumeContext.order.payosOrderCode}</span> • </>}Trạng thái: <span className="font-bold">{resumeContext.order?.status}</span>
                     </p>
                   </div>
                 </div>
@@ -1216,7 +1217,7 @@ const CheckoutPage = () => {
                       <div className="flex items-center gap-2">
                         <ShoppingBag className="w-5 h-5 text-red-600" />
                         <h3 className="text-base font-extrabold text-slate-900">
-                          Sản phẩm đơn #{resumeContext.order?.id} ({resumeContext.order?.items?.length || 0})
+                          Sản phẩm đơn #HG-{resumeContext.order?.id} ({resumeContext.order?.items?.length || 0})
                         </h3>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -1275,14 +1276,9 @@ const CheckoutPage = () => {
                       })}
                     </div>
 
-                    <div className="rounded-xl border border-slate-200 p-3 text-xs space-y-2">
-                <label htmlFor="redeem-points" className="font-bold text-slate-900">Dùng điểm tích lũy</label>
-                <p>Khả dụng: {profile?.loyaltyPoints ?? 0} điểm. 1 điểm = 100 đồng; tối đa 10% tiền hàng sau voucher.</p>
-                <input id="redeem-points" type="number" min="0" max={maximumPoints} step="1" value={redeemPoints}
-                  disabled={maximumPoints === 0 || isValidatingVoucher}
-                  onChange={event => setRequestedPoints(Math.min(maximumPoints, Math.max(0, Math.trunc(Number(event.target.value) || 0))))}
-                  className="w-full rounded-lg border p-2" />
-              </div>
+                    <p className="rounded-xl border border-slate-200 p-3 text-xs text-slate-600">
+                      Điểm và giảm giá đã được lưu khi tạo đơn. Không thể thay đổi trong bước tiếp tục thanh toán.
+                    </p>
 
               {/* Cost Breakdown */}
                     {(() => {
@@ -1309,7 +1305,10 @@ const CheckoutPage = () => {
                                 : formatPrice(resumeContext.order?.shippingFee)}
                             </span>
                           </div>
-                          <div className="flex justify-between text-red-600"><span>Đổi {redeemPoints} điểm</span><span>-{formatPrice(pointsDiscount)}</span></div>
+                          <div className="flex justify-between text-red-600" data-testid="resume-points">
+                            <span>Đổi {resumeContext.order?.pointsUsed ?? '—'} điểm</span>
+                            <span>{resumeContext.order?.pointsDiscount != null ? `-${formatPrice(resumeContext.order.pointsDiscount)}` : '—'}</span>
+                          </div>
                 <div className="h-px bg-slate-200 my-1"></div>
                           <div className="flex justify-between items-baseline pt-1">
                             <span className="text-sm font-black text-slate-900">Tổng thanh toán</span>

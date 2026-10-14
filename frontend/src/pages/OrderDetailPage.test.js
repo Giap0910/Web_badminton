@@ -8,8 +8,10 @@ import { formatDate, getOrderStatusLabel } from '../utils/formatters.js';
 import { formatOrderItemOptionsText } from '../utils/orderItemOptions.js';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MemoryRouter } from 'react-router-dom';
 import { createServer } from 'vite';
+import { createRequire } from 'node:module';
+import { transformSync } from 'esbuild';
+import * as orderIcons from 'lucide-react';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -318,12 +320,59 @@ test('FE-REMEDIATION-2 — Cancelled late-payment warning wraps long reference w
 });
 
 const warrantyServer = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] },
+  resolve: { alias: { 'react-router-dom': 'react-router' } },
   server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+after(() => warrantyServer.close());
+const warrantyRouter = await warrantyServer.ssrLoadModule('react-router');
+const { MemoryRouter } = warrantyRouter;
 const warranty = await warrantyServer.ssrLoadModule('/src/pages/ReturnRequestPage.jsx');
 const warrantyApiModule = await warrantyServer.ssrLoadModule('/src/api/returnApi.js');
 const detailModule = await warrantyServer.ssrLoadModule('/src/pages/OrderDetailPage.jsx');
 const { default: warrantyAxios } = await warrantyServer.ssrLoadModule('/src/api/axiosClient.js');
-after(() => warrantyServer.close());
+const orderImages=await warrantyServer.ssrLoadModule('/src/components/ProductImage.jsx');
+const orderOptions=await warrantyServer.ssrLoadModule('/src/components/OrderItemOptions.jsx');
+const orderTestRequire=createRequire(import.meta.url);
+
+function storedOrderDetailPage(order,payment=null,patch={}) {
+  let index=0;
+  const values=[order,payment,patch.paymentLoading??false,patch.paymentError??null,false,0,null,'',patch.orderError||''];
+  const patchedReact={...React,useEffect:()=>{},useRef:value=>({current:value}),
+    useState:initial=>[index<values.length?values[index++]:++index&&typeof initial==='function'?initial():initial,()=>{}]};
+  const layout={__esModule:true,default:props=>React.createElement('div',null,React.createElement('nav',null,props.currentPage),props.children)};
+  const modules={react:patchedReact,'react-router-dom':{...warrantyRouter,useParams:()=>({id:String(order.id)}),useNavigate:()=>()=>{}},
+    '../utils/formatters':{getOrderStatusLabel},'../components/UserLayout':layout,'../api/orderApi.js':{orderApi:{}},
+    '../api/returnApi.js':warrantyApiModule,'../components/OrderItemOptions':{__esModule:true,...orderOptions},
+    '../components/ProductImage':{__esModule:true,...orderImages},'../utils/paymentFormatters.js':{getPaymentStatusInfo,formatReviewReason},'lucide-react':orderIcons};
+  const instance={exports:{}};
+  const compiled=transformSync(fs.readFileSync(path.join(__dirname,'OrderDetailPage.jsx'),'utf8'),{loader:'jsx',format:'cjs'}).code;
+  new Function('require','module','exports',compiled)(name=>modules[name]||orderTestRequire(name),instance,instance.exports);
+  return instance.exports.default;
+}
+
+function storedOrderDetailHtml(order,payment=null,patch={}) {
+  return renderToStaticMarkup(React.createElement(MemoryRouter,null,React.createElement(storedOrderDetailPage(order,payment,patch))));
+}
+
+test('CTA QR production dùng ID nội bộ và chặn loading, lỗi dữ liệu, đã trả tiền hoặc cần đối soát', () => {
+  const order={id:51,status:'PENDING',paymentMethod:'PAYOS_VIETQR',payosOrderCode:1000000051,note:'Căng BG65Ti ở mức 10kg',items:[]};
+  const html=storedOrderDetailHtml(order,{orderId:51,status:'PENDING'});
+  assert.match(html,/Chi tiết đơn hàng #HG-51/);assert.match(html,/Mã PayOS:[\s\S]*1000000051/);
+  assert.match(html,/href="\/checkout\?orderId=51"/);assert.match(html,/Tiếp tục thanh toán/);
+  assert.doesNotMatch(html,/QR tạm hoãn|checkout\?orderId=1000000051/);
+  assert.match(html,/Căng BG65Ti ở mức 10kg/);assert.doesNotMatch(html,/Yonex Tour Certified Master|Kỹ thuật viên đan vợt:/);
+  for(const payment of [{orderId:51,status:'PAID'},{orderId:51,status:'NEEDS_REVIEW'},{orderId:52,status:'PENDING'}])
+    assert.doesNotMatch(storedOrderDetailHtml(order,payment),/href="\/checkout\?orderId=51"/);
+  for(const patch of [{paymentLoading:true},{paymentError:'Không tải được dữ liệu'},{orderError:'Không tải được đơn'}])
+    assert.doesNotMatch(storedOrderDetailHtml(order,null,patch),/href="\/checkout\?orderId=51"/);
+});
+
+test('CTA QR production không khôi phục đơn đã hủy, COD hoặc trạng thái đã xử lý', () => {
+  for(const order of [{id:51,status:'CANCELLED',paymentMethod:'PAYOS_VIETQR'},
+    {id:51,status:'PENDING',paymentMethod:'COD'},{id:51,status:'PAID',paymentMethod:'PAYOS_VIETQR'},
+    {id:51,status:'SHIPPING',paymentMethod:'PAYOS_VIETQR'},{id:51,status:'COMPLETED',paymentMethod:'PAYOS_VIETQR'}]) {
+    assert.doesNotMatch(storedOrderDetailHtml({...order,items:[]},{orderId:51,status:'NEEDS_REVIEW'}),/href="\/checkout\?orderId=51"/);
+  }
+});
 const eligibleLine = (patch = {}) => ({ orderId: 51, orderItemId: 111, productId: 8, productName: 'Áo Kawasaki ST-16209',
   categoryId: 3, selectedSize: 'M', selectedColor: 'Xanh', remainingQuantity: 2, activeRequestId: null,
   warrantyDeadline: '2026-12-12T10:00:00', eligible: true, ...patch });
@@ -473,6 +522,27 @@ test('Eligibility GET production chặn stale route, lọc cờ eligible và gi�
   const first = productionOrderHandler('fetchWarrantyEligibility', scope)(); scope.id = '52'; scope.currentOrderIdRef.current = '52';
   await productionOrderHandler('fetchWarrantyEligibility', scope)(); release([eligibleLine()]); await first;
   assert.deepEqual(state.items.map(item => item.orderId), [52]); assert.equal(state.note, 'Hết hạn bảo hành'); assert.equal(state.loading, false);
+});
+
+test('Chi tiết đơn hiển thị điểm và tiền giảm đã lưu, giữ nguyên tổng thanh toán máy chủ', () => {
+  const order = { id: 51, status: 'PENDING', paymentMethod: 'COD', totalAmount: 97000,
+    discountAmount: 10000, voucherCode: 'HG10K', pointsUsed: 20, pointsDiscount: 2000, shippingFee: 30000,
+    items: [{ id: 1, productName: 'Quấn cán Yonex', price: 50000, quantity: 2 }] };
+  const html = storedOrderDetailHtml(order);
+  assert.match(html, /Tạm tính:[\s\S]*100\.000/);
+  assert.match(html, /Giảm bằng điểm \(20 điểm\):[\s\S]*-2\.000/);
+  assert.match(html, /Giảm giá Voucher \(HG10K\):[\s\S]*-10\.000/);
+  assert.match(html, /Tổng thanh toán:[\s\S]*97\.000/);
+  assert.doesNotMatch(html, /118\.000/);
+});
+
+test('Chi tiết đơn không tự suy ra điểm hoặc tiền giảm từ các trường còn thiếu', () => {
+  for (const patch of [{}, { pointsUsed: 0, pointsDiscount: 0 }, { pointsUsed: 20 }, { pointsDiscount: 2000 }]) {
+    const html = storedOrderDetailHtml({ id: 51, status: 'PENDING', paymentMethod: 'COD', totalAmount: 50000, items: [], ...patch });
+    assert.equal(html.includes('20 điểm'), patch.pointsUsed === 20);
+    assert.equal(html.includes('-2.000'), patch.pointsDiscount === 2000);
+    if (!patch.pointsUsed && !patch.pointsDiscount) assert.doesNotMatch(html, /Giảm bằng điểm|Điểm đã dùng/);
+  }
 });
 
 

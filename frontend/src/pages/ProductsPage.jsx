@@ -138,6 +138,7 @@ const ProductsPage = () => {
   const setSortBy = value => setFilter({ sort: value });
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const productListTopRef = useRef(null);
+  const categoryNavigationRef = useRef(null);
   const ITEMS_PER_PAGE = 12;
 
   useEffect(() => {
@@ -170,7 +171,7 @@ const ProductsPage = () => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== validCurrentPage) {
       setFilter({ page: newPage });
       if (productListTopRef.current) {
-        const yOffset = -90;
+        const yOffset = -(categoryNavigationRef.current?.getBoundingClientRect().bottom ?? 106) - 16;
         const y = productListTopRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
         window.scrollTo({ top: y, behavior: 'smooth' });
       }
@@ -244,7 +245,7 @@ const ProductsPage = () => {
       </section>
 
       {/* 2. BREADCRUMB & 5-CATEGORY SUB-NAV RIBBON */}
-      <div className="w-full bg-white border-b border-[#E2E8F0] shadow-sm sticky top-[60px] z-30">
+      <div ref={categoryNavigationRef} style={{ top: 'var(--customer-navbar-height, 106px)' }} className="w-full bg-white border-b border-[#E2E8F0] shadow-sm sticky z-30">
         <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
 
           {/* Breadcrumb path */}
@@ -311,7 +312,7 @@ const ProductsPage = () => {
                       <input
                         type="checkbox"
                         checked={selectedBrand.toLowerCase() === b.toLowerCase()}
-                        onChange={() => setSelectedBrand(selectedBrand === b ? 'ALL' : b)}
+                        onChange={() => setSelectedBrand(selectedBrand.toLowerCase() === b.toLowerCase() ? 'ALL' : b)}
                         className="accent-secondary w-4 h-4 cursor-pointer rounded"
                       />
                       <span>{b}</span>

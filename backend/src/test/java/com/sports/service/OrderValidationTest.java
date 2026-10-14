@@ -33,6 +33,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
@@ -66,7 +67,7 @@ class OrderValidationTest {
             return order;
         });
         service = new OrderService(orders, products, users, gateway,
-                new VoucherService(vouchers, new MockEnvironment()), mock(EntityManager.class), mock(PaymentTransitionGuard.class));
+                new VoucherService(vouchers, orders, products, new MockEnvironment()), mock(EntityManager.class), mock(PaymentTransitionGuard.class));
         mvc = MockMvcBuilders.standaloneSetup(new OrderController(service, mock(OrderStatusService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(principalResolver()).build();
@@ -438,7 +439,195 @@ class OrderValidationTest {
     }
 
     private VoucherService voucherService() {
-        return new VoucherService(vouchers, new MockEnvironment());
+        return new VoucherService(vouchers, orders, products, new MockEnvironment());
+    }
+
+    @Test
+    void scopedVoucherRejectsLegacyPayloadWithoutItemsAtHttpBoundary() throws Exception {
+        when(vouchers.findByCodeIgnoreCase("BWF50K")).thenReturn(Optional.of(scopedVoucher()));
+
+        voucherMvc().perform(post("/api/vouchers/validate").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"BWF50K\",\"orderTotal\":1000000}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(
+                        "Mã BWF50K cần giỏ hàng có từ 1 đến 100 dòng sản phẩm để kiểm tra danh mục"));
+
+        verify(vouchers, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {3, 4, 5})
+    void scopedVoucherRejectsOtherCategoriesEvenWhenTotalMeetsMinimum(long categoryId) {
+        configureScopedProduct(categoryId, "1500000");
+        when(vouchers.findByCodeIgnoreCase("BWF50K")).thenReturn(Optional.of(scopedVoucher()));
+
+        assertThrows(BadRequestException.class, () -> voucherService().validateVoucher(scopedRequest("1500000")));
+
+        verify(vouchers, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {1, 2})
+    void scopedVoucherAcceptsServerVerifiedRacketAndShoeTotals(long categoryId) {
+        configureScopedProduct(categoryId, "1000000");
+        when(vouchers.findByCodeIgnoreCase("BWF50K")).thenReturn(Optional.of(scopedVoucher()));
+
+        var result = voucherService().validateVoucher(scopedRequest("1000000"));
+
+        assertEquals(new BigDecimal("50000"), result.getDiscountAmount());
+        assertEquals(new BigDecimal("950000"), result.getFinalTotal());
+        assertEquals(0, BigDecimal.ZERO.compareTo(result.getFinalShippingFee()));
+        verify(vouchers, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"900000", "1000000"})
+    void mixedCartMinimumExcludesAccessoryValue(String racketPrice) {
+        configureScopedProduct(1L, racketPrice);
+        var accessory = Product.builder().id(20L).price(new BigDecimal("600000"))
+                .category(Category.builder().id(5L).build()).build();
+        when(products.findById(20L)).thenReturn(Optional.of(accessory));
+        when(vouchers.findByCodeIgnoreCase("BWF50K")).thenReturn(Optional.of(scopedVoucher()));
+        var request = new VoucherValidateRequest("BWF50K", new BigDecimal(racketPrice).add(accessory.getPrice()),
+                List.of(new OrderItemRequest(10L, 1), new OrderItemRequest(20L, 1)));
+
+        if ("900000".equals(racketPrice)) assertThrows(BadRequestException.class,
+                () -> voucherService().validateVoucher(request));
+        else assertEquals(new BigDecimal("1550000"), voucherService().validateVoucher(request).getFinalTotal());
+
+        verify(vouchers, never()).save(any());
+    }
+
+    @Test
+    void scopedDiscountIsClampedToEligibleLinesAndNotAccessories() {
+        configureScopedProduct(1L, "1000000");
+        var accessory = Product.builder().id(20L).price(new BigDecimal("600000"))
+                .category(Category.builder().id(5L).build()).build();
+        when(products.findById(20L)).thenReturn(Optional.of(accessory));
+        Voucher voucher = scopedVoucher(); voucher.setDiscountValue(new BigDecimal("2000000"));
+        when(vouchers.findByCodeIgnoreCase("BWF50K")).thenReturn(Optional.of(voucher));
+        var request = new VoucherValidateRequest("BWF50K", new BigDecimal("1600000"),
+                List.of(new OrderItemRequest(10L, 1), new OrderItemRequest(20L, 1)));
+
+        var result = voucherService().validateVoucher(request);
+
+        assertEquals(new BigDecimal("1000000"), result.getDiscountAmount());
+        assertEquals(new BigDecimal("600000"), result.getFinalTotal());
+    }
+
+    @Test
+    void scopedVoucherRejectsHiddenMissingAndStalePriceBeforeReservation() {
+        configureScopedProduct(1L, "1000000");
+        when(vouchers.findByCodeForUpdate("BWF50K")).thenReturn(Optional.of(scopedVoucher()));
+
+        assertThrows(BadRequestException.class, () -> voucherService().reserveVoucher(scopedRequest("1500000")));
+        product.setCatalogVisible(false);
+        assertThrows(BadRequestException.class, () -> voucherService().reserveVoucher(scopedRequest("1000000")));
+        when(products.findById(10L)).thenReturn(Optional.empty());
+        assertThrows(BadRequestException.class, () -> voucherService().reserveVoucher(scopedRequest("1000000")));
+
+        verify(vouchers, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(ints = {-1, 0, 101})
+    void scopedVoucherRejectsInvalidQuantities(Integer quantity) {
+        when(vouchers.findByCodeIgnoreCase("BWF50K")).thenReturn(Optional.of(scopedVoucher()));
+        var request = new VoucherValidateRequest("BWF50K", new BigDecimal("1000000"),
+                List.of(new OrderItemRequest(10L, quantity)));
+
+        assertThrows(BadRequestException.class, () -> voucherService().validateVoucher(request));
+
+        verifyNoInteractions(products); verify(vouchers, never()).save(any());
+    }
+
+    @Test
+    void scopedVoucherRejectsMoreThanHundredLinesAndAggregateDuplicateQuantity() {
+        when(vouchers.findByCodeIgnoreCase("BWF50K")).thenReturn(Optional.of(scopedVoucher()));
+        var request = new VoucherValidateRequest("BWF50K", new BigDecimal("1000000"),
+                Collections.nCopies(101, new OrderItemRequest(10L, 1)));
+
+        assertThrows(BadRequestException.class, () -> voucherService().validateVoucher(request));
+        request.setItems(List.of(new OrderItemRequest(10L, 60), new OrderItemRequest(10L, 60)));
+        assertThrows(BadRequestException.class, () -> voucherService().validateVoucher(request));
+
+        verifyNoInteractions(products); verify(vouchers, never()).save(any());
+    }
+
+    @Test
+    void createOrderAppliesSameScopedVoucherPolicyAndOnlyReservesEligibleBasket() {
+        configureScopedProduct(5L, "1000000");
+        Voucher voucher = scopedVoucher();
+        when(vouchers.findByCodeForUpdate("BWF50K")).thenReturn(Optional.of(voucher));
+        var request = request(); request.setVoucherCode("BWF50K");
+
+        assertThrows(BadRequestException.class, () -> service.createOrder(1L, request, UUID.randomUUID().toString()));
+        assertUnchanged();
+        product.setCategory(Category.builder().id(1L).build());
+        var order = service.createOrder(1L, request, UUID.randomUUID().toString()).order();
+
+        assertEquals(new BigDecimal("50000"), order.getDiscountAmount());
+        assertEquals(new BigDecimal("950000"), order.getTotalAmount());
+        assertEquals(1, voucher.getUsedCount());
+    }
+
+    @Test
+    void voucherWithCancelledHistoryCannotBeDeletedEvenAfterUsageReturnsToZero() throws Exception {
+        Voucher voucher = testVoucher("FIXED", "10000"); voucher.setId(8L);
+        when(vouchers.findByIdForUpdate(8L)).thenReturn(Optional.of(voucher));
+        when(orders.existsByVoucherCodeIgnoreCase("SALE")).thenReturn(true);
+
+        voucherMvc().perform(delete("/api/admin/vouchers/8")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Voucher đã có lịch sử sử dụng hoặc đơn hàng; hãy tạm tắt thay vì xóa"));
+
+        verify(vouchers, never()).delete(any()); verify(vouchers, never()).findById(any());
+    }
+
+    @Test
+    void usedVoucherCannotBeDeletedEvenWithoutOrderHistory() {
+        Voucher voucher = testVoucher("FIXED", "10000"); voucher.setUsedCount(1);
+        when(vouchers.findByIdForUpdate(8L)).thenReturn(Optional.of(voucher));
+
+        assertThrows(BadRequestException.class, () -> voucherService().deleteVoucher(8L));
+
+        verify(vouchers, never()).delete(any());
+    }
+
+    @Test
+    void unusedVoucherWithoutHistoryCanStillBeDeletedUnderLock() {
+        Voucher voucher = testVoucher("FIXED", "10000");
+        when(vouchers.findByIdForUpdate(8L)).thenReturn(Optional.of(voucher));
+
+        voucherService().deleteVoucher(8L);
+
+        verify(orders).existsByVoucherCodeIgnoreCase("SALE"); verify(vouchers).delete(voucher);
+        verify(vouchers, never()).findById(any());
+    }
+
+    @Test
+    void removedHistoricalCodeCannotBeRecreatedAndCancelDoesNotDecrementAnotherVoucher() {
+        when(orders.existsByVoucherCodeIgnoreCase("SALE")).thenReturn(true);
+        VoucherDto dto = VoucherDto.builder().code("sale").discountValue(new BigDecimal("10000")).build();
+
+        assertThrows(BadRequestException.class, () -> voucherService().createVoucher(dto));
+        voucherService().releaseVoucher("SALE");
+
+        verify(vouchers, never()).save(any()); verify(vouchers).findByCodeForUpdate("SALE");
+    }
+
+    private void configureScopedProduct(long categoryId, String price) {
+        product.setCategory(Category.builder().id(categoryId).build());
+        product.setPrice(new BigDecimal(price));
+        when(products.findById(10L)).thenReturn(Optional.of(product));
+    }
+
+    private VoucherValidateRequest scopedRequest(String total) {
+        return new VoucherValidateRequest("BWF50K", new BigDecimal(total), List.of(new OrderItemRequest(10L, 1)));
+    }
+
+    private Voucher scopedVoucher() {
+        return Voucher.builder().code("BWF50K").discountValue(new BigDecimal("50000"))
+                .minOrderValue(new BigDecimal("1000000")).build();
     }
 
     private MockMvc voucherMvc() {

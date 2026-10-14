@@ -20,10 +20,11 @@ function compileOrderModule(file, modules) {
   return instance.exports;
 }
 
-function loadOrderPage(page, selectedOrder = null) {
+function loadOrderPage(page, selectedOrder = null, searchTerm = '', activeTab = 'ALL') {
   let index = 0;
   const patchedReact = { ...React, useEffect: () => {}, useRef: value => ({ current: value }),
     useState: initial => [++index === 2 ? selectedOrder ? [selectedOrder] : [] : index === 3 ? false :
+      page === 'MyOrdersPage' && index === 4 ? activeTab : page === 'MyOrdersPage' && index === 5 ? searchTerm :
       index === 7 ? selectedOrder : typeof initial === 'function' ? initial() : initial, () => {}] };
   const layout = { default: props => React.createElement('div', null, props.children), __esModule: true };
   const modules = { react: patchedReact, '../utils/formatters': formatters,
@@ -199,4 +200,68 @@ describe('ACADEMIC DEMO READINESS — 4 CRITICAL P1 DEFECTS VERIFICATION', () =>
       );
     });
   });
+});
+
+test('Mã đơn lịch sử luôn dùng ID nội bộ, mã PayOS là định danh riêng trong bảng và CSV', () => {
+  const module=loadOrderPage('MyOrdersPage');
+  const raw={...orderFixture(),payosOrderCode:1000000017,paymentMethod:'PAYOS_VIETQR'};
+  const order=module.normalizeUserOrder(raw);
+  assert.equal(order.orderCode,'#HG-17');assert.equal(order.payosOrderCode,1000000017);
+  assert.equal(order.paymentMethodCode,'PAYOS_VIETQR');
+  const html=renderToStaticMarkup(React.createElement(loadOrderPage('MyOrdersPage',order).default));
+  assert.match(html,/#HG-17/);assert.match(html,/Mã PayOS:[\s\S]*1000000017/);
+  assert.doesNotMatch(html,/#HG-1000000017/);
+  const csv=module.userOrderSlipCsv([order]);
+  assert.match(csv,/"Mã đơn","Mã PayOS"/);assert.match(csv,/"#HG-17","1000000017"/);
+});
+
+test('Lịch sử QR pending có lối tiếp tục cùng đơn ở bảng và modal, không tạo đơn hoặc link thanh toán mới', () => {
+  const order=loadOrderPage('MyOrdersPage').normalizeUserOrder({...orderFixture(),paymentMethod:'PAYOS_VIETQR',payosOrderCode:1000000017});
+  const html=renderToStaticMarkup(React.createElement(loadOrderPage('MyOrdersPage',order).default));
+  assert.equal((html.match(/href="\/checkout\?orderId=17"/g)||[]).length,2);
+  assert.match(html,/Tiếp tục thanh toán/);assert.match(html,/href="\/orders\/17"/);
+  assert.doesNotMatch(html,/checkout\?orderId=1000000017|payment\/qr\/1000000017/);
+});
+
+test('Lịch sử COD, đã thanh toán, đang giao và đã hủy không có CTA QR tiếp tục', () => {
+  for(const patch of [{status:'PENDING',paymentMethod:'COD'},{status:'PAID',paymentMethod:'PAYOS_VIETQR'},
+    {status:'SHIPPING',paymentMethod:'PAYOS_VIETQR'},{status:'COMPLETED',paymentMethod:'PAYOS_VIETQR'},
+    {status:'CANCELLED',paymentMethod:'PAYOS_VIETQR'}]) {
+    const order=loadOrderPage('MyOrdersPage').normalizeUserOrder({...orderFixture(),...patch});
+    const html=renderToStaticMarkup(React.createElement(loadOrderPage('MyOrdersPage',order).default));
+    assert.doesNotMatch(html,/href="\/checkout\?orderId=/);assert.match(html,/href="\/orders\/17"/);
+  }
+});
+
+function userOrderTable(order, query, tab = 'ALL') {
+  const page = loadOrderPage('MyOrdersPage', order, query, tab);
+  const html = renderToStaticMarkup(React.createElement(page.default));
+  return html.match(/<tbody[\s\S]*?<\/tbody>/)[0];
+}
+
+test('Tìm đơn theo mặt hàng thứ hai, SKU, hãng và tên tiếng Việt không dấu', () => {
+  const raw = orderFixture(); raw.items[1].productBrand = 'Victor';
+  const order = loadOrderPage('MyOrdersPage').normalizeUserOrder(raw);
+  for (const query of ['ao victor', 'ÁO VICTOR', '  HG-APPAREL-018  ', 'victor', 'vot yonex']) {
+    assert.match(userOrderTable(order, query), /#HG-17/, query);
+  }
+  assert.doesNotMatch(userOrderTable(order, 'Không tồn tại'), /#HG-17/);
+});
+
+test('Tìm đơn bằng mã nội bộ, PayOS và phương thức; không tìm theo giá hoặc số lượng', () => {
+  const raw = { ...orderFixture(), payosOrderCode: 1000000017, paymentMethod: 'PAYOS_VIETQR' };
+  const order = loadOrderPage('MyOrdersPage').normalizeUserOrder(raw);
+  for (const query of ['#hg-17', 'HG-17', '1000000017', 'vietqr', '   ']) {
+    assert.match(userOrderTable(order, query), /#HG-17/, query);
+  }
+  for (const query of ['500000', '999999']) assert.doesNotMatch(userOrderTable(order, query), /#HG-17/);
+});
+
+test('Tìm đơn giữ bộ lọc trạng thái và hỗ trợ dữ liệu sản phẩm cũ lồng trong item', () => {
+  const raw = { ...orderFixture(), status: 'CANCELLED', items: [{ quantity: 1,
+    product: { name: 'Đôi giày Mizuno', sku: 'HG-SHOE-021', brand: 'Mizuno' } }] };
+  const order = loadOrderPage('MyOrdersPage').normalizeUserOrder(raw);
+  assert.match(userOrderTable(order, 'doi giay', 'CANCELLED'), /#HG-17/);
+  assert.match(userOrderTable(order, 'HG-SHOE-021', 'CANCELLED'), /#HG-17/);
+  assert.doesNotMatch(userOrderTable(order, 'mizuno', 'PROCESSING'), /#HG-17/);
 });

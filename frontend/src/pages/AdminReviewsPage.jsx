@@ -523,7 +523,7 @@ const AdminReviewsPage = () => {
         )}
 
         {rmaModal && <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
-          <form onSubmit={submitRma} className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
+          <form onSubmit={submitRma} role="dialog" aria-modal="true" aria-label="Xử lý yêu cầu bảo hành" className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
             <h3 className="font-bold">{rmaModal.status === 'COMPLETED' ? 'Hoàn tất đổi hàng' : 'Từ chối bảo hành'} · {rmaModal.rma.rmaCode}</h3>
             <p className="text-sm text-slate-600">{rmaModal.rma.productName} · Số lượng: {rmaModal.rma.quantity ?? '—'}</p>
             {rmaError && <p role="alert" className="text-red-700">{rmaError}</p>}
@@ -547,7 +547,7 @@ const AdminReviewsPage = () => {
         {/* MODAL TRẢ LỜI ĐÁNH GIÁ */}
         {replyModalReview && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
+            <div role="dialog" aria-modal="true" aria-label="Phản hồi đánh giá" className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
                   <h3 className="text-base font-black text-slate-900">Phản hồi bài đánh giá</h3>

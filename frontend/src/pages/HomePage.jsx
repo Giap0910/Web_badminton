@@ -92,7 +92,7 @@ const HomePage = () => {
               <span className="text-xs uppercase tracking-widest text-secondary font-extrabold">
                 {currentHero.tagline}
               </span>
-              <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-extrabold uppercase tracking-normal text-white leading-[1.18] drop-shadow-sm">
+              <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-extrabold uppercase tracking-normal text-white leading-[1.18] sm:leading-10 lg:leading-none drop-shadow-sm">
                 {currentHero.titleLine1} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400">
                   {currentHero.titleGradient}

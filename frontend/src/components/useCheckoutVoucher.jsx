@@ -19,8 +19,9 @@ export function checkoutVoucherSuccess(code, quote) {
   return `Áp dụng mã ${code} thành công! ${benefit}`;
 }
 
-export default function useCheckoutVoucher(code, subtotal, cartKey) {
-  const key = JSON.stringify([code.trim(), subtotal, cartKey]);
+export default function useCheckoutVoucher(code, subtotal, cartKey, items = []) {
+  const requestItems = items.map(item => ({ productId: item.product?.id, quantity: item.quantity }));
+  const key = JSON.stringify([code.trim(), subtotal, cartKey, requestItems]);
   const blank = { ...checkoutVoucherQuote(subtotal), key, appliedVoucher: null, error: '', success: '', validating: Boolean(code.trim()) };
   const [state, setState] = useState(blank);
   const current = useRef(key);
@@ -36,7 +37,7 @@ export default function useCheckoutVoucher(code, subtotal, cartKey) {
     const active = () => current.current === requestKey && generation.current === requestGeneration;
     setState({ ...blank, validating: true });
     try {
-      const response = await voucherApi.validateVoucher(code.trim(), subtotal);
+      const response = await voucherApi.validateVoucher(code.trim(), subtotal, requestItems);
       if (!active()) return;
       const data = response?.data ?? response;
       if (!data?.valid) throw new Error('Mã giảm giá không hợp lệ.');

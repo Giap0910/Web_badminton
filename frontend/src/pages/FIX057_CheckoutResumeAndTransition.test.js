@@ -3328,5 +3328,33 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     assert.equal(harness.getCart().length, 1, 'Cart items remain 100% intact');
     assert.equal(harness.getNavigatedTo(), null, 'No unauthorized navigation');
   });
+  test('Resume hiển thị điểm đã lưu và mã đơn nội bộ, không lấy điểm từ giỏ hoặc hồ sơ hiện tại', async () => {
+    const harness = await createCheckoutRuntimeHarness({
+      orderId: '901', search: '?orderId=901', userProfile: { loyaltyPoints: 0 },
+      cartItems: [{ cartItemId: 'unrelated', product: { id: 9, name: 'Sản phẩm khác', price: 999999 }, quantity: 1 }],
+      contextData: { order: { id: 901, payosOrderCode: 1000000091, status: 'PENDING', paymentMethod: 'PAYOS_VIETQR',
+        pointsUsed: 200, pointsDiscount: 20000, totalAmount: 480000, items: [{ id: 1, price: 500000, quantity: 1 }] },
+        eligibility: { eligible: true, allowedMethods: ['COD'] }, stateVersion: 1 },
+    });
+    const { finalMarkup } = await harness.renderWithLifecycle();
+    assert.match(finalMarkup, /Đổi 200 điểm/);
+    assert.match(finalMarkup, /-20\.000 đ/);
+    assert.match(finalMarkup, /#HG-901/);
+    assert.match(finalMarkup, /Mã PayOS:.*1000000091/);
+    assert.doesNotMatch(finalMarkup, /id="redeem-points"/);
+    assert.equal(harness.transitionCalls.length, 0);
+    assert.equal(harness.getCart().length, 1);
+  });
+
+  test('Resume giữ số điểm 0 thực tế và biểu diễn trường lịch sử thiếu là chưa biết', async () => {
+    const base = { id: 902, status: 'PENDING', paymentMethod: 'PAYOS_VIETQR', totalAmount: 500000, items: [] };
+    const harness = await createCheckoutRuntimeHarness({ orderId: '902', search: '?orderId=902',
+      userProfile: { loyaltyPoints: 900 }, contextData: { order: { ...base, pointsUsed: 0, pointsDiscount: 0 } } });
+    assert.match((await harness.renderWithLifecycle()).finalMarkup, /Đổi 0 điểm/);
+    harness.setContextData({ order: base });
+    harness.setSearch('?orderId=902&refresh=1');
+    assert.match((await harness.renderWithLifecycle()).finalMarkup, /Đổi — điểm/);
+    assert.equal(harness.transitionCalls.length, 0);
+  });
 });
 

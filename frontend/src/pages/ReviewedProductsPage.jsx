@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import UserLayout from '../components/UserLayout';
 import { reviewApi, readReviewList, normalizeReview, buildReviewPayload } from '../api/reviewApi';
 import ProductImage from '../components/ProductImage';
-import { formatDate } from '../utils/formatters';
+import { formatDate, normalizeSearchText } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 import { copyProductLink } from '../components/ProductFacts';
 import {
@@ -23,8 +23,12 @@ import {
   Sparkles,
   Award
 } from 'lucide-react';
-
-
+export function matchesReviewSearch(item, query) {
+  const keyword = normalizeSearchText(query);
+  const orderCode = item?.orderId != null ? `#HG-${item.orderId}` : '';
+  return [item?.productName, item?.productSku, item?.productBrand, item?.content ?? item?.comment,
+    item?.orderId, orderCode].some(value => normalizeSearchText(value).includes(keyword));
+}
 
 const ReviewedProductsPage = () => {
   const { token } = useAuth();
@@ -99,11 +103,9 @@ const ReviewedProductsPage = () => {
     } finally { submissionLock.current = false; if (mounted.current) setSubmittingReview(false); }
   };
 
-  const filteredReviews = reviews.filter((r) =>
-    r.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.productBrand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredReviews = reviews.filter(item => matchesReviewSearch(item, searchQuery));
+  const filteredPendingReviews = pendingReviews.filter(item => matchesReviewSearch(item, searchQuery));
+  const showPendingReviews = activeTab === 'ALL' || activeTab === 'PENDING';
 
   const totalReviewsCount = reviews.length + pendingReviews.length;
 
@@ -112,7 +114,10 @@ const ReviewedProductsPage = () => {
       {dataError && <div role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}<button type="button" onClick={fetchReviews} className="ml-3 underline">Thử lại</button></div>}
       {loading && <p role="status">Đang tải đánh giá và sản phẩm chờ nhận xét...</p>}
       {shareMessage && <p role="status" className="text-xs text-slate-700">{shareMessage}</p>}
-      {!loading && !dataError && activeTab === 'PENDING' && pendingReviews.length === 0 && <p>Chưa có sản phẩm đủ điều kiện đánh giá.</p>}
+      {!loading && !dataError && showPendingReviews && filteredPendingReviews.length === 0
+        && (activeTab === 'PENDING' || pendingReviews.length > 0) && <p>
+        {pendingReviews.length === 0 ? 'Chưa có sản phẩm đủ điều kiện đánh giá.' : 'Không tìm thấy sản phẩm chờ đánh giá phù hợp.'}
+      </p>}
       <div className="flex flex-col gap-6">
         {/* HEADER & QUICK STATS CONTAINER */}
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200/80 flex flex-col gap-5">
@@ -187,7 +192,7 @@ const ReviewedProductsPage = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm theo tên vợt, mã đơn..."
+                placeholder="Tên sản phẩm, SKU, hãng, mã đơn (#HG-...)..."
                 className="w-full bg-slate-50 focus:bg-white text-slate-900 placeholder:text-slate-400 text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
               />
             </div>
@@ -195,15 +200,15 @@ const ReviewedProductsPage = () => {
         </div>
 
         {/* SECTION: PENDING REVIEWS BANNER (If tab is ALL or PENDING) */}
-        {!loading && !dataError && (activeTab === 'ALL' || activeTab === 'PENDING') && pendingReviews.length > 0 && (
+        {!loading && !dataError && showPendingReviews && filteredPendingReviews.length > 0 && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Sản phẩm vừa mua chờ bạn nhận xét ({pendingReviews.length})
+                Sản phẩm vừa mua chờ bạn nhận xét ({filteredPendingReviews.length})
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {pendingReviews.map((pending) => (
+              {filteredPendingReviews.map((pending) => (
                 <div
                   key={pending.productId}
                   className="bg-white rounded-2xl border border-amber-200/80 bg-amber-50/20 p-4 shadow-sm flex items-start justify-between gap-4"

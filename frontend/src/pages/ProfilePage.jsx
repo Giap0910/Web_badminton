@@ -9,7 +9,6 @@ import {
   Check,
   Lock,
   BadgeCheck,
-  History,
   Eye,
   EyeOff,
   RotateCcw,
@@ -368,10 +367,6 @@ const ProfilePage = () => {
           <div className="flex flex-col gap-1 pb-4 border-b border-slate-100">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h2 className="text-xl font-black text-slate-900">Đổi mật khẩu</h2>
-              <span className="text-xs text-slate-400 flex items-center gap-1">
-                <History className="w-3.5 h-3.5" />
-                Lần đổi gần nhất: 30 ngày trước
-              </span>
             </div>
             <p className="text-xs text-slate-500">
               Để bảo mật tài khoản cá nhân, vui lòng không chia sẻ mật khẩu cho người khác

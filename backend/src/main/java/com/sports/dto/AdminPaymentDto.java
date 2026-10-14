@@ -23,6 +23,7 @@ public class AdminPaymentDto {
     private LocalDateTime expiresAt;
     private String reference;
     private LocalDateTime paidAt;
+    private LocalDateTime createdAt;
     private String reviewReason;
     private String customerName;
     private String paymentMethod;
@@ -33,7 +34,7 @@ public class AdminPaymentDto {
                 .orderCode(attempt.getOrderCode()).paymentLinkId(attempt.getPaymentLinkId()).amount(attempt.getAmount())
                 .currency(attempt.getCurrency()).status(attempt.getStatus()).checkoutUrl(attempt.getCheckoutUrl())
                 .qrPayload(attempt.getQrPayload()).expiresAt(attempt.getExpiresAt()).reference(attempt.getReference())
-                .paidAt(attempt.getPaidAt()).reviewReason(attempt.getReviewReason())
+                .paidAt(attempt.getPaidAt()).createdAt(attempt.getCreatedAt()).reviewReason(attempt.getReviewReason())
                 .customerName(order.getCustomerName()).paymentMethod(order.getPaymentMethod()).build();
     }
 }

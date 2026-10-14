@@ -37,6 +37,7 @@ const AdminOrdersPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [toastError, setToastError] = useState(false);
   const actionLock = useRef(false), requestId = useRef(0);
 
   const fetchOrders = async () => {
@@ -69,10 +70,15 @@ const AdminOrdersPage = () => {
   const formatPrice = (p) => p == null ? 'Chưa có thông tin' :
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    setCopiedCode(text);
-    setTimeout(() => setCopiedCode(null), 2000);
+  const copyToClipboard = async (text) => {
+    setCopiedCode(null); setToastMessage('');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedCode(text);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch {
+      setToastError(true); setToastMessage('Không thể sao chép. Vui lòng chọn mã và sao chép thủ công.');
+    }
   };
 
   const handleUpdateStatus = async (orderId, newStatus) => {
@@ -91,9 +97,9 @@ const AdminOrdersPage = () => {
       if (!updated?.id) throw new Error('Máy chủ chưa xác nhận trạng thái đơn');
       await fetchOrders();
       setSelectedOrder(null);
-      setToastMessage(`Đã cập nhật trạng thái đơn sang: "${label}"`);
+      setToastError(false); setToastMessage(`Đã cập nhật trạng thái đơn sang: "${label}"`);
     } catch (err) {
-      setToastMessage(err.response?.data?.message || 'Không thể cập nhật trạng thái đơn hàng.');
+      setToastError(true); setToastMessage(err.response?.data?.message || 'Không thể cập nhật trạng thái đơn hàng.');
     } finally { actionLock.current = false; setBusy(false); }
     setTimeout(() => setToastMessage(''), 3000);
   };
@@ -103,8 +109,8 @@ const AdminOrdersPage = () => {
   const confirmCash = async order => {
     if (actionLock.current || !window.confirm(`Xác nhận đã nhận đủ ${formatPrice(order.totalAmount)} tiền mặt/COD cho ${order.code}? Chỉ xác nhận khi thực tế đã thu tiền.`)) return;
     actionLock.current = true; setBusy(true);
-    try { await adminApi.confirmCash(order.id, order.totalAmount); await fetchOrders(); setToastMessage('Đã ghi nhận thu tiền mặt/COD.'); }
-    catch (error) { setToastMessage(error.response?.data?.message || 'Không xác nhận được thu tiền.'); }
+    try { await adminApi.confirmCash(order.id, order.totalAmount); await fetchOrders(); setToastError(false); setToastMessage('Đã ghi nhận thu tiền mặt/COD.'); }
+    catch (error) { setToastError(true); setToastMessage(error.response?.data?.message || 'Không xác nhận được thu tiền.'); }
     finally { actionLock.current = false; setBusy(false); }
   };
 
@@ -172,8 +178,8 @@ const AdminOrdersPage = () => {
         </div>
 
         {toastMessage && (
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <div role={toastError ? 'alert' : 'status'} className={`p-4 rounded-xl border text-xs font-bold flex items-center gap-2 ${toastError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
+            {toastError ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
             <span>{toastMessage}</span>
           </div>
         )}
@@ -241,6 +247,7 @@ const AdminOrdersPage = () => {
                             <button
                               type="button"
                               onClick={() => copyToClipboard(order.code)}
+                              aria-label={`Sao chép mã đơn ${order.code}`}
                               className="text-slate-400 hover:text-slate-700"
                               title="Sao chép"
                             >
@@ -339,7 +346,7 @@ const AdminOrdersPage = () => {
         {/* MODAL CHI TIẾT ĐƠN HÀNG */}
         {selectedOrder && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
+            <div role="dialog" aria-modal="true" aria-label="Chi tiết đơn hàng" className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
                   <h3 className="text-base font-black text-slate-900">Chi tiết đơn hàng {selectedOrder.code}</h3>

@@ -194,7 +194,7 @@ const AdminProductsPage = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo tên sản phẩm, mã SKU, hãng..."
+              placeholder="Tìm theo ID, tên sản phẩm, mã SKU, hãng..."
               className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
             />
           </div>
@@ -244,7 +244,7 @@ const AdminProductsPage = () => {
             <table className="w-full text-left border-collapse min-w-[850px]">
               <thead>
                 <tr className="bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                  <th className="py-3.5 px-6">Sản phẩm & SKU</th>
+                  <th className="py-3.5 px-6">Sản phẩm, ID & SKU</th>
                   <th className="py-3.5 px-4">Danh mục & Hãng</th>
                   <th className="py-3.5 px-4">Giá niêm yết</th>
                   <th className="py-3.5 px-4">Tồn kho</th>
@@ -281,6 +281,7 @@ const AdminProductsPage = () => {
                             </div>
                             <div className="flex flex-col min-w-0">
                               <span className="font-bold text-slate-900 line-clamp-1">{prod.name}</span>
+                              <span className="text-[11px] text-slate-500 mt-0.5">{`ID: ${prod.id}`}</span>
                               <span className="text-[11px] text-slate-400 font-mono mt-0.5">{prod.sku}</span>
                             </div>
                           </div>

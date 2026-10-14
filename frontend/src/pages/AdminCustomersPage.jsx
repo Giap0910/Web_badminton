@@ -292,7 +292,7 @@ const AdminCustomersPage = () => {
         {/* MODAL VIEW CUSTOMER */}
         {viewCustomer && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
+            <div role="dialog" aria-modal="true" aria-label="Chi tiết khách hàng" className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <h3 className="text-base font-black text-slate-900">Hồ sơ hội viên HGClub</h3>
                 <button

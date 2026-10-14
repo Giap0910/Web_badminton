@@ -3,10 +3,14 @@ package com.sports.service;
 import com.sports.dto.VoucherDto;
 import com.sports.dto.VoucherValidateRequest;
 import com.sports.dto.VoucherValidateResponse;
+import com.sports.dto.OrderItemRequest;
+import com.sports.entity.Product;
 import com.sports.entity.Voucher;
 import com.sports.exception.BadRequestException;
 import com.sports.exception.ResourceNotFoundException;
 import com.sports.repository.VoucherRepository;
+import com.sports.repository.OrderRepository;
+import com.sports.repository.ProductRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +30,8 @@ import java.util.stream.Collectors;
 public class VoucherService {
 
     private final VoucherRepository voucherRepository;
+    private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
     private final org.springframework.core.env.Environment environment;
 
     @Transactional(readOnly = true)
@@ -33,7 +39,7 @@ public class VoucherService {
         String code = validateRequest(request);
         Voucher voucher = voucherRepository.findByCodeIgnoreCase(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Mã giảm giá '" + code + "' không tồn tại!"));
-        return validateVoucher(voucher, request.getOrderTotal());
+        return validateVoucher(voucher, request);
     }
 
     @Transactional
@@ -41,7 +47,7 @@ public class VoucherService {
         String code = validateRequest(request);
         Voucher voucher = voucherRepository.findByCodeForUpdate(code)
                 .orElseThrow(() -> new BadRequestException("Mã giảm giá không tồn tại"));
-        VoucherValidateResponse result = validateVoucher(voucher, request.getOrderTotal());
+        VoucherValidateResponse result = validateVoucher(voucher, request);
         voucher.setUsedCount(usedCount(voucher) + 1);
         voucherRepository.save(voucher);
         return result;
@@ -56,11 +62,13 @@ public class VoucherService {
         });
     }
 
-    private VoucherValidateResponse validateVoucher(Voucher voucher, BigDecimal orderTotal) {
+    private VoucherValidateResponse validateVoucher(Voucher voucher, VoucherValidateRequest request) {
+        BigDecimal orderTotal = request.getOrderTotal();
         VndAmount.requireValid(orderTotal);
         validateConfiguration(voucher);
-        validateEligibility(voucher, orderTotal);
-        BigDecimal discount = productDiscount(voucher, orderTotal);
+        BigDecimal eligibleSubtotal = eligibleSubtotal(voucher, request);
+        validateEligibility(voucher, eligibleSubtotal);
+        BigDecimal discount = productDiscount(voucher, eligibleSubtotal);
         BigDecimal shippingFee = quoteShipping(orderTotal);
         BigDecimal shippingDiscount = shippingDiscount(voucher, shippingFee);
         return VoucherValidateResponse.builder()
@@ -69,6 +77,48 @@ public class VoucherService {
                 .discountAmount(discount).finalTotal(VndAmount.requireValid(orderTotal.subtract(discount)))
                 .shippingDiscountAmount(shippingDiscount).finalShippingFee(shippingFee.subtract(shippingDiscount))
                 .message("Áp dụng mã giảm giá thành công!").build();
+    }
+
+    private BigDecimal eligibleSubtotal(Voucher voucher, VoucherValidateRequest request) {
+        if (!"BWF50K".equalsIgnoreCase(voucher.getCode())) return request.getOrderTotal();
+        java.util.Map<Long, Integer> quantities = validatedQuantities(request.getItems());
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal eligible = BigDecimal.ZERO;
+        for (var entry : quantities.entrySet()) {
+            Product product = voucherProduct(entry.getKey());
+            BigDecimal lineTotal = VndAmount.requireValid(product.getPrice().multiply(BigDecimal.valueOf(entry.getValue())));
+            subtotal = VndAmount.requireValid(subtotal.add(lineTotal));
+            Long categoryId = product.getCategory() == null ? null : product.getCategory().getId();
+            if (Long.valueOf(1).equals(categoryId) || Long.valueOf(2).equals(categoryId)) eligible = eligible.add(lineTotal);
+        }
+        if (subtotal.compareTo(request.getOrderTotal()) != 0)
+            throw new BadRequestException("Giá giỏ hàng đã thay đổi; vui lòng cập nhật trước khi áp dụng voucher");
+        if (eligible.signum() == 0) throw new BadRequestException("Mã BWF50K chỉ áp dụng cho vợt hoặc giày cầu lông");
+        return eligible;
+    }
+
+    private java.util.Map<Long, Integer> validatedQuantities(List<OrderItemRequest> items) {
+        if (items == null || items.isEmpty() || items.size() > 100)
+            throw new BadRequestException("Mã BWF50K cần giỏ hàng có từ 1 đến 100 dòng sản phẩm để kiểm tra danh mục");
+        java.util.Map<Long, Integer> quantities = new java.util.TreeMap<>();
+        for (OrderItemRequest item : items) {
+            if (item == null || item.getProductId() == null || item.getProductId() <= 0
+                    || item.getQuantity() == null || item.getQuantity() <= 0 || item.getQuantity() > 100)
+                throw new BadRequestException("Sản phẩm và số lượng áp dụng voucher không hợp lệ");
+            if (quantities.merge(item.getProductId(), item.getQuantity(), Integer::sum) > 100)
+                throw new BadRequestException("Tổng số lượng mỗi sản phẩm áp dụng voucher tối đa là 100");
+        }
+        return quantities;
+    }
+
+    private Product voucherProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Sản phẩm áp dụng voucher không tồn tại"));
+        if (!Boolean.TRUE.equals(product.getCatalogVisible()))
+            throw new BadRequestException("Sản phẩm áp dụng voucher đã được ẩn khỏi cửa hàng");
+        VndAmount.requireValid(product.getPrice());
+        if (product.getPrice().signum() == 0) throw new BadRequestException("Giá sản phẩm áp dụng voucher không hợp lệ");
+        return product;
     }
 
     private String validateRequest(VoucherValidateRequest request) {
@@ -179,6 +229,8 @@ public class VoucherService {
         String code = normalizeCode(dto.getCode());
         if (voucherRepository.findByCodeIgnoreCase(code).isPresent())
             throw new BadRequestException("Mã voucher đã tồn tại");
+        if (orderRepository.existsByVoucherCodeIgnoreCase(code))
+            throw new BadRequestException("Mã voucher đã có lịch sử đơn hàng; hãy dùng mã mới");
         Voucher voucher = Voucher.builder()
                 .code(code)
                 .description(dto.getDescription())
@@ -246,8 +298,10 @@ public class VoucherService {
 
     @Transactional
     public void deleteVoucher(Long id) {
-        Voucher voucher = voucherRepository.findById(id)
+        Voucher voucher = voucherRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy voucher với ID: " + id));
+        if (usedCount(voucher) > 0 || orderRepository.existsByVoucherCodeIgnoreCase(voucher.getCode()))
+            throw new BadRequestException("Voucher đã có lịch sử sử dụng hoặc đơn hàng; hãy tạm tắt thay vì xóa");
         voucherRepository.delete(voucher);
     }
 

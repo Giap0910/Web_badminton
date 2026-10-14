@@ -127,6 +127,14 @@ PREPARE fix057_statement FROM @fix057_sql;
 EXECUTE fix057_statement;
 DEALLOCATE PREPARE fix057_statement;
 
+SET @fix057_sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE()
+        AND table_name = 'payment_attempts' AND column_name = 'created_at'),
+    'SELECT 1', 'ALTER TABLE payment_attempts ADD COLUMN created_at DATETIME(6) NULL');
+PREPARE fix057_statement FROM @fix057_sql;
+EXECUTE fix057_statement;
+DEALLOCATE PREPARE fix057_statement;
+
 CREATE TABLE IF NOT EXISTS payment_method_transitions (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     operation_id CHAR(36) NOT NULL,

@@ -45,6 +45,9 @@ export const formatTimer = (totalSeconds) => {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
+export const normalizeSearchText = (value) => String(value ?? '').normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().trim();
+
 export const isOrderPaid = (order) => !!order && (order.paymentMethod === 'COD' && order.cashCollected != null ? order.cashCollected : (
   order.status === 'PAID' ||
   (order.paymentMethod === 'PAYOS_VIETQR' && order.status === 'SHIPPING') ||

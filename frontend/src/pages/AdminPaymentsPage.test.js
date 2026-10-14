@@ -46,6 +46,7 @@ const loadAdminPaymentRuntime = () => runtimePromise ??= (async () => {
     '../components/AdminLayout': { default: ({ children }) => React.createElement('div', null, children) },
     '../components/AdminPaymentLog': { default: () => null },
     '../components/AdminProductImport': { saveAdminFile: (blob, name) => { savedCsv = { blob, name }; } },
+    'react-router-dom': { Link: props => React.createElement('a', { href: props.to }, props.children) },
     '../api/adminApi.js': { adminApi: {} },
     '../utils/idempotency.js': { getOrCreateReconciliationKey, clearStoredReconciliationIntent, getStoredReconciliationIntent },
     '../utils/paymentFormatters.js': { formatReviewReason, getPaymentStatusBadge },
@@ -101,23 +102,27 @@ test('Đơn đã hủy không che bằng chứng PAID hoặc NEEDS_REVIEW', asyn
 });
 
 test('fetchPayments thật giữ riêng trạng thái đơn và trạng thái attempt từ Backend', async () => {
+  const runtime = await loadAdminPaymentRuntime();
   const source = adminPageSource.match(/const fetchPayments = (async \(\) => \{[\s\S]*?\n  \});/)[1];
   let transactions;
   const scope = { activeRequestIdRef: { current: 0 }, setIsLoading: () => {}, setHasLoaded: () => {}, setDataError: () => {},
-    setTransactions: value => { transactions = value; }, adminApi: { getAllPayments: async () =>
-      [{ id: 12, orderId: 28, orderStatus: 'CANCELLED', status: 'CREATING', amount: 170000, paymentMethod: 'PAYOS_VIETQR' }] } };
+    setTransactions: value => { transactions = value; }, normalizeAdminPayment: runtime.normalizeAdminPayment,
+    adminApi: { getAllPayments: async () =>
+      [{ id: 12, orderId: 28, orderCode: 1000000028, orderStatus: 'CANCELLED', status: 'CREATING', amount: 170000, paymentMethod: 'PAYOS_VIETQR' }] } };
 
   await new Function('scope', `with (scope) { return (${source}); }`)(scope)();
 
   assert.equal(transactions[0].orderStatus, 'CANCELLED');
   assert.equal(transactions[0].status, 'CREATING');
   assert.equal(transactions[0].paidAt, null); assert.equal(transactions[0].reference, null);
+  assert.equal(transactions[0].orderCode, '#HG-28'); assert.equal(transactions[0].providerCode, 1000000028);
+  assert.equal(transactions[0].orderHref, '/admin/orders?search=HG-28'); assert.equal(transactions[0].createdAt, '—');
 });
 
 test('CSV đối soát xuất hai trạng thái riêng và không phát sinh xác nhận thanh toán', async () => {
   const page = await loadAdminPaymentRuntime();
 
-  page.exportPayments([{ id: 12, orderCode: '#HG-28', customer: '=HYPERLINK("bad")', amount: 170000,
+  page.exportPayments([{ id: 12, orderCode: '#HG-28', providerCode: 1000000028, customer: '=HYPERLINK("bad")', amount: 170000,
     status: 'CREATING', orderStatus: 'CANCELLED', paymentMethod: 'PAYOS_VIETQR', paidAt: null, reviewReason: null }]);
   const text = await savedCsv.blob.text();
 
@@ -125,6 +130,7 @@ test('CSV đối soát xuất hai trạng thái riêng và không phát sinh xá
   assert.match(text, /"Trạng thái thanh toán","Trạng thái đơn hàng"/);
   assert.match(text, /"CREATING","CANCELLED"/);
   assert.match(text, /"'=HYPERLINK/);
+  assert.match(text, /"Mã đơn","Mã PayOS"/); assert.match(text, /"#HG-28","1000000028"/);
   assert.doesNotMatch(text, /"PAID"/);
 });
 
@@ -171,7 +177,8 @@ test('SECTION 10 & 42 — getPaymentStatusBadge renders distinct badge metadata 
   assert.equal(cancelledBadge.label, 'Đã hủy');
 });
 
-test('SECTION 42 & 7 — Real backend ledger mapping preserves real reference, paidAt, and reviewReason', () => {
+test('SECTION 42 & 7 — Real backend ledger mapping preserves real reference, paidAt, and reviewReason', async () => {
+  const runtime = await loadAdminPaymentRuntime();
   const backendList = [
     {
       id: 88,
@@ -203,22 +210,11 @@ test('SECTION 42 & 7 — Real backend ledger mapping preserves real reference, p
     }
   ];
 
-  const mapped = backendList.map((p) => ({
-    id: p.id,
-    orderId: p.orderId,
-    orderCode: `#HG-${p.orderCode}`,
-    provider: p.provider || 'PAYOS',
-    amount: p.amount || 0,
-    status: p.status,
-    reference: p.reference || null,
-    paidAt: p.paidAt ? new Date(p.paidAt).toLocaleString('vi-VN') : null,
-    reviewReason: p.reviewReason || null,
-    customer: p.customerName || '—'
-  }));
+  const mapped = backendList.map(runtime.normalizeAdminPayment);
 
   // Item 88 has real reference and reviewReason
   assert.equal(mapped[0].id, 88);
-  assert.equal(mapped[0].orderCode, '#HG-999888');
+  assert.equal(mapped[0].orderCode, '#HG-101'); assert.equal(mapped[0].providerCode, 999888);
   assert.equal(mapped[0].reference, 'FT2410058821901');
   assert.equal(mapped[0].status, 'NEEDS_REVIEW');
   assert.equal(mapped[0].reviewReason, 'LATE_PAYMENT_CANCELLED_ORDER');
@@ -527,5 +523,29 @@ test('BUG FE-3 — Reconcile 202 body updates payment row with new reviewReason 
 test('BUG FE-5 — Reference column and cells use safe wrapping classes to prevent layout blowout', () => {
   assert.match(adminPageSource, /break-all/, 'AdminPaymentsPage must use break-all for safe wrapping');
   assert.match(adminPageSource, /overflow-wrap:anywhere|min-w-0/, 'AdminPaymentsPage must use modern overflow protection');
+});
+
+test('Mã đơn trong giao dịch, liên kết và mã PayOS giữ hai định danh riêng', async () => {
+  const page = await loadAdminPaymentRuntime(), React = await import('react');
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const payment = page.normalizeAdminPayment({ id: 8, orderId: 28, orderCode: 1000000028, status: 'PENDING' });
+  const html = renderToStaticMarkup(React.createElement(page.AdminPaymentOrder, { payment }));
+  assert.match(html, /href="\/admin\/orders\?search=HG-28"/); assert.match(html, /Đơn hàng #HG-28/);
+  assert.match(html, /Mã PayOS: 1000000028/); assert.doesNotMatch(html, /Đơn hàng #HG-1000000028/);
+  for (const query of ['28', 'HG-28', '#HG-28', '1000000028', 'HG-1000000028', '#HG-1000000028'])
+    assert.equal(page.matchesAdminPaymentSearch(payment, query), true, query);
+  assert.equal(page.matchesAdminPaymentSearch(payment, 'HG-29'), false);
+});
+
+test('Giao dịch thiếu orderId hoặc ngày tạo không suy thông tin từ mã PayOS/ngày nhận tiền', async () => {
+  const page = await loadAdminPaymentRuntime(), React = await import('react');
+  const { renderToStaticMarkup } = await import('react-dom/server');
+  const old = page.normalizeAdminPayment({ id: 8, orderCode: 1000000028, paidAt: '2026-10-14T10:00:00' });
+  assert.equal(old.orderCode, '—'); assert.equal(old.orderHref, null); assert.equal(old.createdAt, '—');
+  const html = renderToStaticMarkup(React.createElement(page.AdminPaymentOrder, { payment: old }));
+  assert.doesNotMatch(html, /href=/); assert.match(html, /Mã PayOS: 1000000028/);
+  const actual = page.normalizeAdminPayment({ id: 9, orderId: 29, createdAt: '2026-10-14T09:30:00', orderCode: null });
+  assert.equal(actual.createdAt, new Date('2026-10-14T09:30:00').toLocaleString('vi-VN'));
+  assert.equal(actual.providerCode, null); assert.doesNotMatch(renderToStaticMarkup(React.createElement(page.AdminPaymentOrder, { payment: actual })), /Mã PayOS:/);
 });
 

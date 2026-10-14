@@ -28,9 +28,9 @@ function voucherHarness(validateVoucher) {
   const source = transformSync(fs.readFileSync('src/components/useCheckoutVoucher.jsx', 'utf8'), { loader: 'jsx', format: 'cjs' }).code;
   new Function('require', 'module', 'exports', 'setTimeout', 'clearTimeout', 'sessionStorage', source)(name => modules[name], instance, instance.exports,
     fn => { pending = fn; return 1; }, () => { pending = null; }, sessionStorage);
-  return { render: (code, total, cart = 'cart') => {
+  return { render: (code, total, cart = 'cart', items = []) => {
     refCursor = 0;
-    api = instance.exports.default(code, total, cart);
+    api = instance.exports.default(code, total, cart, items);
     if (effect.key !== previous) { cleanup?.(); previous = effect.key; cleanup = effect.fn(); }
     return api;
   }, tick: () => pending?.(), state: () => state, stored: () => storage.get('hg_voucher_code') };
@@ -55,6 +55,33 @@ test('Thay đổi giỏ tự kiểm tra lại; phản hồi voucher cũ không g
   assert.equal(h.state().discountAmount, 0);
   assert.match(h.state().error, /không hợp lệ/);
   h.render('', 100000); assert.equal(h.state().validating, false); assert.equal(h.stored(), undefined);
+});
+
+test('Voucher gửi ID và số lượng thật; đổi mặt hàng cùng tổng tiền vẫn xác thực lại', async () => {
+  const calls = [], h = voucherHarness(async (code, total, items) => {
+    calls.push({ code, total, items }); return { valid: true, code, discountAmount: 50000 };
+  });
+  h.render('BWF50K', 1200000, 'same-cart', [{ product: { id: 2 }, quantity: 1 }]); await h.tick();
+  h.render('BWF50K', 1200000, 'same-cart', [{ product: { id: 101 }, quantity: 8 }]); await h.tick();
+  assert.deepEqual(calls.map(call => call.items), [[{ productId: 2, quantity: 1 }], [{ productId: 101, quantity: 8 }]]);
+  assert.equal(calls.length, 2);
+});
+
+test('Voucher theo danh mục bị từ chối giữ nguyên tiền hàng và báo lỗi từ máy chủ', async () => {
+  const h = voucherHarness(async () => { throw { response: { data: { message: 'BWF50K chỉ áp dụng cho vợt hoặc giày' } } }; });
+  h.render('BWF50K', 1120000, 'accessories', [{ product: { id: 101 }, quantity: 8 }]); await h.tick();
+  assert.equal(h.state().discountAmount, 0); assert.equal(h.state().appliedVoucher, null);
+  assert.match(h.state().error, /chỉ áp dụng/); assert.equal(h.stored(), undefined);
+});
+
+test('API voucher giữ payload cũ và bổ sung danh sách mặt hàng khi có', async () => {
+  const calls = [], instance = { exports: {} };
+  const compiled = transformSync(fs.readFileSync('src/api/voucherApi.js', 'utf8'), { format: 'cjs' }).code;
+  new Function('require', 'module', 'exports', compiled)(() => ({ default: { post: (path, body) => calls.push({ path, body }) }, __esModule: true }), instance, instance.exports);
+  instance.exports.voucherApi.validateVoucher('HG10K', 300000);
+  instance.exports.voucherApi.validateVoucher('BWF50K', 1200000, [{ productId: 2, quantity: 1 }]);
+  assert.deepEqual(calls[0], { path: '/vouchers/validate', body: { code: 'HG10K', orderTotal: 300000 } });
+  assert.deepEqual(calls[1].body.items, [{ productId: 2, quantity: 1 }]);
 });
 
 test('Từ khóa ngắn không gọi API; hai ký tự gợi ý sáu sản phẩm công khai', async () => {

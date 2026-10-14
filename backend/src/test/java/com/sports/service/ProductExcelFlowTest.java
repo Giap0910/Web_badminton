@@ -108,4 +108,82 @@ class ProductExcelFlowTest {
             assertEquals(20,excel.read(out.toByteArray()).get(0).product().getStock());
         }
     }
+
+    private byte[] variantChoicesFile(String parentColor, String firstColor, String secondColor,
+            String firstPackaging, String secondPackaging) throws Exception {
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(variantsFile(false,false)));var out=new ByteArrayOutputStream()) {
+            for(int index=1;index<=2;index++) {
+                var row=book.getSheetAt(4).getRow(index);
+                setChoice(row,"colorName",parentColor);
+                setChoice(row,"variantColor",index==1 ? firstColor : secondColor);
+                setChoice(row,"variantPackaging",index==1 ? firstPackaging : secondPackaging);
+            }
+            book.write(out);return out.toByteArray();
+        }
+    }
+
+    private void setChoice(org.apache.poi.ss.usermodel.Row row,String field,String value) {
+        row.createCell(ProductExcelService.HEADERS.indexOf(field)).setCellValue(value==null ? "" : value);
+    }
+
+    @Test void previewRejectsCaseAndWhitespaceEquivalentVariantsBeforeCommit() throws Exception {
+        var products=mock(ProductService.class);var service=imports(mock(ProductRepository.class),products);
+        byte[] bytes=variantChoicesFile(null,"Trắng"," trắng ","10 m"," 10 M ");
+        var preview=service.preview(bytes);
+        assertFalse(preview.valid());assertTrue(preview.rows().get(0).errors().stream().anyMatch(error->error.contains("trùng")));
+        assertThrows(com.sports.exception.BadRequestException.class,()->service.commit(bytes,preview.sha256()));
+        verifyNoInteractions(products);
+    }
+
+    @Test void previewRejectsDuplicatesAfterInheritingParentColorAndPackaging() throws Exception {
+        var products=mock(ProductService.class);var service=imports(mock(ProductRepository.class),products);
+        byte[] bytes=variantChoicesFile("Trắng",null,"trắng",null,"10 m");
+        var preview=service.preview(bytes);
+        assertFalse(preview.valid());assertTrue(preview.rows().get(0).errors().stream().anyMatch(error->error.contains("trùng")));
+        assertThrows(com.sports.exception.BadRequestException.class,()->service.commit(bytes,preview.sha256()));
+        verifyNoInteractions(products);
+    }
+
+    @Test void previewAndCommitUseTheSameNormalizedChoicesWithoutSupplyingGeneratedVariantIdentity() throws Exception {
+        var products=mock(ProductService.class);var service=imports(mock(ProductRepository.class),products);
+        var bytes=variantChoicesFile("Trắng",null," Đỏ ",null," 10 m ");
+        var preview=service.preview(bytes);
+        assertTrue(preview.valid());var choices=preview.rows().get(0).product().getVariants();
+        assertEquals(List.of("Trắng","Đỏ"),choices.stream().map(com.sports.dto.ProductVariantDto::getColor).toList());
+        assertEquals(List.of("10 m","10 m"),choices.stream().map(com.sports.dto.ProductVariantDto::getPackaging).toList());
+        assertTrue(choices.stream().allMatch(choice->choice.getId()==null && choice.getSku()==null));
+        when(products.createProduct(any())).thenAnswer(invocation->{
+            var dto=invocation.getArgument(0,com.sports.dto.ProductDto.class);
+            var product=Product.builder().sku(dto.getSku()).stock(dto.getStock()).colorName(dto.getColorName())
+                    .quantityPerPack(dto.getQuantityPerPack()).category(com.sports.entity.Category.builder().id(5L).build()).build();
+            ProductVariantService.initialize(product,dto);
+            assertEquals(40,product.getStock());return com.sports.dto.ProductDto.builder().id(9001L).build();
+        });
+        assertEquals(List.of(9001L),service.commit(bytes,preview.sha256()).importedIds());
+        verify(products).updateVisibility(9001L,false);
+    }
+
+    @Test void previewRejectsColorListsAndEllipsesWhetherExplicitOrInherited() throws Exception {
+        var products=mock(ProductService.class);var service=imports(mock(ProductRepository.class),products);
+        for(var invalid:List.of("Trắng; Đỏ","Trắng, Đỏ","Trắng…","Trắng...","Trắng. . .")) {
+            for(var bytes:List.of(variantChoicesFile(null,invalid,"Đỏ",null,null),
+                    variantChoicesFile(invalid,null,"Đỏ",null,null))) {
+                var preview=service.preview(bytes);
+                assertFalse(preview.valid(),invalid);
+                assertTrue(preview.rows().get(0).errors().stream().anyMatch(error->error.contains("Mỗi biến thể chỉ có một màu")),invalid);
+                assertThrows(com.sports.exception.BadRequestException.class,()->service.commit(bytes,preview.sha256()));
+            }
+        }
+        verifyNoInteractions(products);
+    }
+
+    @Test void legacyWorkbookWithAggregatedParentColorCannotBypassPreviewValidation() throws Exception {
+        var products=mock(ProductService.class);var service=imports(mock(ProductRepository.class),products);
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(file("TEST-EXCEL-COLOR","false",false)));var out=new ByteArrayOutputStream()) {
+            setChoice(book.getSheetAt(4).getRow(1),"colorName","Trắng; Đỏ");book.write(out);
+            var preview=service.preview(out.toByteArray());assertFalse(preview.valid());
+            assertTrue(preview.rows().get(0).errors().stream().anyMatch(error->error.contains("Mỗi biến thể chỉ có một màu")));
+        }
+        verifyNoInteractions(products);
+    }
 }

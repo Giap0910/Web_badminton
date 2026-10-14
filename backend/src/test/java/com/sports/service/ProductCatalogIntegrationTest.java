@@ -121,6 +121,23 @@ class ProductCatalogIntegrationTest {
                 .findByProductIdOrderByDisplayOrderAsc(1L)),service.getProductImages(1L));
     }
 
+    @Test void publicSuggestionHttpMatchesVietnameseWithOrWithoutAccentsAndKeepsStockPrivate() throws Exception {
+        var mvc = standaloneSetup(new ProductController(service, context.getBean(ProductVariantService.class)))
+                .setControllerAdvice(new com.sports.exception.GlobalExceptionHandler()).build();
+        for (var terms : List.of(List.of("vot", "VỢT"), List.of("giay", "Giày"))) {
+            var plain = service.getSuggestions(terms.get(0));
+            var accented = service.getSuggestions(terms.get(1));
+            assertFalse(plain.isEmpty()); assertTrue(plain.size() <= 6);
+            assertEquals(plain.stream().map(ProductDto::getId).toList(), accented.stream().map(ProductDto::getId).toList());
+            assertFalse(plain.stream().anyMatch(product -> Set.of(31L, 236L, 237L).contains(product.getId())));
+            mvc.perform(get("/api/products/suggestions").param("keyword", terms.get(0)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(plain.size()))
+                    .andExpect(jsonPath("$[0].id").value(plain.get(0).getId()))
+                    .andExpect(jsonPath("$[0].stock").doesNotExist()).andExpect(jsonPath("$[0].reservedStock").doesNotExist());
+        }
+        assertEquals(124, products.count());
+    }
+
     @Test
     void comparisonOnlyAcceptsDistinctVisibleRacketsAndSerializesNoStockCounts() throws Exception {
         var catalog=service.getProducts(null,null,null,null,null,null,null,null,null);
@@ -187,6 +204,58 @@ class ProductCatalogIntegrationTest {
     private void reload() {
         products.flush();
         SharedEntityManagerCreator.createSharedEntityManager(context.getBean(EntityManagerFactory.class)).clear();
+    }
+
+    @Test void excelCommitPersistsNormalizedVariantsOnIsolatedDatabaseAndRollsBack() throws Exception {
+        var excel=new ProductExcelService(new com.fasterxml.jackson.databind.ObjectMapper());
+        var bytes=importVariantWorkbook(excel);var importedIds=new ArrayList<Long>();
+        assertEquals(124,products.count());authenticate("ROLE_ADMIN");
+        try(var factory=jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            var imports=new ProductImportService(excel,service,products,context.getBean(CategoryRepository.class),factory.getValidator());
+            tx.executeWithoutResult(status->{
+                status.setRollbackOnly();
+                var preview=imports.preview(bytes);assertTrue(preview.valid(),preview.rows().toString());
+                assertEquals(1,preview.total());assertImportPreviewChoices(preview.rows().get(0).product());
+                importedIds.addAll(imports.commit(bytes,preview.sha256()).importedIds());
+                assertEquals(1,importedIds.size());reload();
+                assertPersistedImportChoices(products.findById(importedIds.get(0)).orElseThrow());
+                assertEquals(125,products.count());
+            });
+        }
+        assertEquals(124,products.count());assertFalse(products.existsById(importedIds.get(0)));
+    }
+
+    private byte[] importVariantWorkbook(ProductExcelService excel) throws java.io.IOException {
+        try(var workbook=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(excel.template()));
+                var output=new java.io.ByteArrayOutputStream()) {
+            String sku="HG-ACCESSORY-"+UUID.randomUUID().toString().replace("-","");
+            for(int index=1;index<=2;index++) {
+                var row=workbook.getSheetAt(4).createRow(index);
+                var values=Map.of("sku",sku,"name","Cước Yonex kiểm thử Excel","brand","Yonex","price","100000",
+                        "catalogVisible","false","accessoryType","day_cuoc","quantityPerPack","10 m",
+                        "variantColor",index==1 ? " Đỏ " : "Trắng","variantStock",index==1 ? "20" : "0");
+                values.forEach((key,value)->row.createCell(ProductExcelService.HEADERS.indexOf(key)).setCellValue(value));
+            }
+            workbook.write(output);return output.toByteArray();
+        }
+    }
+
+    private void assertImportPreviewChoices(ProductDto product) {
+        var choices=product.getVariants();assertEquals(2,choices.size());
+        assertEquals(List.of("Đỏ","Trắng"),choices.stream().map(com.sports.dto.ProductVariantDto::getColor).toList());
+        assertEquals(List.of("10 m","10 m"),choices.stream().map(com.sports.dto.ProductVariantDto::getPackaging).toList());
+        assertEquals(List.of(20,0),choices.stream().map(com.sports.dto.ProductVariantDto::getStock).toList());
+        assertTrue(choices.stream().allMatch(choice->choice.getId()==null && choice.getSku()==null));
+    }
+
+    private void assertPersistedImportChoices(Product product) {
+        assertNotNull(product.getId());assertFalse(product.getCatalogVisible());assertEquals(20,product.getStock());
+        assertEquals(2,product.getVariants().size());
+        assertEquals(List.of("Đỏ","Trắng"),product.getVariants().stream().map(com.sports.entity.ProductVariant::getColor).toList());
+        assertEquals(List.of("10 m","10 m"),product.getVariants().stream().map(com.sports.entity.ProductVariant::getPackaging).toList());
+        assertEquals(List.of(20,0),product.getVariants().stream().map(com.sports.entity.ProductVariant::getStock).toList());
+        assertTrue(product.getVariants().stream().allMatch(variant->variant.getId()!=null && variant.getSku().startsWith(product.getSku()+"-V")));
+        assertEquals(0,product.getReservedStock());assertTrue(product.getVariants().stream().allMatch(variant->variant.getReservedStock()==0));
     }
 
     private void preserveVariantChoices(ProductDto update,ProductDto saved) {

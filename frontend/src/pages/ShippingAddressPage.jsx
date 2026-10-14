@@ -46,6 +46,7 @@ const ShippingAddressPage = () => {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageError, setMessageError] = useState(false);
 
   const fetchAddresses = async () => {
     const attempt = ++generation.current; setLoading(true); setDataError('');
@@ -100,8 +101,9 @@ const ShippingAddressPage = () => {
       await shippingAddressApi.setDefaultAddress(id, requestConfig);
       if (!mounted.current) return;
       await fetchAddresses();
-      setMessage('Đã đặt làm địa chỉ mặc định thành công!');
+      setMessageError(false); setMessage('Đã đặt làm địa chỉ mặc định thành công!');
     } catch (err) {
+      setMessageError(true);
       setMessage(err.response?.data?.message || 'Không thể cập nhật địa chỉ. Vui lòng thử lại.');
     }
     setTimeout(() => setMessage(''), 3000);
@@ -113,8 +115,9 @@ const ShippingAddressPage = () => {
       await shippingAddressApi.deleteAddress(id, requestConfig);
       if (!mounted.current) return;
       await fetchAddresses();
-      setMessage('Đã xóa địa chỉ nhận hàng.');
+      setMessageError(false); setMessage('Đã xóa địa chỉ nhận hàng.');
     } catch (err) {
+      setMessageError(true);
       setMessage(err.response?.data?.message || 'Không thể cập nhật địa chỉ. Vui lòng thử lại.');
     }
     setTimeout(() => setMessage(''), 3000);
@@ -139,15 +142,18 @@ const ShippingAddressPage = () => {
       if (editingId) {
         await shippingAddressApi.updateAddress(editingId, payload, requestConfig);
         if (!mounted.current) return;
+        setMessageError(false);
         setMessage('Cập nhật địa chỉ nhận hàng thành công!');
       } else {
         await shippingAddressApi.createAddress(payload, requestConfig);
         if (!mounted.current) return;
+        setMessageError(false);
         setMessage('Thêm địa chỉ mới thành công!');
       }
       await fetchAddresses();
       setShowForm(false);
     } catch (err) {
+      setMessageError(true);
       setMessage(err.response?.data?.message || 'Không thể lưu địa chỉ. Dữ liệu chưa được lưu.');
     } finally {
       saveLock.current = false; if (mounted.current) setSaving(false);
@@ -181,8 +187,8 @@ const ShippingAddressPage = () => {
           </div>
 
           {message && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-600" />
+            <div role={messageError ? 'alert' : 'status'} className={`p-3.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${messageError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
+              {messageError ? <AlertCircle className="w-4 h-4" /> : <Check className="w-4 h-4" />}
               <span>{message}</span>
             </div>
           )}

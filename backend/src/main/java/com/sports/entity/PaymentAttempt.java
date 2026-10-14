@@ -2,6 +2,7 @@ package com.sports.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -36,6 +37,9 @@ public class PaymentAttempt {
     private String reference;
     private LocalDateTime paidAt;
     private String reviewReason;
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     public enum Status { CREATING, PENDING, PAID, FAILED, EXPIRED, CANCELLED, NEEDS_REVIEW }
 }

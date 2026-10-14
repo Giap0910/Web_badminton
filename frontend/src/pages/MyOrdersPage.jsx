@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { formatDate, getOrderStatusLabel } from '../utils/formatters';
+import { formatDate, getOrderStatusLabel, normalizeSearchText } from '../utils/formatters';
 import UserLayout from '../components/UserLayout';
 import ProductImage from '../components/ProductImage';
 import { orderApi } from '../api/orderApi';
@@ -28,7 +28,7 @@ export function normalizeUserOrder(item) {
   const items = Array.isArray(item.items) ? item.items : Array.isArray(item.orderItems) ? item.orderItems : [];
   const first = items[0];
   const quantity = items.reduce((sum, line) => sum + (Number.isInteger(line.quantity) && line.quantity > 0 ? line.quantity : 0), 0);
-  return { id: item.id, orderCode: item.payosOrderCode ? `#HG-${item.payosOrderCode}` : item.orderNumber ? `#${item.orderNumber}` : `#HG-${item.id}`,
+  return { id: item.id, orderCode: `#HG-${item.id}`, payosOrderCode: item.payosOrderCode ?? null, paymentMethodCode: item.paymentMethod,
     createdAt: formatDate(item.createdAt), paymentMethod: item.paymentMethod === 'PAYOS_VIETQR' ? 'PayOS / VietQR'
       : item.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng (COD)' : 'Chưa xác định',
     productName: first?.productName || first?.product?.name || 'Xem sản phẩm trong chi tiết đơn hàng',
@@ -39,14 +39,23 @@ export function normalizeUserOrder(item) {
     receiverName: item.customerName || item.shippingName || '', receiverPhone: item.shippingPhone || '', shippingAddress: item.shippingAddress || '' };
 }
 
+export function matchesUserOrderSearch(order, query) {
+  const keyword = normalizeSearchText(query);
+  const items = Array.isArray(order?.items) ? order.items : [];
+  const fields = [order?.id, order?.orderCode, order?.payosOrderCode, order?.productName, order?.paymentMethod,
+    ...items.flatMap(item => [item.productName || item.product?.name, item.productSku || item.product?.sku,
+      item.productBrand || item.product?.brand])];
+  return fields.some(value => normalizeSearchText(value).includes(keyword));
+}
+
 export function userOrderSlipCsv(orders) {
   const cell = value => {
     let text = String(value ?? '');
     if (/^[\s]*[=+\-@]/.test(text)) text = `'${text}`;
     return `"${text.replaceAll('"', '""')}"`;
   };
-  const header = ['Mã đơn', 'Thời gian', 'Người nhận', 'Điện thoại', 'Địa chỉ', 'Sản phẩm và số lượng', 'Tổng số lượng', 'Phí vận chuyển (đồng)', 'Tổng đơn (đồng)', 'Phương thức', 'Trạng thái'];
-  const rows = orders.map(order => [order.orderCode, order.createdAt, order.receiverName, order.receiverPhone,
+  const header = ['Mã đơn', 'Mã PayOS', 'Thời gian', 'Người nhận', 'Điện thoại', 'Địa chỉ', 'Sản phẩm và số lượng', 'Tổng số lượng', 'Phí vận chuyển (đồng)', 'Tổng đơn (đồng)', 'Phương thức', 'Trạng thái'];
+  const rows = orders.map(order => [order.orderCode, order.payosOrderCode ?? '', order.createdAt, order.receiverName, order.receiverPhone,
     order.shippingAddress, order.items.map(item => `${item.productName || 'Sản phẩm'} × ${item.quantity}; ${formatOrderItemOptionsText(item, '')}`).join('\n'),
     order.quantity, order.shippingFee, order.totalPrice, order.paymentMethod, order.statusLabel]);
   return '\uFEFF' + [header, ...rows].map(row => row.map(cell).join(',')).join('\r\n');
@@ -66,6 +75,7 @@ const MyOrdersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedCode, setCopiedCode] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [copyError, setCopyError] = useState('');
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -88,10 +98,15 @@ const MyOrdersPage = () => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    setCopiedCode(text);
-    setTimeout(() => setCopiedCode(null), 2500);
+  const copyToClipboard = async (text) => {
+    setCopiedCode(null); setCopyError('');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedCode(text);
+      setTimeout(() => setCopiedCode(null), 2500);
+    } catch {
+      setCopyError('Không thể sao chép. Vui lòng chọn mã và sao chép thủ công.');
+    }
   };
 
   const handleCancelOrder = async (orderId) => {
@@ -139,17 +154,13 @@ const MyOrdersPage = () => {
         ? order.status === 'COMPLETED'
         : order.status === 'CANCELLED';
 
-    const matchesSearch =
-      order.orderCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.paymentMethod.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesTab && matchesSearch;
+    return matchesTab && matchesUserOrderSearch(order, searchTerm);
   });
 
   return (
     <UserLayout currentPage="Lịch sử đơn hàng" counts={{ orders: orders.length }}>
       {dataError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{dataError}</p>}
+      {copyError && <p role="alert" className="p-4 text-red-700 bg-red-50 rounded-xl">{copyError}</p>}
       <div className="flex flex-col gap-6">
         {/* MAIN ORDER HISTORY CONTAINER */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col">
@@ -182,7 +193,7 @@ const MyOrdersPage = () => {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Tìm theo mã đơn (#HG-...) hoặc tên vợt, giày..."
+                  placeholder="Tên sản phẩm, SKU, hãng, mã đơn hoặc PayOS..."
                   className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
                 />
               </div>
@@ -246,6 +257,7 @@ const MyOrdersPage = () => {
                               <button
                                 type="button"
                                 onClick={() => copyToClipboard(order.orderCode)}
+                                aria-label={`Sao chép mã đơn ${order.orderCode}`}
                                 className="text-slate-400 hover:text-slate-700 transition-colors"
                                 title="Sao chép mã đơn"
                               >
@@ -256,6 +268,9 @@ const MyOrdersPage = () => {
                                 )}
                               </button>
                             </div>
+                            {order.payosOrderCode != null && <span className="text-[10px] text-slate-500 break-all">
+                              Mã PayOS: {order.payosOrderCode}
+                            </span>}
                             <span className="text-[11px] text-slate-500 flex items-center gap-1">
                               <Clock className="w-3 h-3 text-slate-400" />
                               {order.createdAt}
@@ -346,6 +361,11 @@ const MyOrdersPage = () => {
                             >
                               Xem chi tiết
                             </button>
+
+                            {order.status === 'PENDING' && order.paymentMethodCode === 'PAYOS_VIETQR' && <Link
+                              to={`/checkout?orderId=${order.id}`} className="text-[11px] font-bold text-blue-700 hover:underline">
+                              Tiếp tục thanh toán
+                            </Link>}
 
                             {order.status === 'PENDING' && (
                               <button
@@ -456,7 +476,7 @@ const MyOrdersPage = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setSelectedOrder(null)}
@@ -464,6 +484,13 @@ const MyOrdersPage = () => {
                 >
                   Đóng
                 </button>
+                <Link to={`/orders/${selectedOrder.id}`} className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">
+                  Mở trang đơn hàng
+                </Link>
+                {selectedOrder.status === 'PENDING' && selectedOrder.paymentMethodCode === 'PAYOS_VIETQR' && <Link
+                  to={`/checkout?orderId=${selectedOrder.id}`} className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold">
+                  Tiếp tục thanh toán
+                </Link>}
                 {selectedOrder.status === 'COMPLETED' && (
                   <Link
                     to={`/returns?orderId=${selectedOrder.id}`}

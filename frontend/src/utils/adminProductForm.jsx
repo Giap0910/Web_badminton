@@ -104,7 +104,7 @@ export function buildAdminVariantStockPayload(variant, stock, active) {
 export function filterAdminProducts(products, search, category, brand, stockStatus, visibility) {
   const keyword = normalizeSearch(search);
   return products.filter(product => {
-    const text = normalizeSearch([product.name, product.sku, product.brand].filter(Boolean).join(' '));
+    const text = normalizeSearch([product.id, product.name, product.sku, product.brand].filter(value => value != null && value !== '').join(' '));
     const stock = product.stock;
     const matchesStock = stockStatus === 'ALL' || (stockStatus === 'IN_STOCK' && stock > 5)
       || (stockStatus === 'LOW_STOCK' && stock > 0 && stock <= 5) || (stockStatus === 'OUT_OF_STOCK' && stock === 0);

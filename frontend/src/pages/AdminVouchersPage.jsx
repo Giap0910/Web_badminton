@@ -19,6 +19,12 @@ import {
 } from 'lucide-react';
 
 
+function voucherExpiry(formData) {
+  if (!formData.endDate) return null;
+  const original = formData.originalExpiresAt;
+  return original && formData.endDate === original.slice(0, 10) ? original : `${formData.endDate}T23:59:59`;
+}
+
 export function buildAdminVoucherPayload(formData) {
   const amount = (value, label, optional = false) => {
     if (optional && String(value ?? '').trim() === '') return null;
@@ -34,7 +40,7 @@ export function buildAdminVoucherPayload(formData) {
     discountType: formData.discountType, discountValue, minOrderValue: amount(formData.minOrderValue || '0', 'Đơn tối thiểu'),
     maxDiscountAmount: amount(formData.maxDiscountAmount, 'Mức giảm tối đa', true),
     maxUses: amount(formData.maxUsage, 'Số lượt tối đa', true),
-    expiresAt: formData.endDate ? `${formData.endDate}T23:59:59` : null, isActive: formData.isActive !== false };
+    expiresAt: voucherExpiry(formData), isActive: formData.isActive !== false };
   if (!/^[A-Z0-9_-]{1,50}$/.test(payload.code) || payload.description.length > 255) throw new Error('Mã hoặc mô tả voucher không hợp lệ');
   if (!['FIXED', 'PERCENT', 'SHIPPING'].includes(payload.discountType)) throw new Error('Loại voucher không hợp lệ');
   if ((payload.discountType !== 'PERCENT' && !Number.isInteger(discountValue))
@@ -66,6 +72,7 @@ const AdminVouchersPage = () => {
     maxUsage: '100',
     startDate: '',
     endDate: '',
+    originalExpiresAt: null,
     isActive: true
   });
   const [busy, setBusy] = useState(false);
@@ -74,10 +81,15 @@ const AdminVouchersPage = () => {
   const formatPrice = (p) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    setCopiedCode(text);
-    setTimeout(() => setCopiedCode(null), 2000);
+  const copyToClipboard = async (text) => {
+    setCopiedCode(null); setToastMessage('');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedCode(text);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch {
+      setToastError(true); setToastMessage('Không thể sao chép. Vui lòng chọn mã và sao chép thủ công.');
+    }
   };
 
   const handleOpenAdd = () => {
@@ -94,6 +106,7 @@ const AdminVouchersPage = () => {
       maxUsage: '100',
       startDate: '',
       endDate: '',
+      originalExpiresAt: null,
       isActive: true
     });
     setShowModal(true);
@@ -113,6 +126,7 @@ const AdminVouchersPage = () => {
       maxDiscountAmount: v.maxDiscountAmount == null ? '' : v.maxDiscountAmount.toString(),
       startDate: '',
       endDate: v.expiresAt?.slice(0, 10) || '',
+      originalExpiresAt: v.expiresAt ?? null,
       isActive: v.status === 'ACTIVE'
     });
     setShowModal(true);
@@ -339,6 +353,8 @@ const AdminVouchersPage = () => {
                           <button
                             type="button"
                             onClick={() => copyToClipboard(v.code)}
+                            aria-label={`Sao chép mã giảm giá ${v.code}`}
+                            title="Sao chép mã giảm giá"
                             className="text-slate-400 hover:text-slate-700"
                           >
                             {copiedCode === v.code ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -417,7 +433,7 @@ const AdminVouchersPage = () => {
         {/* MODAL TẠO / SỬA VOUCHER */}
         {showModal && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
+            <div role="dialog" aria-modal="true" aria-label={editingId ? 'Chỉnh sửa mã giảm giá' : 'Tạo mã giảm giá'} className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
                   <h3 className="text-base font-black text-slate-900">

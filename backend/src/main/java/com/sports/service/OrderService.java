@@ -226,7 +226,8 @@ public class OrderService {
         BigDecimal discount = BigDecimal.ZERO;
         if (voucherCode != null && !voucherCode.isBlank()) {
             VoucherValidateResponse voucher = voucherService.reserveVoucher(
-                    new VoucherValidateRequest(voucherCode.trim(), subtotal));
+                    new VoucherValidateRequest(voucherCode.trim(), subtotal, order.getItems().stream()
+                            .map(item -> new OrderItemRequest(item.getProduct().getId(), item.getQuantity())).toList()));
             discount = VndAmount.requireValid(voucher.getDiscountAmount());
             if (voucher.getFinalShippingFee() != null) shippingFee = VndAmount.requireValid(voucher.getFinalShippingFee());
             order.setVoucherCode(voucher.getCode());

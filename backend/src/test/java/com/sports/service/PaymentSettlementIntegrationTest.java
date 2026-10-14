@@ -659,7 +659,15 @@ class PaymentSettlementIntegrationTest {
                 .paymentMethod("COD").totalAmount(BigDecimal.TEN).build()));
         mvc.perform(get("/api/admin/payments").with(user(principal(Role.ROLE_ADMIN))).param("query", code.toString()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(attemptId)).andExpect(jsonPath("$[0].customerName").value("Khách kiểm thử"));
+                .andExpect(jsonPath("$[0].id").value(attemptId)).andExpect(jsonPath("$[0].customerName").value("Khách kiểm thử"))
+                .andExpect(jsonPath("$[0].createdAt").exists());
+        for (var prefix : List.of("HG-", "#hg-")) {
+            mvc.perform(get("/api/admin/payments").with(user(principal(Role.ROLE_ADMIN))).param("query", prefix + orderId))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].orderId").value(orderId)).andExpect(jsonPath("$[0].orderCode").value(code));
+        }
+        mvc.perform(get("/api/admin/payments").with(user(principal(Role.ROLE_ADMIN))).param("query", "HG-" + code))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
         mvc.perform(get("/api/admin/payments").with(user(principal(Role.ROLE_ADMIN))).param("page", "0")
                 .param("size", "1").param("query", code.toString()).param("status", "PENDING"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(1))
@@ -670,6 +678,19 @@ class PaymentSettlementIntegrationTest {
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/admin/payments").with(user(principal(Role.ROLE_ADMIN))).param("page", "invalid"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_PAYMENT_REQUEST"));
+    }
+
+    @Test void adminPaymentSearchRetainsProviderReferenceAndUnknownLegacyTimestamp() throws Exception {
+        String reference = "provider-search-" + UUID.randomUUID();
+        try (var c = context.getBean(DataSource.class).getConnection(); var statement = c.prepareStatement(
+                "UPDATE payment_attempts SET reference=?,created_at=NULL WHERE id=?")) {
+            statement.setString(1, reference); statement.setLong(2, attemptId); assertEquals(1, statement.executeUpdate());
+        }
+        mvc.perform(get("/api/admin/payments").with(user(principal(Role.ROLE_ADMIN))).param("query", reference.toUpperCase(Locale.ROOT)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].orderId").value(orderId)).andExpect(jsonPath("$[0].orderCode").value(code))
+                .andExpect(jsonPath("$[0].reference").value(reference)).andExpect(jsonPath("$[0].createdAt").doesNotExist());
+        assertNull(attempts.findById(attemptId).orElseThrow().getCreatedAt());
     }
 
     private void race(Runnable first, Runnable second) throws Exception {
@@ -821,7 +842,9 @@ class PaymentSettlementIntegrationTest {
         @Bean PaymentLedgerService ledger(PaymentEventRepository events, PaymentEventConflictRepository conflicts) {
             return spy(new PaymentLedgerService(events, conflicts));
         }
-        @Bean VoucherService vouchers(VoucherRepository vouchers) { return new VoucherService(vouchers, new MockEnvironment()); }
+        @Bean VoucherService vouchers(VoucherRepository vouchers, OrderRepository orders, ProductRepository products) {
+            return new VoucherService(vouchers, orders, products, new MockEnvironment());
+        }
         @Bean OrderService orderService(OrderRepository orders, ProductRepository products, UserRepository users,
                 PayOSService payos, VoucherService vouchers, EntityManager em, PaymentTransitionGuard guard) {
             return spy(new OrderService(orders, products, users, payos, vouchers, em, guard));

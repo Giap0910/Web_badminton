@@ -21,7 +21,8 @@ public class AdminPaymentService {
         validate(page, size, query, sortBy, sortDir);
         var filter = filter(query, status);
         var direction = "asc".equals(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        var sort = Sort.by(direction, "id".equals(sortBy) ? "id" : "order.createdAt");
+        var sort = Sort.by(direction, "id".equals(sortBy) ? "id" : "createdAt");
+        if (!"id".equals(sortBy)) sort = sort.and(Sort.by(direction, "id"));
         if (page == null && size == null) return attempts.findAll(filter, sort).stream().map(AdminPaymentDto::from).toList();
         var result = attempts.findAll(filter, PageRequest.of(page == null ? 0 : page, size == null ? 20 : size, sort));
         return PageResponse.<AdminPaymentDto>builder().content(result.getContent().stream().map(AdminPaymentDto::from).toList())
@@ -41,13 +42,22 @@ public class AdminPaymentService {
             if (criteria.getResultType() == PaymentAttempt.class) root.fetch("order", JoinType.INNER);
             var predicate = builder.conjunction();
             if (parsed != null) predicate = builder.and(predicate, builder.equal(root.get("status"), parsed));
-            if (!query.isBlank()) {
-                String keyword = "%" + query.toLowerCase(Locale.ROOT) + "%";
-                predicate = builder.and(predicate, builder.or(builder.like(builder.lower(root.get("order").get("customerName")), keyword),
-                        builder.like(root.get("orderCode").as(String.class), keyword), builder.like(root.get("reference"), keyword)));
-            }
+            if (!query.isBlank()) predicate = builder.and(predicate, search(root, builder, query.trim()));
             return predicate;
         };
+    }
+
+    private jakarta.persistence.criteria.Predicate search(jakarta.persistence.criteria.Root<PaymentAttempt> root,
+            jakarta.persistence.criteria.CriteriaBuilder builder, String query) {
+        if (query.matches("(?i)#?HG-[0-9]+")) {
+            return builder.equal(root.get("order").get("id").as(String.class), query.replaceFirst("(?i)^#?HG-", ""));
+        }
+        String keyword = "%" + query.toLowerCase(Locale.ROOT) + "%";
+        return builder.or(builder.like(builder.lower(root.get("order").get("customerName")), keyword),
+                builder.like(root.get("order").get("id").as(String.class), keyword),
+                builder.like(root.get("id").as(String.class), keyword),
+                builder.like(root.get("orderCode").as(String.class), keyword),
+                builder.like(builder.lower(root.get("reference")), keyword));
     }
 
     private PaymentAttempt.Status parseStatus(String status) {

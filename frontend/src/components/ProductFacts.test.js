@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import fs from 'node:fs';
 import { transformSync } from 'esbuild';
+import * as formatters from '../utils/formatters.js';
 
 const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] },
   server: { middlewareMode: true, hmr: false }, appType: 'custom' });
@@ -150,7 +151,7 @@ function reviewPageRuntime() {
   const module={exports:{}},code=transformSync(source,{loader:'jsx',format:'cjs'}).code;
   const mocks={react:h.react,'../api/reviewApi':h.module.exports,'react-router-dom':{Link:'a'},
     '../context/AuthContext':{useAuth:()=>({token:'token-A'})},
-    'lucide-react':new Proxy({}, {get:()=>()=>null}),'../utils/formatters':{formatDate:value=>String(value)},
+    'lucide-react':new Proxy({}, {get:()=>()=>null}),'../utils/formatters':formatters,
     '../components/ProductImage':()=>null,'../components/UserLayout':()=>null};
   new Function('require','module','exports',code)(name=>mocks[name],module,module.exports);
   return{...h,api,renderPage(){h.reset();const value=module.exports.default();h.runEffects();return value;}};
@@ -169,4 +170,54 @@ test('ReviewedProducts gọieligible thật, POSTline/rating/comment thật và 
   await first;await second;tree=reviewNodes(h.renderPage());assert.equal(tree.filter(node=>node.type==='form').length,0);
   const text=tree.flatMap(node=>React.Children.toArray(node.props?.children).filter(child=>typeof child==='string')).join(' ');
   assert.match(text,/2\.0|Đã tiếp nhận|Đã xác thực đã mua hàng/);assert.doesNotMatch(text,/\+50|24\/10\/2024/);
+});
+
+function reviewPageText(harness) {
+  return reviewNodes(harness.renderPage()).flatMap(node => React.Children.toArray(node.props?.children)
+    .filter(child => typeof child === 'string')).join(' ');
+}
+function changeReviewSearch(harness, query) {
+  reviewNodes(harness.renderPage()).find(node => node.type === 'input' && node.props.type === 'text')
+    .props.onChange({ target: { value: query } });
+}
+function selectReviewTab(harness, tab) {
+  reviewNodes(harness.renderPage()).find(node => node.type === 'button'
+    && React.Children.toArray(node.props.children).some(child => child?.props?.children === tab)).props.onClick();
+}
+async function loadReviewSearchFixture(reviews = []) {
+  const harness = reviewPageRuntime(); harness.renderPage();
+  harness.requests[0].resolve(reviews);
+  harness.requests[1].resolve([{ productId: 12, productName: 'Giày Yonex', productSku: 'HG-SHOE-012',
+    productBrand: 'Yonex', orderId: 42, orderItemId: 31 },
+  { productId: 13, productName: 'Áo Victor', productSku: 'HG-APPAREL-013', productBrand: 'Victor', orderId: 43, orderItemId: 32 }]);
+  await reviewFlush(); return harness;
+}
+
+test('Chờ đánh giá lọc đúng tên không dấu, SKU, hãng và mã đơn trong cả Tất cả lẫn Chờ đánh giá', async () => {
+  const harness = await loadReviewSearchFixture();
+  for (const query of ['ao victor', '  HG-APPAREL-013  ', 'VICTOR', '#hg-43']) {
+    changeReviewSearch(harness, query);
+    assert.match(reviewPageText(harness), /Áo Victor/); assert.doesNotMatch(reviewPageText(harness), /Giày Yonex/);
+  }
+  selectReviewTab(harness, 'Chờ đánh giá'); changeReviewSearch(harness, 'giay yonex');
+  assert.match(reviewPageText(harness), /Giày Yonex/); assert.doesNotMatch(reviewPageText(harness), /Áo Victor/);
+  changeReviewSearch(harness, 'Không tồn tại');
+  assert.doesNotMatch(reviewPageText(harness), /Giày Yonex|Áo Victor/);
+  assert.match(reviewPageText(harness), /Không tìm thấy sản phẩm chờ đánh giá phù hợp/);
+  assert.doesNotMatch(reviewPageText(harness), /Chưa có sản phẩm đủ điều kiện/);
+});
+
+test('Đã đánh giá lọc chung tên, SKU, hãng, nội dung và mã đơn; xóa từ khóa khôi phục danh sách', async () => {
+  const harness = await loadReviewSearchFixture([{ id: 71, productId: 14, productName: 'Vợt Li-Ning',
+    productSku: 'HG-RACKET-014', productBrand: 'Li-Ning', orderId: 44, rating: 4, comment: 'Đánh cầu dễ kiểm soát' },
+  { id: 72, productId: 15, productName: 'Balo Fleet', productBrand: 'Fleet', rating: 5, comment: 'Rộng rãi' }]);
+  harness.renderPage(); selectReviewTab(harness, 'Đã đánh giá');
+  for (const query of ['vot li-ning', 'HG-RACKET-014', 'LI-NING', 'danh cau de kiem soat', '#HG-44']) {
+    changeReviewSearch(harness, query);
+    assert.match(reviewPageText(harness), /Vợt Li-Ning/); assert.doesNotMatch(reviewPageText(harness), /Balo Fleet/);
+  }
+  changeReviewSearch(harness, 'Không tồn tại');
+  assert.match(reviewPageText(harness), /Không tìm thấy bài đánh giá nào phù hợp/);
+  assert.doesNotMatch(reviewPageText(harness), /Vợt Li-Ning|Balo Fleet/);
+  changeReviewSearch(harness, '  '); assert.match(reviewPageText(harness), /Vợt Li-Ning/); assert.match(reviewPageText(harness), /Balo Fleet/);
 });

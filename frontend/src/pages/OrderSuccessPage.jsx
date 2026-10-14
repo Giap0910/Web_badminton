@@ -32,6 +32,14 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
+const OrderPointsSummary = ({ order }) => {
+  const used = Number(order?.pointsUsed || 0); const discount = Number(order?.pointsDiscount || 0);
+  if (used <= 0 && discount <= 0) return null;
+  const label = discount > 0 ? `Giảm bằng điểm${used > 0 ? ` (${used} điểm)` : ''}:` : 'Điểm đã dùng:';
+  const value = discount > 0 ? `-${formatPrice(discount)}` : `${used} điểm`;
+  return <div className="flex justify-between text-red-600 font-semibold"><span>{label}</span><span>{value}</span></div>;
+};
+
 const OrderSuccessPage = () => {
   const { orderId } = useParams();
   const location = useLocation();
@@ -44,6 +52,7 @@ const OrderSuccessPage = () => {
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
 
   const currentOrderIdRef = useRef(orderId);
   currentOrderIdRef.current = orderId;
@@ -57,12 +66,17 @@ const OrderSuccessPage = () => {
     };
   }, []);
 
-  const displayOrderCode = order?.orderCode || `#HG-${orderId || '89241'}`;
+  const displayOrderCode = order?.id || orderId ? `#HG-${order?.id ?? orderId}` : 'Chưa có mã đơn hàng';
 
-  const copyOrderId = () => {
-    navigator.clipboard.writeText(displayOrderCode.replace('#', ''));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyOrderId = async () => {
+    setCopied(false); setCopyError('');
+    try {
+      await navigator.clipboard.writeText(displayOrderCode.replace('#', ''));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopyError('Không thể sao chép. Vui lòng chọn mã đơn và sao chép thủ công.');
+    }
   };
 
   const fetchOrderData = async (targetId, isManualCheck = false) => {
@@ -290,6 +304,10 @@ const OrderSuccessPage = () => {
     }
   }
 
+  if (isOrderCancelled && payment && !isPaid && !isNeedsReview && !isCodPaidConflict && !isPaymentError) {
+    statusDetailMessage = 'Đơn hàng này đã bị hủy. Không tiếp tục thanh toán cho đơn đã hủy. Nếu đã chuyển tiền, vui lòng liên hệ cửa hàng để đối soát.';
+  }
+
   if (error || !order || !isPaid) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased pt-6 pb-20">
@@ -380,7 +398,7 @@ const OrderSuccessPage = () => {
               </h1>
               {orderId && (
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Mã đơn hàng: <strong className="font-semibold text-slate-700">#{order?.orderCode || orderId}</strong>
+                  Mã đơn hàng: <strong className="font-semibold text-slate-700">{displayOrderCode}</strong>
                 </p>
               )}
             </div>
@@ -463,7 +481,7 @@ const OrderSuccessPage = () => {
                 <div className="flex justify-between">
                   <span>Tạm tính:</span>
                   <span className="font-semibold text-slate-800">
-                    {formatPrice(order.subtotal || (order.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0))}
+                    {formatPrice(order.subtotal ?? (order.items || []).reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0))}
                   </span>
                 </div>
                 {(order.discountAmount > 0) && (
@@ -472,6 +490,7 @@ const OrderSuccessPage = () => {
                     <span>-{formatPrice(order.discountAmount)}</span>
                   </div>
                 )}
+                <OrderPointsSummary order={order} />
                 <div className="flex justify-between">
                   <span>Phí vận chuyển:</span>
                   <span className="font-semibold text-emerald-600">
@@ -529,10 +548,10 @@ const OrderSuccessPage = () => {
 
   const items = order?.items || [];
 
-  const subtotal = order?.subtotal || items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
+  const subtotal = order?.subtotal ?? items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
   const discountAmount = order?.discountAmount || 0;
   const shippingFee = order?.shippingFee !== undefined ? order.shippingFee : 0;
-  const totalAmount = order?.totalAmount || Math.max(0, subtotal - discountAmount + shippingFee);
+  const totalAmount = order?.totalAmount ?? Math.max(0, subtotal - discountAmount - (order?.pointsDiscount || 0) + shippingFee);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased pt-6 pb-20">
@@ -610,6 +629,7 @@ const OrderSuccessPage = () => {
             Cảm ơn bạn <strong className="font-semibold text-slate-800">{order?.customerName || 'Chưa có thông tin'}</strong> đã tin tưởng lựa chọn <strong className="font-bold text-slate-900">HG Badminton</strong>. Vui lòng theo dõi tình trạng xử lý trong danh sách đơn hàng.
           </p>
 
+          {copyError && <p role="alert" className="w-full mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{copyError}</p>}
           {/* 4 Summary Cards Grid */}
           <div className="w-full mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col items-start">
@@ -619,6 +639,7 @@ const OrderSuccessPage = () => {
                 <button
                   type="button"
                   onClick={copyOrderId}
+                  aria-label={`Sao chép mã đơn ${displayOrderCode}`}
                   className="text-slate-400 hover:text-slate-700 transition-colors p-0.5"
                   title="Sao chép mã đơn"
                 >
@@ -781,6 +802,7 @@ const OrderSuccessPage = () => {
                   <span>-{formatPrice(discountAmount)}</span>
                 </div>
               )}
+              <OrderPointsSummary order={order} />
               <div className="flex justify-between items-center text-xs text-slate-600">
                 <span>Phí vận chuyển:</span>
                 <span className="font-bold text-emerald-600">

@@ -103,3 +103,16 @@ test('Sửa kho biến thể gửi expectedStock, chặn legacy và tắt tổ h
   assert.deepEqual(formTools.buildAdminVariantStockPayload({ ...variant, reservedStock: 1 }, '19', true), { stock: 19, expectedStock: 20, active: true });
   assert.throws(() => formTools.buildAdminVariantStockPayload(variant, '', true));
 });
+
+test('Tìm ID sản phẩm nhập Excel giữ tương thích tên, SKU, hãng và các bộ lọc', () => {
+  const products = [{ ...product(2), id: 384, sku: 'HG-SHOE-009', name: 'Giày Yonex thử nhập', brand: 'Yonex' },
+    { ...product(1), id: 385, sku: 'HG-RACKET-010', name: 'Vợt Victor thử nhập', brand: 'Victor' }];
+  const find = (search, category = 'ALL', brand = 'ALL') => formTools.filterAdminProducts(products, search, category, brand, 'ALL', 'ALL').map(row => row.id);
+  assert.deepEqual(find('384'), [384]);
+  assert.deepEqual(find('385'), [385]);
+  assert.deepEqual(find('384', '1'), []);
+  assert.deepEqual(find('384', '2', 'Victor'), []);
+  assert.deepEqual(find('giay yonex'), [384]);
+  assert.deepEqual(find('HG-RACKET-010'), [385]);
+  assert.deepEqual(find('victor'), [385]);
+});

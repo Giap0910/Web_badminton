@@ -148,13 +148,28 @@ public class GeminiService {
     private List<Product> selectProducts(AiChatRequest request) {
         List<Product> stock = productRepository.findAll(ProductSpecification.shopCatalog()
                 .and((root, query, cb) -> cb.greaterThan(root.get("stock"), 0)));
-        String query = normalize(request.getMessage() + " " + request.getHistory().stream()
+        String query = normalize(request.getMessage());
+        String history = normalize(request.getHistory().stream().filter(message -> "user".equals(message.getRole()))
                 .map(AiChatRequest.HistoryMessage::getText).collect(Collectors.joining(" ")));
-        String category = requestedCategory(query);
+        String category = conversationCategory(request);
         return stock.stream().filter(this::availableProduct)
                 .filter(p -> category == null || normalize(p.getCategory().getName()).contains(category))
                 .sorted(Comparator.<Product>comparingInt(p -> relevance(p, query)).reversed()
+                        .thenComparing(Comparator.<Product>comparingInt(p -> relevance(p, history)).reversed())
                         .thenComparing(Product::getId)).limit(12).toList();
+    }
+
+    private String conversationCategory(AiChatRequest request) {
+        String category = requestedCategory(normalize(request.getMessage()));
+        if (category != null) return category;
+        List<AiChatRequest.HistoryMessage> history = request.getHistory();
+        for (int index = history.size() - 1; index >= 0; index--) {
+            AiChatRequest.HistoryMessage message = history.get(index);
+            if (!"user".equals(message.getRole())) continue;
+            category = requestedCategory(normalize(message.getText()));
+            if (category != null) return category;
+        }
+        return null;
     }
 
     private boolean availableProduct(Product product) {
@@ -169,12 +184,20 @@ public class GeminiService {
     }
 
     private String requestedCategory(String text) {
+        text = withoutNegatedCategories(text);
         if (text.contains("giay")) return "giay";
-        if (text.contains("quan ao") || text.contains("ao dau")) return "quan ao";
+        if (text.matches("(?s).*\\b(?:ao|quan(?!\\s+can\\b))\\b.*")) return "quan ao";
         if (text.contains("balo") || text.contains("bao vot")) return "balo";
         if (text.contains("cuoc") || text.contains("quan can") || text.contains("phu kien")) return "phu kien";
         if (text.contains("vot") || text.contains("smash") || text.contains("tan cong")) return "vot";
         return null;
+    }
+
+    private String withoutNegatedCategories(String text) {
+        return text.replaceAll("\\bkhong\\s+(?:can|muon|mua|tim)(?:\\s+(?:mua|tim))?"
+                + "(?:\\s+(?:doi|cay|chiec))?\\s+(?:giay(?:\\s+cau\\s+long)?|quan\\s+ao"
+                + "|ao(?:\\s+(?:cau\\s+long|thi\\s+dau|dau))?|quan(?!\\s+can\\b)(?:\\s+(?:cau\\s+long|thi\\s+dau))?"
+                + "|balo|bao\\s+vot|phu\\s+kien|quan\\s+can|cuoc|vot)\\b", " ");
     }
 
     private int relevance(Product p, String query) {

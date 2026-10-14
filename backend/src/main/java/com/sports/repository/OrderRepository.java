@@ -40,6 +40,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     long countByStatus(OrderStatus status);
 
+    boolean existsByVoucherCodeIgnoreCase(String voucherCode);
+
     List<Order> findTop5ByOrderByCreatedAtDesc();
 
     List<Order> findByStatus(OrderStatus status);

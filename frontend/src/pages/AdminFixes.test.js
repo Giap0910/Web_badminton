@@ -6,6 +6,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { transformSync } from 'esbuild';
 import { formatDate, getOrderStatusLabel, getNextOrderStatuses, isOrderPaid } from '../utils/formatters.js';
+import * as feedbackFormatters from '../utils/formatters.js';
+import * as feedbackPaymentFormatters from '../utils/paymentFormatters.js';
 import OrderItemOptions, { formatOrderItemOptionsText } from '../utils/orderItemOptions.js';
 
 const require = createRequire(import.meta.url);
@@ -41,6 +43,35 @@ test('Dữ liệu khách hàng cũ/thiếu thống kê không tự tạo điểm
 
 test('Tên tiếng Việt không dấu, đ/Đ và khoảng trắng tìm đúng dữ liệu', () => {
   assert.equal(helpers.normalizeSearch('  Đơn HÀNG Nguyễn Giáp  '), 'don hang nguyen giap');
+});
+
+function adminSearchRuntime() {
+  const modules = { react: React, 'react-router-dom': {}, 'lucide-react': {}, '../api/adminApi': {},
+    '../api/productApi': {}, '../utils/adminCustomers.jsx': helpers };
+  const instance = { exports: {} }, code = transformSync(fs.readFileSync('src/components/AdminSearch.jsx', 'utf8'), { loader: 'jsx', format: 'cjs' }).code;
+  new Function('require', 'module', 'exports', code)(name => modules[name], instance, instance.exports);
+  return instance.exports;
+}
+
+test('Tìm đơn bằng mã nội bộ hoặc mã PayOS cũ luôn mở đúng mã đơn HG-ID', () => {
+  const runtime = adminSearchRuntime(), order = { id: 28, payosOrderCode: 1000000028, customerName: 'Nguyễn Giáp', shippingPhone: '0912345678' };
+  const lists = [[], [order], []].map(value => ({ status: 'fulfilled', value }));
+  for (const query of ['28', 'HG-28', '#HG-28', '1000000028', 'HG-1000000028', '#HG-1000000028', 'nguyen giap']) {
+    const results = runtime.searchResults(lists, query);
+    assert.equal(results.length, 1, query); assert.equal(results[0].href, '/admin/orders?search=HG-28');
+    assert.equal(results[0].label, 'Đơn #HG-28'); assert.equal(results[0].providerCode, 1000000028);
+    assert.ok(loadAdminOrdersPage().normalizeAdminOrder(order).code.includes(new URL(results[0].href, 'http://test').searchParams.get('search')));
+  }
+});
+
+test('Tìm kiếm giữ mã sản phẩm/khách hàng và không bịa mã PayOS cho COD', () => {
+  const runtime = adminSearchRuntime(), values = [[{ id: 384, name: 'Giày Yonex', sku: 'HG-SHOE-009', brand: 'Yonex' }],
+    [{ id: 29, paymentMethod: 'COD', customerName: 'Khách COD' }], [{ id: 6, fullName: 'Khách thật', email: 'user@test.local' }]];
+  const lists = values.map(value => ({ status: 'fulfilled', value }));
+  assert.equal(runtime.searchResults(lists, 'HG-SHOE-009')[0].href, '/admin/products?search=HG-SHOE-009');
+  assert.equal(runtime.searchResults(lists, 'user@test.local')[0].href, '/admin/customers?search=user%40test.local');
+  const cod = runtime.searchResults(lists, 'HG-29')[0];
+  assert.equal(cod.label, 'Đơn #HG-29'); assert.equal(cod.providerCode, null); assert.equal(cod.href, '/admin/orders?search=HG-29');
 });
 
 test('COD chỉ ghi đã thanh toán và mở hoàn tất sau xác nhận tiền thực tế', () => {
@@ -379,6 +410,7 @@ test('Phản hồi dùng API thật, giữ form sau lỗi và hỗ trợ xóa b�
     row = { ...row, officialReply: reply, replyUpdatedAt: reply ? '2026-10-14T11:00:00' : null };return row;
   } });
   await loadReviews(page);page.button('Trả lời đánh giá').props.onClick();
+  assert.match(renderToStaticMarkup(page.render()), /role="dialog" aria-modal="true" aria-label="Phản hồi đánh giá"/);
   page.nodes('textarea')[0].props.onChange({ target: { value: 'Đã hỗ trợ khách' } });
   await page.nodes('form')[0].props.onSubmit({ preventDefault() {} });
   assert.equal(page.nodes('textarea')[0].props.value, 'Đã hỗ trợ khách');assert.match(renderToStaticMarkup(page.render()), /Không thể lưu phản hồi/);
@@ -448,6 +480,7 @@ test('Khóa khách hàng chờ xác nhận máy chủ, chặn nhấn trùng và 
     updateUserStatus: async (id, active) => {calls++;await waiting;row = { ...row, isActive: active };} });
   await page.load();assert.doesNotMatch(renderToStaticMarkup(page.render()), /Không đưa vào danh sách/);
   page.buttons().find(button => button.props.title === 'Xem chi tiết').props.onClick();
+  assert.match(renderToStaticMarkup(page.render()), /role="dialog" aria-modal="true" aria-label="Chi tiết khách hàng"/);
   const handler = page.buttons().find(button => button.props.title === 'Khóa tài khoản').props.onClick;
   const first = handler();await handler();assert.equal(calls, 1);
   release();await first;assert.ok(page.buttons().find(button => button.props.title === 'Mở khóa tài khoản'));
@@ -640,6 +673,7 @@ test('Hoàn tất chọn hàng đổi thật, yêu cầu ghi chú khi đổi m�
     updateReturnStatus: async (...args) => { updates.push(args); throw { response: { data: { message: 'Hàng đổi không đủ tồn kho' } } }; } },
     { getProducts: async params => { productsRequested.push(params); return rmaProducts; } });
   await page.load(); await page.button('Hoàn tất đổi hàng').props.onClick();
+  assert.match(renderToStaticMarkup(page.render()), /role="dialog" aria-modal="true" aria-label="Xử lý yêu cầu bảo hành"/);
   assert.deepEqual(productsRequested, [{ categoryId: 2, brand: 'Yonex', catalogScope: 'all' }]);
   page.nodes('select')[0].props.onChange({ target: { value: '82' } });
   await page.nodes('form')[0].props.onSubmit({ preventDefault() {} });
@@ -776,4 +810,285 @@ test('Admin API giữ status/ghi chú/variant params và tải minh chứng bằ
   runtime.exports.adminApi.getReturnEvidence(7);
   assert.deepEqual(calls, [['put', '/returns/7/status', null, { params: { status: 'COMPLETED', adminNote: 'Khách đồng ý', replacementVariantId: 82 } }],
     ['get', '/returns/7/evidence', { responseType: 'blob' }]]);
+});
+
+function importPageHarness(api, onImported = async () => {}) {
+  const values = [], refs = [], effects = [], pending = [], listeners = new Map();
+  let cursor = 0, refCursor = 0, effectCursor = 0;
+  const documentMock = { activeElement: null, addEventListener: (name, fn) => listeners.set(name, fn),
+    removeEventListener: (name, fn) => { if (listeners.get(name) === fn) listeners.delete(name); } };
+  const patchedReact = { ...React, useState: initial => {
+    const index = cursor++; if (!(index in values)) values[index] = typeof initial === 'function' ? initial() : initial;
+    return [values[index], next => { values[index] = typeof next === 'function' ? next(values[index]) : next; }];
+  }, useRef: initial => refs[refCursor++] ||= { current: initial }, useEffect: (callback, deps) => {
+    const index = effectCursor++, previous = effects[index];
+    if (!previous || deps.some((value, position) => !Object.is(value, previous.deps[position]))) {
+      effects[index] = { callback, deps, cleanup: previous?.cleanup }; pending.push(index);
+    }
+  } };
+  const instance = { exports: {} }, modules = { react: patchedReact, '../api/adminApi': { adminApi: api } };
+  const code = transformSync(fs.readFileSync('src/components/AdminProductImport.jsx', 'utf8'), { loader: 'jsx', format: 'cjs' }).code;
+  new Function('require', 'module', 'exports', 'document', 'window', code)(name => modules[name] || require(name),
+    instance, instance.exports, documentMock, { confirm: () => true });
+  const render = () => { cursor = 0; refCursor = 0; effectCursor = 0; return instance.exports.default({ onImported }); };
+  const nodes = type => {
+    const result = [];
+    const visit = node => { if (Array.isArray(node)) return node.forEach(visit); if (!React.isValidElement(node)) return;
+      if (typeof node.type === 'function') return visit(node.type(node.props));
+      if (node.type === type) result.push(node); visit(node.props.children); };
+    visit(render()); return result;
+  };
+  const flushEffects = () => { for (const index of pending.splice(0)) { effects[index].cleanup?.(); effects[index].cleanup = effects[index].callback(); } };
+  const button = label => nodes('button').find(node => node.props['aria-label'] === label || node.props.children === label);
+  render(); flushEffects();
+  return { render, nodes, button, document: documentMock, flushEffects,
+    key: (key, shiftKey = false, modifiers = {}) => { let prevented = false; listeners.get('keydown')?.({ key, shiftKey, stopPropagation() {}, ...modifiers, preventDefault: () => { prevented = true; } }); return prevented; },
+    unmount: () => effects.forEach(effect => effect.cleanup?.()), listenerCount: () => listeners.size };
+}
+
+const importPreviewFixture = () => ({ sha256: 'verified-file-hash', total: 1, valid: true, importedIds: [],
+  rows: [{ sheet: 'Giày', row: 2, errors: [], product: { sku: 'HG-SHOE-TEST', name: 'Giày Yonex kiểm thử',
+    price: 1500000, stock: 20, catalogVisible: false, variants: [
+      { color: 'Trắng', size: '35', packaging: 'Đôi', stock: 20 },
+      { color: 'Đỏ', size: '42', weightGrip: null, packaging: 'Đôi', stock: 0 }] } }] });
+
+test('Xem trước Excel hiện số sản phẩm gộp, từng màu/size/quy cách và tồn 0 đúng dữ liệu API', async () => {
+  const page = importPageHarness({ previewProducts: async () => importPreviewFixture() });
+  page.button('Nhập Excel').props.onClick();
+  page.nodes('input')[0].props.onChange({ target: { files: [{ name: 'products.xlsx', size: 10 }] } });
+  await page.button('Kiểm tra và xem trước').props.onClick();
+  const html = renderToStaticMarkup(page.render());
+  assert.match(html, /1 sản phẩm/); assert.match(html, /2 biến thể/); assert.doesNotMatch(html, /1 dòng —/);
+  for (const expected of ['Trắng', 'Đỏ', '35', '42', 'Đôi', 'Tồn: 20', 'Tồn: 0']) assert.ok(html.includes(expected), expected);
+});
+
+test('Nhập Excel thành công gắn ID với đúng SKU/tên và liên kết quản trị, giữ trạng thái ẩn', async () => {
+  let reloads = 0, committed;
+  const preview = importPreviewFixture();
+  const page = importPageHarness({ previewProducts: async () => preview, importProducts: async (...params) => {
+    committed = params; return { ...preview, importedIds: [384] };
+  } }, async () => { reloads++; });
+  page.button('Nhập Excel').props.onClick();
+  const file = { name: 'products.xlsx', size: 10 };
+  page.nodes('input')[0].props.onChange({ target: { files: [file] } });
+  await page.button('Kiểm tra và xem trước').props.onClick();
+  await page.nodes('button').find(node => String(node.props.children).includes('Xác nhận nhập')).props.onClick();
+  assert.deepEqual(committed, [file, 'verified-file-hash']); assert.equal(reloads, 1);
+  const link = page.nodes('a').find(node => node.props.href === '/admin/products?search=384');
+  assert.ok(link); const html = renderToStaticMarkup(page.render());
+  for (const expected of ['384', 'HG-SHOE-TEST', 'Giày Yonex kiểm thử', 'Đang ẩn']) assert.ok(html.includes(expected), expected);
+});
+
+test('Kết quả nhiều sản phẩm Excel gắn đúng ID/tên và giữ trạng thái hiển thị từng sản phẩm', async () => {
+  const preview = importPreviewFixture();
+  preview.total = 2;
+  preview.rows.push({ sheet: 'Phụ kiện', row: 4, errors: [], product: { sku: 'HG-ACCESSORY-TEST', name: 'Cước Yonex kiểm thử',
+    price: 100000, stock: 20, catalogVisible: true, variants: [{ color: 'Vàng', packaging: '10m', stock: 20 }] } });
+  const page = importPageHarness({ previewProducts: async () => preview,
+    importProducts: async () => ({ ...preview, importedIds: [385, 384] }) });
+  page.button('Nhập Excel').props.onClick();
+  page.nodes('input')[0].props.onChange({ target: { files: [{ name: 'products.xlsx', size: 10 }] } });
+  await page.button('Kiểm tra và xem trước').props.onClick();
+  await page.nodes('button').find(node => String(node.props.children).includes('Xác nhận nhập')).props.onClick();
+  const links = page.nodes('a');
+  assert.equal(links[0].props.href, '/admin/products?search=385');
+  assert.match(renderToStaticMarkup(links[0]), /HG-SHOE-TEST/);
+  assert.equal(links[1].props.href, '/admin/products?search=384');
+  assert.match(renderToStaticMarkup(links[1]), /HG-ACCESSORY-TEST/);
+  assert.match(renderToStaticMarkup(page.render()), /Đang hiển thị/);
+});
+
+test('Excel lỗi xem trước hoặc file không hợp lệ không mở nút nhập và không báo thành công', async () => {
+  let previews = 0, commits = 0;
+  const page = importPageHarness({ previewProducts: async () => { previews++; throw { response: { data: { message: 'Biến thể trùng' } } }; },
+    importProducts: async () => { commits++; } });
+  page.button('Nhập Excel').props.onClick();
+  const select = file => page.nodes('input')[0].props.onChange({ target: { files: [file] } });
+  select({ name: 'products.csv', size: 10 }); await page.button('Kiểm tra và xem trước').props.onClick();
+  assert.equal(previews, 0); assert.match(renderToStaticMarkup(page.render()), /Chọn file .xlsx/);
+  select({ name: 'products.xlsx', size: 10 }); await page.button('Kiểm tra và xem trước').props.onClick();
+  const html = renderToStaticMarkup(page.render()); assert.match(html, /Biến thể trùng/); assert.match(html, /role="alert"/);
+  assert.doesNotMatch(html, /Xác nhận nhập|Đã nhập/); assert.equal(commits, 0);
+});
+
+test('Hộp Excel bắt Tab hai chiều, Esc đóng, trả focus và không đóng/gửi trùng khi API đang chạy', async () => {
+  let release, calls = 0;
+  const page = importPageHarness({ previewProducts: async () => { calls++; await new Promise(resolve => { release = resolve; }); return importPreviewFixture(); } });
+  const focusable = () => ({ isConnected: true, focus() { page.document.activeElement = this; } });
+  const trigger = focusable(), first = focusable(), last = focusable();
+  const triggerNode = page.button('Nhập Excel'); assert.ok(triggerNode.ref); triggerNode.ref.current = trigger; trigger.focus();
+  triggerNode.props.onClick(); const dialogNode = page.nodes('div').find(node => node.props.role === 'dialog');
+  assert.ok(dialogNode.ref); const dialog = { querySelectorAll: () => [first, last], contains: node => [first, last].includes(node), focus: () => first.focus() };
+  dialogNode.ref.current = dialog; page.flushEffects(); assert.equal(page.document.activeElement, first);
+  first.focus(); assert.equal(page.key('Tab', true), true); assert.equal(page.document.activeElement, last);
+  assert.equal(page.key('Tab'), true); assert.equal(page.document.activeElement, first);
+  page.nodes('input')[0].props.onChange({ target: { files: [{ name: 'products.xlsx', size: 10 }] } });
+  const action = page.button('Kiểm tra và xem trước').props.onClick;
+  const running = action(); await action(); assert.equal(calls, 1);
+  page.key('Escape'); page.button('Đóng nhập Excel').props.onClick(); assert.equal(page.nodes('div').filter(node => node.props.role === 'dialog').length, 1);
+  release(); await running; page.key('Escape'); page.render(); page.flushEffects();
+  assert.equal(page.nodes('div').filter(node => node.props.role === 'dialog').length, 0);
+  assert.equal(page.document.activeElement, trigger); assert.equal(page.listenerCount(), 0); page.unmount();
+});
+
+function feedbackNodes(element) {
+  if (Array.isArray(element)) return element.flatMap(feedbackNodes);
+  if (!React.isValidElement(element)) return [];
+  if (typeof element.type === 'function') return feedbackNodes(element.type(element.props));
+  return [element, ...feedbackNodes(element.props.children)];
+}
+
+function feedbackModules(react, api) {
+  const layout = { __esModule: true, default: props => React.createElement('div', null, props.children) };
+  const icons = new Proxy({}, { get: (_, name) => props => React.createElement('svg', { ...props, 'data-icon': name }) });
+  return { react, 'lucide-react': icons, '../utils/formatters': feedbackFormatters,
+    '../utils/paymentFormatters.js': feedbackPaymentFormatters, '../utils/adminCustomers.jsx': helpers,
+    '../components/AdminLayout': layout, '../components/UserLayout': layout,
+    '../api/adminApi': { adminApi: api }, '../api/adminApi.js': { adminApi: api },
+    '../api/orderApi': { orderApi: api }, '../api/orderApi.js': { orderApi: api },
+    '../api/shippingAddressApi': { shippingAddressApi: api }, '../context/AuthContext': { useAuth: () => ({ token: null }) },
+    '../api/returnApi.js': { returnApi: {}, isEligibleReturnLine: () => false },
+    '../components/ProductImage': { __esModule: true, default: () => null },
+    '../components/OrderItemOptions': { __esModule: true, default: OrderItemOptions, formatOrderItemOptionsText },
+    '../components/AdministrativeAddressFields': { __esModule: true, default: () => null },
+    '../components/AdminPaymentLog': { __esModule: true, default: () => null },
+    '../components/AdminProductImport': { saveAdminFile() {} },
+    '../utils/idempotency.js': { getStoredReconciliationIntent: () => null },
+    'react-router-dom': { Link: props => React.createElement('a', { href: props.to }, props.children),
+      useParams: () => ({ id: '30', orderId: '30' }), useLocation: () => ({ search: '' }), useNavigate: () => () => {} } };
+}
+
+function feedbackPage(filename, initial = {}, api = {}) {
+  const source = fs.readFileSync(`src/pages/${filename}.jsx`, 'utf8');
+  const stateNames = [...source.matchAll(/\[(\w+),\s*(set\w+)\]\s*=\s*useState/g)].map(match => match[1]);
+  const state = { ...initial }, module = { exports: {} }; let cursor = 0;
+  const react = { ...React, useEffect() {}, useRef: initial => ({ current: initial }), useState: initial => {
+    const name = stateNames[cursor++]; if (!(name in state)) state[name] = typeof initial === 'function' ? initial() : initial;
+    return [state[name], value => { state[name] = typeof value === 'function' ? value(state[name]) : value; }];
+  } };
+  const modules = feedbackModules(react, api), code = transformSync(source, { loader: 'jsx', format: 'cjs' }).code;
+  new Function('require', 'module', 'exports', 'setTimeout', 'window', code)(name => modules[name] || require(name),
+    module, module.exports, () => 0, { confirm: () => true, location: { search: '' } });
+  const render = () => { cursor = 0; return module.exports.default(); };
+  return { state, render, html: () => renderToStaticMarkup(render()), nodes: type => feedbackNodes(render()).filter(node => node.type === type),
+    exports: module.exports };
+}
+
+const copyFixture = { id: 30, code: '#HG-30', orderCode: '#HG-30', createdAt: '2026-10-14T12:00:00',
+  status: 'COMPLETED', paymentMethod: 'COD', cashCollected: true, totalAmount: 100000, items: [] };
+const copyPages = [
+  ['MyOrdersPage', { orders: [feedbackPage('MyOrdersPage').exports.normalizeUserOrder(copyFixture)], loading: false }],
+  ['OrderSuccessPage', { order: copyFixture, loading: false, paymentLoadStatus: 'absent' }],
+  ['AdminOrdersPage', { orders: [loadAdminOrdersPage().normalizeAdminOrder(copyFixture)], loading: false }],
+  ['AdminVouchersPage', { vouchers: [{ ...voucherRow(), status: 'ACTIVE' }] }],
+  ['AdminPaymentsPage', { transactions: [{ id: 30, orderId: 30, status: 'PENDING', amount: 100000 }], isLoading: false, hasLoaded: true }]
+];
+
+function clipboardButton(page) {
+  return page.nodes('button').find(node => /Sao chép/.test(node.props.title || '')
+    || feedbackNodes(node.props.children).some(child => child.props['data-icon'] === 'Copy'));
+}
+
+test('Hàm sao chép chi tiết đơn bắt lỗi clipboard, chờ kết quả thật và dùng thông báo riêng', async () => {
+  const source = fs.readFileSync('src/pages/OrderDetailPage.jsx', 'utf8');
+  const body = source.match(/const copyToClipboard = async \(text, fieldName\) => \{([\s\S]*?)\n  \};/)[1];
+  const page = feedbackPage('OrderDetailPage', { order: copyFixture, loading: false, paymentLoading: false });
+  let finish; const pending = new Promise(resolve => { finish = resolve; });
+  const navigator = { clipboard: { writeText: () => pending } };
+  const scope = { navigator, setCopiedField: value => { page.state.copiedField = value; },
+    setCopyError: value => { page.state.copyError = value; }, setTimeout: () => 0 };
+  const copy = new Function(...Object.keys(scope), `return async (text, fieldName) => {${body}}`)(...Object.values(scope));
+  const copying = copy('HG-30', 'order'); assert.equal(page.state.copiedField, null);
+  finish(); await copying; assert.equal(page.state.copiedField, 'order');
+  navigator.clipboard.writeText = async () => { throw new Error('Clipboard bị từ chối'); };
+  await copy('HG-30', 'order'); assert.equal(page.state.copiedField, null);
+  assert.match(page.html(), /role="alert"[^>]*text-red-800[^>]*>Không thể sao chép/);
+  assert.equal(page.state.actionError, ''); assert.equal(page.state.orderError, '');
+});
+
+for (const [filename, initial] of copyPages) {
+  test(`${filename}: chỉ báo đã sao chép sau khi clipboard hoàn tất, lỗi và API thiếu đều báo đỏ`, async () => {
+    const previous = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    let finish; const pending = new Promise(resolve => { finish = resolve; });
+    const setClipboard = clipboard => Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard } });
+    try {
+      setClipboard({ writeText: () => pending });
+      const page = feedbackPage(filename, initial), button = clipboardButton(page); assert.ok(button, filename);
+      const copying = button.props.onClick();
+      assert.doesNotMatch(renderToStaticMarkup(clipboardButton(page)), /data-icon="Check"/);
+      finish(); await copying;
+      assert.match(renderToStaticMarkup(clipboardButton(page)), /data-icon="Check"/);
+      setClipboard({ writeText: async () => { throw new Error('Clipboard bị từ chối'); } });
+      await clipboardButton(page).props.onClick();
+      assert.doesNotMatch(renderToStaticMarkup(clipboardButton(page)), /data-icon="Check"/);
+      assert.match(page.html(), /role="alert"[^>]*text-red-(?:700|800)[^>]*>[^]*Không thể sao chép/);
+      setClipboard(undefined); await clipboardButton(page).props.onClick();
+      assert.match(page.html(), /Không thể sao chép/);
+    } finally {
+      if (previous) Object.defineProperty(globalThis, 'navigator', previous); else delete globalThis.navigator;
+    }
+  });
+}
+
+test('Admin đơn: lỗi cập nhật trạng thái và thu COD dùng alert đỏ, API thành công dùng status xanh', async () => {
+  const order = loadAdminOrdersPage().normalizeAdminOrder({ ...copyFixture, status: 'SHIPPING', cashCollected: false });
+  let fail = true; const mutation = async () => { if (fail) throw { response: { data: { message: 'Máy chủ từ chối thay đổi' } } }; return { id: 30 }; };
+  const page = feedbackPage('AdminOrdersPage', { orders: [order], loading: false, selectedOrder: order },
+    { updateOrderStatus: mutation, confirmCash: mutation, getOrders: async () => [order] });
+  const originalWindow = globalThis.window; globalThis.window = { confirm: () => true };
+  try {
+    const select = page.nodes('select').find(node => node.props.value === order.status); assert.ok(select);
+    await select.props.onChange({ target: { value: 'COMPLETED' } });
+    assert.match(page.html(), /role="alert"[^>]*bg-red-50[^>]*>[^]*Máy chủ từ chối thay đổi/);
+    const cash = page.nodes('button').find(node => node.props.children === 'Xác nhận đã thu tiền'); assert.ok(cash);
+    await cash.props.onClick(); assert.match(page.html(), /role="alert"[^>]*bg-red-50/);
+    fail = false; await cash.props.onClick();
+    assert.match(page.html(), /role="status"[^>]*bg-emerald-50[^>]*>[^]*Đã ghi nhận thu tiền mặt\/COD/);
+  } finally { globalThis.window = originalWindow; }
+});
+
+test('Sổ địa chỉ: lỗi tạo/sửa/xóa/đặt mặc định báo đỏ; thành công báo xanh và không làm mất form lỗi', async () => {
+  const address = { id: 4, fullName: 'Khách kiểm thử', phone: '0901234567', address: 'Số 1, Hà Nội', isDefault: false };
+  let fail = true; const mutation = async () => { if (fail) throw { response: { data: { message: 'Không lưu được địa chỉ kiểm thử' } } }; };
+  const page = feedbackPage('ShippingAddressPage', { addresses: [address], loading: false, showForm: true },
+    { createAddress: mutation, updateAddress: mutation, deleteAddress: mutation, setDefaultAddress: mutation, getMyAddresses: async () => [address] });
+  const checkError = () => assert.match(page.html(), /role="alert"[^>]*bg-red-50[^>]*>[^]*Không lưu được địa chỉ kiểm thử/);
+  await page.nodes('form')[0].props.onSubmit({ preventDefault() {} }); checkError(); assert.equal(page.state.showForm, true);
+  page.state.editingId = 4; await page.nodes('form')[0].props.onSubmit({ preventDefault() {} }); checkError();
+  await page.nodes('button').find(node => node.props.children === 'Đặt làm mặc định').props.onClick(); checkError();
+  await page.nodes('button').find(node => node.props.children === 'Xóa').props.onClick(); checkError();
+  fail = false; await page.nodes('form')[0].props.onSubmit({ preventDefault() {} });
+  assert.match(page.html(), /role="status"[^>]*bg-emerald-50/); assert.equal(page.state.showForm, false);
+});
+
+test('Excel chặn Ctrl+K/Cmd+K, giữ hộp thoại và không để phím truyền ra tìm kiếm nền', () => {
+  const page = importPageHarness({}); page.button('Nhập Excel').props.onClick(); page.render(); page.flushEffects();
+  for (const modifiers of [{ ctrlKey: true }, { metaKey: true }]) {
+    let stopped = false;
+    assert.equal(page.key('k', false, { ...modifiers, stopPropagation: () => { stopped = true; } }), true);
+    assert.equal(stopped, true); assert.equal(page.nodes('div').filter(node => node.props.role === 'dialog').length, 1);
+  }
+  page.unmount();
+});
+
+test('Ctrl+K quản trị chỉ focus tìm kiếm khi không có modal; Enter ở input nền không điều hướng khi modal mở', () => {
+  const source = fs.readFileSync('src/components/AdminSearch.jsx', 'utf8'), module = { exports: {} };
+  const listeners = new Map(); let modal = false, focused = 0, navigated = 0, cursor = 0;
+  const react = { ...React, useRef: initial => ({ current: initial === null ? { focus: () => focused++ } : initial }),
+    useState: initial => [cursor++ === 0 ? 'yo' : cursor === 2 ? [{ href: '/admin/products?search=HG-RACKET-001' }] : cursor === 3 ? true : initial, () => {}],
+    useEffect: callback => { callback(); } };
+  const modules = { react, 'react-router-dom': { useNavigate: () => () => navigated++ }, 'lucide-react': { Search: () => null },
+    '../api/adminApi': { adminApi: {} }, '../api/productApi': { productApi: {} }, '../utils/adminCustomers.jsx': helpers };
+  const documentMock = { querySelector: () => modal ? {} : null };
+  const windowMock = { addEventListener: (name, handler) => listeners.set(name, handler), removeEventListener() {} };
+  const code = transformSync(source, { loader: 'jsx', format: 'cjs' }).code;
+  new Function('require', 'module', 'exports', 'window', 'document', 'setTimeout', code)(name => modules[name], module, module.exports, windowMock, documentMock, () => 0);
+  const tree = module.exports.default(), input = feedbackNodes(tree).find(node => node.type === 'input');
+  for (const modifiers of [{ ctrlKey: true }, { metaKey: true }]) {
+    let prevented = false; modal = true;
+    listeners.get('keydown')({ key: 'k', ...modifiers, preventDefault: () => { prevented = true; } });
+    assert.equal(prevented, true); assert.equal(focused, 0);
+  }
+  input.props.onKeyDown({ key: 'Enter', preventDefault() {} }); assert.equal(navigated, 0);
+  modal = false; listeners.get('keydown')({ key: 'k', ctrlKey: true, preventDefault() {} }); assert.equal(focused, 1);
 });

@@ -63,18 +63,8 @@ public class ProductImportService {
     }
 
     private void validateVariants(ProductDto product,List<String> errors) {
-        if (product.getVariants() == null) return;
-        Set<String> combinations=new HashSet<>();
-        for (var variant : product.getVariants()) {
-            String combination=String.join("|",Objects.toString(variant.getColor(),""),Objects.toString(variant.getSize(),""),
-                    Objects.toString(variant.getWeightGrip(),""),Objects.toString(variant.getPackaging(),""));
-            if (!combinations.add(combination)) errors.add("Biến thể màu/size/trọng lượng/quy cách bị trùng");
-            if (variant.getStock()==null || variant.getStock()<0) errors.add("variantStock: tồn phải không âm");
-            if (product.getCategoryId()==2 && (variant.getSize()==null || !variant.getSize().matches("(?:3[5-9]|4[0-2])(?:\\.5)?")
-                    || Double.parseDouble(variant.getSize())>42)) errors.add("variantSize: size giày chỉ từ 35 đến 42");
-            if (product.getCategoryId()==3 && (variant.getSize()==null || variant.getSize().isBlank())) errors.add("variantSize: quần áo cần kích cỡ");
-            if (product.getCategoryId()==1 && (variant.getWeightGrip()==null || variant.getWeightGrip().isBlank())) errors.add("variantWeightGrip: vợt cần trọng lượng/cỡ cán");
-        }
+        try { product.setVariants(ProductVariantService.normalizeImportVariants(product)); }
+        catch (BadRequestException ex) { errors.add(ex.getMessage()); }
     }
 
     private void validateSpecifications(ProductDto product, List<String> errors) {

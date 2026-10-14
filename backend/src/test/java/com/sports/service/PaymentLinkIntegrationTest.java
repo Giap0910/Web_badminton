@@ -105,6 +105,7 @@ class PaymentLinkIntegrationTest {
 
     @Test
     void newAndExistingLinkHaveNoOrderSideEffectAndHttpHasNoTransaction() {
+        var earliestCreation = LocalDateTime.now().minusSeconds(1);
         when(client.create(any())).thenAnswer(invocation -> {
             assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
             var saved = service.read(orderId, userId, false);
@@ -112,6 +113,9 @@ class PaymentLinkIntegrationTest {
             return result(saved);
         });
         var first = service.create(orderId, userId, key);
+        assertNotNull(first.attempt().createdAt());
+        assertFalse(first.attempt().createdAt().isBefore(earliestCreation));
+        assertFalse(first.attempt().createdAt().isAfter(LocalDateTime.now().plusSeconds(1)));
         var retry = service.create(orderId, userId, key);
         assertEquals(201, first.status());
         assertEquals(200, retry.status());
@@ -122,6 +126,8 @@ class PaymentLinkIntegrationTest {
         assertEquals("payment-payload", persisted.qrPayload());
         assertEquals(retry.attempt().checkoutUrl(), persisted.checkoutUrl());
         assertEquals(orderId, persisted.orderId());
+        assertEquals(first.attempt().createdAt(), retry.attempt().createdAt());
+        assertEquals(first.attempt().createdAt(), persisted.createdAt());
         assertNotEquals(orderId, persisted.orderCode());
         assertEquals(OrderStatus.PENDING, orders.findById(orderId).orElseThrow().getStatus());
         verify(client, times(1)).create(any());
@@ -143,6 +149,7 @@ class PaymentLinkIntegrationTest {
         assertEquals(202, retry.status());
         assertEquals(saved.id(), retry.attempt().id());
         assertEquals(saved.orderCode(), retry.attempt().orderCode());
+        assertNotNull(saved.createdAt()); assertEquals(saved.createdAt(), retry.attempt().createdAt());
         assertEquals("recovered-id", retry.attempt().paymentLinkId());
         assertNull(retry.attempt().checkoutUrl());
         assertNull(retry.attempt().qrPayload());

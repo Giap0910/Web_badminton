@@ -91,16 +91,19 @@ test('Đổi mật khẩu thành công clearlocal và chuyểnlogin với thông
   tree=nodes(h.render());await tree.filter(node=>node.type==='form')[1].props.onSubmit({preventDefault(){}});
   assert.equal(h.cleared(),1);assert.equal(h.navigation[0][0],'/login');assert.match(h.navigation[0][1].state.message,/thu hồi mọi phiên/);
 });
-test('Profile không hứa xác thực điện thoại hoặc bảng xếp hạng khi Backend chưa có',()=>{
+test('Profile không hứa xác thực điện thoại, bảng xếp hạng hoặc lịch sử mật khẩu khi Backend chưa có',()=>{
   const source=fs.readFileSync(new URL('./ProfilePage.jsx',import.meta.url),'utf8');
   assert.doesNotMatch(source,/Đã xác thực|bảng xếp hạng/);
+  const harness=createProfileHarness({fullName:'Phong'});
+  const text=nodes(harness.render()).flatMap(node=>React.Children.toArray(node.props?.children).filter(child=>typeof child==='string')).join(' ');
+  assert.match(text,/Đổi mật khẩu/);assert.doesNotMatch(text,/Lần đổi gần nhất|30 ngày trước/);
 });
 test('Địa chỉ thật gửi note/tag canonical hoặc null, không thêm quận huyện',async()=>{
   const source=fs.readFileSync(new URL('./ShippingAddressPage.jsx',import.meta.url),'utf8');
   const match=source.match(/const handleSaveAddress = async \(e\) => \{([\s\S]*?)\n  \};/);assert.ok(match);
   for(const values of [{formNote:' Gọi trước ',formTag:'Khác'},{formNote:'',formTag:''}]) {
     let payload,config;const scope={saveLock:{current:false},mounted:{current:true},requestConfig:{headers:{Authorization:'Bearer token-A'}},saving:false,formName:'Phong',formPhone:'0901234567',formDetail:'Số 1',formWard:'Xã Quốc Oai',formCity:'Hà Nội',provinceCode:'01',wardCode:'001',formIsDefault:false,editingId:null,...values,
-      setSaving(){},setMessage(){},setShowForm(){},fetchAddresses:async()=>{},setTimeout:()=>0,
+      setSaving(){},setMessage(){},setMessageError(){},setShowForm(){},fetchAddresses:async()=>{},setTimeout:()=>0,
       shippingAddressApi:{createAddress:async(data,options)=>{payload=data;config=options;}}};
     const save=new Function(...Object.keys(scope),'return async e=>{'+match[1]+'}')( ...Object.values(scope));
     await save({preventDefault(){}});assert.equal(payload.note,values.formNote.trim()||null);assert.equal(payload.tag,values.formTag||null);

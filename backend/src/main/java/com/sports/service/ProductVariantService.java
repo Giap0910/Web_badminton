@@ -14,6 +14,21 @@ public class ProductVariantService {
     private final ProductRepository products;
     private final ProductVariantRepository variants;
 
+    static List<ProductVariantDto> normalizeImportVariants(ProductDto dto) {
+        var product=Product.builder().sku(dto.getSku()).stock(Objects.requireNonNullElse(dto.getStock(),0))
+                .colorName(dto.getColorName()).quantityPerPack(dto.getQuantityPerPack()).weightGrip(dto.getWeightGrip())
+                .availableSizes(dto.getAvailableSizes()).category(dto.getCategoryId()==null ? null
+                        : Category.builder().id(dto.getCategoryId()).build()).build();
+        initialize(product,dto);
+        return product.getVariants().stream().map(ProductVariantService::importVariant).toList();
+    }
+
+    private static ProductVariantDto importVariant(ProductVariant variant) {
+        return ProductVariantDto.builder().color(variant.getColor()).size(variant.getSize())
+                .weightGrip(variant.getWeightGrip()).packaging(variant.getPackaging())
+                .stock(variant.getStock()).active(variant.getActive()).build();
+    }
+
     public static void initialize(Product product, ProductDto dto) {
         List<ProductVariantDto> requested=dto.getVariants();
         if (requested == null || requested.isEmpty()) requested=defaultVariants(product);
@@ -24,6 +39,7 @@ public class ProductVariantService {
             var variant=newVariant(product,input,product.getSku()+String.format(Locale.ROOT,"-V%03d",created.size()+1));
             if (variant.getColor()==null) variant.setColor(clean(product.getColorName()));
             if (variant.getPackaging()==null) variant.setPackaging(clean(product.getQuantityPerPack()));
+            validateSingleColor(variant.getColor());
             if (!unique.add(combination(variant))) throw new BadRequestException("Biến thể bị trùng");
             created.add(variant);
         }
@@ -61,7 +77,14 @@ public class ProductVariantService {
     private static void validateAttributes(Product product, ProductVariantDto input) {
         validateLength(input.getColor(),200,"Màu sắc");validateLength(input.getSize(),50,"Kích cỡ");
         validateLength(input.getWeightGrip(),50,"Trọng lượng/cỡ cán");validateLength(input.getPackaging(),100,"Quy cách");
+        validateSingleColor(input.getColor());
         validateSize(product,input);
+    }
+
+    private static void validateSingleColor(String color) {
+        if (color!=null && (color.contains(";") || color.contains(",") || color.contains("…")
+                || color.matches("(?s).*\\.\\s*\\.\\s*\\..*")))
+            throw new BadRequestException("Mỗi biến thể chỉ có một màu hoặc một màu phối. Tách danh sách màu thành các biến thể riêng; không nhập dấu ba chấm.");
     }
 
     private static void validateLength(String text,int maximum,String label) {

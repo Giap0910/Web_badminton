@@ -365,7 +365,7 @@ class OrderServiceTest {
     void voucherReservationChecksLimitUnderLockAndCanBeReleased() {
         var repository = mock(com.sports.repository.VoucherRepository.class);
         var environment = mock(org.springframework.core.env.Environment.class);
-        var service = new VoucherService(repository, environment);
+        var service = new VoucherService(repository, orderRepository, productRepository, environment);
         Voucher voucher = Voucher.builder().code("ONE").isActive(true).maxUses(1).usedCount(0)
                 .discountType("FIXED").discountValue(new BigDecimal("10000")).build();
         when(repository.findByCodeForUpdate("ONE")).thenReturn(Optional.of(voucher));
@@ -401,7 +401,7 @@ class OrderServiceTest {
     void voucherDemoSeedIsDisabledUnlessExplicitOptInAndDevelopmentProfileBothMatch() {
         var repository=mock(com.sports.repository.VoucherRepository.class);
         var environment=new org.springframework.mock.env.MockEnvironment();environment.setActiveProfiles("dev");
-        var service=new VoucherService(repository,environment);
+        var service=new VoucherService(repository,orderRepository,productRepository,environment);
         service.seedInitialVouchers();verifyNoInteractions(repository);
         environment.setProperty("app.demo-data.enabled","false");service.seedInitialVouchers();verifyNoInteractions(repository);
         environment.setProperty("app.demo-data.enabled","true");environment.setActiveProfiles("prod");

@@ -14,6 +14,11 @@ import {
 export { getPaymentStatusInfo };
 export const canRequestOrderWarranty = (order, items) => order?.status === 'COMPLETED'
   && items.some(item => String(item.orderId) === String(order.id) && isEligibleReturnLine(item));
+export function canContinueOrderPayment(order, payment, { paymentLoading=false, paymentError=null, orderError='' }={}) {
+  return order?.status === 'PENDING' && order.paymentMethod === 'PAYOS_VIETQR'
+    && !paymentLoading && !paymentError && !orderError && !['PAID', 'NEEDS_REVIEW'].includes(payment?.status)
+    && (!payment?.orderId || String(payment.orderId) === String(order.id));
+}
 import {
   Clock,
   QrCode,
@@ -36,6 +41,14 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+const OrderPointsSummary = ({ order }) => {
+  const used = Number(order?.pointsUsed || 0); const discount = Number(order?.pointsDiscount || 0);
+  if (used <= 0 && discount <= 0) return null;
+  const label = discount > 0 ? `Giảm bằng điểm${used > 0 ? ` (${used} điểm)` : ''}:` : 'Điểm đã dùng:';
+  const value = discount > 0 ? `-${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(discount)}` : `${used} điểm`;
+  return <div className="flex justify-between text-emerald-600 font-bold"><span>{label}</span><span>{value}</span></div>;
+};
+
 const OrderDetailPage = () => {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
@@ -52,6 +65,7 @@ const OrderDetailPage = () => {
   const [warrantyError, setWarrantyError] = useState('');
   const [warrantyNote, setWarrantyNote] = useState('');
   const [warrantyRetry, setWarrantyRetry] = useState(0);
+  const [copyError, setCopyError] = useState('');
   const navigate = useNavigate();
 
   const activeOrderPaymentIdRef = useRef(null);
@@ -183,10 +197,15 @@ const OrderDetailPage = () => {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  const copyToClipboard = (text, fieldName) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldName);
-    setTimeout(() => setCopiedField(null), 2000);
+  const copyToClipboard = async (text, fieldName) => {
+    setCopiedField(null); setCopyError('');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      setCopyError('Không thể sao chép. Vui lòng chọn thông tin và sao chép thủ công.');
+    }
   };
 
   const handleCancelOrder = async () => {
@@ -253,12 +272,13 @@ const OrderDetailPage = () => {
 
   return (
     <UserLayout
-      currentPage={`Chi tiết đơn hàng #${order.id}`}
+      currentPage={`Chi tiết đơn hàng #HG-${order.id}`}
     >
       <div className="space-y-6">
         {orderError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
           <p>{orderError}</p><button type="button" onClick={fetchOrderAndPayment} className="mt-2 font-bold underline">Thử tải lại dữ liệu</button>
         </div>}
+        {order.payosOrderCode != null && <p className="text-xs text-slate-500 break-all">Mã PayOS: {order.payosOrderCode}</p>}
         {/* Top Action Back Link & Status Badges */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <Link
@@ -304,6 +324,7 @@ const OrderDetailPage = () => {
             {actionError}
           </div>
         )}
+        {copyError && <p role="alert" className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-semibold">{copyError}</p>}
 
         {/* LATE PAYMENT & CANCELLED NOTICE */}
         {order.status === 'CANCELLED' && payment?.status === 'NEEDS_REVIEW' && (
@@ -331,7 +352,7 @@ const OrderDetailPage = () => {
               <div className="space-y-1 text-center sm:text-left">
                 <h3 className="font-black text-lg text-slate-900 flex items-center gap-2">
                   <QrCode className="w-5 h-5 text-secondary" />
-                  <span>Quét mã VietQR để hoàn tất thanh toán</span>
+                  <span>Thanh toán PayOS / VietQR</span>
                 </h3>
                 <p className="text-xs text-slate-500">
                   Thời gian giữ hàng trong kho còn: <strong className="text-secondary font-bold">{formatTimer(timeLeft)}</strong>
@@ -339,13 +360,13 @@ const OrderDetailPage = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <Link
+                {canContinueOrderPayment(order, payment, { paymentLoading, paymentError, orderError }) && <Link
                   to={`/checkout?orderId=${order.id}`}
                   className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm transition-all"
-                  title="Thanh toán QR tạm hoãn trong demo. Bấm để đổi sang COD."
+                  title="Mở lại thông tin thanh toán của đơn hiện tại"
                 >
-                  Đổi sang COD (QR tạm hoãn)
-                </Link>
+                  Tiếp tục thanh toán
+                </Link>}
                 <button
                   type="button"
                   onClick={handleCancelOrder}
@@ -384,10 +405,6 @@ const OrderDetailPage = () => {
               <p className="text-slate-600 italic">
                 {order.note ? `“${order.note}”` : 'Không có yêu cầu kỹ thuật đặc biệt.'}
               </p>
-              <div className="flex items-center justify-between text-[11px] bg-slate-50 p-2 rounded-lg text-slate-600">
-                <span>Kỹ thuật viên đan vợt:</span>
-                <span className="font-bold text-slate-900">Yonex Tour Certified Master</span>
-              </div>
             </div>
 
             {/* Cột 3: Chi tiết thanh toán & Đối soát */}
@@ -516,12 +533,17 @@ const OrderDetailPage = () => {
             </div>
 
             <div className="w-full sm:w-72 space-y-2 text-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>Tạm tính:</span>
+                <span className="font-bold text-slate-900">{formatPrice(order.subtotal ?? (order.items || []).reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0))}</span>
+              </div>
               {order.discountAmount && order.discountAmount > 0 ? (
                 <div className="flex justify-between text-emerald-600 font-bold">
                   <span>Giảm giá Voucher ({order.voucherCode}):</span>
                   <span>-{formatPrice(order.discountAmount)}</span>
                 </div>
               ) : null}
+              <OrderPointsSummary order={order} />
 
               <div className="flex justify-between text-slate-600">
                 <span>Phí vận chuyển:</span>

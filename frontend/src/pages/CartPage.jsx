@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -35,16 +35,27 @@ const CartPage = () => {
   // Coupon state
   const [couponCode, setCouponCode] = useState(() => sessionStorage.getItem('hg_voucher_code') || '');
 
-  // Selected items state (default all selected)
+  const getItemId = (item) => item.cartItemId || item.product.id;
+
   const [selectedItemIds, setSelectedItemIds] = useState(
-    () => new Set(cart.map((item) => item.cartItemId || item.product.id))
+    () => new Set(cart.map(getItemId))
   );
+  const selectedItems = cart.filter((item) => selectedItemIds.has(getItemId(item)));
+  const allItemsSelected = cart.length > 0 && selectedItems.length === cart.length;
+
+  useEffect(() => {
+    const currentIds = new Set(cart.map(getItemId));
+    setSelectedItemIds((previous) => {
+      const next = new Set([...previous].filter((id) => currentIds.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [cart]);
 
   const toggleSelectAll = () => {
-    if (selectedItemIds.size === cart.length) {
+    if (allItemsSelected) {
       setSelectedItemIds(new Set());
     } else {
-      setSelectedItemIds(new Set(cart.map((item) => item.cartItemId || item.product.id)));
+      setSelectedItemIds(new Set(cart.map(getItemId)));
     }
   };
 
@@ -61,13 +72,12 @@ const CartPage = () => {
   };
 
   const removeSelectedItems = () => {
-    selectedItemIds.forEach((id) => removeFromCart(id));
+    selectedItems.forEach((item) => removeFromCart(getItemId(item)));
     setSelectedItemIds(new Set());
   };
 
   // Calculate subtotal based on selected items
-  const selectedSubtotal = cart
-    .filter((item) => selectedItemIds.has(item.cartItemId || item.product.id))
+  const selectedSubtotal = selectedItems
     .reduce((sum, item) => sum + (item.product.price || 0) * item.quantity, 0);
 
   // Free shipping threshold: 1,000,000 VND
@@ -75,9 +85,9 @@ const CartPage = () => {
   const isFreeShipping = selectedSubtotal >= freeShippingThreshold;
   const shippingProgress = Math.min(100, Math.round((selectedSubtotal / freeShippingThreshold) * 100));
 
-  const voucherKey = JSON.stringify([couponCode, cart.filter((item) =>
-    selectedItemIds.has(item.cartItemId)).map((item) => [item.cartItemId, item.quantity, item.product.price])]);
-  const voucher = useCheckoutVoucher(couponCode, selectedSubtotal, voucherKey);
+  const voucherKey = JSON.stringify([couponCode, selectedItems
+    .map((item) => [getItemId(item), item.quantity, item.product.price])]);
+  const voucher = useCheckoutVoucher(couponCode, selectedSubtotal, voucherKey, selectedItems);
   const { discountAmount: couponDiscount, appliedVoucher, error: couponError, success: couponSuccess,
     validating: isValidatingCoupon, apply: handleApplyCoupon, shippingDiscountAmount, finalShippingFee: shippingFee } = voucher;
 
@@ -95,14 +105,14 @@ const CartPage = () => {
 
   const handleCheckoutClick = () => {
     if (isValidatingCoupon) return;
-    if (!cart.some((item) => selectedItemIds.has(item.cartItemId))) {
+    if (selectedItems.length === 0) {
       setCartError('Vui lòng chọn ít nhất một sản phẩm để tiến hành thanh toán.');
       return;
     }
     const checkoutState = {
       voucherCode: appliedVoucher?.code || '',
       discountAmount: effectiveDiscount,
-      selectedItemIds: Array.from(selectedItemIds)
+      selectedItemIds: selectedItems.map(getItemId)
     };
 
     if (!isAuthenticated) {
@@ -232,7 +242,7 @@ const CartPage = () => {
                   <input
                     type="checkbox"
                     id="selectAllTop"
-                    checked={selectedItemIds.size === cart.length && cart.length > 0}
+                    checked={allItemsSelected}
                     onChange={toggleSelectAll}
                     className="w-4 h-4 rounded text-red-600 focus:ring-0 cursor-pointer accent-red-600"
                   />
@@ -246,7 +256,7 @@ const CartPage = () => {
               {/* Cart Rows */}
               <div className="divide-y divide-slate-100">
                 {cart.map((item) => {
-                  const itemId = item.cartItemId || item.product.id;
+                  const itemId = getItemId(item);
                   const isChecked = selectedItemIds.has(itemId);
                   const itemPrice = item.product.price || 0;
                   const originalPrice = item.product.originalPrice || Math.round(itemPrice * 1.2);
@@ -369,7 +379,7 @@ const CartPage = () => {
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
                     <input
                       type="checkbox"
-                      checked={selectedItemIds.size === cart.length && cart.length > 0}
+                      checked={allItemsSelected}
                       onChange={toggleSelectAll}
                       className="w-4 h-4 rounded accent-red-600 cursor-pointer"
                     />
@@ -378,7 +388,7 @@ const CartPage = () => {
                   <button
                     type="button"
                     onClick={removeSelectedItems}
-                    disabled={selectedItemIds.size === 0}
+                    disabled={selectedItems.length === 0}
                     className="text-xs font-semibold text-slate-400 hover:text-red-600 transition-colors disabled:opacity-40"
                   >
                     Xóa các mục đã chọn

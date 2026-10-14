@@ -257,8 +257,8 @@ class OrderIdempotencyIntegrationTest {
         }
 
         @Bean
-        VoucherService voucherService(VoucherRepository repository) {
-            return new VoucherService(repository, new MockEnvironment());
+        VoucherService voucherService(VoucherRepository repository, OrderRepository orders, ProductRepository products) {
+            return new VoucherService(repository, orders, products, new MockEnvironment());
         }
 
         @Bean

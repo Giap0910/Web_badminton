@@ -39,8 +39,10 @@ public class ProductService {
     private final com.sports.repository.ProductImageRepository productImageRepository;
 
     public List<ProductDto> getSuggestions(String keyword) {
-        String term = keyword == null ? "" : keyword.trim().toLowerCase(java.util.Locale.ROOT);
-        if (term.length() < 2 || term.length() > 200) return List.of();
+        String supplied = keyword == null ? "" : keyword.trim();
+        if (supplied.length() > 200) return List.of();
+        String term = suggestionText(supplied);
+        if (term.length() < 2) return List.of();
         return productRepository.findAll(ProductSpecification.shopCatalog()).stream()
                 .filter(p -> suggestionRank(p, term) < 5)
                 .sorted(java.util.Comparator.<Product>comparingInt(p -> suggestionRank(p, term))
@@ -49,10 +51,16 @@ public class ProductService {
                 .limit(6).map(this::toDto).toList();
     }
 
+    private String suggestionText(String value) {
+        String lowercase = value == null ? "" : value.toLowerCase(java.util.Locale.ROOT);
+        return java.text.Normalizer.normalize(lowercase, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replace('đ', 'd');
+    }
+
     private String suggestionModel(Product product, String term) {
         if (!term.matches("[0-9]+")) return "";
         var matcher = java.util.regex.Pattern.compile("[0-9]+[\\p{L}\\p{N}]*")
-                .matcher(product.getName().toLowerCase(java.util.Locale.ROOT));
+                .matcher(suggestionText(product.getName()));
         String model = "~";
         while (matcher.find()) {
             String token = matcher.group();
@@ -62,14 +70,14 @@ public class ProductService {
     }
 
     private int suggestionRank(Product product, String term) {
-        String name = product.getName().toLowerCase(java.util.Locale.ROOT);
+        String name = suggestionText(product.getName());
         if (name.equals(term)) return 0;
         String boundary = term.matches("[0-9]+") ? "(?:^|[^0-9])" : "(?:^|[^\\p{L}\\p{N}])";
         if (java.util.regex.Pattern.compile(boundary + java.util.regex.Pattern.quote(term)).matcher(name).find()) return 1;
         if (name.contains(term)) return 2;
-        if (product.getSku() != null && product.getSku().toLowerCase(java.util.Locale.ROOT).contains(term)) return 3;
+        if (suggestionText(product.getSku()).contains(term)) return 3;
         String brand = ProductBrand.canonicalName(term);
-        return product.getBrand().toLowerCase(java.util.Locale.ROOT).contains(term)
+        return suggestionText(product.getBrand()).contains(term)
                 || brand != null && brand.equals(ProductBrand.canonicalName(product.getBrand())) ? 4 : 5;
     }
 

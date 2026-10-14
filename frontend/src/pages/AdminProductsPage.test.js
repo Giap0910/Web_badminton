@@ -3,18 +3,23 @@ import { after, test } from 'node:test';
 import { createServer } from 'vite';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MemoryRouter } from 'react-router-dom';
+import fs from 'node:fs';
+import { transformSync } from 'esbuild';
 
 const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] },
+  resolve: { alias: { 'react-router-dom': 'react-router' } },
   server: { middlewareMode: true, hmr: false }, appType: 'custom' });
+after(() => server.close());
+const { MemoryRouter } = await server.ssrLoadModule('react-router');
 const { default: AdminProductsPage } = await server.ssrLoadModule('/src/pages/AdminProductsPage.jsx');
 const { default: AdminProductFields } = await server.ssrLoadModule('/src/components/AdminProductFields.jsx');
 const inventory = await server.ssrLoadModule('/src/components/AdminVariantInventory.jsx');
 const { AuthProvider } = await server.ssrLoadModule('/src/context/AuthContext.jsx');
 const { productToAdminForm } = await server.ssrLoadModule('/src/utils/adminProductForm.jsx');
+const productFormTools = await server.ssrLoadModule('/src/utils/adminProductForm.jsx');
+const searchHelpers = await server.ssrLoadModule('/src/utils/adminCustomers.jsx');
 const { adminApi } = await server.ssrLoadModule('/src/api/adminApi.js');
 const { default: axiosClient } = await server.ssrLoadModule('/src/api/axiosClient.js');
-after(() => server.close());
 
 test('Trang quản trị thực render được, có bộ lọc ẩn/hiện và sáu thương hiệu', () => {
   const html = renderToStaticMarkup(React.createElement(MemoryRouter, { initialEntries: ['/admin/products'] },
@@ -82,4 +87,154 @@ test('Mutation production gọi POST/PATCH đúng tổ hợp, optimistic stock v
     await assert.rejects(inventory.saveVariantInventory(9, { id: 12, stock: 20 }, '19', true, async () => { reload++; }), error => error.response.status === 409);
     assert.equal(reload, 2);
   } finally { axiosClient.post = oldPost; axiosClient.patch = oldPatch; }
+});
+
+function runtimeNodes(node, type) {
+  if (Array.isArray(node)) return node.flatMap(child => runtimeNodes(child, type));
+  if (!React.isValidElement(node)) return [];
+  if (typeof node.type === 'function') return runtimeNodes(node.type(node.props), type);
+  return [...(node.type === type ? [node] : []), ...runtimeNodes(node.props.children, type)];
+}
+
+function adminRuntime(path, modules = {}, locationSearch = '') {
+  const values = [], refs = [], effects = [], instance = { exports: {} }, listeners = new Map();
+  let cursor = 0, refCursor = 0, effectCursor = 0, timer;
+  const react = { ...React, useState: initial => {
+    const index = cursor++; if (!(index in values)) values[index] = typeof initial === 'function' ? initial() : initial;
+    return [values[index], next => { values[index] = typeof next === 'function' ? next(values[index]) : next; }];
+  }, useRef: initial => refs[refCursor++] ||= { current: initial }, useEffect: (callback, deps = []) => {
+    const index = effectCursor++, old = effects[index];
+    if (!old || deps.some((value, i) => value !== old.deps[i])) effects[index] = { callback, deps, pending: true, cleanup: old?.cleanup };
+  } };
+  const window = { location: { search: locationSearch }, addEventListener: (name, callback) => listeners.set(name, callback),
+    removeEventListener: name => listeners.delete(name) };
+  const document = { querySelector: () => null };
+  const dependencies = { react, 'lucide-react': new Proxy({}, { get: () => () => null }), ...modules };
+  const code = transformSync(fs.readFileSync(path, 'utf8'), { loader: 'jsx', format: 'cjs' }).code;
+  new Function('require', 'module', 'exports', 'window', 'document', 'setTimeout', 'clearTimeout', code)(name => dependencies[name], instance,
+    instance.exports, window, document, callback => { timer = callback; return 1; }, () => { timer = null; });
+  const render = type => { cursor = 0; refCursor = 0; effectCursor = 0; return runtimeNodes(instance.exports.default(), type); };
+  const effectsRun = async () => { for (const effect of effects) if (effect.pending) {
+    effect.pending = false; effect.cleanup?.(); effect.cleanup = effect.callback();
+  } await Promise.resolve(); await Promise.resolve(); };
+  return { exports: instance.exports, nodes: render, effects: effectsRun, tick: async () => { const callback = timer; timer = null; await callback?.(); },
+    key: event => listeners.get('keydown')?.(event), refs };
+}
+
+function searchHarness(getProducts) {
+  const navigations = [];
+  const products = [384, 385, 386].map(id => ({ id, name: `Giày Yonex ${id}`, sku: `HG-SHOE-${id}`, brand: 'Yonex' }));
+  const page = adminRuntime('src/components/AdminSearch.jsx', { 'react-router-dom': { useNavigate: () => href => navigations.push(href) },
+    '../api/productApi': { productApi: { getProducts: getProducts || (async () => products) } },
+    '../api/adminApi': { adminApi: { getOrders: async () => [], getAllUsers: async () => [] } }, '../utils/adminCustomers.jsx': searchHelpers });
+  return { ...page, navigations, input: () => page.nodes('input')[0],
+    query: async value => { page.nodes('input')[0].props.onChange({ target: { value } }); page.nodes('input'); await page.effects(); await page.tick(); } };
+}
+
+const keyEvent = key => ({ key, preventDefault() {} });
+
+test('Tìm ID trong quản trị dẫn đến ID tương ứng; truy vấn SKU vẫn giữ liên kết cũ', () => {
+  const page = searchHarness(), lists = [[{ id: 384, name: 'Giày Yonex', sku: 'HG-SHOE-009', brand: 'Yonex' }], [], []]
+    .map(value => ({ status: 'fulfilled', value }));
+  const byId = page.exports.searchResults(lists, '384');
+  assert.equal(byId.length, 1); assert.equal(byId[0].href, '/admin/products?search=384');
+  assert.equal(page.exports.searchResults(lists, 'HG-SHOE-009')[0].href, '/admin/products?search=HG-SHOE-009');
+});
+
+test('Gợi ý quản trị ArrowDown chọn đúng dòng thứ hai, Enter đi đúng liên kết và Escape đóng', async () => {
+  const page = searchHarness(); await page.query('yonex');
+  page.input().props.onKeyDown(keyEvent('ArrowDown'));
+  page.input().props.onKeyDown(keyEvent('ArrowDown'));
+  const input = page.input(), options = page.nodes('button');
+  assert.equal(input.props['aria-activedescendant'], options[1].props.id);
+  assert.equal(options[1].props['aria-selected'], true);
+  assert.equal(options[0].props['aria-selected'], false);
+  input.props.onKeyDown(keyEvent('Enter'));
+  assert.deepEqual(page.navigations, ['/admin/products?search=HG-SHOE-385']);
+  assert.equal(page.input().props['aria-expanded'], false);
+  page.input().props.onKeyDown(keyEvent('Enter'));
+  assert.equal(page.navigations.length, 1);
+  page.input().props.onFocus(); page.input().props.onKeyDown(keyEvent('Escape'));
+  assert.equal(page.input().props['aria-expanded'], false);
+});
+
+test('ArrowUp vòng về kết quả cuối; đổi từ khóa không Enter kết quả cũ hoặc đang tải', async () => {
+  const page = searchHarness(); await page.query('yonex');
+  page.input().props.onKeyDown(keyEvent('ArrowUp'));
+  assert.equal(page.input().props['aria-activedescendant'], page.nodes('button')[2].props.id);
+  page.input().props.onKeyDown(keyEvent('ArrowDown'));
+  assert.equal(page.input().props['aria-activedescendant'], page.nodes('button')[0].props.id);
+  page.input().props.onChange({ target: { value: '385' } });
+  assert.equal(page.input().props['aria-activedescendant'], undefined);
+  page.input().props.onKeyDown(keyEvent('Enter'));
+  assert.equal(page.navigations.length, 0);
+  await page.effects(); await page.tick();
+  assert.equal(page.nodes('button').length, 1);
+  page.input().props.onKeyDown(keyEvent('ArrowDown'));
+  page.input().props.onKeyDown(keyEvent('Enter'));
+  assert.deepEqual(page.navigations, ['/admin/products?search=385']);
+});
+
+test('Ctrl+K tập trung input và mở gợi ý; API lỗi không Enter dữ liệu cũ', async () => {
+  const page = searchHarness(); await page.query('yonex'); let focused = false;
+  page.refs[0].current = { focus: () => { focused = true; } };
+  page.key({ ...keyEvent('k'), ctrlKey: true });
+  assert.equal(focused, true); assert.equal(page.input().props['aria-expanded'], true);
+  page.key(keyEvent('Escape')); assert.equal(page.input().props['aria-expanded'], false);
+  const failed = adminRuntime('src/components/AdminSearch.jsx', { 'react-router-dom': { useNavigate: () => () => { throw new Error('Không được điều hướng khi lỗi'); } },
+    '../api/productApi': { productApi: { getProducts: async () => { throw new Error('Mất mạng'); } } },
+    '../api/adminApi': { adminApi: { getOrders: async () => [], getAllUsers: async () => [] } }, '../utils/adminCustomers.jsx': searchHelpers });
+  failed.nodes('input')[0].props.onChange({ target: { value: 'yonex' } }); failed.nodes('input'); await failed.effects(); await failed.tick();
+  failed.nodes('input')[0].props.onKeyDown(keyEvent('Enter'));
+  assert.ok(failed.nodes('p').some(node => node.props.role === 'alert'));
+});
+
+test('Phản hồi từ khóa cũ sau khi gõ từ khóa mới không phục hồi kết quả hoặc điều hướng', async () => {
+  let resolveOld, calls = 0;
+  const page = searchHarness(() => {
+    calls++;
+    if (calls === 1) return Promise.resolve([{ id: 384, name: 'Giày Yonex', sku: 'HG-SHOE-009' }]);
+    if (calls === 2) return new Promise(resolve => { resolveOld = resolve; });
+    return Promise.reject(new Error('Mất mạng'));
+  });
+  await page.query('yonex');
+  page.input().props.onChange({ target: { value: 'fleet' } }); page.input(); await page.effects();
+  const oldRequest = page.tick();
+  page.input().props.onChange({ target: { value: 'victor' } });
+  resolveOld([{ id: 385, name: 'Vợt Fleet', sku: 'HG-RACKET-010' }]); await oldRequest;
+  assert.equal(page.nodes('button').length, 0);
+  page.input().props.onKeyDown(keyEvent('Enter')); assert.equal(page.navigations.length, 0);
+  await page.effects(); await page.tick();
+  assert.ok(page.nodes('p').some(node => node.props.role === 'alert'));
+  assert.equal(page.nodes('button').length, 0);
+});
+
+test('Bảng quản trị hiện ID và tìm sản phẩm sau khi upload theo ID', async () => {
+  const rows = [384, 385].map((id, index) => ({ id, sku: `HG-SHOE-00${index + 8}`, name: 'Giày Yonex thử nhập', brand: 'Yonex', categoryId: 2, stock: 20, price: 100000, catalogVisible: false }));
+  const page = adminRuntime('src/pages/AdminProductsPage.jsx', { '../components/AdminLayout': props => props.children,
+    '../components/ProductImage': () => null, '../components/AdminProductFields': () => null, '../components/AdminProductImport': () => null,
+    '../components/AdminVariantInventory': () => null, '../utils/adminProductForm': productFormTools, '../api/adminApi': { adminApi: {} },
+    '../api/productApi': { productApi: { getProducts: async () => rows, getCategories: async () => [{ id: 2 }] } } }, '?search=384');
+  page.nodes('input'); await page.effects();
+  assert.match(page.nodes('input')[0].props.placeholder, /ID/);
+  assert.equal(page.nodes('tr').length, 2);
+  assert.ok(page.nodes('span').some(node => node.props.children === 'ID: 384'));
+  assert.ok(page.nodes('span').some(node => node.props.children === 'HG-SHOE-008'));
+});
+
+test('Sửa mô tả voucher giữ nguyên giờ hết hạn; đổi hoặc xóa ngày gửi giá trị tương ứng', async () => {
+  const updates = [], original = '2026-12-31T10:45:37';
+  const row = { id: 5, code: 'HGTEST', description: 'Mã giảm kiểm thử', discountType: 'FIXED', discountValue: 10000,
+    minOrderValue: 200000, maxUses: 100, usedCount: 3, expiresAt: original, isActive: true };
+  const makePage = () => adminRuntime('src/pages/AdminVouchersPage.jsx', { '../components/AdminLayout': props => props.children,
+    '../api/adminApi': { adminApi: { getAllVouchers: async () => [row], updateVoucher: async (id, payload) => { updates.push({ id, payload }); } } } });
+  for (const [date, expected] of [[null, original], ['2027-01-02', '2027-01-02T23:59:59'], ['', null]]) {
+    const page = makePage(); page.nodes('button'); await page.effects();
+    page.nodes('button').find(node => node.props.title === 'Chỉnh sửa voucher').props.onClick();
+    page.nodes('input').find(node => node.props.name === 'description').props.onChange({ target: { value: 'Mô tả đã sửa' } });
+    if (date !== null) page.nodes('input').find(node => node.props.name === 'expiresAt').props.onChange({ target: { value: date } });
+    await page.nodes('form')[0].props.onSubmit({ preventDefault() {} });
+    assert.equal(updates.at(-1).payload.expiresAt, expected);
+    assert.equal(updates.at(-1).payload.description, 'Mô tả đã sửa');
+  }
 });

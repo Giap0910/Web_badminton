@@ -188,6 +188,79 @@ class ProductVariantServiceTest {
         verify(fixture.variants(),never()).saveAndFlush(any());
     }
 
+    @Test void groupedAndUnfinishedColorsAreRejectedBeforeChangingInventory() {
+        for (String color : List.of("Red; Blue", "Trắng, Đỏ", "Vàng…", "Trắng...", "Đỏ . . .", "...")) {
+            var current=variant(1,"40",17);current.setReservedStock(2);
+            var fixture=inventory(5,current);
+            var history=OrderItem.builder().variant(current).selectedColor(current.getColor()).quantity(2).build();
+
+            var error=assertThrows(BadRequestException.class,()->fixture.service().create(7L,
+                    ProductVariantDto.builder().color(color).stock(20).build()));
+
+            assertTrue(error.getMessage().contains("một màu"));
+            assertEquals(1,fixture.product().getVariants().size());assertEquals(17,current.getStock());
+            assertEquals(2,current.getReservedStock());assertEquals(17,fixture.product().getStock());
+            assertSame(current,history.getVariant());assertEquals("Trắng / Đen",history.getSelectedColor());
+            verify(fixture.variants(),never()).saveAndFlush(any());verify(fixture.products(),never()).saveAndFlush(any());
+        }
+    }
+
+    @Test void groupedParentColorCannotBypassValidationWhenExplicitVariantsOmitColor() {
+        for (String color : List.of("Đỏ; Trắng", "Đỏ, Trắng", "Vàng…")) {
+            var product=Product.builder().sku("HG-ACCESSORY-101").stock(20).colorName(color)
+                    .category(Category.builder().id(5L).build()).build();
+            var dto=ProductDto.builder().variants(List.of(ProductVariantDto.builder().color("Trắng").stock(20).build(),
+                    ProductVariantDto.builder().stock(20).build())).build();
+
+            assertThrows(BadRequestException.class,()->ProductVariantService.initialize(product,dto));
+
+            assertTrue(product.getVariants().isEmpty());assertEquals(20,product.getStock());assertEquals(color,product.getColorName());
+        }
+    }
+
+    @Test void legacyDefaultInitializationRejectsListsInsteadOfSplittingOrInventingStock() {
+        var product=Product.builder().sku("HG-ACCESSORY-377").stock(17).colorName("Trắng, Đỏ, Vàng…")
+                .category(Category.builder().id(5L).build()).build();
+
+        assertThrows(BadRequestException.class,()->ProductVariantService.initialize(product,ProductDto.builder().stock(17).build()));
+
+        assertTrue(product.getVariants().isEmpty());assertEquals(17,product.getStock());
+        assertEquals("Trắng, Đỏ, Vàng…",product.getColorName());
+    }
+
+    @Test void verifiedSingleAndCompositeColorsStayAtomicAndPreserveOldOrderHistory() {
+        for (String color : java.util.Arrays.asList(null,"Cam phối Trắng","Black / Silver","Đen / Xanh / Bạc")) {
+            var old=variant(2,null,8);old.setColor("Red; Blue");old.setLegacy(true);old.setActive(false);old.setReservedStock(2);
+            var fixture=inventory(5,old);
+            var history=OrderItem.builder().variant(old).selectedColor(old.getColor()).quantity(2).build();
+
+            var result=fixture.service().create(7L,ProductVariantDto.builder().color(color).stock(20).packaging("10m").build());
+
+            assertEquals(color,result.getColor());assertEquals(20,result.getStock());assertEquals(0,result.getReservedStock());
+            assertEquals(20,fixture.product().getStock());assertEquals(2,fixture.product().getReservedStock());
+            assertEquals(2L,old.getId());assertEquals(8,old.getStock());assertEquals("Red; Blue",old.getColor());
+            assertFalse(old.getActive());assertTrue(old.getLegacy());assertSame(old,history.getVariant());
+            assertEquals("Red; Blue",history.getSelectedColor());
+            ProductVariantService.settle(old,2,false);ProductVariantService.refreshTotals(fixture.product());
+            assertEquals(0,old.getReservedStock());assertEquals(8,old.getStock());assertEquals(20,fixture.product().getStock());
+        }
+    }
+
+    @Test void groupedInactiveColorCannotBeReactivatedAndStockOnlyPatchKeepsItsHistory() {
+        var current=variant(1,null,17);current.setColor("Red; Blue");current.setActive(false);current.setReservedStock(2);
+        var fixture=inventory(5,current);
+        var history=OrderItem.builder().variant(current).selectedColor(current.getColor()).quantity(2).build();
+
+        assertThrows(BadRequestException.class,()->fixture.service().update(7L,1L,
+                ProductVariantDto.builder().stock(17).expectedStock(17).active(true).build()));
+        verify(fixture.products(),never()).saveAndFlush(any());
+        var updated=fixture.service().update(7L,1L,ProductVariantDto.builder().stock(17).expectedStock(17).build());
+
+        assertFalse(updated.getActive());assertEquals(17,updated.getStock());assertEquals(2,updated.getReservedStock());
+        assertSame(current,history.getVariant());assertEquals("Red; Blue",history.getSelectedColor());
+        assertEquals(0,fixture.product().getStock());assertEquals(2,fixture.product().getReservedStock());
+    }
+
     @Test void actualJacksonDistinguishesExplicitNullOptionsFromAnUnchangedStockOnlyPatch() throws Exception {
         var current=variant(1,"40",20);current.setWeightGrip("4U-G5");current.setPackaging("10 m");
         var fixture=inventory(2,current);var mapper=new ObjectMapper();

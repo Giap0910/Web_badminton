@@ -69,7 +69,7 @@ class OrderIdempotencyTest {
             return saved;
         });
         service = new OrderService(orders, products, users, payment,
-                new VoucherService(vouchers, new MockEnvironment()), mock(EntityManager.class), mock(PaymentTransitionGuard.class));
+                new VoucherService(vouchers, orders, products, new MockEnvironment()), mock(EntityManager.class), mock(PaymentTransitionGuard.class));
         mvc = MockMvcBuilders.standaloneSetup(new OrderController(service, mock(OrderStatusService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(principalResolver()).build();

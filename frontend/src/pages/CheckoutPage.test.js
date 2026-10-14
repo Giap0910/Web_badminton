@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import React from 'react';
+import { transformSync } from 'esbuild';
 import { buildOrderPayload, getOrCreateIdempotencyKey, clearStoredCheckoutIntent, getOrCreatePaymentLinkKey } from '../utils/idempotency.js';
 import { formatPrice } from '../utils/formatters.js';
 
@@ -199,9 +201,9 @@ function actualCheckoutTotals(voucher, pendingSubmission = null, requestedPoints
 
 function actualCartTotals(voucher) {
   const cartSource = fs.readFileSync(new URL('./CartPage.jsx', import.meta.url), 'utf8');
-  const body = cartSource.slice(cartSource.indexOf('  const selectedSubtotal = cart'), cartSource.indexOf('  const handleRemoveCoupon'));
-  const scope = { cart: [{ cartItemId: 'line-1', quantity: 1, product: { id: 7, price: 400000 } }],
-    selectedItemIds: new Set(['line-1']), couponCode: voucher.appliedVoucher?.code || '', useCheckoutVoucher: () => voucher };
+  const body = cartSource.slice(cartSource.indexOf('  const selectedSubtotal ='), cartSource.indexOf('  const handleRemoveCoupon'));
+  const scope = { selectedItems: [{ cartItemId: 'line-1', quantity: 1, product: { id: 7, price: 400000 } }],
+    getItemId: item => item.cartItemId, couponCode: voucher.appliedVoucher?.code || '', useCheckoutVoucher: () => voucher };
   return new Function(...Object.keys(scope), body + '\nreturn { shippingFee, displayedShippingFee, finalTotal, effectiveDiscount, shippingDiscountAmount };')(...Object.values(scope));
 }
 
@@ -332,4 +334,82 @@ test('Đổi token khi tải địa chỉ giữ token cũ và không gửi POST 
     assert.equal(headers.Authorization, 'Bearer session-A'); assert.equal(creates, 0);
     assert.equal(h.state.navigation, null);
   } finally { globalThis.localStorage = original; }
+});
+
+function cartTestHooks() {
+  const slots = [], effects = []; let cursor = 0;
+  return {
+    react: { ...React,
+      useState(initial) {
+        const index = cursor++;
+        if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial;
+        return [slots[index], value => { slots[index] = typeof value === 'function' ? value(slots[index]) : value; }];
+      },
+      useEffect(effect) { effects.push(effect); },
+    },
+    render(component) {
+      cursor = 0; effects.length = 0;
+      const tree = component();
+      effects.splice(0).forEach(effect => effect());
+      return tree;
+    },
+  };
+}
+
+function cartTestElements(node) {
+  if (Array.isArray(node)) return node.flatMap(cartTestElements);
+  if (!React.isValidElement(node)) return [];
+  return [node, ...cartTestElements(node.props.children)];
+}
+
+function cartPageFixture(initialCart) {
+  const hooks = cartTestHooks(), module = { exports: {} }, state = { cart: initialCart, navigation: null, quote: 0 };
+  const modules = {
+    react: hooks.react,
+    'react-router-dom': { Link: () => null, useNavigate: () => (route, options) => { state.navigation = { route, ...options }; } },
+    '../context/CartContext': { useCart: () => ({ cart: state.cart,
+      removeFromCart: id => { state.cart = state.cart.filter(item => item.cartItemId !== id); }, updateQuantity() {} }) },
+    '../context/AuthContext': { useAuth: () => ({ isAuthenticated: true }) },
+    '../components/useCheckoutVoucher': (code, subtotal) => { state.quote = subtotal;
+      return { discountAmount: 0, shippingDiscountAmount: 0, finalShippingFee: subtotal >= 1000000 ? 0 : 30000 }; },
+    '../components/ProductImage': () => null,
+    '../utils/formatters': { formatPrice },
+    'lucide-react': new Proxy({}, { get: () => () => null }),
+  };
+  const text = fs.readFileSync(new URL('./CartPage.jsx', import.meta.url), 'utf8');
+  new Function('require', 'module', 'exports', transformSync(text, { loader: 'jsx', format: 'cjs' }).code)
+    (name => modules[name], module, module.exports);
+  return { state, render: () => cartTestElements(hooks.render(module.exports.default)) };
+}
+
+const cartTestItems = () => [
+  { cartItemId: 'line-a', product: { id: 11, name: 'Vợt kiểm thử', price: 100000 }, quantity: 1 },
+  { cartItemId: 'line-b', product: { id: 12, name: 'Giày kiểm thử', price: 200000 }, quantity: 2 },
+];
+const cartCheckboxes = nodes => nodes.filter(node => node.type === 'input' && node.props.type === 'checkbox');
+
+test('Giỏ hàng thực: xóa một trong hai dòng đã chọn vẫn đồng bộ hai nút chọn tất cả', () => {
+  sessionStorage.clear(); const h = cartPageFixture(cartTestItems());
+  let nodes = h.render(); assert.ok(cartCheckboxes(nodes).every(node => node.props.checked));
+  nodes.find(node => node.type === 'button' && node.props.title === 'Xóa sản phẩm').props.onClick();
+  nodes = h.render(); assert.equal(cartCheckboxes(nodes).length, 3);
+  assert.ok(cartCheckboxes(nodes).every(node => node.props.checked)); assert.equal(h.state.quote, 400000);
+  cartCheckboxes(nodes)[0].props.onChange(); nodes = h.render();
+  assert.ok(cartCheckboxes(nodes).every(node => !node.props.checked)); assert.equal(h.state.quote, 0);
+  cartCheckboxes(nodes).at(-1).props.onChange(); nodes = h.render();
+  assert.ok(cartCheckboxes(nodes).every(node => node.props.checked)); assert.equal(h.state.quote, 400000);
+  nodes.find(node => node.type === 'button' && node.props.onClick?.name === 'handleCheckoutClick').props.onClick();
+  assert.deepEqual(h.state.navigation.state.selectedItemIds, ['line-b']);
+});
+
+test('Giỏ hàng thực: thay đổi dòng ngoài trang không giữ ID cũ hoặc tự chọn dòng mới', () => {
+  sessionStorage.clear(); const h = cartPageFixture(cartTestItems()); h.render();
+  h.state.cart = [h.state.cart[1], { cartItemId: 'line-c', product: { id: 13, price: 300000 }, quantity: 1 }];
+  let nodes = h.render(); const checks = cartCheckboxes(nodes);
+  assert.deepEqual(checks.map(node => node.props.checked), [false, true, false, false]);
+  nodes.find(node => node.type === 'button' && node.props.onClick?.name === 'handleCheckoutClick').props.onClick();
+  assert.deepEqual(h.state.navigation.state.selectedItemIds, ['line-b']);
+  checks[0].props.onChange(); nodes = h.render(); assert.ok(cartCheckboxes(nodes).every(node => node.props.checked));
+  nodes.find(node => node.type === 'button' && node.props.onClick?.name === 'removeSelectedItems').props.onClick();
+  assert.deepEqual(h.state.cart, []); assert.equal(cartCheckboxes(h.render()).length, 0);
 });

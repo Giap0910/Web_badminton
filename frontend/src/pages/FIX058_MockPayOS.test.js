@@ -263,8 +263,8 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
     });
 
     test('5.4. AdminPaymentsPage maps paymentMode and mockProviderStatus from backend response', () => {
-      assert.match(adminPaymentsSource, /paymentMode:\s*p\.paymentMode\s*\|\|\s*'REAL'/);
-      assert.match(adminPaymentsSource, /mockProviderStatus:\s*p\.mockProviderStatus\s*\|\|\s*null/);
+      assert.match(adminPaymentsSource, /paymentMode:\s*payment\.paymentMode\s*\|\|\s*'REAL'/);
+      assert.match(adminPaymentsSource, /mockProviderStatus:\s*payment\.mockProviderStatus\s*\|\|\s*null/);
     });
 
     test('5.5. AdminPaymentsPage renders MOCK badge in transaction row', () => {

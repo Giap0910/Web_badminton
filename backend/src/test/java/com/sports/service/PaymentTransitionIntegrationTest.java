@@ -819,6 +819,7 @@ class PaymentTransitionIntegrationTest {
     @Test
     void migrationRerunPreservesAppliedOperationResultAndRevision() throws Exception {
         safeProvider(); submit();
+        var created = attempts.findById(attemptId).orElseThrow().getCreatedAt(); assertNotNull(created);
         var original = operation(); var before = ledgerSnapshot(); var revision = order().getCheckoutRevision();
         try (var c = context.getBean(DataSource.class).getConnection()) {
             ScriptUtils.executeSqlScript(c, new ClassPathResource("fix057_payment_transition.sql"));
@@ -827,6 +828,25 @@ class PaymentTransitionIntegrationTest {
         assertEquals(before, ledgerSnapshot()); assertEquals(revision, order().getCheckoutRevision());
         assertEquals(original.getOperationId(), operation().getOperationId()); assertEquals(original.getResult(), operation().getResult());
         assertEquals(original.getAppliedAt(), operation().getAppliedAt()); assertInventory(9, 1, 1);
+        assertEquals(created, attempts.findById(attemptId).orElseThrow().getCreatedAt());
+    }
+
+    @Test void migrationRerunKeepsLegacyAttemptCreationDateUnknown() throws Exception {
+        long before = attempts.count();
+        var original = attempts.findById(attemptId).orElseThrow();
+        try (var c = context.getBean(DataSource.class).getConnection(); var statement = c.prepareStatement(
+                "UPDATE payment_attempts SET created_at=NULL WHERE id=?")) {
+            statement.setLong(1, attemptId); assertEquals(1, statement.executeUpdate());
+            ScriptUtils.executeSqlScript(c, new ClassPathResource("fix057_payment_transition.sql"));
+            ScriptUtils.executeSqlScript(c, new ClassPathResource("fix057_payment_transition.sql"));
+        }
+        var retained = attempts.findById(attemptId).orElseThrow();
+        assertNull(retained.getCreatedAt()); assertEquals(before, attempts.count());
+        assertEquals(original.getOrderCode(), retained.getOrderCode()); assertEquals(original.getStatus(), retained.getStatus());
+        assertEquals(original.getAmount(), retained.getAmount()); assertEquals(original.getExpiresAt(), retained.getExpiresAt());
+        assertEquals(List.of(List.of("YES")), rows("SELECT is_nullable FROM information_schema.columns WHERE table_schema=DATABASE() "
+                + "AND table_name='payment_attempts' AND column_name='created_at'"));
+        assertInventory(9, 1, 1);
     }
 
     @Test
@@ -1062,7 +1082,9 @@ class PaymentTransitionIntegrationTest {
         @Bean ObjectMapper json() { return new ObjectMapper().findAndRegisterModules(); }
         @Bean JwtAuthenticationFilter jwtAuthenticationFilter() { return new JwtAuthenticationFilter(mock(JwtTokenProvider.class), mock(UserDetailsServiceImpl.class)); }
         @Bean PaymentLedgerService ledger(PaymentEventRepository events, PaymentEventConflictRepository conflicts) { return new PaymentLedgerService(events, conflicts); }
-        @Bean VoucherService vouchers(VoucherRepository vouchers) { return new VoucherService(vouchers, new MockEnvironment()); }
+        @Bean VoucherService vouchers(VoucherRepository vouchers, OrderRepository orders, ProductRepository products) {
+            return new VoucherService(vouchers, orders, products, new MockEnvironment());
+        }
         @Bean OrderService orderService(OrderRepository orders, ProductRepository products, UserRepository users,
                 PayOSService payos, VoucherService vouchers, EntityManager em, PaymentTransitionGuard guard) {
             return spy(new OrderService(orders, products, users, payos, vouchers, em, guard));

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import AdminPaymentLog from '../components/AdminPaymentLog';
 import { saveAdminFile } from '../components/AdminProductImport';
@@ -87,25 +88,7 @@ const AdminPaymentsPage = () => {
           : [];
 
         if (Array.isArray(list)) {
-          const mapped = list.map((p) => ({
-            id: p.id,
-            orderId: p.orderId,
-            orderStatus: p.orderStatus || null,
-            orderCode: p.orderCode != null ? `#HG-${p.orderCode}` : p.orderId ? `#HG-${p.orderId}` : '—',
-            provider: p.provider || 'PAYOS',
-            amount: p.amount || 0,
-            currency: p.currency || 'VND',
-            status: p.status,
-            reference: p.reference || null,
-            paidAt: p.paidAt ? new Date(p.paidAt).toLocaleString('vi-VN') : null,
-            createdAt: p.createdAt ? new Date(p.createdAt).toLocaleString('vi-VN') : '—',
-            reviewReason: p.reviewReason || null,
-            customer: p.customerName || 'Khách hàng HG',
-            paymentMethod: p.paymentMethod || 'PAYOS_VIETQR',
-            methodLabel: p.paymentMethod?.includes('PAYOS') ? 'VietQR Pro (PayOS)' : p.paymentMethod === 'COD' ? 'COD Đồng kiểm' : 'Chuyển khoản',
-            paymentMode: p.paymentMode || 'REAL',
-            mockProviderStatus: p.mockProviderStatus || null,
-          }));
+          const mapped = list.map(normalizeAdminPayment);
           setTransactions(mapped);
           setHasLoaded(true);
           setDataError('');
@@ -130,10 +113,15 @@ const AdminPaymentsPage = () => {
     return () => { clearInterval(timer); activeRequestIdRef.current++; };
   }, []);
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(text);
-    setTimeout(() => setCopiedId(null), 2000);
+  const copyToClipboard = async (text) => {
+    setCopiedId(null); setToastMessage('');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(text);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      setToastType('error'); setToastMessage('Không thể sao chép. Vui lòng chọn mã và sao chép thủ công.');
+    }
   };
 
   const handleVerifyWebhook = () => {
@@ -261,13 +249,7 @@ const AdminPaymentsPage = () => {
   };
 
   const filteredTransactions = transactions.filter((t) => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      String(t.id).toLowerCase().includes(q) ||
-      t.orderCode.toLowerCase().includes(q) ||
-      t.customer.toLowerCase().includes(q) ||
-      (t.reference && t.reference.toLowerCase().includes(q)) ||
-      (t.reviewReason && t.reviewReason.toLowerCase().includes(q));
+    const matchesSearch = matchesAdminPaymentSearch(t, searchQuery);
 
     const matchesMethod =
       selectedMethod === 'ALL'
@@ -324,8 +306,11 @@ const AdminPaymentsPage = () => {
 
         {toastMessage && (
           <div
+            role={toastType === 'error' ? 'alert' : 'status'}
             className={`p-4 rounded-xl border text-xs font-bold flex items-center justify-between gap-2 ${
-              toastType === 'success'
+              toastType === 'error'
+                ? 'bg-red-50 border-red-200 text-red-800'
+                : toastType === 'success'
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                 : toastType === 'warning'
                 ? 'bg-amber-50 border-amber-200 text-amber-800'
@@ -333,7 +318,7 @@ const AdminPaymentsPage = () => {
             }`}
           >
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 shrink-0" />
+              {toastType === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <ShieldCheck className="w-4 h-4 shrink-0" />}
               <span>{toastMessage}</span>
             </div>
             <button
@@ -392,7 +377,7 @@ const AdminPaymentsPage = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo mã GD, mã đơn (#HG-...), Ref ngân hàng..."
+              placeholder="Tìm mã GD, mã đơn (#HG-...), mã PayOS, Ref ngân hàng..."
               className="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner"
             />
           </div>
@@ -463,6 +448,7 @@ const AdminPaymentsPage = () => {
                               <button
                                 type="button"
                                 onClick={() => copyToClipboard(String(t.id))}
+                                aria-label={`Sao chép ID giao dịch ${t.id}`}
                                 className="text-slate-400 hover:text-slate-700"
                                 title="Sao chép ID giao dịch"
                               >
@@ -478,7 +464,7 @@ const AdminPaymentsPage = () => {
                                 </span>
                               )}
                             </div>
-                            <span className="text-[11px] text-blue-600 font-bold">Đơn hàng {t.orderCode}</span>
+                            <AdminPaymentOrder payment={t} />
                             <span className="text-[11px] text-slate-500">Trạng thái đơn: {adminOrderStatusLabel(t.orderStatus)}</span>
                           </div>
                         </td>
@@ -570,7 +556,7 @@ const AdminPaymentsPage = () => {
       {/* RECONCILE MODAL */}
       {reconcileModalTarget && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+          <div role="dialog" aria-modal="true" aria-label="Đối soát giao dịch" className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <FileCheck className="w-5 h-5 text-amber-600" />
@@ -592,6 +578,10 @@ const AdminPaymentsPage = () => {
                 <span className="text-slate-500">Mã đơn hàng:</span>
                 <span className="font-bold text-slate-900">{reconcileModalTarget.orderCode}</span>
               </div>
+              {reconcileModalTarget.providerCode != null && <div className="flex justify-between gap-2">
+                <span className="text-slate-500">Mã PayOS:</span>
+                <span className="font-mono text-slate-700 break-all">{reconcileModalTarget.providerCode}</span>
+              </div>}
               <div className="flex justify-between">
                 <span className="text-slate-500">Số tiền quyết toán:</span>
                 <span className="font-bold text-secondary">{formatPrice(reconcileModalTarget.amount)}</span>
@@ -662,10 +652,37 @@ const AdminPaymentsPage = () => {
 
 export default AdminPaymentsPage;
 
+export function normalizeAdminPayment(payment) {
+  const orderCode = payment.orderId != null ? `#HG-${payment.orderId}` : '—';
+  return { id: payment.id, orderId: payment.orderId, orderStatus: payment.orderStatus || null, orderCode,
+    orderHref: payment.orderId != null ? `/admin/orders?search=${encodeURIComponent(`HG-${payment.orderId}`)}` : null,
+    providerCode: payment.orderCode ?? null, provider: payment.provider || 'PAYOS', amount: payment.amount || 0,
+    currency: payment.currency || 'VND', status: payment.status, reference: payment.reference || null,
+    paidAt: payment.paidAt ? new Date(payment.paidAt).toLocaleString('vi-VN') : null,
+    createdAt: payment.createdAt ? new Date(payment.createdAt).toLocaleString('vi-VN') : '—',
+    reviewReason: payment.reviewReason || null, customer: payment.customerName || 'Khách hàng HG',
+    paymentMethod: payment.paymentMethod || 'PAYOS_VIETQR',
+    methodLabel: payment.paymentMethod?.includes('PAYOS') ? 'VietQR Pro (PayOS)' : payment.paymentMethod === 'COD' ? 'COD Đồng kiểm' : 'Chuyển khoản',
+    paymentMode: payment.paymentMode || 'REAL', mockProviderStatus: payment.mockProviderStatus || null };
+}
+
+export function matchesAdminPaymentSearch(payment, query) {
+  const term = query.trim().toLowerCase();
+  return [payment.id, payment.orderCode, payment.providerCode,
+    payment.providerCode == null ? '' : `#HG-${payment.providerCode}`, payment.customer, payment.reference, payment.reviewReason]
+    .some(value => String(value ?? '').toLowerCase().includes(term));
+}
+
+export function AdminPaymentOrder({ payment }) {
+  return <>{payment.orderHref ? <Link to={payment.orderHref} className="text-[11px] text-blue-600 font-bold hover:underline">Đơn hàng {payment.orderCode}</Link>
+    : <span className="text-[11px] text-slate-500">Đơn hàng {payment.orderCode}</span>}
+    {payment.providerCode != null && <span className="text-[11px] text-slate-500 font-mono break-all">Mã PayOS: {payment.providerCode}</span>}</>;
+}
+
 export function exportPayments(rows) {
-  const headers = ['Mã giao dịch', 'Mã đơn', 'Khách hàng', 'Số tiền', 'Trạng thái thanh toán', 'Trạng thái đơn hàng', 'Phương thức', 'Ngày thanh toán', 'Lý do đối soát'];
+  const headers = ['Mã giao dịch', 'Mã đơn', 'Mã PayOS', 'Khách hàng', 'Số tiền', 'Trạng thái thanh toán', 'Trạng thái đơn hàng', 'Phương thức', 'Ngày thanh toán', 'Ngày tạo giao dịch', 'Lý do đối soát'];
   const cell = value => { let text = String(value ?? ''); if (/^[=+@-]/.test(text.trimStart())) text = "'" + text; return '"' + text.replaceAll('"', '""') + '"'; };
-  const values = [headers, ...rows.map(row => [row.id, row.orderCode, row.customer, row.amount, row.status, row.orderStatus, row.paymentMethod, row.paidAt, row.reviewReason])];
+  const values = [headers, ...rows.map(row => [row.id, row.orderCode, row.providerCode, row.customer, row.amount, row.status, row.orderStatus, row.paymentMethod, row.paidAt, row.createdAt, row.reviewReason])];
   saveAdminFile(new Blob(['\ufeff' + values.map(row => row.map(cell).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), 'payment-reconciliation.csv');
 }
 

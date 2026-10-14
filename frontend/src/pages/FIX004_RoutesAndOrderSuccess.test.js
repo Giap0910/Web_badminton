@@ -1431,6 +1431,58 @@ describe('FIX-004 — Frontend Implementation & Verification', () => {
     assert.ok(markupError.includes('Lỗi xác minh'), 'Failed GET must render "Lỗi xác minh"');
     assert.ok(markupError.includes('Không thể xác minh trạng thái thanh toán'), 'Failed GET must render verification error heading');
   });
+
+  test('70. Kết quả đơn hiển thị điểm đã lưu ở cả COD, QR chờ xác nhận và QR đã trả tiền', async () => {
+    for (const [paymentMethod, status, paymentData] of [['COD', 'PENDING', null],
+      ['PAYOS_VIETQR', 'PENDING', { status: 'PENDING' }], ['PAYOS_VIETQR', 'PAID', { status: 'PAID' }]]) {
+      const harness = await createOrderSuccessTestHarness({ orderId: '501', useRealEffects: true, paymentData,
+        orderData: { id: 501, status, paymentMethod, totalAmount: 97000, discountAmount: 10000,
+          pointsUsed: 20, pointsDiscount: 2000, shippingFee: 30000, items: [{ price: 50000, quantity: 2 }] } });
+      const { finalMarkup } = await harness.renderWithLifecycle();
+      assert.match(finalMarkup, /Giảm bằng điểm \(20 điểm\):[\s\S]*-2\.000/);
+      assert.match(finalMarkup, /Tổng thanh toán:[\s\S]*97\.000/);
+      assert.doesNotMatch(finalMarkup, /118\.000/);
+    }
+  });
+
+  test('71. Kết quả đơn không tính lại tổng 0, không tự suy ra điểm và thống nhất mã HG nội bộ', async () => {
+    for (const paymentData of [null, { status: 'PAID' }]) {
+      const harness = await createOrderSuccessTestHarness({ orderId: '501', useRealEffects: true, paymentData,
+        orderData: { id: 501, orderCode: '1000000501', status: 'PAID', paymentMethod: 'PAYOS_VIETQR',
+          totalAmount: 0, pointsUsed: 0, pointsDiscount: 0, items: [{ price: 50000, quantity: 1 }] } });
+      const { finalMarkup } = await harness.renderWithLifecycle();
+      assert.match(finalMarkup, /Chi tiết đơn hàng #HG-501/);
+      assert.doesNotMatch(finalMarkup, /Giảm bằng điểm|Điểm đã dùng|#1000000501|89241/);
+      assert.match(finalMarkup, /Tổng thanh toán:[\s\S]*>0 đ</);
+    }
+  });
+
+  test('72. Đơn hủy giữ trạng thái giao dịch nhưng không hướng dẫn đợi hoặc thanh toán lại', async () => {
+    for (const status of ['CREATING', 'PENDING', 'FAILED', 'EXPIRED']) {
+      const harness = await createOrderSuccessTestHarness({ orderId: '501', useRealEffects: true,
+        orderData: { id: 501, status: 'CANCELLED', paymentMethod: 'PAYOS_VIETQR', totalAmount: 50000 }, paymentData: { status } });
+      const { finalMarkup } = await harness.renderWithLifecycle();
+      assert.match(finalMarkup, /Đơn hàng đã bị hủy/);
+      assert.match(finalMarkup, /Mã đơn hàng:[\s\S]*#HG-501/);
+      assert.doesNotMatch(finalMarkup, /Vui lòng chờ trong giây lát|quay lại trang thanh toán để thử lại|tạo mã thanh toán mới|href="\/checkout/);
+      assert.match(finalMarkup, /Không tiếp tục thanh toán cho đơn đã hủy/);
+    }
+  });
+
+  test('73. Cả hai bảng kết quả giữ tạm tính 0 và chỉ hiển thị trường điểm đã được lưu', async () => {
+    for (const paymentData of [null, { status: 'PAID' }]) {
+      for (const patch of [{ pointsUsed: 20 }, { pointsDiscount: 2000 }]) {
+        const harness = await createOrderSuccessTestHarness({ orderId: '501', useRealEffects: true, paymentData,
+          orderData: { id: 501, status: 'PENDING', paymentMethod: 'PAYOS_VIETQR', subtotal: 0, totalAmount: 0,
+            items: [{ id: 1, price: 50000, quantity: 1 }], ...patch } });
+        const { finalMarkup } = await harness.renderWithLifecycle();
+        assert.match(finalMarkup, /Tạm tính[^<]*:[\s\S]*?>0 đ</);
+        assert.equal(finalMarkup.includes('20 điểm'), patch.pointsUsed === 20);
+        assert.equal(finalMarkup.includes('-2.000'), patch.pointsDiscount === 2000);
+        assert.match(finalMarkup, /Tổng thanh toán:[\s\S]*>0 đ</);
+      }
+    }
+  });
 });
 
 

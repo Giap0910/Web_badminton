@@ -1,5 +1,5 @@
 import AccountAvatar from './AccountAvatar';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -18,11 +18,40 @@ import {
   ChevronDown
 } from 'lucide-react';
 
+const navbarHeightOwners = new WeakMap();
+const NAVBAR_HEIGHT_PROPERTY = '--customer-navbar-height';
+
+function useNavbarHeight(headerRef, mobileMenuOpen) {
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const root = header.ownerDocument.documentElement, view = header.ownerDocument.defaultView;
+    let active = true, publishedValue = '';
+    const measure = () => {
+      const height = Math.ceil(header.getBoundingClientRect().height);
+      if (!active || !Number.isFinite(height) || height <= 0) return;
+      publishedValue = `${height}px`; navbarHeightOwners.set(root, header);
+      root.style.setProperty(NAVBAR_HEIGHT_PROPERTY, publishedValue);
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    observer?.observe(header); view?.addEventListener('resize', measure);
+    return () => {
+      active = false; observer?.disconnect(); view?.removeEventListener('resize', measure);
+      if (navbarHeightOwners.get(root) !== header) return;
+      navbarHeightOwners.delete(root);
+      if (root.style.getPropertyValue(NAVBAR_HEIGHT_PROPERTY) === publishedValue) root.style.removeProperty(NAVBAR_HEIGHT_PROPERTY);
+    };
+  }, [headerRef, mobileMenuOpen]);
+}
+
 const Navbar = () => {
   const { profile, user, isAuthenticated, isAdmin, logout } = useAuth();
   const { cartCount } = useCart();
   const { selectedRackets } = useCompare();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerRef = useRef(null);
+  useNavbarHeight(headerRef, mobileMenuOpen);
   const navigate = useNavigate();
 
 
@@ -35,7 +64,7 @@ const Navbar = () => {
   ];
 
   return (
-    <header className="sticky top-0 left-0 right-0 z-50 bg-[#0F172A] text-white shadow-header-sticky border-b border-slate-800">
+    <header ref={headerRef} className="sticky top-0 left-0 right-0 z-50 bg-[#0F172A] text-white shadow-header-sticky border-b border-slate-800">
       <div className="max-w-[80rem] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-between pt-2.5 sm:pt-3 pb-2">
         {/* Top Header Row */}
         <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-y-2 gap-x-2 lg:gap-6">
@@ -208,14 +237,14 @@ const Navbar = () => {
             {/* Mobile links cho 4 phụ kiện */}
             <div className="pt-2 border-t border-slate-800/60 grid grid-cols-2 gap-1 text-[11px]">
               <Link
-                to="/product/racket-grip/grip-ac102ex"
+                to="/products?categoryId=5&accessoryType=quan_can"
                 onClick={() => setMobileMenuOpen(false)}
                 className="px-2 py-1.5 rounded text-slate-400 hover:text-white"
               >
                 • Quấn Cán Vợt
               </Link>
               <Link
-                to="/product/string/string-bg80p"
+                to="/products?categoryId=5&accessoryType=day_cuoc"
                 onClick={() => setMobileMenuOpen(false)}
                 className="px-2 py-1.5 rounded text-slate-400 hover:text-white"
               >
@@ -229,7 +258,7 @@ const Navbar = () => {
                 • Ống Cầu Lông
               </Link>
               <Link
-                to="/product/sweatband/sweatband-ac402"
+                to="/products?categoryId=5&accessoryType=bang_do"
                 onClick={() => setMobileMenuOpen(false)}
                 className="px-2 py-1.5 rounded text-slate-400 hover:text-white"
               >
