@@ -29,7 +29,12 @@ public class PaymentTransitionStore {
     private final EntityManager em;
 
     public record Locked(Order order, PaymentAttempt attempt, PaymentMethodTransition operation) {}
-    public record Runner(Long orderId, Long userId, long epoch, Long code, boolean claimed) {}
+    public record Runner(Long orderId, Long userId, long epoch, Long code, boolean claimed,
+            String operationId, String target) {
+        public Runner(Long id, Long owner, long epoch, Long code, boolean claimed) {
+            this(id, owner, epoch, code, claimed, null, "COD");
+        }
+    }
     public record Outcome(int status, String error, PaymentTransitionResponse body) {}
 
     @Transactional(readOnly = true)
@@ -47,20 +52,29 @@ public class PaymentTransitionStore {
     }
 
     @Transactional
-    public void prepare(Long id, Long owner, String key, PaymentTransitionRequest request) {
+    public String prepare(Long id, Long owner, String key, PaymentTransitionRequest request) {
         var state = lockOwned(id, owner);
-        var op = state.operation();
-        if (op != null && key.equals(op.getIdempotencyKey())) {
-            if (!request.fingerprint().equals(op.getRequestHash())) throw error("IDEMPOTENCY_CONFLICT");
-            return;
+        var replay = transitions.findByOrderIdAndIdempotencyKey(id, key).orElse(null);
+        if (replay != null) {
+            if (!request.fingerprint().equals(replay.getRequestHash())) throw error("IDEMPOTENCY_CONFLICT");
+            return replay.getOperationId();
         }
-        if (!"COD".equals(request.targetPaymentMethod())) throw error("PAYMENT_METHOD_TRANSITION_OUT_OF_SCOPE");
-        if (op != null) throw PaymentTransitionGuard.conflict();
+        requireIdle(state, request);
         if (state.order().getCheckoutRevision() != request.expectedStateVersion()) throw error("STALE_ORDER_STATE");
-        policy.requireEligible(state.order(), state.attempt());
+        if ("COD".equals(request.targetPaymentMethod())) policy.requireEligible(state.order(), state.attempt());
+        else policy.requireReverseEligible(state.order(), state.attempt());
         validateReservation(state.order());
-        transitions.saveAndFlush(draft(state, key, request));
+        var saved = transitions.saveAndFlush(draft(state, key, request));
         CheckoutRevision.touch(state.order());
+        return saved.getOperationId();
+    }
+
+    private void requireIdle(Locked state, PaymentTransitionRequest request) {
+        var op = state.operation();
+        if (op == null) return;
+        if (op.getStatus() == PaymentMethodTransition.Status.VERIFYING) throw PaymentTransitionGuard.conflict();
+        if (op.getStatus() == PaymentMethodTransition.Status.NEEDS_REVIEW) throw PaymentTransitionGuard.reviewRequired();
+        if (state.order().getPaymentMethod().equals(request.targetPaymentMethod())) throw PaymentTransitionGuard.conflict();
     }
 
     private PaymentMethodTransition draft(Locked state, String key, PaymentTransitionRequest request) {
@@ -72,7 +86,10 @@ public class PaymentTransitionStore {
         op.setIdempotencyKey(key);
         op.setRequestHash(request.fingerprint());
         op.setExpectedStateVersion(request.expectedStateVersion());
-        op.setOriginalExpiresAt(state.order().getExpiresAt());
+        op.setSourceMethod(state.order().getPaymentMethod());
+        op.setTargetMethod(request.targetPaymentMethod());
+        op.setOriginalExpiresAt(state.order().getExpiresAt() == null
+                ? LocalDateTime.now().plusMinutes(15) : state.order().getExpiresAt());
         op.setCreatedAt(LocalDateTime.now());
         op.setUpdatedAt(op.getCreatedAt());
         copyProvider(op, state.attempt());
@@ -80,6 +97,11 @@ public class PaymentTransitionStore {
     }
 
     private void copyProvider(PaymentMethodTransition op, PaymentAttempt attempt) {
+        if (attempt == null) {
+            op.setAmount(op.getOrder().getTotalAmount());
+            op.setCurrency("VND");
+            return;
+        }
         op.setProviderOrderCode(attempt.getOrderCode());
         op.setProviderLinkId(attempt.getPaymentLinkId());
         op.setAmount(attempt.getAmount());
@@ -88,22 +110,41 @@ public class PaymentTransitionStore {
 
     @Transactional
     public Runner claim(Long id, Long owner) {
-        var state = lockOwned(id, owner);
+        return claim(id, owner, null);
+    }
+
+    @Transactional
+    public Runner claim(Long id, Long owner, String operationId) {
+        var state = lockOperation(id, owner, operationId);
         var op = state.operation();
         if (op == null) throw PaymentTransitionGuard.conflict();
-        if (!continueOperation(state)) return new Runner(id, owner, op.getRunnerEpoch(), op.getProviderOrderCode(), false);
+        if (!continueOperation(state)) return runner(state, owner, false);
         if (op.getLeaseUntil() != null && op.getLeaseUntil().isAfter(LocalDateTime.now())) {
-            return new Runner(id, owner, op.getRunnerEpoch(), op.getProviderOrderCode(), false);
+            return runner(state, owner, false);
         }
         op.setRunnerEpoch(Math.addExact(op.getRunnerEpoch(), 1));
         op.setLeaseUntil(LocalDateTime.now().plusSeconds(60));
         op.setUpdatedAt(LocalDateTime.now());
-        return new Runner(id, owner, op.getRunnerEpoch(), op.getProviderOrderCode(), true);
+        return runner(state, owner, true);
+    }
+
+    private Runner runner(Locked state, Long owner, boolean claimed) {
+        var op = state.operation();
+        return new Runner(state.order().getId(), owner, op.getRunnerEpoch(), op.getProviderOrderCode(),
+                claimed, op.getOperationId(), op.getTargetMethod());
+    }
+
+    private Locked lockOperation(Long id, Long owner, String operationId) {
+        var state = lockOwned(id, owner);
+        if (operationId == null) return state;
+        var op = transitions.findByOperationId(operationId).orElseThrow(PaymentTransitionGuard::conflict);
+        if (!op.getOrder().getId().equals(id)) throw PaymentTransitionGuard.conflict();
+        return new Locked(state.order(), state.attempt(), op);
     }
 
     @Transactional
     public boolean renew(Runner runner) {
-        var state = lockOwned(runner.orderId(), runner.userId());
+        var state = lockOperation(runner.orderId(), runner.userId(), runner.operationId());
         var op = state.operation();
         if (!continueOperation(state) || op.getRunnerEpoch() != runner.epoch()) return false;
         op.setLeaseUntil(LocalDateTime.now().plusSeconds(60));
@@ -115,7 +156,7 @@ public class PaymentTransitionStore {
         var op = state.operation();
         if (op.getStatus() != PaymentMethodTransition.Status.VERIFYING) return false;
         if (state.order().getStatus() == OrderStatus.PAID) reject(op, "PAYMENT_ALREADY_SETTLED", false);
-        else if (guard.needsReview(state.attempt()) || guard.hasMoney(state.attempt())) reject(op, "PAYMENT_REQUIRES_REVIEW", true);
+        else if (historyBlocked(state)) reject(op, "PAYMENT_REQUIRES_REVIEW", true);
         else if (state.order().getStatus() != OrderStatus.PENDING) reject(op, "ORDER_NOT_ELIGIBLE", false);
         else if (!op.getOriginalExpiresAt().isAfter(LocalDateTime.now())) {
             orderService.expireOrder(state.order().getId());
@@ -124,9 +165,14 @@ public class PaymentTransitionStore {
         return op.getStatus() == PaymentMethodTransition.Status.VERIFYING;
     }
 
+    private boolean historyBlocked(Locked state) {
+        try { guard.checkHistory(state.order(), null); return false; }
+        catch (PaymentLinkException ex) { return true; }
+    }
+
     @Transactional
     public Outcome observe(Runner runner, PayOSPaymentClient.Query proof, PaymentEvent.Source source, boolean finalize) {
-        var state = lockOwned(runner.orderId(), runner.userId());
+        var state = lockOperation(runner.orderId(), runner.userId(), runner.operationId());
         var op = state.operation();
         audit(op, source.name(), proof);
         if (proof == null) return outcome(state, true);
@@ -170,7 +216,7 @@ public class PaymentTransitionStore {
 
     @Transactional
     public void failed(Runner runner, String code) {
-        var state = lockOwned(runner.orderId(), runner.userId());
+        var state = lockOperation(runner.orderId(), runner.userId(), runner.operationId());
         audit(state.operation(), "ERROR", Map.of("code", code));
         if (state.operation().getRunnerEpoch() != runner.epoch()
                 || state.operation().getStatus() != PaymentMethodTransition.Status.VERIFYING) return;
@@ -185,10 +231,52 @@ public class PaymentTransitionStore {
         return outcome(lockOwned(id, owner), replay);
     }
 
+    @Transactional
+    public Outcome reply(Runner runner, boolean replay) {
+        return outcome(lockOperation(runner.orderId(), runner.userId(), runner.operationId()), replay);
+    }
+
+    @Transactional
+    public Outcome activatePayos(Runner runner, PayOSPaymentClient.Query proof) {
+        var state = lockOperation(runner.orderId(), runner.userId(), runner.operationId());
+        var op = state.operation();
+        if (proof != null) {
+            audit(op, "REVERSE_QUERY", proof);
+            settlement.query(op.getPaymentAttempt().getId(), proof);
+        }
+        if (!continueOperation(state) || op.getRunnerEpoch() != runner.epoch()) return outcome(state, true);
+        if (!"COD".equals(state.order().getPaymentMethod()) || state.order().getCashCollectedAt() != null) {
+            reject(op, "ORDER_NOT_ELIGIBLE", false); return outcome(state, false);
+        }
+        if (op.getPaymentAttempt() != null && !guard.safeTerminal(op, proof)) return outcome(state, false);
+        validateReservation(state.order());
+        applyPayos(state);
+        return outcome(state, false);
+    }
+
+    private void applyPayos(Locked state) {
+        var order = state.order();
+        var op = state.operation();
+        order.setPaymentMethod("PAYOS_VIETQR");
+        order.setPayosOrderCode(java.util.concurrent.ThreadLocalRandom.current().nextLong(1_000_000_000_000L, 9_000_000_000_000L));
+        order.setExpiresAt(LocalDateTime.now().plusMinutes(15));
+        op.setStatus(PaymentMethodTransition.Status.APPLIED);
+        op.setReason(null);
+        op.setAppliedAt(LocalDateTime.now());
+        op.setFinishedAt(op.getAppliedAt());
+        op.setUpdatedAt(op.getAppliedAt());
+        op.setLeaseUntil(null);
+        CheckoutRevision.touch(order);
+        op.setResult(serialize(Map.of("orderId", order.getId(), "targetPaymentMethod", "PAYOS_VIETQR",
+                "orderCode", order.getPayosOrderCode(), "appliedStateVersion", order.getCheckoutRevision())));
+    }
+
     private Outcome outcome(Locked state, boolean replay) {
         var op = state.operation();
+        var current = "PAYOS_VIETQR".equals(state.order().getPaymentMethod())
+                ? attempts.findByOrderCode(state.order().getPayosOrderCode()).orElse(null) : state.attempt();
         var body = new PaymentTransitionResponse(operation(op), orderService.snapshot(state.order()),
-                payment(state.attempt()), state.order().getCheckoutRevision(), replay);
+                payment(current), state.order().getCheckoutRevision(), replay);
         return switch (op.getStatus()) {
             case APPLIED -> new Outcome(200, null, body);
             case VERIFYING -> new Outcome(202, null, body);
@@ -205,6 +293,26 @@ public class PaymentTransitionStore {
         if (op == null || op.getStatus() != PaymentMethodTransition.Status.APPLIED
                 || !"COD".equals(state.order().getPaymentMethod())) return null;
         return new Runner(id, state.order().getUser().getId(), op.getRunnerEpoch(), op.getProviderOrderCode(), false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Runner> retiredHistory(Long id) {
+        var order = orders.findById(id).orElseThrow(this::missing);
+        return attempts.findByOrderIdOrderByIdAsc(id).stream()
+                .filter(a -> !Objects.equals(a.getOrderCode(), order.getPayosOrderCode()))
+                .map(a -> new Runner(id, order.getUser().getId(), 0, a.getOrderCode(), false)).toList();
+    }
+
+    @Transactional
+    public boolean verifyRetired(Runner runner, PayOSPaymentClient.Query proof) {
+        var state = lockOwned(runner.orderId(), runner.userId());
+        var attempt = attempts.findByOrderCode(runner.code()).orElseThrow(this::missing);
+        if (!attempt.getOrder().getId().equals(runner.orderId())) throw PaymentTransitionGuard.reviewRequired();
+        settlement.query(attempt.getId(), proof);
+        if (proof == null || !Objects.equals(attempt.getPaymentLinkId(), proof.paymentLinkId())
+                || !Objects.equals(attempt.getOrderCode(), proof.orderCode()) || attempt.getAmount().compareTo(proof.amount()) != 0
+                || !Set.of("CANCELLED", "EXPIRED").contains(proof.status()) || !policy.zero(proof)) return false;
+        return !guard.hasMoney(attempt) && !guard.needsReview(attempt);
     }
 
     @Transactional
@@ -233,7 +341,8 @@ public class PaymentTransitionStore {
 
     private Locked refresh(Order order) {
         em.refresh(order, LockModeType.PESSIMISTIC_WRITE);
-        PaymentAttempt attempt = attempts.findByOrderId(order.getId()).orElse(null);
+        PaymentAttempt attempt = "PAYOS_VIETQR".equals(order.getPaymentMethod())
+                ? attempts.findByOrderCode(order.getPayosOrderCode()).orElse(null) : attempts.findByOrderId(order.getId()).orElse(null);
         if (attempt != null) {
             attempt = attempts.findByIdForUpdate(attempt.getId()).orElseThrow();
             em.refresh(attempt, LockModeType.PESSIMISTIC_WRITE);

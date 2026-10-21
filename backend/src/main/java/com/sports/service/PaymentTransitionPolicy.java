@@ -11,6 +11,35 @@ import java.util.*;
 @Service @RequiredArgsConstructor
 public class PaymentTransitionPolicy {
     private final PaymentTransitionGuard guard;
+    private final com.sports.repository.PaymentMethodTransitionRepository transitions;
+    @org.springframework.beans.factory.annotation.Value("${payos.mode:REAL}") private String mode = "REAL";
+
+    public String reverseForbidden(Order order, PaymentAttempt attempt) {
+        if ("MOCK".equals(mode)) return "MOCK_TRANSITION_UNSUPPORTED";
+        if (order.getStatus() != OrderStatus.PENDING || !"COD".equals(order.getPaymentMethod())
+                || order.getCashCollectedAt() != null) return "ORDER_NOT_ELIGIBLE";
+        if (transitions.existsByOrderIdAndTargetMethod(order.getId(), "PAYOS_VIETQR")) {
+            return "PAYMENT_TRANSITION_LIMIT_REACHED";
+        }
+        return retiredReason(order, attempt);
+    }
+
+    private String retiredReason(Order order, PaymentAttempt attempt) {
+        if (attempt == null) return null;
+        if (guard.needsReview(attempt) || guard.hasMoney(attempt)) return "PAYMENT_REQUIRES_REVIEW";
+        if (!Set.of(PaymentAttempt.Status.CANCELLED, PaymentAttempt.Status.EXPIRED).contains(attempt.getStatus())
+                || attempt.getPaymentLinkId() == null || attempt.getPaymentLinkId().isBlank()) return "PAYMENT_LINK_UNRESOLVED";
+        if (!"PAYOS".equals(attempt.getProvider()) || !"VND".equals(attempt.getCurrency())
+                || !Objects.equals(order.getPayosOrderCode(), attempt.getOrderCode())
+                || order.getTotalAmount().compareTo(attempt.getAmount()) != 0) return "PAYMENT_REQUIRES_REVIEW";
+        return null;
+    }
+
+    public void requireReverseEligible(Order order, PaymentAttempt attempt) {
+        String reason = reverseForbidden(order, attempt);
+        if (reason != null) throw new PaymentLinkException(409, reason, "Đơn chưa đủ điều kiện đổi sang PayOS");
+        guard.checkHistory(order, null);
+    }
 
     public String forbidden(Order order, PaymentAttempt attempt) {
         if (order.getStatus() != OrderStatus.PENDING || !"PAYOS_VIETQR".equals(order.getPaymentMethod())
@@ -28,9 +57,14 @@ public class PaymentTransitionPolicy {
     }
 
     public Eligibility eligibility(Order order, PaymentAttempt attempt, PaymentMethodTransition op) {
-        String reason = op == null ? forbidden(order, attempt) : operationReason(op);
+        boolean active = op != null && (op.getStatus() == PaymentMethodTransition.Status.VERIFYING
+                || op.getStatus() == PaymentMethodTransition.Status.NEEDS_REVIEW);
+        String reason = active ? operationReason(op) : "COD".equals(order.getPaymentMethod())
+                ? reverseForbidden(order, attempt) : forbidden(order, attempt);
+        try { guard.checkHistory(order, attempt); }
+        catch (PaymentLinkException ex) { reason = ex.getCode(); }
         if (reason == null) return new Eligibility(true, List.of("PAYOS_VIETQR", "COD"), List.of());
-        boolean continuePayos = op == null && "PAYMENT_LINK_UNRESOLVED".equals(reason);
+        boolean continuePayos = !active && "PAYMENT_LINK_UNRESOLVED".equals(reason);
         return new Eligibility(false, continuePayos ? List.of("PAYOS_VIETQR") : List.of(), List.of(reason));
     }
 

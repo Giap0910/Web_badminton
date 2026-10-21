@@ -7,7 +7,16 @@ import { createServer } from 'vite';
 const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] },
   server: { middlewareMode: true, hmr: false }, appType: 'custom' });
 const gallery = await server.ssrLoadModule('/src/components/ProductGallery.jsx');
+const media = await server.ssrLoadModule('/src/components/ProductImage.jsx');
 after(() => server.close());
+
+test('Ảnh nội bộ được tải từ Backend thay vì cổng Vite', () => {
+  assert.equal(media.productImageSource('/api/media/products/1/a.webp'), 'http://localhost:8080/api/media/products/1/a.webp');
+  const html = renderToStaticMarkup(React.createElement(media.default, { src: '/api/media/products/1/a.webp' }));
+  assert.match(html, /src="http:\/\/localhost:8080\/api\/media\/products\/1\/a.webp"/);
+  assert.equal(media.internalProductImage('https://other.test/a.webp'), false);
+  assert.equal(media.productImageSource(null), null);
+});
 
 test('Cả 5 danh mục có đúng 4 ô và ảnh nhỏ nằm bên trái ảnh lớn', () => {
   for (let categoryId = 1; categoryId <= 5; categoryId++) {

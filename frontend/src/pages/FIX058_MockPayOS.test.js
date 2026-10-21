@@ -238,7 +238,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
 
     test('4.7. PayOS MOCK -> COD transition uses same Order.id and FIX-057 transition endpoint', () => {
       assert.match(checkoutSource, /orderApi\.transitionPaymentMethod\(/);
-      assert.match(checkoutSource, /targetPaymentMethod:\s*['"]COD['"]/);
+      assert.match(checkoutSource, /targetPaymentMethod,/);
     });
   });
 
@@ -1308,6 +1308,26 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
       await harness.renderWithLifecycle();
       assert.equal(createdCalls, 1, 'Payment 404 performs exactly one recovery call for same order');
       harness.unmount();
+    });
+
+    test('FIX-059: empty HTTP 200 payment body creates one link for the same Order', async () => {
+      const harness = await createQRPaymentRuntimeHarness({
+        initialOrderId: '501',
+        getOrderByIdHandler: async () => ({ data: {
+          id: 501, status: 'PENDING', paymentMethod: 'PAYOS_VIETQR', totalAmount: 500000,
+        } }),
+        getOrderPaymentHandler: async () => '',
+        createPaymentLinkHandler: async id => ({ data: {
+          id: 9501, orderId: id, status: 'PENDING', amount: 500000,
+        } }),
+      });
+      try {
+        await harness.renderWithLifecycle();
+        assert.equal(harness.createPaymentLinkCalls.length, 1);
+        assert.equal(String(harness.createPaymentLinkCalls[0].id), '501');
+        await harness.renderWithLifecycle();
+        assert.equal(harness.createPaymentLinkCalls.length, 1);
+      } finally { harness.unmount(); }
     });
 
     test('10.6. Late response from Order 501 arriving after switch to 502 is discarded by generation guard', async () => {

@@ -343,6 +343,9 @@ const OrderDetailPage = () => {
         {order.status === 'PENDING' && order.paymentMethod === 'COD' && (
           <div className="bg-white p-6 rounded-2xl space-y-3">
             <p>Đơn COD đang chờ xử lý. Thanh toán khi nhận hàng; không áp dụng thời hạn QR.</p>
+            {!paymentLoading && !paymentError && !orderError && !order.cashCollected
+              && (!payment || ['CANCELLED', 'EXPIRED', 'FAILED'].includes(payment.status)) &&
+              <Link to={`/checkout?orderId=${order.id}`} className="inline-flex px-4 py-2 rounded-xl bg-red-600 text-white text-sm font-bold">Đổi phương thức thanh toán</Link>}
             <button className="border rounded px-4 py-2" onClick={handleCancelOrder}>Hủy đơn</button>
           </div>
         )}

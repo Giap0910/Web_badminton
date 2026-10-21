@@ -1,3 +1,4 @@
+import * as productMedia from '../utils/productMedia.js';
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -162,8 +163,8 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     // Verify that the submit button in resume mode triggers transition, not handleSubmitOrder
     assert.match(
       checkoutSource,
-      /onClick=\{handleTransitionToCOD\}/,
-      'Resume button must call handleTransitionToCOD'
+      /onClick=\{handleConfirmResumePayment\}/,
+      'Resume button must confirm the selected method'
     );
   });
 
@@ -211,12 +212,12 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
   test('14. Current payment method displayed clearly', () => {
     assert.match(
       checkoutSource,
-      /resumeContext\.order\?\.paymentMethod\s*===\s*'PAYOS_VIETQR'/,
+      /\['PAYOS_VIETQR', 'Thanh toán QR Động/,
       'Must check PAYOS_VIETQR'
     );
     assert.match(
       checkoutSource,
-      /resumeContext\.order\?\.paymentMethod\s*===\s*'COD'/,
+      /\['COD', 'Thanh toán khi nhận hàng/,
       'Must check COD'
     );
   });
@@ -224,7 +225,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
   test('15. Eligible PayOS→COD option shown when backend permits', () => {
     assert.match(
       checkoutSource,
-      /resumeContext\.eligibility\?\.eligible\s*&&\s*resumeContext\.eligibility\?\.allowedMethods\?\.includes\('COD'\)/,
+      /resumeContext\.eligibility\?\.eligible\s*&&\s*resumeContext\.eligibility\?\.allowedMethods\?\.includes\(method\)/,
       'Must check backend eligibility for COD'
     );
   });
@@ -256,7 +257,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
   test('19. NEEDS_REVIEW cannot normal switch to COD', () => {
     assert.match(
       checkoutSource,
-      /resumeContext\.payment\?\.status\s*===\s*'NEEDS_REVIEW'/,
+      /resumeContext\.payment\?\.status\s*!==\s*'NEEDS_REVIEW'/,
       'Must guard against NEEDS_REVIEW payment'
     );
   });
@@ -332,10 +333,10 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     );
   });
 
-  test('26. Mutation sends targetPaymentMethod: "COD"', () => {
+  test('26. Mutation sends the selected targetPaymentMethod', () => {
     assert.match(
       checkoutSource,
-      /targetPaymentMethod:\s*'COD'/,
+      /targetPaymentMethod,/,
       'Payload must set targetPaymentMethod to COD'
     );
   });
@@ -351,7 +352,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
   test('28. Mutation sends Idempotency-Key header UUID', () => {
     assert.match(
       checkoutSource,
-      /idempotencyKey\s*=\s*getOrCreateTransitionKey\(resumeOrderId,\s*'COD',\s*currentVersion\)/,
+      /idempotencyKey\s*=\s*getOrCreateTransitionKey\(resumeOrderId,\s*targetPaymentMethod,\s*currentVersion\)/,
       'Must retrieve or create transition idempotency key'
     );
     assert.match(
@@ -385,7 +386,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     );
     assert.match(
       checkoutSource,
-      /navigate\(`\/order-success\/\$\{resumeOrderId\}`/,
+      /`\/order-success\/\$\{resumeOrderId\}`/,
       'Must navigate to order-success after successful COD transition'
     );
   });
@@ -1050,6 +1051,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
 
     let checkoutVoucherModule;
     const customRequire = (specifier) => {
+      if (specifier.includes('productMedia')) return productMedia;
       if (specifier.includes('useCheckoutVoucher')) return checkoutVoucherModule;
       if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
@@ -1120,6 +1122,14 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     }
 
     async function triggerClick(testId) {
+      if (testId === 'switch-to-cod-btn' && capturedElements.has('recover-transition-btn')) testId = 'recover-transition-btn';
+      if (testId === 'switch-to-cod-btn') {
+        const radio = capturedElements.get('resume-method-COD');
+        if (radio && !radio.props.disabled && !radio.props.checked) {
+          radio.props.onChange();
+          await renderWithLifecycle(0);
+        }
+      }
       const el = capturedElements.get(testId);
       if (!el || !el.props || typeof el.props.onClick !== 'function') {
         throw new Error(`Element with data-testid="${testId}" not found or has no onClick`);
@@ -1286,6 +1296,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     const mockLucide = new Proxy({}, { get: (t, p) => (props) => React.createElement('span', { 'data-icon': p, ...props }) });
 
     const customRequire = (specifier) => {
+      if (specifier.includes('productMedia')) return productMedia;
       if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;
@@ -3340,7 +3351,7 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     assert.match(finalMarkup, /Đổi 200 điểm/);
     assert.match(finalMarkup, /-20\.000 đ/);
     assert.match(finalMarkup, /#HG-901/);
-    assert.match(finalMarkup, /Mã PayOS:.*1000000091/);
+    assert.doesNotMatch(finalMarkup, /Mã PayOS:/);
     assert.doesNotMatch(finalMarkup, /id="redeem-points"/);
     assert.equal(harness.transitionCalls.length, 0);
     assert.equal(harness.getCart().length, 1);
@@ -3355,6 +3366,85 @@ describe('FIX-057 — Resume Unpaid Checkout & Safe Payment Transition', () => {
     harness.setSearch('?orderId=902&refresh=1');
     assert.match((await harness.renderWithLifecycle()).finalMarkup, /Đổi — điểm/);
     assert.equal(harness.transitionCalls.length, 0);
+  });
+
+  const reverseContext = (extra = {}) => ({
+    order: { id: 5901, status: 'PENDING', paymentMethod: 'COD', customerName: 'Khách kiểm thử',
+      shippingPhone: '0901234567', shippingAddress: 'Địa chỉ đã lưu', note: 'Gọi trước khi giao',
+      totalAmount: 475000, discountAmount: 25000, shippingFee: 0, pointsUsed: 0, pointsDiscount: 0,
+      items: [{ id: 81, productName: 'Vợt snapshot', quantity: 1, price: 500000 }] },
+    payment: null, stateVersion: 7, eligibility: { eligible: true, allowedMethods: ['COD', 'PAYOS_VIETQR'], blockedReasons: [] },
+    ...extra,
+  });
+  const reverseHarness = options => createCheckoutRuntimeHarness({ orderId: '5901', search: '?orderId=5901',
+    cartItems: [{ cartItemId: 'cart-C', product: { id: 99, price: 999999 }, quantity: 2 }], ...options });
+  async function selectReversePayos(harness) {
+    harness.capturedElements.get('resume-method-PAYOS_VIETQR').props.onChange();
+    return harness.renderWithLifecycle(0);
+  }
+  const confirmSelected = harness => harness.capturedElements.get('switch-to-cod-btn').props.onClick();
+
+  test('FIX059: radio COD/PayOS giống checkout, giữ snapshot chỉ đọc; chọn radio chưa gọi backend', async () => {
+    const h = await reverseHarness({ contextData: reverseContext() });
+    const { finalMarkup } = await h.renderWithLifecycle();
+    assert.match(finalMarkup, /value="0901234567"/); assert.match(finalMarkup, /readonly=""/);
+    assert.match(finalMarkup, /Địa chỉ đã lưu/); assert.match(finalMarkup, /Gọi trước khi giao/);
+    assert.match(finalMarkup, /475.000 đ/); assert.match(finalMarkup, /500.000 đ/);
+    assert.equal(h.capturedElements.get('resume-method-COD').props.checked, true);
+    await selectReversePayos(h); assert.equal(h.transitionCalls.length, 0); assert.equal(h.getCart().length, 1);
+    assert.equal(h.capturedElements.get('resume-method-PAYOS_VIETQR').props.checked, true);
+  });
+
+  test('FIX059: xác nhận COD→PayOS gửi đúng đích/version và đi trang QR cùng Order.id', async () => {
+    const context = reverseContext();
+    const h = await reverseHarness({ contextData: context, onTransition: async () => ({ status: 200,
+      data: { order: { ...context.order, paymentMethod: 'PAYOS_VIETQR' }, payment: null,
+        operation: { status: 'APPLIED', targetPaymentMethod: 'PAYOS_VIETQR' }, stateVersion: 9 } }) });
+    await h.renderWithLifecycle(); await selectReversePayos(h); await confirmSelected(h);
+    assert.equal(h.transitionCalls.length, 1); assert.equal(h.transitionCalls[0].id, 5901);
+    assert.deepEqual(h.transitionCalls[0].payload, { targetPaymentMethod: 'PAYOS_VIETQR', expectedStateVersion: 7 });
+    assert.match(h.transitionCalls[0].idempotencyKey, /^[0-9a-f-]{36}$/i);
+    assert.equal(h.getNavigatedTo(), '/payment/qr/5901'); assert.equal(h.getCart().length, 1);
+    assert.equal(h.getNavigatedOptions().state.order.shippingPhone, context.order.shippingPhone);
+  });
+
+  test('FIX059: COD→PayOS double click chỉ gửi một mutation', async () => {
+    let release; const pending = new Promise(resolve => { release = resolve; }); const context = reverseContext();
+    const h = await reverseHarness({ contextData: context, onTransition: async () => { await pending;
+      return { status: 200, data: { order: { ...context.order, paymentMethod: 'PAYOS_VIETQR' }, operation: { status: 'APPLIED' } } }; } });
+    await h.renderWithLifecycle(); await selectReversePayos(h);
+    const first = confirmSelected(h); const second = confirmSelected(h);
+    assert.equal(h.transitionCalls.length, 1); release(); await Promise.all([first, second]);
+    assert.equal(h.getNavigatedTo(), '/payment/qr/5901');
+  });
+
+  test('FIX059: mất response đổi sang PayOS phải GET recovery, không gửi POST thứ hai khi APPLIED', async () => {
+    const context = reverseContext();
+    const h = await reverseHarness({ contextData: context, onTransition: async () => { throw { response: { status: 504 } }; } });
+    await h.renderWithLifecycle(); await selectReversePayos(h); await confirmSelected(h); await h.renderWithLifecycle(0);
+    const original = h.transitionCalls[0];
+    h.setContextData({ ...context, order: { ...context.order, paymentMethod: 'PAYOS_VIETQR' },
+      operation: { status: 'APPLIED', idempotencyKey: original.idempotencyKey, targetPaymentMethod: 'PAYOS_VIETQR', expectedStateVersion: 7 } });
+    await h.triggerClick('recover-transition-btn');
+    assert.equal(h.transitionCalls.length, 1); assert.equal(h.getNavigatedTo(), '/payment/qr/5901');
+    assert.equal(h.apiCallHistory.at(-1).type, 'GET_CONTEXT');
+  });
+
+  test('FIX059: backend khóa đổi phương thức thì radio PayOS bị khóa; không tự giả thành công', async () => {
+    const h = await reverseHarness({ contextData: reverseContext({ eligibility: { eligible: false, allowedMethods: [],
+      blockedReasons: ['PAYMENT_TRANSITION_LIMIT_REACHED'] } }) });
+    const { finalMarkup } = await h.renderWithLifecycle();
+    assert.equal(h.capturedElements.get('resume-method-PAYOS_VIETQR').props.disabled, true);
+    assert.match(finalMarkup, /Đơn đã sử dụng lượt đổi/); assert.equal(h.transitionCalls.length, 0);
+    assert.equal(h.getNavigatedTo(), null);
+  });
+
+  test('FIX059: APPLIED thiếu snapshot không được dùng Order giả để báo thành công', async () => {
+    const h = await reverseHarness({ contextData: reverseContext(), onTransition: async () => ({ status: 200,
+      data: { operation: { status: 'APPLIED', targetPaymentMethod: 'PAYOS_VIETQR' } } }) });
+    await h.renderWithLifecycle(); await selectReversePayos(h); await confirmSelected(h);
+    assert.equal(h.getNavigatedTo(), null);
+    assert.match((await h.renderWithLifecycle(0)).finalMarkup, /Phản hồi đơn hàng không hợp lệ/);
   });
 });
 

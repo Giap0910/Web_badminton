@@ -9,5 +9,8 @@ import java.util.List;
 @Repository
 public interface ProductImageRepository extends JpaRepository<ProductImage, Long> {
     List<ProductImage> findByProductIdOrderByDisplayOrderAsc(Long productId);
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "product")
+    java.util.Optional<ProductImage> findFirstByProductIdAndImageUrlAndRightsApprovedTrueAndModelVerifiedTrue(
+            Long productId, String imageUrl);
     void deleteByProductId(Long productId);
 }

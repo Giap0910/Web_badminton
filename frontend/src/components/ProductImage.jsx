@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-
-export const internalProductImage = src => typeof src === 'string' && /^\/api\/media\/products\/\d+\/[a-zA-Z0-9-]+\.(jpg|png|webp)$/.test(src);
+import { internalProductImage, productImageSource } from '../utils/productMedia.js';
+export { internalProductImage, productImageSource } from '../utils/productMedia.js';
 
 /**
  * ProductImage Component
@@ -41,7 +41,7 @@ const ProductImage = ({
   return (
     <div className={`relative flex items-center justify-center overflow-hidden ${className}`}>
       <img
-        src={src}
+        src={productImageSource(src)}
         alt={alt}
         loading={loading}
         onError={() => setHasError(true)}

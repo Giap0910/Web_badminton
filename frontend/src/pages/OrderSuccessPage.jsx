@@ -3,6 +3,7 @@ import { useParams, useLocation, Link } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
 import { formatPrice, isOrderPaid, getOrderStatusLabel } from '../utils/formatters';
 import OrderItemOptions from '../components/OrderItemOptions';
+import { productImageSource } from '../utils/productMedia.js';
 import {
   Tag,
   CheckCircle2,
@@ -105,8 +106,17 @@ const OrderSuccessPage = () => {
       let pStatus = 'idle';
       let pErrMessage = '';
       try {
-        const payRes = await orderApi.getOrderPayment(targetId);
+        const shouldVerify = oData?.paymentMethod === 'PAYOS_VIETQR'
+          && (isManualCheck || Boolean(location.search));
+        const payRes = shouldVerify
+          ? await orderApi.refreshOrderPayment(targetId)
+          : await orderApi.getOrderPayment(targetId);
         pData = (payRes && typeof payRes === 'object' && 'data' in payRes) ? payRes.data : payRes;
+        if (shouldVerify) {
+          const latest = await orderApi.getOrderById(targetId);
+          if (currentOrderIdRef.current !== targetId || !isMountedRef.current) return;
+          setOrder(latest && typeof latest === 'object' && 'data' in latest ? latest.data : latest);
+        }
         if (pData && pData.status) {
           pStatus = 'loaded';
         } else {
@@ -449,7 +459,7 @@ const OrderSuccessPage = () => {
                           <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 shrink-0 flex items-center justify-center overflow-hidden p-0.5">
                             {(item.productImageUrl || item.imageUrl || item.image) ? (
                               <img
-                                src={item.productImageUrl || item.imageUrl || item.image}
+                                src={productImageSource(item.productImageUrl || item.imageUrl || item.image)}
                                 alt={item.productName || item.name}
                                 className="w-full h-full object-contain"
                               />
@@ -525,12 +535,12 @@ const OrderSuccessPage = () => {
               )}
             </button>
 
-            {(isPending || isCreating || isFailed || isExpired) && !isOrderCancelled && order?.paymentMethod === 'PAYOS_VIETQR' && !isPaymentError && (
+            {!isOrderCancelled && !isPaymentError && !isNeedsReview && !isCodPaidConflict && ((order?.paymentMethod === 'PAYOS_VIETQR' && (isPending || isCreating || isFailed || isExpired)) || (isCurrentCod && order?.status === 'PENDING' && !order?.cashCollected)) && (
               <Link
                 to={`/checkout?orderId=${orderId}`}
                 className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition"
               >
-                <span>Đổi sang phương thức COD</span>
+                <span>Đổi phương thức thanh toán</span>
               </Link>
             )}
 
@@ -760,7 +770,7 @@ const OrderSuccessPage = () => {
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-16 h-16 rounded-xl bg-white shrink-0 overflow-hidden shadow-sm flex items-center justify-center p-1 border border-slate-200/60">
                       <img
-                        src={item.productImageUrl || item.imageUrl || item.image}
+                        src={productImageSource(item.productImageUrl || item.imageUrl || item.image)}
                         alt={item.productName || item.name}
                         className="w-full h-full object-contain"
                       />

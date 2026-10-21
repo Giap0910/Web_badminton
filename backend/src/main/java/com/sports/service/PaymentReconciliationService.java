@@ -12,6 +12,24 @@ import org.springframework.transaction.annotation.*;
 public class PaymentReconciliationService {
     private final PaymentReconciliationStore store;
     private final PayOSGateway client;
+    private final PaymentSettlementService settlement;
+
+    @Transactional(propagation = Propagation.NEVER)
+    public PaymentSettlementService.Outcome refresh(Long orderId, Long userId, boolean admin) {
+        var attempt = settlement.readOwnedAttempt(orderId, userId, admin);
+        if (attempt.status() == com.sports.entity.PaymentAttempt.Status.PAID) {
+            return new PaymentSettlementService.Outcome(200, attempt);
+        }
+        if (attempt.paymentLinkId() == null) return new PaymentSettlementService.Outcome(202, attempt);
+        var proof = client.queryPayment(attempt.orderCode());
+        for (int retry = 0; ; retry++) {
+            try { return settlement.query(attempt.id(), proof); }
+            catch (DataIntegrityViolationException | TransientDataAccessException ex) {
+                if (retry >= 2) throw ex;
+            }
+        }
+    }
+
 
     @Transactional(propagation = Propagation.NEVER)
     public PaymentSettlementService.Outcome reconcile(Long id, Long actor, String key, JsonNode body) {

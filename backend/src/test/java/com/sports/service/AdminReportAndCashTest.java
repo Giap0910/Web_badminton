@@ -174,7 +174,7 @@ class AdminReportAndCashTest {
         var repository = mock(OrderRepository.class); var orders = mock(OrderService.class);
         var order = Order.builder().id(9L).status(OrderStatus.SHIPPING).paymentMethod("COD").totalAmount(new BigDecimal("100000")).build();
         when(repository.findByIdForUpdate(9L)).thenReturn(Optional.of(order));
-        var service = new CashCollectionService(repository, orders);
+        var service = new CashCollectionService(repository, orders, mock(PaymentTransitionGuard.class));
         assertThrows(BadRequestException.class, () -> service.collect(9L, 1L, new BigDecimal("1")));
         service.collect(9L, 1L, new BigDecimal("100000")); LocalDateTime first = order.getCashCollectedAt();
         service.collect(9L, 2L, new BigDecimal("100000"));

@@ -19,14 +19,17 @@ public class PaymentTransitionService {
         store.authorize(id, owner);
         String validKey = validateKey(key);
         var request = PaymentTransitionRequest.parse(body);
-        store.prepare(id, owner, validKey, request);
-        var runner = store.claim(id, owner);
-        if (!runner.claimed()) return result(store.reply(id, owner, true));
+        String operation = store.prepare(id, owner, validKey, request);
+        var runner = store.claim(id, owner, operation);
+        if (!runner.claimed()) return result(store.reply(runner, true));
         try { return result(run(runner)); }
         catch (PaymentLinkException ex) { store.failed(runner, ex.getCode()); throw ex; }
     }
 
     private PaymentTransitionStore.Outcome run(PaymentTransitionStore.Runner runner) {
+        if ("PAYOS_VIETQR".equals(runner.target())) {
+            return store.activatePayos(runner, runner.code() == null ? null : query(runner.code()));
+        }
         var query = query(runner.code());
         var observed = store.observe(runner, query, PaymentEvent.Source.RECONCILE_QUERY, true);
         if (observed.status() != 202 || !policy.zero(query)) return observed;

@@ -759,6 +759,36 @@ class PaymentSettlementIntegrationTest {
         }).doCallRealMethod().when(ledger).record(any(), any());
     }
 
+    @Test
+    void ownerRefreshQueriesProviderAndSettlesExactlyOnce() {
+        when(client.queryPayment(code)).thenReturn(paidQuery("OWNER-REFRESH", 100000));
+        assertEquals(PaymentAttempt.Status.PAID, reconcile.refresh(orderId, userId, false).attempt().status());
+        assertEquals(PaymentAttempt.Status.PAID, reconcile.refresh(orderId, userId, false).attempt().status());
+        assertEquals(1, events.findByPaymentAttemptId(attemptId).size());
+        verify(client, times(1)).queryPayment(code);
+        verify(orderService, times(1)).handlePaymentSuccess(code, new BigDecimal("100000"));
+        assertInventory(9, 0, 1);
+    }
+
+    @Test
+    void nonOwnerRefreshDoesNotQueryProviderOrWriteEvents() {
+        var error = assertThrows(PaymentLinkException.class, () -> reconcile.refresh(orderId, userId + 999L, false));
+        assertEquals(403, error.getStatus());
+        verify(client, never()).queryPayment(any());
+        assertTrue(events.findByPaymentAttemptId(attemptId).isEmpty());
+        assertPendingInventory();
+    }
+
+    @Test
+    void ownerRefreshTimeoutDoesNotMarkPaidAndCanRetry() {
+        when(client.queryPayment(code)).thenThrow(new PaymentLinkException(504, "PAYOS_UNAVAILABLE", "Timeout"))
+                .thenReturn(paidQuery("OWNER-RECOVERY", 100000));
+        assertThrows(PaymentLinkException.class, () -> reconcile.refresh(orderId, userId, false));
+        assertPendingInventory();
+        assertEquals(PaymentAttempt.Status.PAID, reconcile.refresh(orderId, userId, false).attempt().status());
+        assertInventory(9, 0, 1);
+    }
+
     private PayOSPaymentClient.Transaction transaction(String reference, long amount) {
         return new PayOSPaymentClient.Transaction(reference, BigDecimal.valueOf(amount), time);
     }

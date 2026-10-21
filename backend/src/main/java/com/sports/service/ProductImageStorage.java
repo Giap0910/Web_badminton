@@ -26,7 +26,38 @@ public class ProductImageStorage {
     private final Path root;
 
     public ProductImageStorage(@Value("${app.product-images.storage-root:storage/products}") String root) {
-        this.root = Path.of(root).toAbsolutePath().normalize();
+        this.root = resolveRoot(root);
+    }
+
+    static Path resolveRoot(String configured) {
+        Path path = Path.of(configured);
+        if (path.isAbsolute()) return path.normalize();
+        Path workspace = Path.of("").toAbsolutePath().normalize();
+        if (workspace.getFileName().toString().equals("backend")
+                && Files.isRegularFile(workspace.resolve("pom.xml"))) workspace = workspace.getParent();
+        return workspace.resolve(path).normalize();
+    }
+
+    public byte[] read(long productId, String fileName) {
+        if (productId <= 0 || fileName == null
+                || !fileName.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp)")) throw missing();
+        Path path = root.resolve(Long.toString(productId)).resolve(fileName);
+        try {
+            rejectSymbolicLinks(path);
+            if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) throw missing();
+            try (var input = Files.newInputStream(path, LinkOption.NOFOLLOW_LINKS)) {
+                byte[] bytes = input.readNBytes(MAX_BYTES + 1);
+                if (bytes.length == 0 || bytes.length > MAX_BYTES) throw missing();
+                String format = detectedFormat(bytes);
+                String extension = format.equals("JPEG") ? "jpg" : format.toLowerCase(Locale.ROOT);
+                if (!fileName.endsWith("." + extension)) throw missing();
+                return bytes;
+            }
+        } catch (IOException | SecurityException | ProductImageException exception) { throw missing(); }
+    }
+
+    private com.sports.exception.ResourceNotFoundException missing() {
+        return new com.sports.exception.ResourceNotFoundException("Không tìm thấy ảnh sản phẩm đã duyệt");
     }
 
     public StoredImage store(long productId, MultipartFile file, String approvedSha256) {

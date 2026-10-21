@@ -22,7 +22,7 @@ public class PaymentAttemptStore {
         Order order = ownedOrder(orderId, userId, false);
         validateEligible(order);
         transitionGuard.checkLink(order);
-        var existing = attempts.findByOrderId(orderId);
+        var existing = attempts.findByOrderCode(order.getPayosOrderCode());
         if (existing.isPresent()) return new Prepared(PaymentAttemptResponse.from(existing.get()), false);
         PaymentAttempt attempt = new PaymentAttempt();
         attempt.setOrder(order);
@@ -39,7 +39,7 @@ public class PaymentAttemptStore {
             boolean created) {
         Order order = ownedOrder(orderId, userId, false);
         transitionGuard.checkLink(order);
-        PaymentAttempt attempt = attempts.findByOrderId(orderId).orElseThrow();
+        PaymentAttempt attempt = attempts.findByOrderCode(order.getPayosOrderCode()).orElseThrow();
         if (attempt.getStatus() == PaymentAttempt.Status.PENDING) return PaymentAttemptResponse.from(attempt);
         if (!attempt.getOrderCode().equals(result.orderCode())
                 || attempt.getAmount().compareTo(result.amount()) != 0
@@ -63,7 +63,9 @@ public class PaymentAttemptStore {
     public PaymentAttemptResponse read(Long orderId, Long userId, boolean admin) {
         Order order = orders.findById(orderId).orElseThrow(() -> missing());
         authorize(order, userId, admin);
-        return attempts.findByOrderId(orderId).map(PaymentAttemptResponse::from).orElse(null);
+        var attempt = "PAYOS_VIETQR".equals(order.getPaymentMethod())
+                ? attempts.findByOrderCode(order.getPayosOrderCode()) : attempts.findByOrderId(orderId);
+        return attempt.map(PaymentAttemptResponse::from).orElse(null);
     }
 
     private Order ownedOrder(Long id, Long userId, boolean admin) {

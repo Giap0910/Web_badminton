@@ -1,3 +1,4 @@
+import * as productMedia from '../utils/productMedia.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -121,6 +122,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
     const mockLucide = new Proxy({}, { get: (t, p) => (props) => React.createElement('span', { 'data-icon': p, ...props }) });
 
     const customRequire = (specifier) => {
+      if (specifier.includes('productMedia')) return productMedia;
       if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;
@@ -257,6 +259,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
     const mockLucide = new Proxy({}, { get: (t, p) => (props) => React.createElement('span', { 'data-icon': p, ...props }) });
 
     const customRequire = (specifier) => {
+      if (specifier.includes('productMedia')) return productMedia;
       if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;
@@ -360,6 +363,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
     const mockLucide = new Proxy({}, { get: (t, p) => (props) => React.createElement('span', { 'data-icon': p, ...props }) });
 
     const customRequire = (specifier) => {
+      if (specifier.includes('productMedia')) return productMedia;
       if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;
@@ -458,6 +462,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
     const mockLucide = new Proxy({}, { get: (t, p) => (props) => React.createElement('span', { 'data-icon': p, ...props }) });
 
     const customRequire = (specifier) => {
+      if (specifier.includes('productMedia')) return productMedia;
       if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;
@@ -646,6 +651,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
     };
 
     const customRequire = (specifier) => {
+      if (specifier.includes('productMedia')) return productMedia;
       if (specifier.includes('AdministrativeAddressFields')) return { __esModule: true, default: () => React.createElement('div', null, 'Tỉnh / Thành phố', 'Phường / Xã') };
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;

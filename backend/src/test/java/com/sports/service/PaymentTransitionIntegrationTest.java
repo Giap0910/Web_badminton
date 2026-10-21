@@ -78,6 +78,10 @@ class PaymentTransitionIntegrationTest {
         context.setServletContext(new MockServletContext());
         context.register(Config.class);
         context.refresh();
+        try (var c = context.getBean(DataSource.class).getConnection()) {
+            ScriptUtils.executeSqlScript(c, new ClassPathResource("fix057_payment_transition.sql"));
+            ScriptUtils.executeSqlScript(c, new ClassPathResource("fix059_payment_round_trip.sql"));
+        }
     }
 
     @AfterAll
@@ -165,6 +169,9 @@ class PaymentTransitionIntegrationTest {
         assertThrows(org.hibernate.exception.ConstraintViolationException.class, () -> tx.executeWithoutResult(s ->
                 context.getBean(EntityManager.class).createNativeQuery(
                     "UPDATE payment_method_transitions SET status='INVALID' WHERE id=:id").setParameter("id", op.getId()).executeUpdate()));
+        try (var c = context.getBean(DataSource.class).getConnection()) {
+            ScriptUtils.executeSqlScript(c, new ClassPathResource("fix059_payment_round_trip.sql"));
+        }
     }
 
 
@@ -249,12 +256,12 @@ class PaymentTransitionIntegrationTest {
     }
 
     @Test
-    void staleVersionDoesNotPrepareAndCodRoundTripIsOutOfScope() {
+    void staleVersionAndIneligibleReverseAreRejectedBeforeProvider() {
         assertError("STALE_ORDER_STATE", () -> transitions.submit(orderId, userId, key, body("COD", 1)));
         assertNoOperation();
-        assertError("PAYMENT_METHOD_TRANSITION_OUT_OF_SCOPE", () -> transitions.submit(orderId, userId, key, body("PAYOS_VIETQR", 0)));
+        assertError("ORDER_NOT_ELIGIBLE", () -> transitions.submit(orderId, userId, key, body("PAYOS_VIETQR", 0)));
         tx.executeWithoutResult(s -> orders.findById(orderId).orElseThrow().setPaymentMethod("COD"));
-        assertError("PAYMENT_METHOD_TRANSITION_OUT_OF_SCOPE", () -> transitions.submit(orderId, userId, key, body("PAYOS_VIETQR", 0)));
+        assertError("PAYMENT_LINK_UNRESOLVED", () -> transitions.submit(orderId, userId, key, body("PAYOS_VIETQR", 0)));
         assertError("ORDER_NOT_ELIGIBLE", this::submit); assertNoOperation(); verifyNoInteractions(client);
     }
 
@@ -391,7 +398,7 @@ class PaymentTransitionIntegrationTest {
         assertInventory(9, 0, 1);
         assertThrows(BadRequestException.class,()->statuses.update(orderId,OrderStatus.COMPLETED));
         assertEquals(OrderStatus.SHIPPING,order().getStatus());assertNull(order().getCashCollectedAt());
-        tx.executeWithoutResult(status->new CashCollectionService(orders,orderService).collect(orderId,userId,order().getTotalAmount()));
+        tx.executeWithoutResult(status->new CashCollectionService(orders,orderService,context.getBean(PaymentTransitionGuard.class)).collect(orderId,userId,order().getTotalAmount()));
         assertNotNull(order().getCashCollectedAt());assertEquals(userId,order().getCashCollectedBy());
         assertEquals("COMPLETED", statuses.update(orderId, OrderStatus.COMPLETED).getStatus());
         assertInventory(9, 0, 1);
@@ -677,6 +684,194 @@ class PaymentTransitionIntegrationTest {
     void missingReservationFailsBeforePrepareOrProvider() {
         tx.executeWithoutResult(s -> context.getBean(ProductRepository.class).findById(productId).orElseThrow().setReservedStock(0));
         assertError("ORDER_NOT_ELIGIBLE", this::submit); assertNoOperation(); verifyNoInteractions(client);
+    }
+
+    @Test
+    void reverseNativeCodCreatesQrOnSameSnapshotAndOneOperation() {
+        nativeCod();
+        var response = reverse();
+        assertEquals(200, response.status()); assertEquals(orderId, response.body().order().getId());
+        assertEquals("PAYOS_VIETQR", response.body().order().getPaymentMethod());
+        assertEquals("Địa chỉ snapshot", response.body().order().getShippingAddress());
+        assertEquals("0900000000", response.body().order().getShippingPhone());
+        assertNull(response.body().payment()); assertTrue(order().getExpiresAt().isAfter(LocalDateTime.now()));
+        verifyNoInteractions(client); assertInventory(9, 1, 1);
+        createCurrentLink();
+        assertEquals(1, attempts.findByOrderIdOrderByIdAsc(orderId).size());
+        assertEquals(200, reverse().status()); assertInventory(9, 1, 1);
+        assertError("PAYMENT_TRANSITION_CONFLICT", () -> transitions.submit(orderId, userId,
+                UUID.randomUUID().toString(), body("PAYOS_VIETQR", order().getCheckoutRevision())));
+    }
+
+    @Test
+    void reverseAfterCodPreservesOldAttemptAndLateMoneyBlocksCurrentSettlement() {
+        safeProvider(); submit(); var oldCode = code; var oldLink = link;
+        key = UUID.randomUUID().toString();
+        assertEquals(200, reverse().status()); assertNotEquals(oldCode, order().getPayosOrderCode());
+        createCurrentLink();
+        assertEquals(2, attempts.findByOrderIdOrderByIdAsc(orderId).size());
+        assertEquals(oldLink, attempts.findById(attemptId).orElseThrow().getPaymentLinkId());
+        assertEquals(PaymentAttempt.Status.CANCELLED, attempts.findById(attemptId).orElseThrow().getStatus());
+        webhooks.accept(payload("OLD-LATE")); webhooks.accept(payload("OLD-LATE"));
+        assertEquals(1, receipts().size());
+        assertEquals("LATE_PAYMENT_RETIRED_ATTEMPT", attempts.findById(attemptId).orElseThrow().getReviewReason());
+        var current = attempts.findByOrderId(orderId).orElseThrow();
+        assertEquals(PaymentAttempt.Status.NEEDS_REVIEW, current.getStatus());
+        assertEquals("HISTORICAL_PAYMENT_REQUIRES_REVIEW", current.getReviewReason());
+        var paidCurrent = new PayOSPaymentClient.Query(current.getOrderCode(), current.getAmount(), current.getPaymentLinkId(),
+                "PAID", current.getAmount(), BigDecimal.ZERO, List.of(transaction("CURRENT-MONEY", 100000)));
+        settlement.query(current.getId(), paidCurrent);
+        assertEquals(OrderStatus.PENDING, order().getStatus());
+        assertEquals(PaymentAttempt.Status.NEEDS_REVIEW, attempts.findById(current.getId()).orElseThrow().getStatus());
+        assertInventory(9, 1, 1);
+    }
+
+    @Test
+    void reverseThenCodRetiresNewLinkAndSecondReverseIsBlocked() {
+        safeProvider(); submit(); key = UUID.randomUUID().toString(); reverse(); createCurrentLink();
+        code = order().getPayosOrderCode(); link = attempts.findByOrderId(orderId).orElseThrow().getPaymentLinkId();
+        safeProvider(); key = UUID.randomUUID().toString();
+        assertEquals(200, submitWithVersion(order().getCheckoutRevision()).status());
+        assertEquals("COD", order().getPaymentMethod()); assertInventory(9, 1, 1);
+        key = UUID.randomUUID().toString();
+        assertError("PAYMENT_TRANSITION_LIMIT_REACHED", this::reverse);
+    }
+
+    @Test
+    void reverseQrExpiryCancelsAndRestoresResourcesExactlyOnce() {
+        nativeCod(); reverse(); createCurrentLink();
+        tx.executeWithoutResult(s -> orders.findById(orderId).orElseThrow().setExpiresAt(LocalDateTime.now().minusSeconds(1)));
+        assertTrue(orderService.expireOrder(orderId)); assertFalse(orderService.expireOrder(orderId));
+        assertEquals(OrderStatus.CANCELLED, order().getStatus()); assertInventory(10, 0, 0);
+    }
+
+    @Test
+    void reverseTimeoutKeepsCodAndDurableIntentThenRecovers() {
+        safeProvider(); submit(); key = UUID.randomUUID().toString(); long version = order().getCheckoutRevision();
+        when(client.queryPayment(code)).thenThrow(new PaymentLinkException(504, "PAYOS_UNAVAILABLE", "fixture"));
+        assertEquals(504, assertThrows(PaymentLinkException.class, () -> reverseWithVersion(version)).getStatus());
+        assertEquals("COD", order().getPaymentMethod()); assertEquals(PaymentMethodTransition.Status.VERIFYING, operation().getStatus());
+        doReturn(zero("CANCELLED")).when(client).queryPayment(code);
+        assertEquals(200, reverseWithVersion(version).status()); assertInventory(9, 1, 1);
+    }
+
+    @Test
+    void reverseCommitFailureRollsBackAndReplayPreservesIdentity() {
+        nativeCod();
+        doAnswer(invocation -> { var reply = invocation.callRealMethod();
+            if ("PAYOS_VIETQR".equals(((Order) invocation.getArgument(0)).getPaymentMethod())) failCommit();
+            return reply;
+        }).when(orderService).snapshot(any());
+        assertThrows(IllegalStateException.class, this::reverse);
+        assertEquals("COD", order().getPaymentMethod()); assertNull(order().getPayosOrderCode());
+        doCallRealMethod().when(orderService).snapshot(any()); expireLease();
+        assertEquals(200, reverse().status()); assertInventory(9, 1, 1);
+    }
+
+    @Test
+    void reverseMigrationRepeatPreservesHistoryAndSingleReverseConstraint() throws Exception {
+        safeProvider(); submit(); key = UUID.randomUUID().toString(); reverse(); createCurrentLink();
+        var before = operations.count(); var count = attempts.count(); var original = attempts.findById(attemptId).orElseThrow();
+        try (var c = context.getBean(DataSource.class).getConnection()) {
+            ScriptUtils.executeSqlScript(c, new ClassPathResource("fix059_payment_round_trip.sql"));
+            ScriptUtils.executeSqlScript(c, new ClassPathResource("fix059_payment_round_trip.sql"));
+        }
+        assertEquals(before, operations.count()); assertEquals(count, attempts.count());
+        assertEquals(original.getPaymentLinkId(), attempts.findById(attemptId).orElseThrow().getPaymentLinkId());
+        assertThrows(RuntimeException.class, () -> tx.executeWithoutResult(s -> {
+            var op = operation(); var duplicate = new PaymentMethodTransition();
+            org.springframework.beans.BeanUtils.copyProperties(op, duplicate, "id", "operationId", "idempotencyKey");
+            duplicate.setOperationId(UUID.randomUUID().toString()); duplicate.setIdempotencyKey(UUID.randomUUID().toString());
+            operations.saveAndFlush(duplicate);
+        }));
+    }
+
+    @Test
+    void reverseQueryMoneyRaceNeverActivatesNewPayment() {
+        safeProvider(); submit(); key = UUID.randomUUID().toString();
+        when(client.queryPayment(code)).thenAnswer(i -> { webhooks.accept(payload("REVERSE-RACE")); return zero("CANCELLED"); });
+        assertError("PAYMENT_REQUIRES_REVIEW", this::reverse);
+        assertEquals("COD", order().getPaymentMethod()); assertEquals(1, receipts().size()); assertInventory(9, 1, 1);
+    }
+
+    @ParameterizedTest @EnumSource(value = OrderStatus.class, names = {"PAID", "SHIPPING", "COMPLETED", "CANCELLED"})
+    void reverseNeverAcceptsTerminalOrShippingCod(OrderStatus status) {
+        nativeCod(); tx.executeWithoutResult(s -> orders.findById(orderId).orElseThrow().setStatus(status));
+        assertError("ORDER_NOT_ELIGIBLE", this::reverse); verifyNoInteractions(client); assertInventory(9, 1, 1);
+    }
+
+    @Test
+    void reverseRejectsCashAndNonOwnerWithoutProvider() {
+        nativeCod();
+        assertEquals(403, assertThrows(PaymentLinkException.class, () -> transitions.submit(orderId, userId + 999,
+                key, body("PAYOS_VIETQR", 0))).getStatus());
+        tx.executeWithoutResult(s -> orders.findById(orderId).orElseThrow().setCashCollectedAt(LocalDateTime.now()));
+        assertError("ORDER_NOT_ELIGIBLE", this::reverse); verifyNoInteractions(client);
+    }
+
+    @Test
+    void reverseNewPaymentSettlesOnceAndOldOperationReplayDoesNotChangeMethod() {
+        safeProvider(); submit(); String originalKey = key; key = UUID.randomUUID().toString(); reverse(); createCurrentLink();
+        var current = attempts.findByOrderId(orderId).orElseThrow();
+        var proof = new PayOSPaymentClient.Query(current.getOrderCode(), current.getAmount(), current.getPaymentLinkId(),
+                "PAID", current.getAmount(), BigDecimal.ZERO, List.of(transaction("NEW-SETTLED", 100000)));
+        settlement.query(current.getId(), proof); settlement.query(current.getId(), proof);
+        assertEquals(OrderStatus.PAID, order().getStatus()); assertInventory(9, 0, 1);
+        assertEquals(200, transitions.submit(orderId, userId, originalKey, body("COD", 0)).status());
+        assertEquals("PAYOS_VIETQR", order().getPaymentMethod()); assertInventory(9, 0, 1);
+    }
+
+    @Test
+    void reverseSameIntentConcurrentCommitsOnceWithoutProvider() throws Exception {
+        nativeCod(); long before = operations.count(); var pool = Executors.newFixedThreadPool(2);
+        try {
+            var first = pool.submit(() -> reverseWithVersion(0)); var second = pool.submit(() -> reverseWithVersion(0));
+            assertEquals(200, first.get(15, TimeUnit.SECONDS).status());
+            assertEquals(200, second.get(15, TimeUnit.SECONDS).status());
+        } finally { pool.shutdownNow(); }
+        assertEquals(before + 1, operations.count()); assertInventory(9, 1, 1); verifyNoInteractions(client);
+    }
+
+    @Test
+    void reverseCreateTimeoutRetainsSameAttemptAndNeverBlindlyCreatesAgain() {
+        nativeCod(); reverse(); var links = context.getBean(PaymentLinkService.class); var linkKey = UUID.randomUUID().toString();
+        when(client.create(any())).thenThrow(new PaymentLinkException(504, "PAYOS_UNAVAILABLE", "fixture"));
+        assertEquals(504, assertThrows(PaymentLinkException.class, () -> links.create(orderId, userId, linkKey)).getStatus());
+        var current = attempts.findByOrderId(orderId).orElseThrow();
+        when(client.query(current.getOrderCode())).thenReturn(null);
+        assertEquals(202, links.create(orderId, userId, linkKey).status());
+        assertEquals(current.getId(), attempts.findByOrderId(orderId).orElseThrow().getId());
+        verify(client, times(1)).create(any()); assertInventory(9, 1, 1);
+    }
+
+    @Test
+    void reverseAndAdminShippingAreSerialized() {
+        nativeCod(); statuses.update(orderId, OrderStatus.SHIPPING);
+        assertError("ORDER_NOT_ELIGIBLE", this::reverse); assertInventory(9, 0, 1);
+    }
+
+    private void nativeCod() {
+        tx.executeWithoutResult(s -> {
+            attempts.deleteById(attemptId); attempts.flush();
+            var order = orders.findById(orderId).orElseThrow();
+            order.setPaymentMethod("COD"); order.setExpiresAt(null); order.setPayosOrderCode(null);
+        });
+    }
+
+    private PaymentTransitionStore.Outcome reverse() { return reverseWithVersion(operationVersion()); }
+    private long operationVersion() {
+        var op = operations.findByOrderIdAndIdempotencyKey(orderId, key).orElse(null);
+        return op == null ? order().getCheckoutRevision() : op.getExpectedStateVersion();
+    }
+    private PaymentTransitionStore.Outcome reverseWithVersion(long version) {
+        return transitions.submit(orderId, userId, key, body("PAYOS_VIETQR", version));
+    }
+    private void createCurrentLink() {
+        var prepared = context.getBean(PaymentAttemptStore.class).prepare(orderId, userId, UUID.randomUUID().toString());
+        assertTrue(prepared.created()); var current = prepared.attempt();
+        context.getBean(PaymentAttemptStore.class).saveResult(orderId, userId,
+                new PayOSPaymentClient.Result(current.orderCode(), current.amount(), "new-" + current.orderCode(),
+                        "https://pay.payos.vn/web/new", "new-qr"), true);
     }
 
     private PaymentTransitionStore.Outcome submitWithVersion(long version) {

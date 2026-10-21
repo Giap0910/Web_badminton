@@ -42,6 +42,19 @@ public class PaymentSettlementService {
         settle(attempt, List.of(receipt.event()), proof.paidAt());
     }
 
+    @Transactional(readOnly = true)
+    public PaymentAttemptResponse readOwnedAttempt(Long orderId, Long userId, boolean admin) {
+        var order = orders.findById(orderId).orElseThrow(this::missing);
+        if (!admin && !order.getUser().getId().equals(userId)) {
+            throw new PaymentLinkException(403, "PAYMENT_FORBIDDEN", "Bạn không có quyền truy cập đơn này");
+        }
+        if (!"PAYOS_VIETQR".equals(order.getPaymentMethod())) {
+            throw new PaymentLinkException(409, "ORDER_NOT_PAYABLE", "Đơn không dùng phương thức PayOS");
+        }
+        return attempts.findByOrderCode(order.getPayosOrderCode()).map(PaymentAttemptResponse::from)
+                .orElseThrow(this::missing);
+    }
+
     public PaymentAttempt lockAttempt(Long id) {
         var peek = attempts.findById(id).orElseThrow(this::missing);
         Order order = orders.findByIdForUpdate(peek.getOrder().getId()).orElseThrow(this::missing);
@@ -59,8 +72,7 @@ public class PaymentSettlementService {
 
     private boolean identityMatches(PaymentAttempt attempt, PaymentEvidence proof) {
         return "PAYOS".equals(attempt.getProvider()) && proof.paymentLinkId().equals(attempt.getPaymentLinkId())
-                && proof.orderCode().equals(attempt.getOrderCode())
-                && attempt.getOrderCode().equals(attempt.getOrder().getPayosOrderCode());
+                && proof.orderCode().equals(attempt.getOrderCode());
     }
 
     private String webhookReason(PaymentAttempt attempt, PaymentEvidence proof) {
@@ -120,8 +132,7 @@ public class PaymentSettlementService {
     private boolean queryIdentity(PaymentAttempt attempt, PayOSPaymentClient.Query query) {
         return "PAYOS".equals(attempt.getProvider())
                 && Objects.equals(attempt.getPaymentLinkId(), query.paymentLinkId())
-                && Objects.equals(attempt.getOrderCode(), query.orderCode())
-                && Objects.equals(attempt.getOrder().getPayosOrderCode(), query.orderCode());
+                && Objects.equals(attempt.getOrderCode(), query.orderCode());
     }
 
     private PaymentEvidence evidence(PayOSPaymentClient.Query query, PayOSPaymentClient.Transaction tx, PaymentEvent.Source source) {
@@ -172,6 +183,9 @@ public class PaymentSettlementService {
 
     private String eligibilityReason(PaymentAttempt attempt) {
         var order = attempt.getOrder();
+        if (!Objects.equals(order.getPayosOrderCode(), attempt.getOrderCode())) return "LATE_PAYMENT_RETIRED_ATTEMPT";
+        try { transitionGuard.checkHistory(order, attempt); }
+        catch (PaymentLinkException ex) { return "PAYMENT_REQUIRES_REVIEW"; }
         if (!"PAYOS_VIETQR".equals(order.getPaymentMethod())) return "LATE_PAYMENT_AFTER_METHOD_CHANGE";
         if (order.getStatus() == OrderStatus.CANCELLED) return "LATE_PAYMENT_CANCELLED_ORDER";
         var now = LocalDateTime.now();
@@ -204,11 +218,22 @@ public class PaymentSettlementService {
             }
             attempt.setStatus(PaymentAttempt.Status.NEEDS_REVIEW);
             attempt.setReviewReason(hardBlock ? previous : reason);
+            blockCurrentAttempt(attempt);
             var received = ledger.received(attempt.getId());
             if (!received.isEmpty()) attempt.setReference(received.size() == 1 ? received.get(0).getReference() : null);
         }
         events.forEach(e -> recordReview(e, attempt == null ? "UNMATCHED" : "NEEDS_REVIEW", reason));
         if (attempt != null) transitionGuard.paymentChanged(attempt);
+    }
+
+    private void blockCurrentAttempt(PaymentAttempt historical) {
+        var order = historical.getOrder();
+        if (Objects.equals(order.getPayosOrderCode(), historical.getOrderCode())) return;
+        attempts.findByOrderCode(order.getPayosOrderCode()).ifPresent(current -> {
+            if (current.getStatus() == PaymentAttempt.Status.PAID) return;
+            current.setStatus(PaymentAttempt.Status.NEEDS_REVIEW);
+            current.setReviewReason("HISTORICAL_PAYMENT_REQUIRES_REVIEW");
+        });
     }
 
     @Transactional

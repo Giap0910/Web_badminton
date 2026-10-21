@@ -14,7 +14,17 @@ public class PaymentTransitionGuard {
     private final PaymentLedgerService ledger;
 
     public void checkLink(Order order) {
-        if (transitions.findByOrderId(order.getId()).isPresent()) throw conflict();
+        var op = transitions.findByOrderId(order.getId()).orElse(null);
+        if (op != null && !(op.getStatus() == PaymentMethodTransition.Status.APPLIED
+                && "PAYOS_VIETQR".equals(op.getTargetMethod()))) throw conflict();
+        checkHistory(order, null);
+    }
+
+    public void checkHistory(Order order, PaymentAttempt current) {
+        for (var attempt : attempts.findByOrderIdOrderByIdAsc(order.getId())) {
+            if (current != null && java.util.Objects.equals(current.getId(), attempt.getId())) continue;
+            checkMoney(attempt);
+        }
     }
 
     public PaymentMethodTransition lock(Order order) {
@@ -33,6 +43,7 @@ public class PaymentTransitionGuard {
     }
 
     public void checkCancel(Order order) {
+        checkHistory(order, null);
         var op = lock(order);
         if (op == null) return;
         if (op.getStatus() == PaymentMethodTransition.Status.VERIFYING) throw conflict();
@@ -40,10 +51,12 @@ public class PaymentTransitionGuard {
     }
 
     public void checkDelivery(Order order, OrderStatus target, PayOSPaymentClient.Query proof) {
+        var current = attempts.findByOrderId(order.getId()).orElse(null);
+        checkHistory(order, current);
         var op = lock(order);
         if (op == null) return;
         if (op.getStatus() == PaymentMethodTransition.Status.VERIFYING) throw conflict();
-        checkMoney(op.getPaymentAttempt());
+        if ("COD".equals(order.getPaymentMethod())) checkMoney(current);
         if (!"COD".equals(order.getPaymentMethod()) || target == OrderStatus.CANCELLED) return;
         if (target != OrderStatus.SHIPPING && target != OrderStatus.COMPLETED) return;
         if (op.getStatus() != PaymentMethodTransition.Status.APPLIED || !safeTerminal(op, proof)) {
@@ -52,8 +65,8 @@ public class PaymentTransitionGuard {
     }
 
     public boolean safeTerminal(PaymentMethodTransition op, PayOSPaymentClient.Query proof) {
-        return proof != null && op.getProviderOrderCode().equals(proof.orderCode())
-                && op.getProviderLinkId().equals(proof.paymentLinkId()) && op.getAmount().compareTo(proof.amount()) == 0
+        return proof != null && java.util.Objects.equals(op.getProviderOrderCode(), proof.orderCode())
+                && java.util.Objects.equals(op.getProviderLinkId(), proof.paymentLinkId()) && op.getAmount().compareTo(proof.amount()) == 0
                 && ("CANCELLED".equals(proof.status()) || "EXPIRED".equals(proof.status()))
                 && proof.amountPaid().signum() == 0 && proof.amountRemaining().compareTo(op.getAmount()) == 0
                 && proof.transactions().isEmpty();

@@ -1,3 +1,4 @@
+import * as productMedia from '../utils/productMedia.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -238,6 +239,7 @@ describe('FIX-004 — Frontend Implementation & Verification', () => {
 
     let fetchedOrderIds = [];
     let fetchedPaymentOrderIds = [];
+    let refreshedOrderIds = [];
     const mockOrderApi = {
       getOrderById: async (id) => {
         fetchedOrderIds.push(id);
@@ -245,6 +247,7 @@ describe('FIX-004 — Frontend Implementation & Verification', () => {
         if (getOrderByIdError) throw getOrderByIdError;
         return { success: true, data: orderData !== undefined && orderData !== null ? orderData : { id: Number(id), status: 'PENDING', paymentMethod: 'PAYOS_VIETQR', totalAmount: 500000 } };
       },
+      refreshOrderPayment: async (id) => { refreshedOrderIds.push(id); return mockOrderApi.getOrderPayment(id); },
       getOrderPayment: async (id) => {
         fetchedPaymentOrderIds.push(id);
         if (getOrderPaymentDelay > 0) await new Promise(r => setTimeout(r, getOrderPaymentDelay));
@@ -279,6 +282,7 @@ describe('FIX-004 — Frontend Implementation & Verification', () => {
     });
 
     const customRequire = (specifier) => {
+      if (specifier.includes('productMedia')) return productMedia;
       if (specifier === 'react') return customReact;
       if (specifier === 'react-router-dom') return mockRouter;
       if (specifier.includes('orderApi')) return { orderApi: mockOrderApi };
@@ -338,6 +342,7 @@ describe('FIX-004 — Frontend Implementation & Verification', () => {
       customReact,
       fetchedOrderIds,
       fetchedPaymentOrderIds,
+      refreshedOrderIds,
       renderWithLifecycle,
       triggerRetry,
       setRoute: (newOrderId, newSearch = '') => {
@@ -346,6 +351,20 @@ describe('FIX-004 — Frontend Implementation & Verification', () => {
       }
     };
   }
+
+  test('PayOS return triggers backend verification; COD never triggers it', async () => {
+    const online = await createOrderSuccessTestHarness({ orderId: '501', search: '?status=PAID',
+      orderData: { id: 501, status: 'PENDING', paymentMethod: 'PAYOS_VIETQR' },
+      paymentData: { status: 'PENDING' }, useRealEffects: true });
+    const result = await online.renderWithLifecycle();
+    assert.deepEqual(online.refreshedOrderIds, ['501']);
+    assert.ok(!result.finalMarkup.includes('Đặt hàng thành công!'));
+    const cod = await createOrderSuccessTestHarness({ orderId: '502', search: '?status=PAID',
+      orderData: { id: 502, status: 'PENDING', paymentMethod: 'COD' },
+      paymentData: null, useRealEffects: true });
+    await cod.renderWithLifecycle();
+    assert.deepEqual(cod.refreshedOrderIds, []);
+  });
 
   test('20. Real Component Runtime: Actual OrderSuccessPage instantiates without missing hook ReferenceError (Fault Proof verified)', async () => {
     const React = await import('react');

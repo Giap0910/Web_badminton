@@ -10,10 +10,10 @@ import java.time.LocalDateTime;
 public class PaymentMethodTransition {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @Column(name = "operation_id", nullable = false, unique = true, length = 36, columnDefinition = "char(36)", updatable = false) private String operationId;
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "order_id", nullable = false, unique = true, updatable = false) private Order order;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "payment_attempt_id", nullable = false, updatable = false) private PaymentAttempt paymentAttempt;
+    @JoinColumn(name = "order_id", nullable = false, updatable = false) private Order order;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_attempt_id", updatable = false) private PaymentAttempt paymentAttempt;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "actor_id", nullable = false, updatable = false) private User actor;
     @Column(name = "idempotency_key", nullable = false, length = 36, columnDefinition = "char(36)", updatable = false) private String idempotencyKey;
@@ -22,8 +22,8 @@ public class PaymentMethodTransition {
     @Column(name = "target_method", nullable = false, length = 32, updatable = false) private String targetMethod = "COD";
     @Column(name = "expected_state_version", nullable = false, updatable = false) private long expectedStateVersion;
     @Column(name = "original_expires_at", nullable = false, updatable = false) private LocalDateTime originalExpiresAt;
-    @Column(name = "provider_order_code", nullable = false, updatable = false) private Long providerOrderCode;
-    @Column(name = "provider_link_id", nullable = false, updatable = false, columnDefinition = "varbinary(1020)") private String providerLinkId;
+    @Column(name = "provider_order_code", updatable = false) private Long providerOrderCode;
+    @Column(name = "provider_link_id", updatable = false, columnDefinition = "varbinary(1020)") private String providerLinkId;
     @Column(nullable = false, updatable = false, precision = 12, scale = 0) private BigDecimal amount;
     @Column(nullable = false, updatable = false, length = 8) private String currency;
     @Enumerated(EnumType.STRING) @Column(nullable = false, columnDefinition = "varchar(32)")

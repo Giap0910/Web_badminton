@@ -296,7 +296,7 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
       }
 
       // Handle null (BUG A: 200 with null body) or 404 -> no payment attempt yet
-      if (payData == null || getFailed404) {
+      if (payData == null || payData === '' || getFailed404) {
         const isSuspendedInFetch = typeof isQRSuspended !== 'undefined' && isQRSuspended;
         const environmentVerified = typeof envStatus === 'undefined' || envStatus === 'VERIFIED';
 
@@ -897,7 +897,7 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
       // If payment is null (200 + null or 404) OR status is CREATING:
       // In PayOS-enabled mode: Must call POST payment-link with SAME orderId and SAME payment key to trigger creation / provider recovery
       // In demo COD mode: read-only status check, NO POST payment-link call
-      if (payData == null || getFailed404 || payData.status === 'CREATING') {
+      if (payData == null || payData === '' || getFailed404 || payData.status === 'CREATING') {
         const isSuspendedInCheck = typeof isQRSuspended !== 'undefined' && isQRSuspended;
 
         const canCreateLink = latest.status === 'PENDING' &&

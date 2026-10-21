@@ -28,8 +28,9 @@ const AiChatbotWidget = () => {
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
-      text: 'Xin chào! Tôi là Chuyên gia Tư vấn Thiết bị Cầu Lông AI của HG Badminton. Bạn đang tìm kiếm cây vợt theo lối chơi nào (tấn công, phản tạt, công thủ toàn diện) hay phân khúc giá bao nhiêu? Hãy chia sẻ với tôi nhé!',
-      products: []
+      text: 'Chào bạn! Mình là trợ lý AI của HG Badminton. Bạn muốn tìm vợt, giày hay phụ kiện để mình hỗ trợ nhé?',
+      products: [],
+      greeting: true
     }
   ]);
   const [inputValue, setInputValue] = useState('');
@@ -40,7 +41,7 @@ const AiChatbotWidget = () => {
   useEffect(() => {
     mounted.current = true; generation.current++; sendLock.current = false;
     setLoading(false); setAdvisorStatus('Chưa kết nối AI'); setInputValue('');
-    setMessages([{ sender: 'ai', text: 'Xin chào! Bạn muốn tìm vợt theo lối chơi và mức giá nào?', products: [] }]);
+    setMessages([{ sender: 'ai', text: 'Chào bạn! Mình là trợ lý AI của HG Badminton. Bạn muốn tìm vợt, giày hay phụ kiện để mình hỗ trợ nhé?', products: [], greeting: true }]);
     return () => { mounted.current = false; generation.current++; };
   }, [user?.id]);
 
@@ -54,43 +55,40 @@ const AiChatbotWidget = () => {
     }
   }, [messages, isOpen]);
 
+  const showReply = (response, conversation) => {
+    if (typeof response?.reply !== 'string' || !response.reply.trim()) throw new Error('Phản hồi tư vấn chưa hợp lệ');
+    setAdvisorStatus(!response.fallback && response.model ? response.model : 'Tư vấn cơ bản');
+    const products = Array.isArray(response.recommendedProducts)
+      ? response.recommendedProducts.filter(item => Number.isSafeInteger(item?.id) && item.id > 0 && item.catalogVisible !== false) : [];
+    setMessages([...conversation, { sender: 'ai', text: response.reply, products }]);
+  };
+
+  const showFailure = (error, conversation, query) => {
+    setAdvisorStatus('Chưa kết nối AI');
+    setInputValue(query);
+    setMessages([...conversation, { sender: 'user', text: query, failed: true }, {
+      sender: 'ai', products: [], error: true,
+      text: error.response?.status === 429 ? 'Tư vấn đang nhận nhiều yêu cầu. Vui lòng đợi một lúc rồi gửi lại.'
+        : 'Không kết nối được dịch vụ tư vấn. Bạn có thể gửi lại câu hỏi hoặc xem danh mục sản phẩm.',
+    }]);
+  };
+
   const handleSend = async (textToSend) => {
     const query = String(textToSend || inputValue).trim();
-    if (!query || sendLock.current) return;
-    if (query.length > 2000) return;
-    sendLock.current = true; const attempt = ++generation.current;
-
-    // Add user message
-    const newMessages = [...messages, { sender: 'user', text: query }];
-    setMessages(newMessages);
+    if (!query || query.length > 2000 || sendLock.current) return;
+    sendLock.current = true;
+    const attempt = ++generation.current;
+    const previous = messages.filter(message => !message.error && !message.failed).slice(-24);
+    setMessages([...previous, { sender: 'user', text: query }]);
     setInputValue('');
     setLoading(true);
-
     try {
-      const history = messages.slice(1).slice(-6).map(message => ({ role: message.sender === 'user' ? 'user' : 'model', text: message.text.slice(0, 2000) }));
-      const res = await aiApi.chat(query, history);
-      if (!mounted.current || generation.current !== attempt) return;
-      setAdvisorStatus(!res.fallback && res.model ? res.model : 'Tư vấn cơ bản');
-      setMessages([
-        ...newMessages,
-        {
-          sender: 'ai',
-          text: res.reply || 'Dưới đây là một số gợi ý phù hợp nhất với bạn:',
-          products: Array.isArray(res.recommendedProducts) ? res.recommendedProducts.filter(item => Number.isSafeInteger(item?.id) && item.id > 0 && item.catalogVisible !== false) : []
-        }
-      ]);
+      const history = previous.filter(message => !message.greeting).slice(-6)
+        .map(message => ({ role: message.sender === 'user' ? 'user' : 'model', text: message.text.slice(0, 2000) }));
+      const response = await aiApi.chat(query, history);
+      if (mounted.current && generation.current === attempt) showReply(response, [...previous, { sender: 'user', text: query }]);
     } catch (error) {
-      if (!mounted.current || generation.current !== attempt) return;
-      setAdvisorStatus('Chưa kết nối AI');
-      setMessages([
-        ...newMessages,
-        {
-          sender: 'ai',
-          text: error.response?.status === 429 ? 'Tư vấn đang nhận nhiều yêu cầu. Vui lòng đợi một lúc rồi gửi lại.'
-            : 'Không kết nối được dịch vụ tư vấn. Vui lòng thử lại hoặc xem danh mục sản phẩm.',
-          products: []
-        }
-      ]);
+      if (mounted.current && generation.current === attempt) showFailure(error, previous, query);
     } finally {
       if (mounted.current && generation.current === attempt) { sendLock.current = false; setLoading(false); }
     }
@@ -105,6 +103,7 @@ const AiChatbotWidget = () => {
       {/* Floating Action Trigger Button */}
       {!isOpen && (
         <button
+          aria-label="Mở trợ lý AI tư vấn"
           onClick={() => setIsOpen(true)}
           className="fixed bottom-6 right-3 sm:right-6 max-w-[calc(100vw-1.5rem)] z-50 group flex items-center gap-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white pl-4 pr-5 py-3.5 rounded-full shadow-xl shadow-emerald-700/25 hover:shadow-2xl hover:scale-105 transition-all duration-300"
         >
@@ -114,7 +113,7 @@ const AiChatbotWidget = () => {
           </div>
           <div className="text-left min-w-0">
             <div className="text-xs font-black tracking-wide flex items-center gap-1">
-              AI TƯ VẤN VỢT <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded max-w-[100px] truncate" title={advisorStatus}>{advisorStatus}</span>
+              TRỢ LÝ AI <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded max-w-[100px] truncate" title={advisorStatus}>{advisorStatus}</span>
             </div>
             <div className="text-[10px] text-emerald-100 font-medium">Bắt đúng lối chơi • Chuẩn kho hàng</div>
           </div>
@@ -133,7 +132,7 @@ const AiChatbotWidget = () => {
               </div>
               <div>
                 <div className="text-sm font-extrabold flex items-center gap-1.5">
-                  Chuyên Gia Cầu Lông AI
+                  Trợ lý AI HG Badminton
                   <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
                 </div>
                 <div className="text-[11px] text-emerald-100 font-medium">
@@ -142,6 +141,7 @@ const AiChatbotWidget = () => {
               </div>
             </div>
             <button
+              aria-label="Đóng trò chuyện"
               onClick={() => setIsOpen(false)}
               className="p-1.5 rounded-xl hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
             >
@@ -150,7 +150,7 @@ const AiChatbotWidget = () => {
           </div>
 
           {/* Messages Body */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/70 text-sm">
+          <div role="log" aria-live="polite" aria-label="Nội dung tư vấn" className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/70 text-sm">
             {messages.map((msg, idx) => (
               <div
                 key={idx}
@@ -227,7 +227,7 @@ const AiChatbotWidget = () => {
             {loading && (
               <div className="flex items-center gap-2 text-slate-500 text-xs italic pl-10">
                 <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-                <span>Chuyên gia AI đang phân tích kho vợt phù hợp...</span>
+                <span>Mình đang xem thông tin để hỗ trợ bạn...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -257,7 +257,8 @@ const AiChatbotWidget = () => {
           >
             <input
               type="text"
-              placeholder="Hỏi về lối chơi, trợ lực, chọn vợt..."
+              aria-label="Tin nhắn cho trợ lý AI"
+              placeholder="Bạn cần mình tư vấn điều gì?"
               value={inputValue}
               maxLength={2000}
               onChange={(e) => setInputValue(e.target.value)}
@@ -266,6 +267,7 @@ const AiChatbotWidget = () => {
             />
             <button
               type="submit"
+              aria-label="Gửi tin nhắn"
               disabled={loading || !inputValue.trim()}
               className="p-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 transition-all shadow-sm"
             >

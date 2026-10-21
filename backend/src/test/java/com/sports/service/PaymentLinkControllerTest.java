@@ -24,6 +24,7 @@ class PaymentLinkControllerTest {
     private final PaymentAttemptStore store = mock(PaymentAttemptStore.class);
     private final PayOSPaymentClient client = mock(PayOSPaymentClient.class);
     private final PaymentLinkService service = new PaymentLinkService(store, client);
+    private final PaymentReconciliationService reconciliations = mock(PaymentReconciliationService.class);
     private final String key = UUID.randomUUID().toString();
 
     @Test
@@ -74,6 +75,33 @@ class PaymentLinkControllerTest {
         }
     }
 
+    @Test
+    void refreshRequiresLoginAndReturnsVerifiedResult() throws Exception {
+        try (var context = context()) {
+            var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+            mvc.perform(post("/api/orders/2/payment/refresh")).andExpect(status().isUnauthorized());
+            verifyNoInteractions(reconciliations);
+            var paid = attempt(PaymentAttempt.Status.PAID, null);
+            when(reconciliations.refresh(2L, 1L, false))
+                    .thenReturn(new PaymentSettlementService.Outcome(200, paid));
+            mvc.perform(post("/api/orders/2/payment/refresh").with(user(principal())))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("PAID"));
+        }
+    }
+
+    @Test
+    void refreshPropagatesAuthorizationAndProviderErrorsWithoutSuccess() throws Exception {
+        try (var context = context()) {
+            var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+            for (int code : new int[] {403, 404, 409, 502, 503, 504}) {
+                doThrow(new PaymentLinkException(code, "PAYMENT_ERROR", "Không thể xác minh"))
+                        .when(reconciliations).refresh(2L, 1L, false);
+                mvc.perform(post("/api/orders/2/payment/refresh").with(user(principal())))
+                        .andExpect(status().is(code)).andExpect(jsonPath("$.code").value("PAYMENT_ERROR"));
+            }
+        }
+    }
+
     private CustomUserDetails principal() {
         return new CustomUserDetails(User.builder().id(1L).username("test").role(Role.ROLE_USER).build());
     }
@@ -89,6 +117,7 @@ class PaymentLinkControllerTest {
         context.register(SecurityConfig.class, OrderPaymentController.class, GlobalExceptionHandler.class, WebConfig.class);
         context.addBeanFactoryPostProcessor(factory -> {
             factory.registerSingleton("paymentLinkService", service);
+            factory.registerSingleton("paymentReconciliationService", reconciliations);
             factory.registerSingleton("jwtAuthenticationFilter", new JwtAuthenticationFilter(
                     mock(JwtTokenProvider.class), mock(UserDetailsServiceImpl.class)));
         });

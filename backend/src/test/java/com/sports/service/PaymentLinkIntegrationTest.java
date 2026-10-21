@@ -325,7 +325,7 @@ class PaymentLinkIntegrationTest {
                 new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                         principal, null, principal.getAuthorities()));
         return org.springframework.test.web.servlet.setup.MockMvcBuilders
-                .standaloneSetup(new com.sports.controller.OrderPaymentController(service))
+                .standaloneSetup(new com.sports.controller.OrderPaymentController(service, mock(PaymentReconciliationService.class)))
                 .setControllerAdvice(new com.sports.exception.GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver())
                 .build();

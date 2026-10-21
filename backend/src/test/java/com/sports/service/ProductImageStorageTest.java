@@ -166,6 +166,40 @@ class ProductImageStorageTest {
         assertArrayEquals(bytes, Files.readAllBytes(directory.resolve(second.storageKey())));
     }
 
+    @Test
+    void shouldReadExactStoredAssetWithoutChangingIt() throws Exception {
+        var storage = new ProductImageStorage(directory.toString());
+        byte[] bytes = image("png");
+        var saved = storage.store(1, upload(bytes), hash(bytes));
+        assertArrayEquals(bytes, storage.read(1, saved.fileName()));
+        assertArrayEquals(bytes, Files.readAllBytes(directory.resolve(saved.storageKey())));
+    }
+
+    @Test
+    void shouldRejectTraversalAndMissingMediaWithoutCreatingDirectories() {
+        var storage = new ProductImageStorage(directory.resolve("absent").toString());
+        for (String key : new String[]{"../a.png", "a.svg", "../outside.jpg", "..\\outside.png",
+                "11111111-2222-3333-4444-555555555555.png"}) {
+            assertThrows(com.sports.exception.ResourceNotFoundException.class, () -> storage.read(1, key));
+        }
+        assertFalse(Files.exists(directory.resolve("absent")));
+    }
+
+    @Test
+    void shouldNotReadAFileFromAnotherProduct() throws Exception {
+        var storage = new ProductImageStorage(directory.toString());
+        byte[] bytes = image("png");
+        var saved = storage.store(1, upload(bytes), hash(bytes));
+        assertThrows(com.sports.exception.ResourceNotFoundException.class, () -> storage.read(2, saved.fileName()));
+    }
+
+    @Test
+    void shouldResolveDefaultProductStorageFromRepositoryRoot() {
+        Path workspace = Path.of("").toAbsolutePath().normalize();
+        if (workspace.getFileName().toString().equals("backend")) workspace = workspace.getParent();
+        assertEquals(workspace.resolve("storage/products"), ProductImageStorage.resolveRoot("storage/products"));
+    }
+
     private byte[] image(String format) throws IOException {
         var output = new ByteArrayOutputStream();
         assertTrue(ImageIO.write(new BufferedImage(3, 2, BufferedImage.TYPE_INT_RGB), format, output));

@@ -362,7 +362,7 @@ const MyOrdersPage = () => {
                               Xem chi tiết
                             </button>
 
-                            {order.status === 'PENDING' && order.paymentMethodCode === 'PAYOS_VIETQR' && <Link
+                            {order.status === 'PENDING' && ['COD', 'PAYOS_VIETQR'].includes(order.paymentMethodCode) && <Link
                               to={`/checkout?orderId=${order.id}`} className="text-[11px] font-bold text-blue-700 hover:underline">
                               Tiếp tục thanh toán
                             </Link>}
@@ -487,7 +487,7 @@ const MyOrdersPage = () => {
                 <Link to={`/orders/${selectedOrder.id}`} className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">
                   Mở trang đơn hàng
                 </Link>
-                {selectedOrder.status === 'PENDING' && selectedOrder.paymentMethodCode === 'PAYOS_VIETQR' && <Link
+                {selectedOrder.status === 'PENDING' && ['COD', 'PAYOS_VIETQR'].includes(selectedOrder.paymentMethodCode) && <Link
                   to={`/checkout?orderId=${selectedOrder.id}`} className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold">
                   Tiếp tục thanh toán
                 </Link>}

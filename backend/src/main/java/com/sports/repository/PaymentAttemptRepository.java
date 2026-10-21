@@ -10,7 +10,11 @@ import jakarta.persistence.LockModeType;
 import java.util.Optional;
 
 public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, Long>, JpaSpecificationExecutor<PaymentAttempt> {
-    Optional<PaymentAttempt> findByOrderId(Long orderId);
+    Optional<PaymentAttempt> findFirstByOrderIdOrderByIdDesc(Long orderId);
+    java.util.List<PaymentAttempt> findByOrderIdOrderByIdAsc(Long orderId);
+    default Optional<PaymentAttempt> findByOrderId(Long orderId) {
+        return findFirstByOrderIdOrderByIdDesc(orderId);
+    }
     Optional<PaymentAttempt> findByPaymentLinkId(String linkId);
     Optional<PaymentAttempt> findByOrderCode(Long orderCode);
     @Lock(LockModeType.PESSIMISTIC_WRITE)

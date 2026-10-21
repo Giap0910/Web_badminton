@@ -17,6 +17,7 @@ export const orderApi = {
     }
     return axiosClient.post(`/orders/${orderId}/payment-link`, undefined, config);
   },
+  refreshOrderPayment: (orderId) => axiosClient.post(`/orders/${orderId}/payment/refresh`),
   getOrderPayment: (orderId) => axiosClient.get(`/orders/${orderId}/payment`),
   getOrderById: (id) => axiosClient.get(`/orders/${id}`),
   cancelOrder: (id) => axiosClient.post(`/orders/${id}/cancel`),

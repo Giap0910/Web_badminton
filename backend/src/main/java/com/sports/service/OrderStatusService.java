@@ -17,6 +17,12 @@ public class OrderStatusService {
     @Transactional(propagation = Propagation.NEVER)
     public OrderResponse update(Long id, OrderStatus target) {
         if (target != OrderStatus.SHIPPING && target != OrderStatus.COMPLETED) return orders.updateOrderStatus(id, target);
+        for (var old : transitions.retiredHistory(id)) {
+            var proof = client.queryPayment(old.code());
+            if (proof == null) throw new PaymentLinkException(503, "PAYOS_UNAVAILABLE", "Chưa xác minh được QR cũ");
+            policy.requireKnown(proof);
+            if (!transitions.verifyRetired(old, proof)) throw PaymentTransitionGuard.reviewRequired();
+        }
         var runner = transitions.delivery(id);
         if (runner == null) return orders.updateOrderStatus(id, target);
         var proof = client.queryPayment(runner.code());

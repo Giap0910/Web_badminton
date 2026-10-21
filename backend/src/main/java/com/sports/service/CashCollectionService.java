@@ -14,10 +14,12 @@ import java.time.LocalDateTime;
 public class CashCollectionService {
     private final OrderRepository orders;
     private final OrderService orderService;
+    private final PaymentTransitionGuard transitionGuard;
 
     @Transactional
     public OrderResponse collect(Long id, Long actorId, BigDecimal amount) {
         var order = orders.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng"));
+        transitionGuard.checkHistory(order, null);
         if (!"COD".equals(order.getPaymentMethod()) || !java.util.Set.of(OrderStatus.SHIPPING, OrderStatus.COMPLETED).contains(order.getStatus())) {
             throw new BadRequestException("Chỉ xác nhận thu tiền cho đơn COD đang giao hoặc đã giao");
         }

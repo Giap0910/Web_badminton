@@ -11,6 +11,16 @@ import org.springframework.web.bind.annotation.*;
 @RestController @RequestMapping("/api/orders") @RequiredArgsConstructor
 public class OrderPaymentController {
     private final PaymentLinkService service;
+    private final com.sports.service.PaymentReconciliationService reconciliations;
+
+    @PostMapping("/{id}/payment/refresh")
+    public ResponseEntity<PaymentAttemptResponse> refresh(@PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails principal) {
+        boolean admin = principal.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        var outcome = reconciliations.refresh(id, principal.getId(), admin);
+        return ResponseEntity.status(outcome.status()).body(outcome.attempt());
+    }
+
 
     @PostMapping("/{id}/payment-link")
     public ResponseEntity<PaymentAttemptResponse> create(@PathVariable Long id,

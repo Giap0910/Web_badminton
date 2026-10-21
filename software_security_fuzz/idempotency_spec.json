@@ -1,0 +1,408 @@
+{
+  "module": "idempotency",
+  "version": 1,
+  "description": "Chuỗi tối đa 4 yêu cầu tạo đơn, 2 người dùng, UUID ASCII đúng định dạng và chuẩn hóa hoa/thường. Fingerprint số là token đại diện cho fingerprint canonical đã tính: chỉ kiểm tra quan hệ bằng/khác, không tính SHA-256, không kiểm thử toàn bộ canonical JSON, chuỗi Unicode trong payload, khóa DB, chủng tộc hoặc nghiệp vụ tạo đơn khác. pending đầu vào chỉ là số đơn chờ tồn tại; không cung cấp bản ghi cũ để replay, bản ghi được tạo trong chuỗi mới.",
+  "backend_sha256": {
+    "OrderRequestFingerprint.java": "0ed090d5a5c5a8a1767ec43d37c182f018177c1f32e13de88bbedd26b4595687",
+    "OrderService.java": "7c40dc928498fcd79af6bb278f8ce4a0f4b759f1efe76b3af94a99ef9caea53d"
+  },
+  "fields": {
+    "pending_1": [
+      0,
+      3,
+      0
+    ],
+    "pending_2": [
+      0,
+      3,
+      0
+    ],
+    "request_count": [
+      0,
+      4,
+      2
+    ],
+    "user_0": [
+      1,
+      2,
+      1
+    ],
+    "fingerprint_0": [
+      0,
+      2147483647,
+      0
+    ],
+    "user_1": [
+      1,
+      2,
+      1
+    ],
+    "fingerprint_1": [
+      0,
+      2147483647,
+      1
+    ],
+    "user_2": [
+      1,
+      2,
+      1
+    ],
+    "fingerprint_2": [
+      0,
+      2147483647,
+      0
+    ],
+    "user_3": [
+      1,
+      2,
+      1
+    ],
+    "fingerprint_3": [
+      0,
+      2147483647,
+      0
+    ]
+  },
+  "uuid_size": 36,
+  "pending_limit": 3,
+  "outputs": [
+    "created",
+    "replayed",
+    "conflicts",
+    "invalid_keys",
+    "limited",
+    "request_0",
+    "request_1",
+    "request_2",
+    "request_3"
+  ],
+  "requirements": [
+    [
+      "REQ-I1",
+      "Khóa UUID phải đủ 36 byte ASCII với nhóm 8-4-4-4-12 hex."
+    ],
+    [
+      "REQ-I2",
+      "Chuẩn hóa chữ hoa/thường của UUID trước khi tìm bản ghi."
+    ],
+    [
+      "REQ-I3",
+      "Khóa được định danh theo cả người dùng và UUID."
+    ],
+    [
+      "REQ-I4",
+      "Cùng khóa cùng fingerprint trả replay, không tạo thêm đơn."
+    ],
+    [
+      "REQ-I5",
+      "Cùng khóa khác fingerprint phải trả xung đột."
+    ],
+    [
+      "REQ-I6",
+      "Replay/xung đột xét trước giới hạn 3 đơn chờ, tạo mới không vượt giới hạn."
+    ]
+  ],
+  "cases": [
+    {
+      "id": "TC-I1",
+      "req": "REQ-I4",
+      "title": "Gửi cùng nội dung hai lần",
+      "input": {
+        "fingerprint_1": 0
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          1,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I2",
+      "req": "REQ-I5",
+      "title": "Cùng khóa khác fingerprint",
+      "input": {},
+      "expected": {
+        "code": 0,
+        "values": [
+          1,
+          0,
+          1,
+          0,
+          0,
+          1,
+          3,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I3",
+      "req": "REQ-I2",
+      "title": "UUID hoa/thường cùng danh tính",
+      "input": {
+        "fingerprint_1": 0,
+        "keys": [
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "abcdef01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab"
+        ]
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          1,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I4",
+      "req": "REQ-I3",
+      "title": "Khóa được phân biệt theo người dùng",
+      "input": {
+        "user_1": 2,
+        "fingerprint_1": 0
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          2,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I5",
+      "req": "REQ-I6",
+      "title": "Đã có ba đơn chờ",
+      "input": {
+        "pending_1": 3,
+        "request_count": 1
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          5,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I6",
+      "req": "REQ-I6",
+      "title": "Replay được kiểm tra trước giới hạn pending",
+      "input": {
+        "pending_1": 2,
+        "fingerprint_1": 0
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          1,
+          2,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I7",
+      "req": "REQ-I1",
+      "title": "Khóa sai định dạng",
+      "input": {
+        "request_count": 1,
+        "keys": [
+          "invalid",
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab"
+        ]
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I8",
+      "req": "REQ-I1",
+      "title": "Khóa vượt bộ đệm không bị cắt thành hợp lệ",
+      "input": {
+        "request_count": 1,
+        "keys": [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab"
+        ]
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I9",
+      "req": "REQ-I1",
+      "title": "NUL cuối UUID không được bỏ qua",
+      "input": {
+        "request_count": 1,
+        "keys": [
+          "ABCDEF01-2345-6789-abcd-0123456789ab\u0000",
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab"
+        ]
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I10",
+      "req": "REQ-I6",
+      "title": "Khóa khác nhau nhưng chặn đơn thứ tư",
+      "input": {
+        "request_count": 4,
+        "keys": [
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "12345678-2345-6789-abcd-0123456789ab",
+          "22345678-2345-6789-abcd-0123456789ab",
+          "32345678-2345-6789-abcd-0123456789ab"
+        ]
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          3,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          5
+        ]
+      }
+    },
+    {
+      "id": "TC-I11",
+      "req": "REQ-I1",
+      "title": "Sai vị trí dấu gạch",
+      "input": {
+        "request_count": 1,
+        "keys": [
+          "ABCDEF01_2345_6789_abcd_0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab",
+          "ABCDEF01-2345-6789-abcd-0123456789ab"
+        ]
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "TC-I12",
+      "req": "REQ-I4",
+      "title": "Chuỗi rỗng không tạo đơn",
+      "input": {
+        "request_count": 0
+      },
+      "expected": {
+        "code": 0,
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  ]
+}

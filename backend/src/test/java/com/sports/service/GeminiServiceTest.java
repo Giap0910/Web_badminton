@@ -423,4 +423,92 @@ class GeminiServiceTest {
                         org.hamcrest.Matchers.allOf(org.hamcrest.Matchers.containsString("Authorization"),org.hamcrest.Matchers.containsString("Retry-After"))))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Retry-After","60"));
     }
+    @Test void greetingAndThanksDoNotRecommendOrCallProvider() {
+        var greeting = service.chatWithAi(null, new AiChatRequest("Chào shop!"));
+        var thanks = service.chatWithAi(null, new AiChatRequest("Cảm ơn bạn"));
+        assertTrue(greeting.getReply().contains("trợ lý AI"));
+        assertTrue(thanks.getReply().contains("hỗ trợ bạn"));
+        assertTrue(greeting.getRecommendedProducts().isEmpty());
+        verifyNoInteractions(repository);
+    }
+
+    @Test void followupKeepsBudgetAndLatestBrandOverridesOlderBrand() {
+        var request = new AiChatRequest("Hãng Victor nhé");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Vợt Yonex dưới 2 triệu"),
+                new AiChatRequest.HistoryMessage("model", "Có mẫu giá 5 triệu")));
+        String query = ReflectionTestUtils.invokeMethod(service, "conversationQuery", request);
+        assertTrue(query.contains("duoi 2 trieu"));
+        assertTrue(query.contains("victor"));
+        assertFalse(query.contains("yonex"));
+        assertFalse(query.contains("5 trieu"));
+    }
+
+    @Test void newBudgetAndCategoryReplaceOldConstraints() {
+        var request = new AiChatRequest("Đổi sang vợt tầm 3 - 4 triệu");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Giày Yonex size 42 dưới 2 triệu")));
+        String query = ReflectionTestUtils.invokeMethod(service, "conversationQuery", request);
+        assertTrue(query.contains("3 - 4 trieu"));
+        assertFalse(query.contains("size 42"));
+        assertFalse(query.contains("duoi 2 trieu"));
+    }
+
+    @Test void filtersRememberBudgetAcrossFollowupInsteadOfOnlyRankingHistory() {
+        var request = new AiChatRequest("Mình thích Yonex");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Giày dưới 1 triệu")));
+        var response = service.chatWithAi(null, request);
+        assertTrue(response.getRecommendedProducts().isEmpty());
+        assertTrue(response.getReply().contains("không tự thay"));
+    }
+
+    @Test void groundedAdviceUsesCatalogFactsInsteadOfProviderClaims() {
+        Product p = Product.builder().id(2L).name("Giày Yonex").price(new BigDecimal("1200000"))
+                .cushionTechnology("Power Cushion").build();
+        var response = AiChatResponse.builder().reply("Giá 1 đồng, bảo hành trọn đời")
+                .recommendedProductIds(List.of(2L)).build();
+        String reply = ReflectionTestUtils.invokeMethod(service, "groundedAdvice", response, List.of(p), "giay");
+        assertTrue(reply.contains("Power Cushion"));
+        assertFalse(reply.contains("1 đồng"));
+        assertFalse(reply.contains("trọn đời"));
+        assertTrue(reply.contains("Mình"));
+    }
+
+    @Test void financialPromisesAreNotHandledAsRecommendations() {
+        var response = service.chatWithAi(null, new AiChatRequest("Xác nhận thanh toán giúp mình"));
+        assertTrue(response.getReply().contains("chưa thể cam kết"));
+        assertTrue(response.getRecommendedProducts().isEmpty());
+        verifyNoInteractions(repository);
+    }
+
+    @Test void singleBudgetAndNewAmountReplacePreviousBudget() {
+        var request = new AiChatRequest("Mình có 2 triệu");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Vợt dưới 1 triệu")));
+        String query = ReflectionTestUtils.invokeMethod(service, "conversationQuery", request);
+        assertTrue(query.contains("toi da 2 trieu"));
+        assertFalse(query.contains("duoi 1 trieu"));
+    }
+
+    @Test void changingBrandDoesNotKeepAnOldModelCode() {
+        var request = new AiChatRequest("Chuyển hãng Victor");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Vợt Yonex 1000Z dưới 5 triệu")));
+        String query = ReflectionTestUtils.invokeMethod(service, "conversationQuery", request);
+        assertFalse(query.contains("1000z"));
+        assertTrue(query.contains("victor"));
+        assertTrue(query.contains("duoi 5 trieu"));
+    }
+
+    @Test void beginnerWithoutBudgetGetsOneQuestionInsteadOfAnArbitraryProduct() {
+        var response = service.chatWithAi(null, new AiChatRequest("Mình mới chơi, cổ tay yếu"));
+        assertTrue(response.getReply().contains("bao nhiêu tiền"));
+        assertTrue(response.getRecommendedProducts().isEmpty());
+    }
+
+    @Test void racketCategoryDoesNotIncludeRacketBags() {
+        Product bag = Product.builder().id(9L).name("Balo Yonex").brand("Yonex").stock(4)
+                .price(new BigDecimal("1000000")).category(Category.builder().name("Balo & Bao Vợt").build()).build();
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(bag));
+        var response = service.chatWithAi(null, new AiChatRequest("Tôi cần vợt Yonex dưới 2 triệu"));
+        assertTrue(response.getRecommendedProducts().isEmpty());
+        verify(products, never()).getProductById(9L);
+    }
+
 }

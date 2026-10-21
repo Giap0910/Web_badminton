@@ -125,6 +125,9 @@ public class ReturnService {
 
     private boolean paid(Order order) {
         PaymentAttempt attempt=paymentAttemptRepository.findByOrderId(order.getId()).orElse(null);
+        if (paymentAttemptRepository.findByOrderIdOrderByIdAsc(order.getId()).stream()
+                .anyMatch(old -> !java.util.Objects.equals(old.getId(), attempt == null ? null : attempt.getId())
+                        && conflictingCodPayment(old))) return false;
         if ("COD".equals(order.getPaymentMethod())) return order.getCashCollectedAt()!=null && !conflictingCodPayment(attempt);
         if (!"PAYOS_VIETQR".equals(order.getPaymentMethod())) return false;
         return attempt!=null && attempt.getStatus()==PaymentAttempt.Status.PAID && "PAYOS".equals(attempt.getProvider())

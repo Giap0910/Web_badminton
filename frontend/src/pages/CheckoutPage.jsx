@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderApi } from '../api/orderApi';
 import OrderItemOptions from '../components/OrderItemOptions';
+import { productImageSource } from '../utils/productMedia.js';
 import useCheckoutVoucher from '../components/useCheckoutVoucher';
 import { shippingAddressApi } from '../api/shippingAddressApi';
 import { formatPrice } from '../utils/formatters';
@@ -243,6 +244,10 @@ const CheckoutPage = () => {
 
   // FIX-057: Resume Unpaid Order Mode State
   const [resumeContext, setResumeContext] = useState(null);
+  const [resumeSelectedMethod, setResumeSelectedMethod] = useState(null);
+  useEffect(() => {
+    setResumeSelectedMethod(resumeContext?.order?.paymentMethod || null);
+  }, [resumeOrderId, resumeContext?.order?.paymentMethod]);
   const [resumeLoading, setResumeLoading] = useState(isResumeMode);
   const [resumeError, setResumeError] = useState('');
   const [transitionLoading, setTransitionLoading] = useState(false);
@@ -353,6 +358,18 @@ const CheckoutPage = () => {
     }
   }, [location.search, isResumeMode, resumeOrderId]);
 
+  const finishResumeTransition = (data) => {
+    const order = data?.order;
+    if (!order || Number(order.id) !== resumeOrderId || !['COD', 'PAYOS_VIETQR'].includes(order.paymentMethod)) {
+      throw new Error('Phản hồi đơn hàng không hợp lệ. Vui lòng tải lại thông tin.');
+    }
+    clearStoredTransitionIntent(resumeOrderId);
+    markRequiresContextRecovery(false);
+    const destination = order.paymentMethod === 'PAYOS_VIETQR' && order.status === 'PENDING'
+      ? `/payment/qr/${resumeOrderId}` : `/order-success/${resumeOrderId}`;
+    navigate(destination, { state: { order, payment: data.payment ?? null, transitioned: true } });
+  };
+
   // FIX-057: PayOS -> COD transition & recovery mutation handler
   const handleExecuteTransition = async ({ isRecovery = false } = {}) => {
     if (isTransitioningRef.current || transitionLoading) return;
@@ -377,14 +394,12 @@ const CheckoutPage = () => {
         const opStatus = op?.status || op?.state;
 
         // Authoritative operation APPLIED / order already COD: do NOT POST again.
-        if (opStatus === 'APPLIED' || data?.order?.paymentMethod === 'COD') {
+        const saved = getStoredTransitionIntent(resumeOrderId);
+        const sameIntent = op?.idempotencyKey === saved?.key;
+        if ((opStatus === 'APPLIED' && sameIntent) || data?.order?.paymentMethod === saved?.targetMethod) {
           clearStoredTransitionIntent(resumeOrderId);
           markRequiresContextRecovery(false);
-          const updatedOrder = data?.order || { ...(resumeContext.order || {}), paymentMethod: 'COD' };
-          setTransitionSuccess('Đã chuyển sang phương thức Thanh toán khi nhận hàng (COD) thành công!');
-          navigate(`/order-success/${resumeOrderId}`, {
-            state: { order: updatedOrder, transitioned: true },
-          });
+          finishResumeTransition(data);
           return;
         }
 
@@ -416,12 +431,12 @@ const CheckoutPage = () => {
         if (opStatus === 'NEEDS_REVIEW' || data?.payment?.status === 'NEEDS_REVIEW') {
           clearStoredTransitionIntent(resumeOrderId);
           markRequiresContextRecovery(false);
-          setTransitionError('Giao dịch cần nhân viên đối soát (NEEDS_REVIEW). Không thể đổi sang COD.');
+          setTransitionError('Giao dịch cần nhân viên đối soát (NEEDS_REVIEW). Không thể đổi phương thức thanh toán.');
           return;
         }
 
         // Backend says REJECTED or CANCELLED: terminal failure
-        if (opStatus === 'REJECTED' || data?.order?.status === 'CANCELLED') {
+        if ((opStatus === 'REJECTED' && sameIntent) || data?.order?.status === 'CANCELLED') {
           clearStoredTransitionIntent(resumeOrderId);
           markRequiresContextRecovery(false);
           setTransitionError('Đơn hàng không thể đổi phương thức thanh toán lúc này.');
@@ -430,8 +445,8 @@ const CheckoutPage = () => {
 
         // No durable operation found: clear recovery flag
         markRequiresContextRecovery(false);
-        if (!data?.eligibility?.eligible || !data?.eligibility?.allowedMethods?.includes('COD')) {
-          setTransitionError('Đơn hàng hiện không đủ điều kiện đổi sang phương thức COD.');
+        if (!data?.eligibility?.eligible || !data?.eligibility?.allowedMethods?.includes(resumeSelectedMethod)) {
+          setTransitionError('Đơn hàng hiện không đủ điều kiện đổi phương thức thanh toán.');
           return;
         }
         return;
@@ -464,7 +479,7 @@ const CheckoutPage = () => {
     );
 
     let idempotencyKey;
-    let targetPaymentMethod = 'COD';
+    let targetPaymentMethod = resumeSelectedMethod || resumeContext.order?.paymentMethod;
     let currentVersion;
 
     if (isRecovering) {
@@ -489,14 +504,19 @@ const CheckoutPage = () => {
       saveTransitionIntent(resumeOrderId, targetPaymentMethod, currentVersion, idempotencyKey);
     } else {
       // NEW TRANSITION PATH: Backend eligibility is mandatory
-      if (!resumeContext.eligibility?.eligible || !resumeContext.eligibility?.allowedMethods?.includes('COD')) {
-        setTransitionError('Đơn hàng hiện không đủ điều kiện đổi sang phương thức COD.');
+      if (targetPaymentMethod === resumeContext.order?.paymentMethod) {
+        if (resumeContext.order?.status === 'PENDING' && resumeContext.payment?.status !== 'NEEDS_REVIEW'
+            && !resumeContext.eligibility?.blockedReasons?.includes('PAYMENT_REQUIRES_REVIEW')) finishResumeTransition(resumeContext);
+        return;
+      }
+      if (!resumeContext.eligibility?.eligible || !resumeContext.eligibility?.allowedMethods?.includes(targetPaymentMethod)) {
+        setTransitionError('Đơn hàng hiện không đủ điều kiện đổi phương thức thanh toán.');
         return;
       }
 
       currentVersion = Number(resumeContext.stateVersion);
       try {
-        idempotencyKey = getOrCreateTransitionKey(resumeOrderId, 'COD', currentVersion);
+        idempotencyKey = getOrCreateTransitionKey(resumeOrderId, targetPaymentMethod, currentVersion);
       } catch {
         setTransitionError('Không thể khởi tạo mã giao dịch an toàn (Web Crypto không khả dụng). Vui lòng thử lại trên trình duyệt hiện đại.');
         return;
@@ -509,7 +529,7 @@ const CheckoutPage = () => {
     setTransitionSuccess('');
 
     const payload = {
-      targetPaymentMethod: 'COD',
+      targetPaymentMethod,
       expectedStateVersion: currentVersion,
     };
 
@@ -543,23 +563,7 @@ const CheckoutPage = () => {
       } else if (status === 200 || data?.operation?.status === 'APPLIED' || data?.operation?.state === 'APPLIED') {
         // 200 OK / APPLIED
         clearStoredTransitionIntent(resumeOrderId);
-        const updatedOrder = data?.order || { ...(resumeContext.order || {}), paymentMethod: 'COD' };
-        setResumeContext((prev) => prev ? {
-          ...prev,
-          order: updatedOrder,
-          payment: data?.payment || prev.payment,
-          stateVersion: data?.stateVersion !== undefined ? data.stateVersion : prev.stateVersion,
-          operation: data?.operation,
-          eligibility: {
-            eligible: false,
-            allowedMethods: [],
-            blockedReasons: ['ALREADY_COD'],
-          },
-        } : prev);
-        setTransitionSuccess('Đã chuyển sang phương thức Thanh toán khi nhận hàng (COD) thành công!');
-        navigate(`/order-success/${resumeOrderId}`, {
-          state: { order: updatedOrder, transitioned: true },
-        });
+        finishResumeTransition(data);
       }
     } catch (err) {
       if (activeResumeOrderIdRef.current !== resumeOrderId) return;
@@ -583,7 +587,7 @@ const CheckoutPage = () => {
           setTransitionError('Đơn hàng đã được thanh toán thành công qua cổng thanh toán!');
           fetchResumeContext(resumeOrderId);
         } else if (errCode === 'PAYMENT_REQUIRES_REVIEW') {
-          setTransitionError('Giao dịch cần nhân viên đối soát (NEEDS_REVIEW). Không thể đổi sang COD.');
+          setTransitionError('Giao dịch cần nhân viên đối soát (NEEDS_REVIEW). Không thể đổi phương thức thanh toán.');
           fetchResumeContext(resumeOrderId);
         } else if (errCode === 'IDEMPOTENCY_CONFLICT') {
           clearStoredTransitionIntent(resumeOrderId);
@@ -609,7 +613,7 @@ const CheckoutPage = () => {
     }
   };
 
-  const handleTransitionToCOD = () => handleExecuteTransition({ isRecovery: false });
+  const handleConfirmResumePayment = () => handleExecuteTransition({ isRecovery: false });
   const handleRecoverTransition = () => handleExecuteTransition({ isRecovery: true });
 
   const activeOp = resumeContext?.operation;
@@ -920,27 +924,9 @@ const CheckoutPage = () => {
           {/* Success Loaded Resume UI */}
           {!resumeLoading && !resumeError && resumeContext && (
             <div className="flex flex-col gap-6">
-              {/* Banner */}
-              <div
-                data-testid="resume-order-banner"
-                className="p-4 sm:p-5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                    <Clock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-extrabold text-blue-950">
-                      Đang tiếp tục đơn hàng #HG-{resumeContext.order?.id}
-                    </h2>
-                    <p className="text-xs text-blue-700 mt-0.5 font-medium">
-                      {resumeContext.order?.payosOrderCode && <>Mã PayOS: <span className="font-bold">{resumeContext.order.payosOrderCode}</span> • </>}Trạng thái: <span className="font-bold">{resumeContext.order?.status}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="text-xs font-semibold px-3 py-1 bg-white border border-blue-200 rounded-full text-blue-800 shrink-0">
-                  Phiên bản: #{resumeContext.stateVersion ?? 0}
-                </div>
+              <div data-testid="resume-order-banner" className="text-sm text-slate-600">
+                Đang tiếp tục đơn hàng <strong className="text-slate-900">#HG-{resumeContext.order?.id}</strong>.
+                Thông tin và tổng tiền đã được giữ nguyên.
               </div>
 
               {/* Transition Error or Success Alert */}
@@ -973,7 +959,7 @@ const CheckoutPage = () => {
                         </div>
                         <div>
                           <h3 className="text-base font-bold text-slate-900">Thông tin nhận hàng</h3>
-                          <p className="text-xs text-slate-500 mt-0.5">Dữ liệu cố định theo đơn hàng đã khởi tạo</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Thông tin đã lưu theo đơn hàng; chỉ thay đổi phương thức thanh toán</p>
                         </div>
                       </div>
                       <span className="text-[11px] font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
@@ -981,39 +967,21 @@ const CheckoutPage = () => {
                       </span>
                     </div>
 
-                    <div className="space-y-3 text-xs">
-                      <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-slate-100 gap-1">
-                        <span className="font-bold text-slate-500">Họ và tên người nhận:</span>
-                        <span className="font-extrabold text-slate-900 text-sm">
-                          {resumeContext.order?.customerName || '—'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-slate-100 gap-1">
-                        <span className="font-bold text-slate-500">Số điện thoại:</span>
-                        <span className="font-bold text-slate-900">
-                          {resumeContext.order?.shippingPhone || '—'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-slate-100 gap-1">
-                        <span className="font-bold text-slate-500">Địa chỉ giao hàng:</span>
-                        <span className="font-medium text-slate-800 text-right max-w-sm">
-                          {resumeContext.order?.shippingAddress ||
-                            [
-                              resumeContext.order?.addressDetail,
-                              resumeContext.order?.ward,
-                              resumeContext.order?.district,
-                              resumeContext.order?.province,
-                            ].filter(Boolean).join(', ') || '—'}
-                        </span>
-                      </div>
-                      {resumeContext.order?.note && (
-                        <div className="flex flex-col sm:flex-row sm:justify-between py-2 border-b border-slate-100 gap-1">
-                          <span className="font-bold text-slate-500">Ghi chú:</span>
-                          <span className="font-medium text-slate-700 italic">
-                            {resumeContext.order?.note}
-                          </span>
-                        </div>
-                      )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <label className="text-xs font-bold text-slate-700">Họ và tên người nhận
+                        <input readOnly value={resumeContext.order?.customerName || ''} className="mt-2 w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-normal" />
+                      </label>
+                      <label className="text-xs font-bold text-slate-700">Số điện thoại
+                        <input readOnly value={resumeContext.order?.shippingPhone || ''} className="mt-2 w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-normal" />
+                      </label>
+                      <label className="sm:col-span-2 text-xs font-bold text-slate-700">Địa chỉ giao hàng
+                        <textarea readOnly rows={2} value={resumeContext.order?.shippingAddress ||
+                          [resumeContext.order?.addressDetail, resumeContext.order?.ward, resumeContext.order?.province].filter(Boolean).join(', ')}
+                          className="mt-2 w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-normal resize-none" />
+                      </label>
+                      <label className="sm:col-span-2 text-xs font-bold text-slate-700">Ghi chú kỹ thuật & giao nhận
+                        <textarea readOnly rows={3} value={resumeContext.order?.note || ''} className="mt-2 w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-normal resize-none" />
+                      </label>
                     </div>
                   </section>
 
@@ -1026,7 +994,7 @@ const CheckoutPage = () => {
                         </div>
                         <div>
                           <h3 className="text-base font-bold text-slate-900">Phương thức thanh toán</h3>
-                          <p className="text-xs text-slate-500 mt-0.5">Trạng thái và các lựa chọn tiếp tục thanh toán</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Chọn kênh giao dịch thuận tiện và được bảo toàn an toàn</p>
                         </div>
                       </div>
                       <span className="text-[11px] font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-full">
@@ -1034,176 +1002,48 @@ const CheckoutPage = () => {
                       </span>
                     </div>
 
-                    {/* Current Method: PAYOS_VIETQR */}
-                    {resumeContext.order?.paymentMethod === 'PAYOS_VIETQR' && (
-                      <div className="flex flex-col gap-4">
-                        {/* Current Box */}
-                        <div className="p-4 rounded-xl border-2 border-blue-200 bg-blue-50/30 flex flex-col gap-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                                <QrCode className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block">
-                                  Phương thức hiện tại
-                                </span>
-                                <h4 className="text-sm font-extrabold text-slate-900">
-                                  Thanh toán QR Động (PayOS / VietQR)
-                                </h4>
-                              </div>
-                            </div>
-                            {resumeContext.payment?.status && (
-                              <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                                resumeContext.payment.status === 'PAID'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : resumeContext.payment.status === 'NEEDS_REVIEW'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : resumeContext.payment.status === 'FAILED'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {resumeContext.payment.status}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Resume payment on the existing order. */}
-                          {resumeContext.order?.status === 'PENDING' && resumeContext.payment?.status !== 'PAID' && (
-                            <div className="pt-2 flex items-center justify-between border-t border-blue-100">
-                              <span className="text-xs text-slate-500">Tiếp tục thanh toán đơn hàng này</span>
-                              <Link
-                                to={`/payment/qr/${resumeOrderId}`}
-                                state={{ order: resumeContext.order, payment: resumeContext.payment }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700"
-                              >
-                                <span>Thanh toán VietQR</span>
-                              </Link>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Transition to COD / Recovery Section */}
-                        {resumeContext.eligibility?.eligible && resumeContext.eligibility?.allowedMethods?.includes('COD') ? (
-                          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col gap-3">
-                            <div className="flex items-start gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                                <Truck className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <h4 className="text-sm font-bold text-slate-900">
-                                  Đổi sang Thanh toán khi nhận hàng (COD)
-                                </h4>
-                                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                  Hệ thống sẽ xác minh và đóng liên kết QR PayOS cũ, chuyển đơn hàng sang nhận hàng thanh toán tiền mặt. Không tạo đơn mới.
-                                </p>
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              data-testid="switch-to-cod-btn"
-                              onClick={handleTransitionToCOD}
-                              disabled={transitionLoading}
-                              className="mt-2 w-full py-3.5 px-6 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-extrabold text-sm uppercase tracking-wider rounded-xl shadow-lg shadow-red-500/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
-                            >
-                              {transitionLoading ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span>{requiresContextRecovery ? 'ĐANG KIỂM TRA TRẠNG THÁI...' : 'ĐANG XỬ LÝ CHUYỂN ĐỔI...'}</span>
-                                </>
-                              ) : requiresContextRecovery ? (
-                                <>
-                                  <RefreshCw className="w-4 h-4" />
-                                  <span>KIỂM TRA LẠI GIAO DỊCH</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Truck className="w-4 h-4" />
-                                  <span>XÁC NHẬN ĐỔI SANG COD</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        ) : isVerifyingOperation ? (
-                          <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/70 flex flex-col gap-3" data-testid="verifying-recovery-section">
-                            <div className="flex items-start gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                                <Clock className="w-5 h-5 text-amber-700" />
-                              </div>
-                              <div>
-                                <h4 className="text-sm font-bold text-slate-900">
-                                  Đang xác minh thay đổi phương thức thanh toán
-                                </h4>
-                                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                                  Yêu cầu chuyển sang phương thức COD đang được hệ thống xác minh với cổng thanh toán. Vui lòng bấm &ldquo;Kiểm tra lại&rdquo; để hoàn tất cập nhật.
-                                </p>
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              data-testid="recover-transition-btn"
-                              onClick={handleRecoverTransition}
-                              disabled={transitionLoading || retryCountdown > 0}
-                              className="mt-2 w-full py-3.5 px-6 bg-amber-600 hover:bg-amber-700 active:scale-[0.99] text-white font-extrabold text-sm uppercase tracking-wider rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
-                            >
-                              {transitionLoading ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span>ĐANG KIỂM TRA LẠI...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <RefreshCw className="w-4 h-4" />
-                                  <span>{retryCountdown > 0 ? `Kiểm tra lại (${retryCountdown}s)` : 'Kiểm tra lại'}</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-xs flex flex-col gap-1.5">
-                            <div className="flex items-center gap-2 font-bold">
-                              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                              <span>Không thể đổi phương thức thanh toán</span>
-                            </div>
-                            <p className="text-slate-600 pl-6 leading-relaxed">
-                              {resumeContext.payment?.status === 'PAID'
-                                ? 'Đơn hàng này đã được thanh toán thành công.'
-                                : resumeContext.payment?.status === 'NEEDS_REVIEW'
-                                ? 'Giao dịch đang trong trạng thái rà soát đối soát (NEEDS_REVIEW).'
-                                : resumeContext.order?.status === 'CANCELLED'
-                                ? 'Đơn hàng đã bị hủy.'
-                                : resumeContext.payment?.status === 'CREATING'
-                                ? 'Liên kết thanh toán đang được khởi tạo.'
-                                : resumeContext.eligibility?.blockedReasons?.join(', ') || 'Đơn hàng không đủ điều kiện chuyển đổi.'}
-                            </p>
-                          </div>
-                        )}
+                    <fieldset disabled={transitionLoading || isVerifyingOperation || requiresContextRecovery} className="flex flex-col gap-3" aria-label="Chọn phương thức thanh toán">
+                      {[
+                        ['PAYOS_VIETQR', 'Thanh toán QR Động (PayOS / VietQR)', 'Mã QR được tạo theo số tiền của đơn hàng. Trạng thái thanh toán được xác nhận từ PayOS.'],
+                        ['MANUAL', 'Chuyển khoản thủ công — chưa hỗ trợ', 'Vui lòng chọn COD hoặc PayOS.'],
+                        ['COD', 'Thanh toán khi nhận hàng (COD)', 'Nhận hàng và thanh toán tiền mặt cho shipper.'],
+                      ].map(([method, label, description]) => {
+                        const current = method === resumeContext.order?.paymentMethod;
+                        const allowed = method !== 'MANUAL' && resumeContext.order?.status === 'PENDING'
+                          && resumeContext.payment?.status !== 'PAID' && resumeContext.payment?.status !== 'NEEDS_REVIEW'
+                          && (current || (resumeContext.eligibility?.eligible && resumeContext.eligibility?.allowedMethods?.includes(method)));
+                        return <label key={method} className={`p-4 rounded-xl border-2 flex items-start gap-3 ${resumeSelectedMethod === method ? 'border-red-600 bg-red-50/20' : 'border-slate-200'} ${allowed ? 'cursor-pointer' : 'opacity-60'}`}>
+                          <input type="radio" name="resume_payment_method" data-testid={`resume-method-${method}`} checked={(resumeSelectedMethod || resumeContext.order?.paymentMethod) === method}
+                            disabled={!allowed} onChange={() => setResumeSelectedMethod(method)} className="accent-red-600 mt-1 shrink-0" />
+                          <span><span className="text-sm font-bold text-slate-900">{label}</span>
+                            {current && <span className="ml-2 text-[10px] text-slate-500">Hiện tại</span>}
+                            <span className="block text-xs text-slate-500 mt-1 leading-relaxed">{description}</span></span>
+                        </label>;
+                      })}
+                    </fieldset>
+                    {isVerifyingOperation || requiresContextRecovery ? (
+                      <div data-testid="verifying-recovery-section" className="p-4 bg-amber-50 rounded-xl text-sm text-amber-900">
+                        <p>Đang xác minh thay đổi phương thức thanh toán. Đơn hàng và thông tin của bạn vẫn được giữ nguyên.</p>
+                        <button type="button" data-testid="recover-transition-btn" onClick={handleRecoverTransition}
+                          disabled={transitionLoading || retryCountdown > 0} className="mt-3 w-full py-3 rounded-xl bg-amber-600 text-white font-bold disabled:opacity-50">
+                          {retryCountdown > 0 ? `Kiểm tra lại (${retryCountdown}s)` : 'Kiểm tra lại'}
+                        </button>
                       </div>
-                    )}
-
-                    {/* Current Method: COD */}
-                    {resumeContext.order?.paymentMethod === 'COD' && (
-                      <div className="p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50/30 flex flex-col gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                            <Truck className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider block">
-                              Phương thức hiện tại
-                            </span>
-                            <h4 className="text-sm font-extrabold text-slate-900">
-                              Thanh toán khi nhận hàng (COD)
-                            </h4>
-                          </div>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                          Đơn hàng được giao tận nơi và thanh toán tiền mặt khi nhận hàng. Không hỗ trợ chuyển đổi sang PayOS.
-                        </p>
-                      </div>
-                    )}
+                    ) : resumeContext.order?.status === 'PENDING' && resumeContext.payment?.status !== 'PAID'
+                        && resumeContext.payment?.status !== 'NEEDS_REVIEW'
+                        && (resumeContext.eligibility?.eligible || resumeContext.eligibility?.allowedMethods?.includes('PAYOS_VIETQR')) ? (
+                      <button type="button" data-testid="switch-to-cod-btn" onClick={handleConfirmResumePayment} disabled={transitionLoading || !resumeSelectedMethod}
+                        className="w-full py-3.5 px-6 bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
+                        {transitionLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {transitionLoading ? 'Đang xử lý...' : 'Xác nhận phương thức thanh toán'}
+                      </button>
+                    ) : <p className="text-sm text-amber-800" role="status">Không thể đổi phương thức thanh toán: {
+                      resumeContext.payment?.status === 'PAID' ? 'Đơn đã được thanh toán.' :
+                      resumeContext.order?.status === 'CANCELLED' ? 'Đơn hàng đã bị hủy.' :
+                      resumeContext.payment?.status === 'CREATING' ? 'Liên kết thanh toán đang được khởi tạo.' :
+                      resumeContext.eligibility?.blockedReasons?.includes('PAYMENT_TRANSITION_LIMIT_REACHED') ? 'Đơn đã sử dụng lượt đổi từ COD sang PayOS.' :
+                      resumeContext.eligibility?.blockedReasons?.includes('MOCK_TRANSITION_UNSUPPORTED') ? 'Chiều chuyển này chưa hỗ trợ trong môi trường mô phỏng.' :
+                      'Đơn chưa đủ điều kiện hoặc cần nhân viên kiểm tra giao dịch.'}</p>}
                   </section>
 
                 </div>
@@ -1246,7 +1086,7 @@ const CheckoutPage = () => {
                             <div className="w-16 h-16 rounded-xl bg-slate-50 shrink-0 overflow-hidden relative flex items-center justify-center p-1 border border-slate-100">
                               {itemImg ? (
                                 <img
-                                  src={itemImg}
+                                  src={productImageSource(itemImg)}
                                   alt={itemName}
                                   className="w-full h-full object-contain"
                                 />
@@ -1721,7 +1561,7 @@ const CheckoutPage = () => {
                     <div key={itemId} className="py-3 flex gap-3 items-start">
                       <div className="w-16 h-16 rounded-xl bg-slate-50 shrink-0 overflow-hidden relative flex items-center justify-center p-1 border border-slate-100">
                         <img
-                          src={item.product.imageUrl || item.product.image}
+                          src={productImageSource(item.product.imageUrl || item.product.image)}
                           alt={item.product.name}
                           className="w-full h-full object-contain"
                         />
