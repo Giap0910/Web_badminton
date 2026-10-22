@@ -177,30 +177,45 @@ public class ProductService {
         if (productIds == null || productIds.isEmpty() || productIds.size() > 3
                 || productIds.stream().anyMatch(id -> id == null || id <= 0)
                 || new java.util.HashSet<>(productIds).size() != productIds.size()) {
-            throw new BadRequestException("Vui lòng chọn từ 1 đến tối đa 3 cây vợt để so sánh thông số");
+            throw new BadRequestException("Vui lòng chọn từ 1 đến tối đa 3 sản phẩm để so sánh thông số");
         }
 
         List<ProductDto> rackets = productIds.stream()
                 .map(this::getProductById)
                 .collect(Collectors.toList());
-        if (rackets.stream().anyMatch(product -> !java.util.Objects.equals(product.getCategoryId(), 1L)))
-            throw new BadRequestException("Chỉ có thể so sánh sản phẩm thuộc danh mục vợt cầu lông");
-
-        List<String> attributes = Arrays.asList(
-                "Thương hiệu",
-                "Giá niêm yết",
-                "Trọng lượng & Chu vi cán (Weight / Grip)",
-                "Độ cứng thân vợt (Stiffness)",
-                "Điểm cân bằng (Balance Point)",
-                "Sức căng tối đa (Max Tension)",
-                "Phong cách chơi đề xuất (Play Style)",
-                "Tồn kho khả dụng (Available Stock)"
-        );
+        String group = comparisonGroup(rackets.get(0));
+        if (rackets.stream().anyMatch(product -> !group.equals(comparisonGroup(product)))) {
+            throw new BadRequestException("Chỉ so sánh sản phẩm cùng nhóm và phụ kiện cùng loại");
+        }
+        List<String> attributes = comparisonAttributes(rackets.get(0).getCategoryId());
 
         return RacketComparisonResponse.builder()
                 .rackets(rackets)
                 .comparisonAttributes(attributes)
                 .build();
+    }
+
+    private String comparisonGroup(ProductDto product) {
+        Long category = product.getCategoryId();
+        if (category == null || category < 1 || category > 5) {
+            throw new BadRequestException("Nhóm sản phẩm chưa hỗ trợ so sánh");
+        }
+        if (category != 5L) return category.toString();
+        String type = product.getAccessoryType();
+        if (type == null || type.isBlank()) throw new BadRequestException("Phụ kiện chưa xác định loại để so sánh");
+        return "5:" + type.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private List<String> comparisonAttributes(Long category) {
+        var attributes = new java.util.ArrayList<>(List.of("Thương hiệu", "Giá niêm yết", "Màu sắc", "Tình trạng"));
+        attributes.addAll(switch (category.intValue()) {
+            case 1 -> List.of("Trọng lượng & cán", "Độ cứng", "Điểm cân bằng", "Sức căng tối đa", "Phong cách chơi", "Vật liệu khung", "Vật liệu thân");
+            case 2 -> List.of("Kích cỡ", "Loại đế", "Công nghệ đệm", "Chất liệu mặt giày", "Giới tính");
+            case 3 -> List.of("Kích cỡ", "Giới tính", "Chất liệu vải");
+            case 4 -> List.of("Loại túi", "Dung tích", "Sức chứa vợt", "Chống nước");
+            default -> List.of("Loại phụ kiện", "Quy cách đóng gói");
+        });
+        return attributes;
     }
 
     @Transactional

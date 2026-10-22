@@ -535,7 +535,7 @@ const OrderSuccessPage = () => {
               )}
             </button>
 
-            {!isOrderCancelled && !isPaymentError && !isNeedsReview && !isCodPaidConflict && ((order?.paymentMethod === 'PAYOS_VIETQR' && (isPending || isCreating || isFailed || isExpired)) || (isCurrentCod && order?.status === 'PENDING' && !order?.cashCollected)) && (
+            {!isOrderCancelled && !isPaymentError && !isNeedsReview && !isCodPaidConflict && ((order?.paymentMethod === 'PAYOS_VIETQR' && order?.status === 'PENDING' && !isPaid && (isPending || isCreating || isFailed || isExpired || isPaymentCancelled)) || (isCurrentCod && order?.status === 'PENDING' && !order?.cashCollected)) && (
               <Link
                 to={`/checkout?orderId=${orderId}`}
                 className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition"

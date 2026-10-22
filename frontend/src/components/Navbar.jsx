@@ -3,12 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useCompare } from '../context/CompareContext';
 import ProductSearch from './ProductSearch';
 import { 
   Search, 
   ShoppingCart, 
-  Layers, 
   Phone, 
   User, 
   LogOut, 
@@ -48,7 +46,6 @@ function useNavbarHeight(headerRef, mobileMenuOpen) {
 const Navbar = () => {
   const { profile, user, isAuthenticated, isAdmin, logout } = useAuth();
   const { cartCount } = useCart();
-  const { selectedRackets } = useCompare();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef(null);
   useNavbarHeight(headerRef, mobileMenuOpen);
@@ -104,23 +101,6 @@ const Navbar = () => {
                 <span className="text-xs font-bold text-white tracking-wide">Chưa cấu hình</span>
               </div>
             </div>
-
-            {/* Compare Button */}
-            <Link
-              to="/compare"
-              className="relative flex items-center gap-1.5 text-slate-200 hover:text-white p-1.5 sm:px-2 sm:py-1.5 rounded-lg hover:bg-slate-800/80 transition-colors"
-              title="So sánh vợt (tối đa 3 cây)"
-            >
-              <div className="relative">
-                <Layers className="w-5 h-5 text-slate-300 hover:text-white" />
-                {selectedRackets.length > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-royal text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold shadow animate-pulse">
-                    {selectedRackets.length}
-                  </span>
-                )}
-              </div>
-              <span className="text-xs font-semibold hidden md:inline text-slate-300">So sánh</span>
-            </Link>
 
             {/* Cart Button */}
             <Link

@@ -96,4 +96,32 @@ class ProductPresentationTest {
         assertEquals("[\"40\"]",result.getAvailableSizes());assertEquals(20,result.getStock());
         assertEquals(1L,result.getVariants().get(0).getId());assertEquals("40",result.getVariants().get(0).getSize());
     }
+    @Test void comparisonSupportsEveryCategoryAndKeepsOrder() {
+        var service = org.mockito.Mockito.spy(new ProductService(null, null, null, null));
+        for (long category = 1; category <= 5; category++) {
+            var first = com.sports.dto.ProductDto.builder().id(1L).categoryId(category).accessoryType("day_cuoc").build();
+            var second = com.sports.dto.ProductDto.builder().id(2L).categoryId(category).accessoryType("day_cuoc").build();
+            org.mockito.Mockito.doReturn(first).when(service).getProductById(1L);
+            org.mockito.Mockito.doReturn(second).when(service).getProductById(2L);
+            var result = service.compareRackets(java.util.List.of(2L, 1L));
+            assertEquals(java.util.List.of(2L, 1L), result.getRackets().stream().map(com.sports.dto.ProductDto::getId).toList());
+            assertFalse(result.getComparisonAttributes().isEmpty());
+            second.setCategoryId(category == 1 ? 2L : 1L);
+            assertThrows(com.sports.exception.BadRequestException.class, () -> service.compareRackets(java.util.List.of(1L, 2L)));
+        }
+    }
+
+    @Test void comparisonRejectsDifferentOrUnknownAccessoryTypesAndInvalidIds() {
+        var service = org.mockito.Mockito.spy(new ProductService(null, null, null, null));
+        var first = com.sports.dto.ProductDto.builder().id(1L).categoryId(5L).accessoryType("day_cuoc").build();
+        var second = com.sports.dto.ProductDto.builder().id(2L).categoryId(5L).accessoryType("quan_can").build();
+        org.mockito.Mockito.doReturn(first).when(service).getProductById(1L);
+        org.mockito.Mockito.doReturn(second).when(service).getProductById(2L);
+        assertThrows(com.sports.exception.BadRequestException.class, () -> service.compareRackets(java.util.List.of(1L, 2L)));
+        first.setAccessoryType(null);
+        assertThrows(com.sports.exception.BadRequestException.class, () -> service.compareRackets(java.util.List.of(1L)));
+        for (var ids : java.util.List.of(java.util.List.<Long>of(), java.util.List.of(1L, 1L), java.util.List.of(0L), java.util.List.of(1L, 2L, 3L, 4L))) {
+            assertThrows(com.sports.exception.BadRequestException.class, () -> service.compareRackets(ids));
+        }
+    }
 }

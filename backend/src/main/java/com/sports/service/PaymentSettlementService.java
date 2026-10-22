@@ -116,11 +116,28 @@ public class PaymentSettlementService {
         if (receipts.stream().anyMatch(r -> !r.duplicate() || r.conflict())) CheckoutRevision.touch(attempt.getOrder());
         String reason = queryReason(attempt, query, proofs);
         if (reason != null) { review(attempt, eventRows(receipts), reason); return outcome(200, attempt); }
-        if (proofs.isEmpty()) return outcome(202, attempt);
+        if (proofs.isEmpty()) return unpaidTerminal(attempt, query);
         if (!"PAID".equals(query.status())) {
             review(attempt, eventRows(receipts), "PAYMENT_NOT_CONFIRMED"); return outcome(202, attempt);
         }
         applyQuery(attempt, receipts, proofs);
+        return outcome(200, attempt);
+    }
+
+    private Outcome unpaidTerminal(PaymentAttempt attempt, PayOSPaymentClient.Query query) {
+        if (!Set.of("CANCELLED", "EXPIRED").contains(query.status())) return outcome(202, attempt);
+        if (attempt.getStatus() == PaymentAttempt.Status.PAID
+                || attempt.getStatus() == PaymentAttempt.Status.NEEDS_REVIEW) return outcome(200, attempt);
+        if (query.amountPaid().signum() != 0 || query.amountRemaining().compareTo(attempt.getAmount()) != 0
+                || !ledger.received(attempt.getId()).isEmpty() || ledger.hasHardConflict(attempt.getId())) {
+            review(attempt, List.of(), "TERMINAL_PAYMENT_EVIDENCE_CONFLICT");
+            return outcome(200, attempt);
+        }
+        var status = PaymentAttempt.Status.valueOf(query.status());
+        if (attempt.getStatus() != status) {
+            attempt.setStatus(status);
+            CheckoutRevision.touch(attempt.getOrder());
+        }
         return outcome(200, attempt);
     }
 

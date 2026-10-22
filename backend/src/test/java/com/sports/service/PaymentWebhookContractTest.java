@@ -109,4 +109,30 @@ class PaymentWebhookContractTest {
     private void sign(ObjectNode payload) {
         payload.put("signature", signatures.hmacSha256(signatures.canonicalData(payload.get("data")), KEY));
     }
+    @Test
+    void verifiedUnpaidCancellationUpdatesAttemptOnlyAndIsIdempotent() {
+        var ledger = mock(PaymentLedgerService.class);
+        var orders = mock(OrderService.class);
+        var service = spy(new PaymentSettlementService(null, null, ledger, orders, null, mock(PaymentTransitionGuard.class)));
+        var attempt = new com.sports.entity.PaymentAttempt();
+        var order = new com.sports.entity.Order();
+        order.setStatus(com.sports.entity.OrderStatus.PENDING);
+        order.setTotalAmount(new BigDecimal("30000")); order.setPayosOrderCode(100000019L);
+        attempt.setId(19L); attempt.setOrder(order); attempt.setOrderCode(100000019L);
+        attempt.setPaymentLinkId("link-19"); attempt.setAmount(new BigDecimal("30000"));
+        attempt.setStatus(com.sports.entity.PaymentAttempt.Status.PENDING);
+        doReturn(attempt).when(service).lockAttempt(19L);
+        when(ledger.received(19L)).thenReturn(java.util.List.of());
+        var proof = new PayOSPaymentClient.Query(100000019L, new BigDecimal("30000"), "link-19", "CANCELLED",
+                BigDecimal.ZERO, new BigDecimal("30000"), java.util.List.of());
+        assertEquals(com.sports.entity.PaymentAttempt.Status.CANCELLED, service.query(19L, proof).attempt().status());
+        assertEquals(com.sports.entity.PaymentAttempt.Status.CANCELLED, service.query(19L, proof).attempt().status());
+        assertEquals(com.sports.entity.OrderStatus.PENDING, order.getStatus());
+        attempt.setStatus(com.sports.entity.PaymentAttempt.Status.PAID);
+        assertEquals(com.sports.entity.PaymentAttempt.Status.PAID, service.query(19L, proof).attempt().status());
+        attempt.setStatus(com.sports.entity.PaymentAttempt.Status.NEEDS_REVIEW);
+        assertEquals(com.sports.entity.PaymentAttempt.Status.NEEDS_REVIEW, service.query(19L, proof).attempt().status());
+        verifyNoInteractions(orders);
+    }
+
 }

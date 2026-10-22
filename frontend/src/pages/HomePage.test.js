@@ -91,12 +91,13 @@ function compareFixture(saved='[]') {
     {localStorage:{getItem:key=>storage.get(key),setItem:(key,value)=>storage.set(key,value)}});
   return{...h,...mod,storage,value:()=>h.render(mod.CompareProvider,{children:null}).props.value};
 }
-test('Comparison production normalizesbadstorage, onlyrackets, dedupe andmax3 even rapidadds',()=>{
+test('Comparison production normalizesbadstorage, samegroup, dedupe andmax3 even rapidadds',()=>{
   for(const saved of ['{}','null','notjson','[1,null,"shoe"]'])assert.deepEqual(compareFixture(saved).value().selectedRackets,[]);
   const h=compareFixture(JSON.stringify([{id:1,categoryId:1},{id:1,categoryId:1},{id:2,categoryId:2},{id:3,categoryId:1},{id:4,categoryId:1},{id:5,categoryId:1}]));
   assert.deepEqual(h.value().selectedRackets.map(item=>item.id),[1,3,4]);h.value().clearComparison();let value=h.value();
   for(let id=10;id<14;id++)value.addRacket({id,categoryId:1});assert.equal(h.value().selectedRackets.length,3);assert.match(h.value().comparisonError,/tối đa 3/);
-  h.value().clearComparison();h.value().addRacket({id:22,categoryId:2});assert.equal(h.value().selectedRackets.length,0);assert.match(h.value().comparisonError,/Chỉ có thể so sánh vợt/);
+  h.value().clearComparison();h.value().addRacket({id:22,categoryId:2});assert.equal(h.value().selectedRackets.length,1);
+  h.value().addRacket({id:23,categoryId:1});assert.equal(h.value().selectedRackets.length,1);assert.match(h.value().comparisonError,/cùng nhóm/);
 });
 function comparePageFixture(api,selected=[{id:1,categoryId:1,name:'Vợt cũ'}]) {
   const h=hooks(),context=compareFixture(),{facts}=factsFixture(h.react),mod=compileFile('./ComparePage.jsx',{
@@ -107,9 +108,9 @@ function comparePageFixture(api,selected=[{id:1,categoryId:1,name:'Vợt cũ'}])
 test('ComparisonPage actualAPI refreshesprice/specs, Pagecatalogcompatible, missinginfo notfabricated,GET500retry',async()=>{
   const requests=[],api={getProducts:async()=>({content:[{id:1,categoryId:1},{id:2,categoryId:2}]}),compareRackets:ids=>{requests.push(ids);return Promise.resolve({rackets:[{id:1,categoryId:1,name:'Vợt máy chủ',price:999000,inStock:true}]});}};
   const h=comparePageFixture(api);h.renderPage();await flush();let html=renderToStaticMarkup(h.renderPage());assert.deepEqual(requests[0],[1]);assert.match(html,/Vợt máy chủ|999\.000|Chưa có thông tin/);assert.doesNotMatch(html,/Medium|4U-G5|28-30 lbs|Toàn diện/);
-  assert.deepEqual(h.comparisonCatalog({content:[{id:1,categoryId:1},{id:2,categoryId:2}]}).map(item=>item.id),[1]);
+  assert.deepEqual(h.comparisonCatalog({content:[{id:1,categoryId:1},{id:2,categoryId:2}]}).map(item=>item.id),[1,2]);
   assert.throws(()=>h.comparisonResults({rackets:[{id:2,categoryId:1}]},[{id:1}]));
-  treeNodes(h.renderPage()).find(node=>node.type==='button'&&React.Children.toArray(node.props.children).includes('Thêm vợt so sánh')).props.onClick();
+  treeNodes(h.renderPage()).find(node=>node.type==='button'&&React.Children.toArray(node.props.children).includes('Thêm sản phẩm so sánh')).props.onClick();
   assert.doesNotThrow(()=>renderToStaticMarkup(h.renderPage()));
   api.compareRackets=async()=>{throw {response:{status:500}};};
   const failed=comparePageFixture(api);failed.renderPage();await flush();html=renderToStaticMarkup(failed.renderPage());assert.match(html,/Không tải được thông số|Thử lại/);assert.doesNotMatch(html,/999\.000/);
@@ -183,3 +184,32 @@ test('Accessory legacy pages keepfilesbutallproductimagesuseinternalvalidatedpla
     const source=fs.readFileSync(new URL(file,import.meta.url),'utf8');assert.doesNotMatch(source,/<img\b/);assert.match(source,/ProductImage from '\.\.\/components\/ProductImage'/);
   }
 });
+
+ test('Comparison accepts all five categories, persists group and accessory subtype, rejects mixed selections', () => {
+  for (const categoryId of [1, 2, 3, 4, 5]) {
+    const h = compareFixture();
+    h.value().addRacket({ id: 21, categoryId, accessoryType: categoryId === 5 ? 'day_cuoc' : null });
+    h.value().addRacket({ id: 22, categoryId, accessoryType: categoryId === 5 ? 'day_cuoc' : null });
+    assert.equal(h.value().selectedRackets.length, 2);
+    const saved = h.storage.get('badminton_compare');
+    assert.equal(compareFixture(saved).value().selectedRackets[0].categoryId, categoryId);
+    h.value().addRacket({ id: 23, categoryId: categoryId === 1 ? 2 : 1 });
+    assert.equal(h.value().selectedRackets.length, 2);
+  }
+  const h = compareFixture();
+  h.value().addRacket({ id: 1, categoryId: 5, accessoryType: 'day_cuoc' });
+  h.value().addRacket({ id: 2, categoryId: 5, accessoryType: 'quan_can' });
+  h.value().addRacket({ id: 3, categoryId: 5 });
+  assert.deepEqual(h.value().selectedRackets.map(item => item.id), [1]);
+ });
+ test('Comparison table renders category-specific facts from backend and filters selector by group', async () => {
+  const examples = [[2, 'soleType', 'Đế cao su'], [3, 'fabricType', 'Polyester'], [4, 'capacity', '30 lít'], [5, 'quantityPerPack', '10 m']];
+  for (const [categoryId, field, value] of examples) {
+    const item = { id: 11, categoryId, accessoryType: categoryId === 5 ? 'day_cuoc' : null, [field]: value };
+    const api = { getProducts: async () => [item], compareRackets: async () => ({ rackets: [item] }) };
+    const h = comparePageFixture(api, [item]); h.renderPage(); await flush();
+    const html = renderToStaticMarkup(h.renderPage()); assert.ok(html.includes(value));
+    assert.deepEqual(h.comparisonCatalog([item, { id: 99, categoryId: 1 }], [item]).map(x => x.id), [11]);
+    assert.throws(() => h.comparisonResults({ rackets: [{ id: 11, categoryId: 1 }] }, [item]));
+  }
+ });

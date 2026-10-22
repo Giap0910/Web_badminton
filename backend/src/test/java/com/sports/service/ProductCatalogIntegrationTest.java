@@ -139,13 +139,13 @@ class ProductCatalogIntegrationTest {
     }
 
     @Test
-    void comparisonOnlyAcceptsDistinctVisibleRacketsAndSerializesNoStockCounts() throws Exception {
+    void comparisonAcceptsSameCategoryAndSerializesNoStockCounts() throws Exception {
         var catalog=service.getProducts(null,null,null,null,null,null,null,null,null);
         var rackets=catalog.stream().filter(product->Objects.equals(product.getCategoryId(),1L)).limit(2).toList();
         var other=catalog.stream().filter(product->!Objects.equals(product.getCategoryId(),1L)).findFirst().orElseThrow();
         assertEquals(2,rackets.size());Long first=rackets.get(0).getId(),second=rackets.get(1).getId();
         assertThrows(BadRequestException.class,()->service.compareRackets(List.of(first,first)));
-        assertThrows(BadRequestException.class,()->service.compareRackets(List.of(other.getId())));
+        assertThrows(BadRequestException.class,()->service.compareRackets(List.of(first,other.getId())));
         assertThrows(BadRequestException.class,()->service.compareRackets(Arrays.asList(first,null)));
         var response=service.compareRackets(List.of(second,first));
         assertEquals(List.of(second,first),response.getRackets().stream().map(ProductDto::getId).toList());

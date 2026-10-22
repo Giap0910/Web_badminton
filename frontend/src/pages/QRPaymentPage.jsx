@@ -42,6 +42,8 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
   const { orderId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const returnParams = new URLSearchParams(location.search);
+  const isProviderCancelReturn = returnParams.get('cancelled') === '1' || returnParams.get('cancel') === 'true';
 
   // Validate initial location.state strictly matches current route orderId
   const initialOrder =
@@ -214,6 +216,10 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
 
   // Fetch order details & latest payment attempt
   const fetchOrder = async () => {
+    if (typeof isProviderCancelReturn !== 'undefined' && isProviderCancelReturn) {
+      navigate(`/order-success/${orderId}?cancelled=1`, { replace: true });
+      return;
+    }
     const targetOrderId = orderId;
     const fetchGen = typeof orderFetchGenerationRef !== 'undefined' ? ++orderFetchGenerationRef.current : 0;
     const reqEpoch = typeof authEpochRef !== 'undefined' ? ++authEpochRef.current : 0;
@@ -387,10 +393,11 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
 
   useEffect(() => {
     fetchOrder();
-  }, [orderId, envStatus]);
+  }, [orderId, envStatus, location.search]);
 
   // Polling check order status every 4 seconds
   useEffect(() => {
+    if (typeof isProviderCancelReturn !== 'undefined' && isProviderCancelReturn) return;
     let cancelled = false;
     const targetOrderId = orderId;
     const generation = typeof pollGenerationRef !== 'undefined' ? ++pollGenerationRef.current : 0;
@@ -1011,7 +1018,17 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
   const isUnknownMode = resolvedPaymentMode === 'UNKNOWN';
   const simulationControlsAllowed = Boolean(isMockMode && paymentEnv?.simulationControlsAllowed);
 
+  if (isProviderCancelReturn) return <p className="p-8" role="status">Đang xác minh trạng thái thanh toán với PayOS...</p>;
   if (loading) return <p className="p-8" role="status">Đang tải đơn hàng...</p>;
+  if (isOrderOwnedByRoute && payment && ['CANCELLED', 'EXPIRED', 'FAILED', 'NEEDS_REVIEW', 'PAID'].includes(payment.status)) {
+    return <div className="max-w-2xl mx-auto p-8 space-y-4">
+      <h1 className="text-xl font-bold">Liên kết thanh toán không còn sử dụng được</h1>
+      <p>Vui lòng xem trạng thái đã được ghi nhận trước khi tiếp tục thanh toán hoặc đổi phương thức.</p>
+      <Link className="block text-blue-600 underline" to={`/order-success/${orderId}`}>Xem trạng thái thanh toán</Link>
+      {order?.status === 'PENDING' && order?.paymentMethod === 'PAYOS_VIETQR' && ['CANCELLED', 'EXPIRED', 'FAILED'].includes(payment.status) &&
+        <Link className="block text-red-600 underline" to={`/checkout?orderId=${orderId}`}>Đổi phương thức thanh toán</Link>}
+    </div>;
+  }
   if (!isOrderOwnedByRoute || error || (order && order.status !== 'PENDING') || secondsRemaining <= 0) {
     return <div className="max-w-2xl mx-auto p-8 space-y-4">
       <h1 className="text-xl font-bold">Thanh toán đơn hàng #{orderId}</h1>
@@ -1140,14 +1157,6 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
             </div>
           )}
 
-          {/* Banner thông báo khi người dùng quay lại từ cổng thanh toán (?cancelled=1) */}
-          {new URLSearchParams(location.search).get('cancelled') === '1' && (
-            <div className="w-full bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2.5 rounded-xl text-xs font-semibold mb-4 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>Bạn đã quay lại từ cổng thanh toán. Bạn có thể tiếp tục quét mã VietQR bên dưới hoặc kiểm tra lại thanh toán.</span>
-            </div>
-          )}
-
           {/* Trạng thái mô phỏng Mock Provider (nếu có) */}
           {isMockMode && payment?.mockProviderStatus && (
             <div
@@ -1158,20 +1167,6 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
               <span>Trạng thái mô phỏng: {payment.mockProviderStatus}</span>
             </div>
           )}
-          {/* FIX-048: Thông báo minh bạch bản demo */}
-          <div className="w-full mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Thanh toán QR tạm hoãn trong bản demo. Quý khách có thể quay lại Checkout để chuyển sang COD.</span>
-            </div>
-            <Link
-              to={`/checkout?orderId=${orderId}`}
-              className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg font-bold text-[11px] shrink-0 transition"
-            >
-              Đổi sang COD
-            </Link>
-          </div>
-
           {/* Trạng thái thanh toán */}
           {error ? (
             <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 px-3.5 py-1.5 rounded-full text-xs font-bold text-red-800 mb-5 shadow-sm">
@@ -1333,12 +1328,12 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
                     className="max-w-full max-h-full aspect-square"
                   />
                 </div>
-              ) : isRealMode && payment?.checkoutUrl ? (
+              ) : isRealMode && payment?.status === 'PENDING' && payment?.checkoutUrl ? (
                 <div className="text-center p-4 flex flex-col items-center justify-center gap-2">
                   <QrCode className="w-16 h-16 text-slate-700" />
                   <a
                     href={payment.checkoutUrl}
-                    target="_blank"
+                    target="_self"
                     rel="noopener noreferrer"
                     className="text-xs font-bold text-blue-600 hover:underline"
                   >
@@ -1450,12 +1445,12 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
             </div>
           )}
 
-          {/* Nút "Tôi đã thanh toán" */}
+          {/* Tiếp tục thanh toán và thao tác phụ */}
           <div className="w-full flex flex-col gap-2.5">
-            {!isQRSuspended && isRealMode && payment?.checkoutUrl && (
+            {!isQRSuspended && isRealMode && payment?.status === 'PENDING' && payment?.checkoutUrl && (
               <a
                 href={payment.checkoutUrl}
-                target="_blank"
+                target="_self"
                 rel="noopener noreferrer"
                 className="w-full py-3.5 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm sm:text-base transition-all duration-200 shadow-sm flex items-center justify-center gap-2"
               >
@@ -1470,29 +1465,13 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
                 Cổng thanh toán PayOS tạm hoãn trong bản demo.
               </div>
             )}
-            <button
-              type="button"
-              onClick={handleCheckPayment}
-              disabled={isVerifying}
-              className="w-full py-3.5 px-5 rounded-xl border-2 border-slate-900 text-slate-900 font-bold text-sm sm:text-base hover:bg-slate-900 hover:text-white transition-all duration-200 shadow-sm flex items-center justify-center gap-2 group disabled:opacity-50"
-            >
-              {isVerifying ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Đang kiểm tra giao dịch...</span>
-                </>
-              ) : (!payment || payment?.status === 'CREATING') ? (
-                <>
-                  <RefreshCw className="w-5 h-5 text-blue-600 group-hover:text-white transition-colors" />
-                  <span>Kiểm tra lại</span>
-                </>
-              ) : (
-                <>
-                  <Check className="w-5 h-5 text-blue-600 group-hover:text-white transition-colors" />
-                  <span>Tôi đã thanh toán</span>
-                </>
-              )}
-            </button>
+            {(!payment || payment.status === 'CREATING') && (
+              <button type="button" onClick={handleCheckPayment} disabled={isVerifying}
+                className="w-full py-3 px-5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+                {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                <span>{isVerifying ? 'Đang kiểm tra giao dịch...' : 'Kiểm tra lại'}</span>
+              </button>
+            )}
 
             {/* Thao tác phụ: Tải ảnh QR / Quay lại checkout */}
             <div className="flex items-center justify-between text-xs text-slate-500 pt-1 px-1">

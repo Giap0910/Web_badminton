@@ -531,6 +531,8 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
   // =========================================================================
   async function createQRPaymentHarness({
     qrEnabled = false,
+    locationSearch = '',
+    onNavigate = () => {},
     orderId = '501',
     initialOrder = null,
     initialPayment = null,
@@ -627,8 +629,8 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
 
     const mockRouter = {
       useParams: () => ({ orderId: currentOrderId }),
-      useLocation: () => ({ pathname: `/payment/qr/${currentOrderId}`, search: '', state: currentLocationState }),
-      useNavigate: () => () => {},
+      useLocation: () => ({ pathname: `/payment/qr/${currentOrderId}`, search: locationSearch, state: currentLocationState }),
+      useNavigate: () => onNavigate,
       Link: ({ to, children, ...props }) => React.createElement('a', { href: to, ...props }, children),
     };
 
@@ -756,7 +758,8 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
       const markup = await harness.render();
 
       assert.equal(postLinkCalls, 0, 'DEMO COD REQUIREMENT: initial mount must make ZERO POST payment-link calls');
-      assert.ok(markup.includes('Thanh toán QR tạm hoãn trong bản demo'), 'Must display demo suspension banner');
+      assert.ok(!markup.includes('Thanh toán QR tạm hoãn trong bản demo'), 'Must not display obsolete demo banner');
+      assert.ok(!markup.includes('Tôi đã thanh toán'), 'Must not display manual payment confirmation button');
       assert.ok(markup.includes('TẠM HOÃN THANH TOÁN QR'), 'Must display suspended QR placeholder card');
     } finally {
       harness.dispose();
@@ -826,7 +829,7 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
     try {
       const markup = await harness.render();
       assert.ok(markup.includes('href="/checkout?orderId=304"'), 'Return checkout link must preserve internal orderId 304');
-      assert.ok(markup.includes('Đổi sang COD'), 'Banner must provide quick switch link to COD');
+      assert.ok(markup.includes('Đổi phương thức thanh toán'), 'Header must retain payment method navigation');
     } finally {
       harness.dispose();
     }
@@ -869,6 +872,41 @@ test('STEP 1 — COD Demo Verification Suite', async (t) => {
   // =========================================================================
   // FIX-010 TESTS: RacketGripDetailPage Fake Combo Disabled
   // =========================================================================
+  await t.test('Terminal PayOS attempts never render stale checkout links or payable QR', async (sub) => {
+    for (const status of ['CANCELLED', 'EXPIRED', 'FAILED', 'NEEDS_REVIEW']) {
+      const harness = await createQRPaymentHarness({ qrEnabled: true, orderId: '310',
+        getOrderPaymentHandler: async () => ({ data: { orderId: 310, status, paymentMode: 'REAL',
+          checkoutUrl: 'https://pay.payos.vn/web/retired-link', qrPayload: 'RETIRED-QR' } }) });
+      sub.after(() => harness.dispose());
+      try {
+        const markup = await harness.render();
+        assert.ok(!markup.includes('retired-link'));
+        assert.ok(!markup.includes('RETIRED-QR'));
+        assert.ok(!markup.includes('Tiếp tục thanh toán qua PayOS'));
+        assert.match(markup, /Xem trạng thái thanh toán/);
+        if (status === 'NEEDS_REVIEW') assert.ok(!markup.includes('Đổi phương thức thanh toán'));
+      } finally { harness.dispose(); }
+    }
+  });
+
+  await t.test('PayOS cancel return blocks stale QR and routes same order to backend verification', async (sub) => {
+    for (const search of ['?cancelled=1', '?cancel=true&status=CANCELLED']) {
+      const navigations = []; let creates = 0;
+      const harness = await createQRPaymentHarness({ qrEnabled: true, orderId: '309', locationSearch: search,
+        onNavigate: (...args) => navigations.push(args),
+        createPaymentLinkHandler: async () => { creates++; return { data: null }; } });
+      sub.after(() => harness.dispose());
+      try {
+        const markup = await harness.render();
+        assert.match(markup, /Đang xác minh trạng thái thanh toán với PayOS/);
+        assert.ok(!markup.includes('Tiếp tục thanh toán qua PayOS'));
+        assert.ok(navigations.length > 0);
+        assert.ok(navigations.every(([to, options]) => to === '/order-success/309?cancelled=1' && options.replace));
+        assert.equal(creates, 0);
+      } finally { harness.dispose(); }
+    }
+  });
+
   await t.test('FIX-010 TEST 1: RacketGripDetailPage combo button is disabled and does NOT contain fake product 99901', async () => {
     const gripCode = fs.readFileSync(path.join(__dirname, 'RacketGripDetailPage.jsx'), 'utf-8');
     assert.ok(

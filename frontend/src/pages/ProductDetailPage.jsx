@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { productApi } from '../api/productApi';
 import { reviewApi, useProductReviews, buildReviewPayload } from '../api/reviewApi';
 import { useCart } from '../context/CartContext';
-import { useCompare } from '../context/CompareContext';
+import { useCompare, comparisonGroup } from '../context/CompareContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
 import { productCategory } from '../utils/formatters';
@@ -49,7 +49,7 @@ const ProductDetailPage = () => {
   // Accordion state for QA
 
   const { addToCart } = useCart();
-  const { toggleRacket, isInComparison } = useCompare();
+  const { toggleRacket, isInComparison, comparisonError } = useCompare();
   const { isAuthenticated, token, user } = useAuth();
   const { isFavorite, toggleFavorite, favoriteError } = useProductFavorite(user?.id, Number(id));
 
@@ -248,6 +248,7 @@ const ProductDetailPage = () => {
           {/* RIGHT COLUMN: SPECS & PURCHASING ARCHITECTURE (6 cols) */}
           <div className="lg:col-span-6 flex flex-col justify-between">
             {favoriteError && <p role="alert" className="text-xs text-red-700">{favoriteError}</p>}
+            {comparisonError && <p role="alert" className="text-xs text-red-700">{comparisonError}</p>}
             <div>
               {/* Brand line & SKU Header */}
               <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
@@ -353,8 +354,8 @@ const ProductDetailPage = () => {
 
               {/* Auxiliary Compare & Share Links */}
               <div className="flex items-center justify-between text-xs text-slate-600 mb-6 pt-1">
-                <div className="flex items-center gap-6">
-                  {isRacket && (
+                <div className="flex flex-wrap items-center gap-3 sm:gap-6">
+                  {comparisonGroup(product) && (
                     <button
                       type="button"
                       onClick={() => toggleRacket(product)}

@@ -119,7 +119,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
 
     test('2.3. Does NOT link to external PayOS checkoutUrl unless strictly verified in REAL mode', () => {
       // Confirms external checkoutUrl button is hidden when in mock mode or unknown mode
-      assert.match(qrSource, /isRealMode && payment\?\.checkoutUrl/);
+      assert.match(qrSource, /isRealMode && payment\?\.status === 'PENDING' && payment\?\.checkoutUrl/);
       assert.doesNotMatch(qrSource, /!isMockMode && payment\?\.checkoutUrl/);
     });
 
@@ -570,7 +570,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
       assert.match(qrSource, /data-testid="unknown-env-card"/);
       assert.match(qrSource, /data-testid="retry-env-btn"/);
       assert.match(qrSource, /isRealMode && payment\?\.qrPayload/);
-      assert.match(qrSource, /isRealMode && payment\?\.checkoutUrl/);
+      assert.match(qrSource, /isRealMode && payment\?\.status === 'PENDING' && payment\?\.checkoutUrl/);
       assert.match(qrSource, /\{simulationControlsAllowed && \(/);
 
       // Verify order snapshot preservation: Order is not mutated or cleared
@@ -679,7 +679,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
 
     test('9.12. MOCK mode never renders QRCodeSVG or external checkoutUrl', () => {
       assert.match(qrSource, /isMockMode \? \(\s*\/\* MOCK MODE:[\s\S]*?data-testid="mock-qr-placeholder"/);
-      assert.match(qrSource, /isRealMode && payment\?\.checkoutUrl/);
+      assert.match(qrSource, /isRealMode && payment\?\.status === 'PENDING' && payment\?\.checkoutUrl/);
     });
 
     test('9.13. UNKNOWN mode never renders external PayOS URL even if checkoutUrl is in payment fixture', () => {
@@ -796,7 +796,9 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
       const React = await import('react');
       const ReactDOMServer = await import('react-dom/server');
 
-      const transformed = await esbuild.transform(qrSource, {
+      // Exercise recovery races independently of the removed manual confirmation UI.
+      const instrumentedSource = qrSource.replace('  if (loading) return', '  React.capturePaymentCheck(handleCheckPayment);\n  if (loading) return');
+      const transformed = await esbuild.transform(instrumentedSource, {
         loader: 'jsx',
         format: 'cjs',
         jsx: 'transform',
@@ -819,6 +821,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
 
       const customReact = {
         ...React,
+        capturePaymentCheck: handler => { checkPaymentHandler = handler; },
         createElement: (type, props, ...children) => {
           if (props && typeof props.onClick === 'function') {
             const strChildren = JSON.stringify(children || '');
@@ -1530,7 +1533,7 @@ describe('FIX-058 — Development Mock PayOS and Full Checkout Payment Testing',
       assert.ok(initial.finalMarkup.includes('https://pay.payos.vn/web/test-checkout-501'), 'Initial load must contain checkoutUrl');
       assert.ok(initial.finalMarkup.includes('qrcode-svg'), 'Initial load must contain QR code');
       assert.ok(initial.finalMarkup.includes('Đang chờ thanh toán...'), 'Initial load must show pending payment indicator');
-      assert.ok(initial.finalMarkup.includes('Tôi đã thanh toán'), 'Initial load must contain payment action button');
+      assert.ok(!initial.finalMarkup.includes('Tôi đã thanh toán'), 'Pending payment must rely on automatic status polling without manual confirmation');
       assert.equal(harness.isPollIntervalCleared(), false, 'Polling interval must be running initially');
 
       // 2. Trigger 4-second polling tick where backend returns HTTP 403

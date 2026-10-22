@@ -77,7 +77,8 @@ describe('FIX-004 — Frontend Implementation & Verification', () => {
 
   test('11. QRPaymentPage: Cancelled query ?cancelled=1 provides context only and does NOT call cancelOrder', () => {
     assert.match(qrSource, /get\('cancelled'\)\s*===\s*'1'/, 'Must detect ?cancelled=1 context');
-    assert.match(qrSource, /Bạn đã quay lại từ cổng thanh toán/, 'Must render contextual notice');
+    assert.match(qrSource, /order-success\/\$\{orderId\}\?cancelled=1/, 'Must route to backend-verified payment result');
+    assert.match(qrSource, /Đang xác minh trạng thái thanh toán với PayOS/, 'Must block stale QR while redirecting');
     // Ensure cancelled=1 does NOT invoke orderApi.cancelOrder
     assert.ok(!qrSource.includes('orderApi.cancelOrder'), 'Must NEVER call orderApi.cancelOrder on cancelled query');
   });
