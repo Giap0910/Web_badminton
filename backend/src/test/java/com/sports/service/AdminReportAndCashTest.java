@@ -14,6 +14,31 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AdminReportAndCashTest {
+    @Test void revenueExcludesShippingWithoutLosingPaidOrdersOrSnapshotSales() throws Exception {
+        var orders = mock(OrderService.class); var attempts = mock(PaymentAttemptRepository.class);
+        var repository = mock(OrderRepository.class);
+        var payos = order(1L, "PAYOS_VIETQR", "PAID"); payos.setTotalAmount(new BigDecimal("30000")); payos.setShippingFee(new BigDecimal("30000"));
+        payos.setItems(List.of(sold(10L, 30L, "R30", "Vợt", 1, 650000, false)));
+        var cash = order(2L, "COD", "COMPLETED"); cash.setTotalAmount(new BigDecimal("30000")); cash.setShippingFee(new BigDecimal("30000"));
+        cash.setCashCollected(true); cash.setCashCollectedAt(LocalDateTime.of(2026, 10, 12, 12, 0));
+        var sale = order(3L, "PAYOS_VIETQR", "PAID"); sale.setShippingFee(new BigDecimal("30000"));
+        when(orders.getAllOrders()).thenReturn(List.of(payos, cash, sale));
+        when(attempts.findAll()).thenReturn(List.of(proof(payos, "PAYOS"), proof(sale, "PAYOS")));
+        when(repository.findRecognizedPaymentOrders()).thenReturn(List.of(Order.builder().id(1L).build(), Order.builder().id(2L).build(), Order.builder().id(3L).build()));
+        var service = new AdminReportService(orders, attempts, mock(UserRepository.class), mock(ProductRepository.class), repository, mock(PaymentEnvironmentService.class));
+        var day = LocalDate.of(2026, 10, 12); var report = service.report(day, day);
+        assertEquals(new BigDecimal("70000"), report.stats().getTotalRevenue());
+        assertEquals(new BigDecimal("70000"), report.stats().getDailyRevenue().get(day.toString()));
+        assertEquals(3L, report.stats().getPaidOrders()); assertEquals(1L, report.stats().getTopSellingProducts().get(0).quantity());
+        assertEquals(BigDecimal.ZERO, report.rows().get(0).recognizedAmount()); assertEquals(BigDecimal.ZERO, report.rows().get(1).recognizedAmount());
+        assertEquals(new BigDecimal("30000"), payos.getTotalAmount()); assertEquals(new BigDecimal("100000"), sale.getTotalAmount());
+        try (var book = new XSSFWorkbook(new ByteArrayInputStream(service.export(day, day, "xlsx")))) {
+            assertEquals(30000, book.getSheet("Đơn hàng").getRow(1).getCell(2).getNumericCellValue());
+            assertEquals(0, book.getSheet("Đơn hàng").getRow(1).getCell(8).getNumericCellValue());
+            assertEquals(70000, book.getSheet("Tổng quan").getRow(3).getCell(1).getNumericCellValue());
+        }
+    }
+
     @Test void paymentDtosUseAttemptCreationDateAndKeepProviderCodeSeparateFromInternalOrderId() throws Exception {
         var order = Order.builder().id(9L).createdAt(LocalDateTime.of(2026, 10, 1, 10, 0)).build();
         var attempt = new PaymentAttempt(); attempt.setId(12L); attempt.setOrder(order); attempt.setOrderCode(1000000009L);

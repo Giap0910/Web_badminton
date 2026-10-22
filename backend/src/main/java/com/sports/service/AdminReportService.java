@@ -41,10 +41,10 @@ public class AdminReportService {
         var stats = DashboardStatsResponse.builder().totalRevenue(revenue).totalOrders((long) selected.size())
                 .totalCustomers(users.count()).totalProducts(products.count())
                 .pendingOrders(selected.stream().filter(row -> "PENDING".equals(row.order().getStatus())).count())
-                .paidOrders(all.stream().filter(row -> row.recognizedAmount().signum() > 0).count())
+                .paidOrders(all.stream().filter(row -> row.confirmed() && inRange(row.receivedAt(), from, to)).count())
                 .recentOrders(selected.stream().limit(5).map(ReportRow::order).toList()).dailyRevenue(daily(all, from, to))
-                .unverifiedPaidOrders(unverified).topSellingProducts(topSelling(all))
-                .revenueBasis("Theo ngày nhận tiền PayOS có bằng chứng hợp lệ hoặc xác nhận thu COD không có xung đột; giá trị hàng bán chạy trước voucher, điểm và phí vận chuyển")
+                .unverifiedPaidOrders(unverified).topSellingProducts(topSelling(all, from, to))
+                .revenueBasis("Doanh thu tiền hàng sau ưu đãi, không gồm phí vận chuyển; theo ngày nhận tiền PayOS có bằng chứng hợp lệ hoặc xác nhận thu COD không có xung đột; giá trị hàng bán chạy trước ưu đãi")
                 .build();
         return new Report(stats, selected);
     }
@@ -66,12 +66,17 @@ public class AdminReportService {
         LocalDateTime received = cash ? order.getCashCollectedAt() : payos ? proof.getPaidAt() : null;
         boolean confirmed = recognized && (cash || payos) && received != null;
         if (!confirmed) received = null;
-        return new ReportRow(order, received, confirmed, confirmed && inRange(received, from, to) ? order.getTotalAmount() : BigDecimal.ZERO);
+        return new ReportRow(order, received, confirmed, confirmed && inRange(received, from, to) ? merchandiseRevenue(order) : BigDecimal.ZERO);
     }
 
-    private List<DashboardStatsResponse.TopSellingProduct> topSelling(List<ReportRow> rows) {
+    private BigDecimal merchandiseRevenue(OrderResponse order) {
+        BigDecimal shipping = order.getShippingFee() == null ? BigDecimal.ZERO : order.getShippingFee();
+        return order.getTotalAmount().subtract(shipping).max(BigDecimal.ZERO);
+    }
+
+    private List<DashboardStatsResponse.TopSellingProduct> topSelling(List<ReportRow> rows, LocalDate from, LocalDate to) {
         Map<String, DashboardStatsResponse.TopSellingProduct> totals = new LinkedHashMap<>();
-        rows.stream().filter(row -> row.recognizedAmount().signum() > 0).forEach(row -> {
+        rows.stream().filter(row -> row.confirmed() && inRange(row.receivedAt(), from, to)).forEach(row -> {
             if (row.order().getItems() == null) return;
             for (OrderItemResponse item : row.order().getItems()) {
                 if (item.getQuantity() == null || item.getQuantity() <= 0 || item.getPrice() == null) continue;

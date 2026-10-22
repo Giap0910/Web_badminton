@@ -165,12 +165,13 @@ class OrderServiceTest {
     @Test
     void dashboardUsesRecognizedPaymentsAfterOrderProgresses() {
         Order order = pendingOrder("PAYOS_VIETQR");
+        order.setShippingFee(new BigDecimal("30000"));
         order.setStatus(OrderStatus.SHIPPING);
         when(orderRepository.findRecognizedPaymentOrders()).thenReturn(java.util.List.of(order));
         var service = new AdminDashboardService(orderRepository, productRepository, userRepository, orderService);
         var stats = service.getDashboardStats();
         assertEquals(1L, stats.getPaidOrders());
-        assertEquals(0, order.getTotalAmount().compareTo(stats.getTotalRevenue()));
+        assertEquals(0, order.getTotalAmount().subtract(order.getShippingFee()).compareTo(stats.getTotalRevenue()));
     }
 
     private void lockExisting(Order order) {

@@ -151,7 +151,7 @@ const AdminDashboardPage = () => {
               </div>
             </div>
             <div className="mt-4 pt-2 flex items-center gap-2 border-t border-slate-100">
-              <span className="text-[11px] text-slate-500">Chỉ ghi nhận tiền PayOS đã xác nhận và tiền mặt/COD đã xác nhận thu. {unverified > 0 && `${unverified} đơn chưa có bằng chứng thu tiền.`}{unverified == null && ' Chưa có thống kê đơn chưa xác minh.'}</span>
+              <span className="text-[11px] text-slate-500">Doanh thu tiền hàng sau ưu đãi, không bao gồm phí vận chuyển. Chỉ ghi nhận tiền PayOS đã xác nhận và tiền mặt/COD đã xác nhận thu. {unverified > 0 && `${unverified} đơn chưa có bằng chứng thu tiền.`}{unverified == null && ' Chưa có thống kê đơn chưa xác minh.'}</span>
             </div>
           </div>
 

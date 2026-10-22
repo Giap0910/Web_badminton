@@ -327,6 +327,7 @@ test('STEP 2 — FIX-026 & FIX-036 Verification Suite', async (t) => {
 
       // 1. Verify Card Labels & Captions
       assert.ok(html.includes('Tổng doanh thu ghi nhận'), 'Must have label "Tổng doanh thu ghi nhận"');
+      assert.ok(html.includes('Doanh thu tiền hàng sau ưu đãi, không bao gồm phí vận chuyển.'));
       assert.ok(
         html.includes('Chỉ ghi nhận tiền PayOS đã xác nhận và tiền mặt/COD đã xác nhận thu.'),
         'Must have truthful revenue caption explaining backend recognition and no separate COD cash reconciliation'

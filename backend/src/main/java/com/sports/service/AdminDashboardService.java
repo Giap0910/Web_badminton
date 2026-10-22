@@ -37,7 +37,7 @@ public class AdminDashboardService {
         List<Order> paidOrderList = orderRepository.findRecognizedPaymentOrders();
         long paidOrders = paidOrderList.size();
         BigDecimal totalRevenue = paidOrderList.stream()
-                .map(Order::getTotalAmount)
+                .map(this::merchandiseRevenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // 5 Recent Orders
@@ -62,7 +62,7 @@ public class AdminDashboardService {
                 if (!orderDate.isBefore(today.minusDays(6))) {
                     String dateKey = orderDate.format(formatter);
                     BigDecimal current = dailyRevenue.getOrDefault(dateKey, BigDecimal.ZERO);
-                    dailyRevenue.put(dateKey, current.add(order.getTotalAmount()));
+                    dailyRevenue.put(dateKey, current.add(merchandiseRevenue(order)));
                 }
             }
         }
@@ -77,5 +77,10 @@ public class AdminDashboardService {
                 .recentOrders(recentOrders)
                 .dailyRevenue(dailyRevenue)
                 .build();
+    }
+
+    private BigDecimal merchandiseRevenue(Order order) {
+        BigDecimal shipping = order.getShippingFee() == null ? BigDecimal.ZERO : order.getShippingFee();
+        return order.getTotalAmount().subtract(shipping).max(BigDecimal.ZERO);
     }
 }
