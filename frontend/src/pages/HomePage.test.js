@@ -213,3 +213,47 @@ test('Accessory legacy pages keepfilesbutallproductimagesuseinternalvalidatedpla
     assert.throws(() => h.comparisonResults({ rackets: [{ id: 11, categoryId: 1 }] }, [item]));
   }
  });
+
+test('AI conversation renders text without product cards and keeps the next turn history', async () => {
+  const calls = [];
+  const h = aiFixture({ chat: async (query, history) => {
+    calls.push({ query, history });
+    return { reply: calls.length === 1 ? 'Mình nghe bạn, bạn cứ chia sẻ nhé.' : 'Bạn muốn chọn vợt hay giày trước?',
+      fallback: false, model: 'fixture-model', recommendedProducts: [] };
+  } });
+  treeNodes(h.renderPage()).find(node => node.type === 'button').props.onClick(); h.renderPage();
+  for (const text of ['Chào bạn, hôm nay mình hơi mệt', 'Mình mới tập chơi']) {
+    treeNodes(h.renderPage()).find(node => node.type === 'input').props.onChange({ target: { value: text } });
+    treeNodes(h.renderPage()).find(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+    await flush(); h.renderPage();
+  }
+  const html = renderToStaticMarkup(h.renderPage());
+  assert.match(html, /Mình nghe bạn, bạn cứ chia sẻ nhé/);
+  assert.match(html, /Bạn muốn chọn vợt hay giày trước/);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].history.map(x => x.role), ['user', 'model']);
+  assert.equal(calls[1].history[0].text, 'Chào bạn, hôm nay mình hơi mệt');
+  assert.ok(!treeNodes(h.renderPage()).some(node => node.type === 'a' && String(node.props.href).startsWith('/products/')));
+  h.unmount();
+});
+
+test('AI retains compact shopping constraints beyond six recent messages and clears them for another owner', async () => {
+  const calls = [];
+  const h = aiFixture({ chat: async (query, history) => {
+    calls.push({ query, history });
+    return { reply: 'Bạn cứ chia sẻ thêm nhé.', fallback: true, recommendedProducts: [], shoppingContext: 'giay duoi 2 trieu nu mau do' };
+  } });
+  treeNodes(h.renderPage()).find(node => node.type === 'button').props.onClick(); h.renderPage();
+  for (let i = 0; i < 5; i++) {
+    treeNodes(h.renderPage()).find(node => node.type === 'input').props.onChange({ target: { value: 'Câu hỏi ' + i } });
+    treeNodes(h.renderPage()).find(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+    await flush(); h.renderPage();
+  }
+  assert.equal(calls[4].history[0].text, 'giay duoi 2 trieu nu mau do');
+  assert.ok(calls.every(call => call.history.length <= 6));
+  h.owner(2); h.renderPage(); h.renderPage();
+  treeNodes(h.renderPage()).find(node => node.type === 'input').props.onChange({ target: { value: 'Xin chào' } });
+  treeNodes(h.renderPage()).find(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+  await flush(); h.renderPage();
+  assert.deepEqual(calls.at(-1).history, []); h.unmount();
+});

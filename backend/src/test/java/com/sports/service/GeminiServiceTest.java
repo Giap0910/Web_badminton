@@ -114,7 +114,7 @@ class GeminiServiceTest {
         var client = (RestTemplate) ReflectionTestUtils.getField(service, "restTemplate");
         var server = MockRestServiceServer.bindTo(client).build();
         server.expect(anything()).andRespond(withServerError());
-        assertTrue(service.chatWithAi(null, new AiChatRequest("Giày")).isFallback());
+        assertTrue(service.chatWithAi(null, new AiChatRequest("Giày Yonex")).isFallback());
         server.verify();
     }
 
@@ -207,7 +207,7 @@ class GeminiServiceTest {
     }
 
     private void catalogWithCategory(Long id, String category) {
-        Product product = Product.builder().id(id).name(category).brand("Yonex").stock(20)
+        Product product = Product.builder().id(id).name(category).brand("Yonex").stock(20).accessoryType(id == 5 ? "quan_can" : null)
                 .category(Category.builder().name(category).build()).build();
         when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(product));
         when(products.getProductById(id)).thenReturn(ProductDto.builder().id(id).inStock(true).build());
@@ -241,7 +241,7 @@ class GeminiServiceTest {
         Product yonex = Product.builder().id(1L).name("Vợt Yonex Astrox").brand("Yonex").stock(20)
                 .playStyle("Tấn công").balancePoint("Nặng đầu")
                 .category(Category.builder().name("Vợt Cầu Lông").build()).build();
-        Product victor = Product.builder().id(3L).name("Vợt Victor").brand("Victor").stock(20)
+        Product victor = Product.builder().id(3L).name("Vợt Victor").brand("Victor").stock(20).balancePoint("Nặng đầu")
                 .category(Category.builder().name("Vợt Cầu Lông").build()).build();
         when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(yonex, victor));
         when(products.getProductById(1L)).thenReturn(ProductDto.builder().id(1L).inStock(true).build());
@@ -345,11 +345,11 @@ class GeminiServiceTest {
 
     @Test void freshDetailStockCheckDropsRecommendationsThatJustSoldOut() {
         when(products.getProductById(2L)).thenReturn(ProductDto.builder().id(2L).inStock(false).build());
-        assertTrue(service.chatWithAi(null,new AiChatRequest("Giày")).getRecommendedProducts().isEmpty());
+        assertTrue(service.chatWithAi(null,new AiChatRequest("Giày Yonex")).getRecommendedProducts().isEmpty());
     }
 
     @Test void invalidHistoryFailsBeforeCatalogProviderAndAdmission() {
-        var request=new AiChatRequest("Giày");request.setHistory(java.util.Arrays.asList((AiChatRequest.HistoryMessage)null));
+        var request=new AiChatRequest("Giày Yonex");request.setHistory(java.util.Arrays.asList((AiChatRequest.HistoryMessage)null));
         assertThrows(com.sports.exception.BadRequestException.class,()->service.chatWithAi(null,request));
         request.setHistory(null);assertThrows(com.sports.exception.BadRequestException.class,()->service.chatWithAi(null,request));
         request.setHistory(java.util.Collections.nCopies(7,new AiChatRequest.HistoryMessage("user","Giày")));
@@ -378,8 +378,8 @@ class GeminiServiceTest {
     @Test void catalogExceptionReleasesActiveSlotWithoutSavingChatContent() {
         when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
                 .thenThrow(new IllegalStateException("test failure")).thenReturn(List.of());
-        assertThrows(IllegalStateException.class,()->service.chatWithAi(1L,"192.0.2.1",new AiChatRequest("Giày")));
-        assertTrue(service.chatWithAi(1L,"192.0.2.1",new AiChatRequest("Giày")).isFallback());
+        assertThrows(IllegalStateException.class,()->service.chatWithAi(1L,"192.0.2.1",new AiChatRequest("Giày Yonex")));
+        assertTrue(service.chatWithAi(1L,"192.0.2.1",new AiChatRequest("Giày Yonex")).isFallback());
     }
 
     @Test void httpNullHistoryIs400AndSeventhAnonymousRequestIs429WithRetryAfter() throws Exception {
@@ -511,4 +511,207 @@ class GeminiServiceTest {
         verify(products, never()).getProductById(9L);
     }
 
+    @Test void naturalGreetingsAndSmallTalkNeverForceCatalogCards() {
+        for (String message : List.of("Xin chào bạn ạ!", "Shop ơi", "Bạn có khỏe không?", "Cảm ơn bạn nhiều")) {
+            var response = service.chatWithAi(null, new AiChatRequest(message));
+            assertFalse(response.getReply().isBlank());
+            assertTrue(response.getRecommendedProductIds().isEmpty());
+            assertTrue(response.getRecommendedProducts().isEmpty());
+        }
+        verifyNoInteractions(repository, products);
+    }
+
+    @Test void conversationKeepsProviderTextAndHistoryWithoutCatalogRecommendations() {
+        ReflectionTestUtils.setField(service, "openAiKey", "test-openai");
+        var server = MockRestServiceServer.bindTo((RestTemplate) ReflectionTestUtils.getField(service, "restTemplate")).build();
+        server.expect(anything()).andExpect(jsonPath("$.input[0].content").value("Hôm nay mình hơi mệt"))
+                .andExpect(jsonPath("$.instructions").value(org.hamcrest.Matchers.containsString("không ép khách mua")))
+                .andRespond(withSuccess("{\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"reply\\\":\\\"Mình nghe bạn nói rồi. Bạn muốn kể thêm không?\\\",\\\"recommendedProductIds\\\":[999]}\"}]}]}", MediaType.APPLICATION_JSON));
+        var request = new AiChatRequest("Mình muốn trò chuyện một chút");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Hôm nay mình hơi mệt")));
+        var response = service.chatWithAi(null, request);
+        assertEquals("Mình nghe bạn nói rồi. Bạn muốn kể thêm không?", response.getReply());
+        assertFalse(response.isFallback()); assertTrue(response.getRecommendedProductIds().isEmpty());
+        verifyNoInteractions(repository, products); server.verify();
+    }
+
+    @Test void technicalQuestionAndOfflineConversationDoNotBecomeProductSearch() {
+        var knowledge = service.chatWithAi(null, new AiChatRequest("Vợt 3U và 4U khác nhau thế nào?"));
+        assertTrue(knowledge.getReply().contains("4U thường nhẹ hơn 3U"));
+        var chat = service.chatWithAi(null, new AiChatRequest("Hôm nay mình hơi buồn"));
+        assertTrue(chat.getReply().contains("kể thêm"));
+        assertTrue(chat.getRecommendedProducts().isEmpty());
+        verifyNoInteractions(repository);
+    }
+    @Test void shortBudgetReplyKeepsThePreviousProductCategory() {
+        var request = new AiChatRequest("2 triệu nhé");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Mình cần giày Yonex"),
+                new AiChatRequest.HistoryMessage("model", "Bạn dự tính ngân sách bao nhiêu?")));
+        var response = service.chatWithAi(null, request);
+        assertEquals(List.of(2L), response.getRecommendedProductIds());
+        assertTrue(response.getReply().contains("Giày Yonex"));
+    }
+
+    @Test void vagueCategoryQuestionAsksBudgetWithoutProductCards() {
+        var response = service.chatWithAi(null, new AiChatRequest("Giày"));
+        assertTrue(response.getReply().contains("khoảng giá"));
+        assertTrue(response.getRecommendedProductIds().isEmpty());
+    }
+    @Test void priceRangeAcceptsNaturalWordingAndEnforcesBothInclusiveBounds() {
+        for (String wording : List.of("2 đến 3 triệu", "2-3 triệu", "2–3 triệu", "2—3 triệu",
+                "từ 2 triệu đến 3 triệu", "tầm 2tr đến 3tr", "khoảng 2000 đến 3000k")) {
+            String query = ReflectionTestUtils.invokeMethod(service, "normalize", "Giày cầu lông " + wording);
+            for (int price : List.of(950000, 1999999, 2000000, 2500000, 3000000, 3000001)) {
+                var product = Product.builder().price(BigDecimal.valueOf(price)).build();
+                assertEquals(price >= 2000000 && price <= 3000000,
+                        ReflectionTestUtils.invokeMethod(service, "matchesRequirements", product, query), wording + " price=" + price);
+            }
+        }
+    }
+
+    @Test void latestRangeReplacesOldBudgetAndCannotRecommendNineHundredFiftyThousandShoe() {
+        var request = new AiChatRequest("Giày cầu lông 2 đến 3 triệu");
+        request.setHistory(List.of(new AiChatRequest.HistoryMessage("user", "Giày dưới 1 triệu")));
+        String query = ReflectionTestUtils.invokeMethod(service, "conversationQuery", request);
+        assertTrue(query.contains("2 den 3 trieu")); assertFalse(query.contains("duoi 1 trieu"));
+        Product cheap = Product.builder().id(3L).name("Giày Kawasaki").stock(4).price(new BigDecimal("950000"))
+                .category(Category.builder().name("Giày Cầu Lông").build()).build();
+        Product fitting = Product.builder().id(4L).name("Giày Victor").stock(4).price(new BigDecimal("2250000"))
+                .category(Category.builder().name("Giày Cầu Lông").build()).build();
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(cheap, fitting));
+        when(products.getProductById(4L)).thenReturn(ProductDto.builder().id(4L).name("Giày Victor").inStock(true).build());
+        var response = service.chatWithAi(null, request);
+        assertEquals(List.of(4L), response.getRecommendedProductIds());
+        verify(products, never()).getProductById(3L);
+    }
+
+    @Test void rangeSupportsSeparateUnitsAndRejectsReversedBounds() {
+        var product = Product.builder().price(new BigDecimal("1250000")).build();
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service, "matchesPriceRange", product, "1 trieu den 1500k"));
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service, "matchesPriceRange", product, "1,2 den 1,5 trieu"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service, "matchesPriceRange", product, "3 den 2 trieu"));
+    }
+    private Product auditProduct(long id, String name, String category) {
+        return Product.builder().id(id).name(name).brand("Yonex").stock(10).price(new BigDecimal("200000"))
+                .category(Category.builder().name(category).build()).build();
+    }
+
+    @Test void catalogAuditQueriesRespectAccessoryTypeApparelGenderAndSoftShaft() {
+        var grip = auditProduct(21L, "Quấn cán", "Phụ Kiện"); grip.setAccessoryType("quan_can");
+        var string = auditProduct(22L, "Cước BG65", "Phụ Kiện"); string.setAccessoryType("day_cuoc");
+        var shuttle = auditProduct(23L, "Quả cầu", "Phụ Kiện"); shuttle.setAccessoryType("qua_cau");
+        var bag = auditProduct(24L, "Túi cầu lông", "Balo & Bao Vợt");
+        var shirt = auditProduct(25L, "Áo cầu lông", "Quần Áo"); shirt.setGender("Nữ");
+        shirt.setVariants(List.of(ProductVariant.builder().size("L").stock(5).build()));
+        var pants = auditProduct(26L, "Quần nam", "Quần Áo"); pants.setGender("Nam");
+        var soft = auditProduct(27L, "Vợt mềm", "Vợt Cầu Lông"); soft.setStiffness("Flexible (Dẻo)");
+        var hard = auditProduct(28L, "Vợt cứng", "Vợt Cầu Lông"); hard.setStiffness("Stiff");
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(grip,string,shuttle,bag,shirt,pants,soft,hard));
+        when(products.getProductById(anyLong())).thenAnswer(call -> ProductDto.builder().id(call.getArgument(0)).inStock(true).build());
+        String[] questions = {"Quấn cán dưới 300k", "Quả cầu dưới 500k", "Túi cầu lông dưới 1 triệu", "Áo nữ size L dưới 500k", "Vợt thân mềm dưới 2 triệu"};
+        long[] expected = {21,23,24,25,27};
+        for (int index=0; index<questions.length; index++)
+            assertEquals(List.of(expected[index]), service.chatWithAi(null, new AiChatRequest(questions[index])).getRecommendedProductIds(), questions[index]);
+    }
+
+    @Test void explicitDongPricesAndModelCodesDoNotInterfere() {
+        var p = auditProduct(31L, "Vợt Yonex Arcsaber 11", "Vợt Cầu Lông"); p.setPrice(new BigDecimal("2500000"));
+        for (String text : List.of("giày từ 2000000 đến 3000000 đồng", "giày từ 2.000.000 đến 3.000.000đ", "giày 2,000,000-3,000,000 VND")) {
+            String query = ReflectionTestUtils.invokeMethod(service,"normalize",text);
+            assertEquals(true, ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,query),text);
+        }
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service,"matchesModel",p,"arcsaber 11"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service,"matchesModel",p,"arcsaber 77"));
+        p.setName("Yonex BG65");
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service,"matchesModel",p,"cuoc bg65"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service,"matchesModel",p,"cuoc bg66"));
+    }
+
+    @Test void colorsTechnicalRequirementsAndMissingFactsAreStrict() {
+        var p = auditProduct(32L,"Vợt Yonex","Vợt Cầu Lông");
+        p.setVariants(List.of(ProductVariant.builder().stock(5).color("Red").weightGrip("4U-G5").build()));
+        p.setStiffness("Dẻo"); p.setMaxTension("20-30 lbs"); p.setBalancePoint("Head-Light");
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"mau do 4u-g5 than mem nhe dau cang 28 lbs"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"mau tim"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"cang 31 lbs"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"than cung"));
+        p.setGender(null); assertEquals(false, ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"nu"));
+        p.setCapacity("30 lít"); p.setWaterproof("Có"); p.setFabricType("Polyester");
+        assertEquals(true, ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"dung tich 30 lit chong nuoc polyester"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"it nhat 40 lit"));
+        assertEquals(false, ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"cotton"));
+    }
+
+    @Test void knownModelSpecificationQuestionUsesCatalogWithoutProvider() {
+        var p = auditProduct(33L,"Vợt Yonex Arcsaber 11","Vợt Cầu Lông"); p.setStiffness("Stiff");
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(p));
+        var result = service.chatWithAi(null,new AiChatRequest("Thông số vợt Arcsaber 11 là gì?"));
+        assertTrue(result.getReply().contains("Stiff")); assertTrue(result.getReply().contains("Chưa có thông tin"));
+        assertTrue(result.getRecommendedProducts().isEmpty());
+    }
+
+    @Test void compactContextRetainsConstraintsAfterConversationalTurns() {
+        var request = new AiChatRequest("Giày nữ màu đỏ dưới 2 triệu");
+        var first = service.chatWithAi(null,request);
+        assertTrue(first.getShoppingContext().contains("duoi 2 trieu"));
+        var followup = new AiChatRequest("size 40");
+        followup.setHistory(List.of(new AiChatRequest.HistoryMessage("user",first.getShoppingContext()),
+                new AiChatRequest.HistoryMessage("model","Bạn cần cỡ nào?")));
+        String query=ReflectionTestUtils.invokeMethod(service,"conversationQuery",followup);
+        assertTrue(query.contains("duoi 2 trieu")); assertTrue(query.contains("nu"));
+        assertTrue(query.contains("mau do")); assertTrue(query.contains("size 40"));
+    }
+    @Test void shoeTechnologyMaterialAndPackLengthRequireMatchingCatalogFacts() {
+        var p=auditProduct(41L,"Giày Yonex","Giày Cầu Lông");
+        p.setCushionTechnology("Power Cushion+"); p.setSoleType("Rubber"); p.setUpperMaterial("Synthetic Mesh");
+        assertEquals(true,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"dem power cushion+ de cao su mat giay luoi"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"dem eva"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"mat giay da pu"));
+        p.setFrameMaterial("Graphite");p.setShaftMaterial(null);
+        assertEquals(true,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"khung graphite"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"than graphite"));
+        p.setQuantityPerPack("10m");
+        assertEquals(true,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"10m"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"200m"));
+    }
+
+    @Test void bagRacketCapacityIsNotMistakenForLiters() {
+        var p=auditProduct(42L,"Túi Yonex","Balo & Bao Vợt");p.setCapacity("3 vợt");p.setRacketCapacity(3);
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"dung tich 3 lit"));
+        assertEquals(true,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"chua 3 vot"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"chua 6 vot"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"chua 999999999999999999999 vot"));
+        p.setWaterproof("Chống thấm nhẹ");
+        assertEquals(true,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"chong tham"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"chong nuoc"));
+    }
+
+    @Test void stocklessKnownProductCanStillAnswerSpecificationsButNeverBecomePurchaseRecommendation() {
+        var p=auditProduct(43L,"Yonex Arcsaber 11","Vợt Cầu Lông");p.setStock(0);p.setMaxTension("28 lbs");
+        when(repository.findAll(any(org.springframework.data.jpa.domain.Specification.class))).thenReturn(List.of(p));
+        var answer=service.chatWithAi(null,new AiChatRequest("Thông số Arcsaber 11 là gì?"));
+        assertTrue(answer.getReply().contains("Hết hàng"));assertTrue(answer.getReply().contains("28 lbs"));
+        assertTrue(answer.getRecommendedProducts().isEmpty());
+    }
+
+    @Test void minimumBudgetAndEnglishVietnameseColorsAreHandledWithoutRelaxingConstraints() {
+        var p=auditProduct(44L,"Vợt","Vợt Cầu Lông");p.setPrice(new BigDecimal("2000000"));
+        assertEquals(true,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"it nhat 2 trieu"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"tren 2 trieu"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,"duoi 2 trieu"));
+        assertEquals("do",ReflectionTestUtils.invokeMethod(service,"colorText","Red"));
+        assertEquals("tim",ReflectionTestUtils.invokeMethod(service,"colorText","Purple"));
+    }
+    @Test void plainPriceFollowingCategoryIsNotSilentlyIgnored() {
+        var request = new AiChatRequest("Giày 2.500.000đ");
+        String query=ReflectionTestUtils.invokeMethod(service,"conversationQuery",request);
+        assertTrue(query.contains("toi da 2500000 dong"));
+        var p=auditProduct(49L,"Giày","Giày Cầu Lông");p.setPrice(new BigDecimal("3000000"));
+        assertEquals(false,ReflectionTestUtils.invokeMethod(service,"matchesRequirements",p,query));
+    }
+    @Test void unrecognizedNamedTechnologyAsksInsteadOfIgnoringTheRequirement() {
+        var result=service.chatWithAi(null,new AiChatRequest("Giày đệm SuperMagic dưới 2 triệu"));
+        assertTrue(result.getReply().contains("chưa xác định")); assertTrue(result.getRecommendedProducts().isEmpty());
+        verifyNoInteractions(repository);
+    }
 }

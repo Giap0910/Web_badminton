@@ -15,6 +15,7 @@ public class AiChatResponse {
     private String provider;
     private String model;
     private boolean fallback;
+    private String shoppingContext;
     @Builder.Default
     private List<Long> recommendedProductIds = new ArrayList<>();
     @Builder.Default

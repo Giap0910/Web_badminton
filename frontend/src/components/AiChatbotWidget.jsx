@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 const quickPrompts = [
-  "Tư vấn vợt tấn công smash uy lực tầm 3 - 4 triệu",
+  "Chào bạn, mình mới chơi cầu lông!",
   "Vợt phản tạt nhanh nhẹ đầu chuyên đánh lưới",
   "Vợt công thủ toàn diện dễ thuần cho người mới",
   "Vợt Yonex cao cấp nào bền và trợ lực tốt nhất?"
@@ -28,7 +28,7 @@ const AiChatbotWidget = () => {
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
-      text: 'Chào bạn! Mình là trợ lý AI của HG Badminton. Bạn muốn tìm vợt, giày hay phụ kiện để mình hỗ trợ nhé?',
+      text: 'Chào bạn! Mình là trợ lý AI của HG Badminton. Bạn cứ trò chuyện hoặc chia sẻ nhu cầu nhé; mình sẽ cùng bạn chọn đồ cầu lông phù hợp.',
       products: [],
       greeting: true
     }
@@ -37,11 +37,12 @@ const AiChatbotWidget = () => {
   const [loading, setLoading] = useState(false);
   const [advisorStatus, setAdvisorStatus] = useState('Chưa kết nối AI');
   const messagesEndRef = useRef(null);
+  const shoppingContext = useRef('');
   const sendLock = useRef(false), mounted = useRef(true), generation = useRef(0);
   useEffect(() => {
-    mounted.current = true; generation.current++; sendLock.current = false;
+    mounted.current = true; generation.current++; sendLock.current = false; shoppingContext.current = '';
     setLoading(false); setAdvisorStatus('Chưa kết nối AI'); setInputValue('');
-    setMessages([{ sender: 'ai', text: 'Chào bạn! Mình là trợ lý AI của HG Badminton. Bạn muốn tìm vợt, giày hay phụ kiện để mình hỗ trợ nhé?', products: [], greeting: true }]);
+    setMessages([{ sender: 'ai', text: 'Chào bạn! Mình là trợ lý AI của HG Badminton. Bạn cứ trò chuyện hoặc chia sẻ nhu cầu nhé; mình sẽ cùng bạn chọn đồ cầu lông phù hợp.', products: [], greeting: true }]);
     return () => { mounted.current = false; generation.current++; };
   }, [user?.id]);
 
@@ -57,6 +58,7 @@ const AiChatbotWidget = () => {
 
   const showReply = (response, conversation) => {
     if (typeof response?.reply !== 'string' || !response.reply.trim()) throw new Error('Phản hồi tư vấn chưa hợp lệ');
+    if (typeof response.shoppingContext === 'string' && response.shoppingContext.length <= 1000) shoppingContext.current = response.shoppingContext;
     setAdvisorStatus(!response.fallback && response.model ? response.model : 'Tư vấn cơ bản');
     const products = Array.isArray(response.recommendedProducts)
       ? response.recommendedProducts.filter(item => Number.isSafeInteger(item?.id) && item.id > 0 && item.catalogVisible !== false) : [];
@@ -83,8 +85,9 @@ const AiChatbotWidget = () => {
     setInputValue('');
     setLoading(true);
     try {
-      const history = previous.filter(message => !message.greeting).slice(-6)
+      const history = previous.filter(message => !message.greeting).slice(shoppingContext.current ? -4 : -6)
         .map(message => ({ role: message.sender === 'user' ? 'user' : 'model', text: message.text.slice(0, 2000) }));
+      if (shoppingContext.current) history.unshift({ role: 'user', text: shoppingContext.current });
       const response = await aiApi.chat(query, history);
       if (mounted.current && generation.current === attempt) showReply(response, [...previous, { sender: 'user', text: query }]);
     } catch (error) {
@@ -258,7 +261,7 @@ const AiChatbotWidget = () => {
             <input
               type="text"
               aria-label="Tin nhắn cho trợ lý AI"
-              placeholder="Bạn cần mình tư vấn điều gì?"
+              placeholder="Chào hỏi hoặc chia sẻ điều bạn muốn tư vấn..."
               value={inputValue}
               maxLength={2000}
               onChange={(e) => setInputValue(e.target.value)}
