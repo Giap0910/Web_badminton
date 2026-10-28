@@ -1,0 +1,98 @@
+package com.sports.security;
+
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Component;
+
+import java.security.Key;
+import java.util.Date;
+
+@Component
+@Slf4j
+public class JwtTokenProvider {
+
+    @Value("${app.jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${app.jwt.expiration-ms:86400000}")
+    private long jwtExpirationMs;
+
+    @jakarta.annotation.PostConstruct
+    public void validateSigningKey() {
+        getSigningKey();
+    }
+
+    private Key getSigningKey() {
+        if (jwtSecret == null || jwtSecret.length() < 64 || jwtSecret.length() % 2 != 0
+                || !jwtSecret.matches("[0-9a-fA-F]+")) {
+            throw new IllegalStateException("JWT signing secret is missing or invalid");
+        }
+        byte[] keyBytes = java.util.HexFormat.of().parseHex(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String generateToken(Authentication authentication) {
+        CustomUserDetails userPrincipal = (CustomUserDetails) authentication.getPrincipal();
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+
+        String role = userPrincipal.getAuthorities().iterator().next().getAuthority();
+
+        return Jwts.builder()
+                .setSubject(userPrincipal.getUsername())
+                .claim("userId", userPrincipal.getId())
+                .claim("tokenVersion",userPrincipal.getTokenVersion())
+                .claim("role", role)
+                .claim("email", userPrincipal.getEmail())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String getUsernameFromJwt(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getSubject();
+    }
+
+    public Long getUserIdFromJwt(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("userId", Long.class);
+    }
+
+    public boolean validateToken(String authToken) {
+        try {
+            Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(authToken);
+            return true;
+        } catch (SignatureException ex) {
+            log.error("Chữ ký JWT không hợp lệ: {}", ex.getMessage());
+        } catch (MalformedJwtException ex) {
+            log.error("Token JWT không đúng định dạng: {}", ex.getMessage());
+        } catch (ExpiredJwtException ex) {
+            log.error("Token JWT đã hết hạn: {}", ex.getMessage());
+        } catch (UnsupportedJwtException ex) {
+            log.error("Token JWT không được hỗ trợ: {}", ex.getMessage());
+        } catch (IllegalArgumentException ex) {
+            log.error("Chuỗi claims JWT rỗng: {}", ex.getMessage());
+        }
+        return false;
+    }
+
+    public long getTokenVersionFromJwt(String token) {
+        Claims claims=Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
+        Long version=claims.get("tokenVersion",Long.class);
+        return version==null ? 0L : version;
+    }
+}

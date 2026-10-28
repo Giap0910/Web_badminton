@@ -43,10 +43,18 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
+!.env.example
 
 # Local backups and private uploaded media
 /backups/
 /backend/storage/
+/storage/
+
+# Local inspection output and office temporary files
+*.inspect.ndjson
+~$*
+~*.tmp
 
 # Portable project launchers
 !/.gitignore

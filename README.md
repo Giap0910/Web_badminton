@@ -1,5 +1,65 @@
 # HG Badminton — Cửa hàng cầu lông Fullstack
 
+## Hướng dẫn chạy bản nộp đồ án — 28/10/2026
+
+Yêu cầu: Java 17, Maven, Node.js 20.19+ (hoặc 22.12+) và MySQL/MariaDB. Bản SQL mẫu đã kiểm tra trên MariaDB 10.4 của XAMPP; chưa xác minh MySQL 8 riêng.
+
+### 1. Tạo database mẫu riêng
+
+Trong terminal của MySQL/MariaDB, dùng `source C:/duong-dan/Web_badminton/database-demo.sql;` (thay đường dẫn theo máy). Hoặc nhập file qua phpMyAdmin trên môi trường học tập. File tự tạo database **web_badminton_demo**; nếu tên này đã tồn tại, dừng nhập và dùng một database mới, không chạy với tùy chọn bỏ qua lỗi. Không nhập vào database cửa hàng đang sử dụng.
+
+File chứa cấu trúc 17 bảng, 5 danh mục, 6 sản phẩm kèm biến thể, 2 tài khoản và 1 voucher giả lập. Không sao chép dữ liệu khách hàng, đơn hàng, thanh toán, địa chỉ, chat hay tệp media thật. Giá, tồn và thông số sản phẩm chỉ để thử nghiệm. Các bảng giao dịch ban đầu trống; ảnh sản phẩm dùng giao diện thay thế khi chưa có ảnh.
+
+| Vai trò | Tên đăng nhập | Mật khẩu demo |
+|---|---|---|
+| Quản trị | `demo_admin` | `DemoAdmin@2026!` |
+| Khách hàng | `demo_user` | `DemoUser@2026!` |
+
+Chỉ dùng các tài khoản này trên môi trường học tập local. Voucher mẫu: `DEMO10K`, giảm 10.000 đồng cho tiền hàng từ 100.000 đồng.
+
+### 2. Chạy backend
+
+Mở PowerShell tại thư mục gốc, cấu hình cho đúng database mới tạo. Ví dụ dưới đây dùng tài khoản root không mật khẩu mặc định của XAMPP local; thay bằng tài khoản database của máy nếu khác.
+
+```powershell
+$env:SPRING_DATASOURCE_URL = "jdbc:mysql://localhost:3306/web_badminton_demo?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh"
+$env:SPRING_DATASOURCE_USERNAME = "root"
+$env:SPRING_DATASOURCE_PASSWORD = ""
+$env:SPRING_JPA_HIBERNATE_DDL_AUTO = "validate"
+$env:SPRING_SQL_INIT_MODE = "never"
+$env:SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT = "org.hibernate.dialect.MariaDBDialect"
+$env:APP_DEMO_DATA_ENABLED = "false"
+$demoBytes = New-Object byte[] 32
+$demoRandom = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$demoRandom.GetBytes($demoBytes)
+$demoRandom.Dispose()
+$env:JWT_SECRET = -join ($demoBytes | ForEach-Object { $_.ToString("x2") })
+cd backend
+mvn spring-boot:run
+```
+
+Backend phục vụ tại `http://localhost:8080`. Nếu dùng MySQL 8, đặt dialect thành `org.hibernate.dialect.MySQLDialect`. Khóa JWT vừa tạo chỉ nằm trong phiên terminal; đổi khóa sẽ yêu cầu đăng nhập lại. Không cần tạo `.env` để chạy theo cách này.
+
+### 3. Chạy frontend
+
+Mở terminal khác tại thư mục gốc:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Mở `http://localhost:5173`, đăng nhập tài khoản demo để xem khách hàng hoặc `/admin`. Có thể thử tìm kiếm sản phẩm, giỏ hàng, đặt đơn COD và quản trị trên database demo. COD chỉ được ghi nhận đã thanh toán sau bước xác nhận thu tiền của quản trị.
+
+Không cần khóa PayOS/AI để xem catalog và thử COD. Thanh toán ngân hàng thật cần cấu hình PayOS riêng; đây không phải chức năng đã được xác minh bằng database mẫu. Khi thiếu khóa AI, backend có thể trả tư vấn theo quy tắc với `fallback=true`. Không đưa khóa dịch vụ thật lên GitHub.
+
+### 4. Kiểm tra mã nguồn
+
+Backend: chạy `mvn test` trong `backend` (một số kiểm thử tích hợp cần môi trường riêng và có thể bị bỏ qua). Frontend: chạy `npm run build` trong `frontend`. Không bật kiểm thử tích hợp trên database cửa hàng thật.
+
+Các mục dưới đây giữ lịch sử phát triển; số liệu, tài khoản cũ, script local và đường dẫn bằng chứng trong lịch sử không phải thành phần của bộ dữ liệu demo này. Hướng dẫn bản nộp ở trên dùng trực tiếp Maven/npm, không phụ thuộc launcher `.bat` hoặc thư mục `backups`.
+
 ## Trạng thái hiện hành — cập nhật 14/10/2026
 
 HG Badminton là đồ án cửa hàng cầu lông gồm giao diện khách hàng, quản trị, Backend Java và Database local. Phần hướng dẫn dưới đây là mốc hiện hành; các đặc tả, tài khoản mẫu và số liệu kiểm thử ngày 24/09/2026 ở phía sau được giữ làm lịch sử, không thay cho hợp đồng API mới.

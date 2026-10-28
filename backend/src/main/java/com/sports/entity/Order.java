@@ -1,0 +1,100 @@
+package com.sports.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = "orders", uniqueConstraints = @UniqueConstraint(
+        name = "uk_orders_user_idempotency", columnNames = {"user_id", "idempotency_key"}))
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Order {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Builder.Default
+    @Column(name = "checkout_revision", nullable = false)
+    private long checkoutRevision = 0;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(name = "idempotency_key", length = 36)
+    private String idempotencyKey;
+
+    @Column(name = "request_hash", length = 64)
+    private String requestHash;
+
+    @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalAmount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private OrderStatus status = OrderStatus.PENDING;
+
+    @Column(name = "payment_method", length = 50)
+    @Builder.Default
+    private String paymentMethod = "PAYOS_VIETQR";
+
+    @Column(name = "payos_order_code", unique = true)
+    private Long payosOrderCode;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt; // 15-minute expiration timestamp
+
+    @Column(name = "shipping_address", columnDefinition = "TEXT")
+    private String shippingAddress;
+
+    @Column(name = "shipping_phone", length = 20)
+    private String shippingPhone;
+
+    @Column(name = "customer_name", length = 100)
+    private String customerName;
+
+    @Column(name = "voucher_code", length = 50)
+    private String voucherCode;
+
+    @Column(name = "discount_amount", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+    @Column(name = "points_used", nullable = false) @Builder.Default
+    private Integer pointsUsed = 0;
+    @Column(name = "points_discount", nullable = false, precision = 12, scale = 2) @Builder.Default
+    private BigDecimal pointsDiscount = BigDecimal.ZERO;
+
+    @Column(name = "shipping_fee", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal shippingFee = BigDecimal.ZERO;
+
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(name = "cash_collected_at")
+    private LocalDateTime cashCollectedAt;
+
+    @Column(name = "cash_collected_by")
+    private Long cashCollectedBy;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<OrderItem> items = new ArrayList<>();
+}

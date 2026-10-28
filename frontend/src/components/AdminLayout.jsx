@@ -1,0 +1,287 @@
+import React, { useState, useEffect } from 'react';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import AdminSearch from './AdminSearch';
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingBag,
+  Users,
+  CreditCard,
+  Tag,
+  Star,
+  Settings,
+  LogOut,
+  Store,
+  ShieldCheck,
+  Menu,
+  X
+} from 'lucide-react';
+
+const AdminLayout = ({ children, title, subtitle, activeBadge }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const adminName = user?.fullName || user?.username || 'Quản trị viên';
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const navOverview = [
+    { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true, badge: null }
+  ];
+
+  const navSales = [
+    { to: '/admin/products', label: 'Sản phẩm', icon: Package, badge: null },
+    { to: '/admin/orders', label: 'Đơn hàng', icon: ShoppingBag, badge: null },
+    { to: '/admin/customers', label: 'Khách hàng', icon: Users, badge: null },
+    { to: '/admin/vouchers', label: 'Khuyến mãi', icon: Tag, badge: null },
+    { to: '/admin/reviews', label: 'Đánh giá & RMA', icon: Star, badge: null },
+    { to: '/admin/payments', label: 'Giao dịch', icon: CreditCard, badge: null }
+  ];
+
+  const navSystem = [
+    { to: '/admin/settings', label: 'Cài đặt', icon: Settings, badge: null }
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans antialiased flex flex-col md:flex-row">
+      {/* MOBILE BACKDROP */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 md:hidden transition-opacity"
+        />
+      )}
+
+      {/* SIDEBAR FIXED (Width 256px / 64) */}
+      <aside
+        id="admin-sidebar"
+        className={`${
+          isMobileMenuOpen ? 'flex' : 'hidden'
+        } md:flex w-64 bg-[#0F172A] text-white flex-col justify-between shrink-0 fixed inset-y-0 left-0 z-50 select-none shadow-xl border-r border-slate-800`}
+      >
+        <div className="flex flex-col flex-1 overflow-y-auto">
+          {/* BRAND HEADER */}
+          <div className="h-16 px-5 flex items-center justify-between border-b border-slate-800 bg-[#0B1120]">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-secondary to-red-500 flex items-center justify-center font-black text-white text-sm tracking-wider shadow-md shadow-red-600/30">
+                HG
+              </div>
+              <div className="flex flex-col">
+                <span className="font-black text-sm tracking-tight text-white uppercase leading-none">
+                  HG <span className="text-secondary">ADMIN</span>
+                </span>
+                <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider mt-1">
+                  Pro Badminton Portal
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Đóng menu quản trị"
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* MENU SECTIONS */}
+          <div className="px-3 py-4 space-y-5">
+            {/* TỔNG QUAN */}
+            <div>
+              <div className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
+                TỔNG QUAN
+              </div>
+              <nav className="space-y-1">
+                {navOverview.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-extrabold'
+                            : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                        }`
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </div>
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* QUẢN LÝ BÁN HÀNG */}
+            <div>
+              <div className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
+                QUẢN LÝ BÁN HÀNG
+              </div>
+              <nav className="space-y-1">
+                {navSales.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-extrabold'
+                            : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                        }`
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${item.badgeClass || 'bg-slate-800 text-slate-300'}`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* HỆ THỐNG */}
+            <div>
+              <div className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
+                HỆ THỐNG
+              </div>
+              <nav className="space-y-1">
+                {navSystem.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-extrabold'
+                            : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                        }`
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </div>
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+        </div>
+
+        {/* ADMIN FOOTER */}
+        <div className="p-3 bg-[#0B1120] border-t border-slate-800 flex flex-col gap-2">
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-secondary font-black text-xs">
+              {adminName.charAt(0)}
+            </div>
+            <div className="overflow-hidden flex-1">
+              <p className="text-xs font-bold text-white truncate">{adminName}</p>
+              <p className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                {user?.role === 'ROLE_ADMIN' ? 'Quản trị viên' : 'Tài khoản'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1 border-t border-slate-800/80">
+            <Link
+              to="/"
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold transition-colors"
+            >
+              <Store className="w-3.5 h-3.5" />
+              <span>Cửa hàng</span>
+            </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Đăng xuất"
+              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-secondary text-slate-400 hover:text-white transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* RIGHT MAIN AREA (Offset by 256px on md+) */}
+      <div className="flex-1 md:pl-64 flex flex-col min-h-screen min-w-0 w-full max-w-full">
+        {/* TOPBAR HEADER */}
+        <header className="fixed top-0 left-0 md:left-64 right-0 h-16 bg-white/95 backdrop-blur-md shadow-xs border-b border-slate-200/80 z-40 px-4 md:px-8 flex items-center justify-between">
+          <div className="flex items-center gap-3 md:gap-4 min-w-0">
+            {/* Mobile Menu Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Mở menu quản trị"
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="admin-sidebar"
+              className="md:hidden p-2 -ml-1 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
+            {/* Search Input */}
+            <AdminSearch />
+
+            {/* Live System Indicator */}
+            <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/60">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="text-[11px] font-bold text-emerald-700">Trang quản trị</span>
+            </div>
+          </div>
+
+          {/* Topbar Actions */}
+          <div className="flex items-center gap-3 shrink-0">
+            <Link to="/profile" className="rounded-xl px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100" aria-label="Hồ sơ tài khoản quản trị">{adminName}</Link>
+          </div>
+        </header>
+
+        {/* MAIN BODY CONTENT */}
+        <main className="pt-20 md:pt-24 px-4 md:px-8 pb-4 md:pb-8 flex-1 bg-[#F8FAFC] min-w-0 w-full max-w-full">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default AdminLayout;
