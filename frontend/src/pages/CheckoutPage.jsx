@@ -28,6 +28,8 @@ import {
   Loader2,
   ArrowLeft,
   ArrowRight,
+  ChevronUp,
+  ChevronDown,
   Lock,
   Phone,
   Mail,
@@ -218,7 +220,7 @@ export const calculateOrderSnapshotSubtotal = (order) => {
 
 const CheckoutPage = () => {
   const { cart, updateQuantity, removeFromCart } = useCart();
-  const { user, profile, token: checkoutToken } = useAuth();
+  const { user, profile, refreshProfile, token: checkoutToken } = useAuth();
   const checkoutOwnerRef = useRef(user?.id);
   const checkoutTokenRef = useRef(checkoutToken);
   const checkoutActiveRef = useRef(true);
@@ -626,6 +628,24 @@ const CheckoutPage = () => {
   const locationState = location.state || {};
   const selectedItemIds = locationState.selectedItemIds || cart.map((i) => i.cartItemId || i.product.id);
   const checkoutItems = cart.filter((i) => selectedItemIds.includes(i.cartItemId || i.product.id));
+  const loyaltyCartKey = JSON.stringify(checkoutItems.map(item => [item.cartItemId || item.product.id, item.quantity]));
+  const [loyaltyRefreshing, setLoyaltyRefreshing] = useState(false);
+  const [loyaltyError, setLoyaltyError] = useState('');
+  const [loyaltyRefreshVersion, setLoyaltyRefreshVersion] = useState(0);
+  useEffect(() => {
+    if (!user?.id || !refreshProfile || isResumeMode) return;
+    let active = true, requestVersion = 0;
+    const refresh = async () => {
+      const request = ++requestVersion;
+      setLoyaltyRefreshing(true); setLoyaltyError('');
+      try { await refreshProfile(); }
+      catch { if (active && request === requestVersion) setLoyaltyError('Chưa cập nhật được số dư điểm. Vui lòng thử lại trước khi dùng điểm.'); }
+      finally { if (active && request === requestVersion) setLoyaltyRefreshing(false); }
+    };
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => { active = false; window.removeEventListener('focus', refresh); };
+  }, [user?.id, checkoutToken, refreshProfile, isResumeMode, loyaltyCartKey, loyaltyRefreshVersion]);
 
   // Saved Addresses
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -716,7 +736,8 @@ const CheckoutPage = () => {
     error: voucherError, success: voucherSuccess, validating: isValidatingVoucher, apply: handleApplyVoucher } = voucher;
   const shippingFee = finalShippingFee;
   const effectiveDiscount = subtotal > 0 ? Math.min(subtotal, discountAmount) : 0;
-  const maximumPoints = Math.min(Number(profile?.loyaltyPoints) || 0, Math.floor((subtotal - effectiveDiscount) / 1000));
+  const loyaltyLimitPoints = Math.floor((subtotal - effectiveDiscount) / 1000);
+  const maximumPoints = Math.min(Number(profile?.loyaltyPoints) || 0, loyaltyLimitPoints);
   const redeemPoints = Math.min(Math.max(0, requestedPoints), maximumPoints);
   const pointsDiscount = redeemPoints * 100;
   const finalTotal = Math.max(0, subtotal - effectiveDiscount - pointsDiscount + shippingFee);
@@ -738,6 +759,9 @@ const CheckoutPage = () => {
     redeemPoints,
   });
   const validateNewCheckout = () => {
+    if (redeemPoints > 0 && (loyaltyRefreshing || loyaltyError)) {
+      return loyaltyError || 'Đang cập nhật số dư điểm, vui lòng chờ trước khi đặt hàng.';
+    }
     if (!['COD', 'PAYOS_VIETQR'].includes(paymentMethod)) {
       return 'Vui lòng chọn thanh toán COD hoặc QR PayOS/VietQR.';
     }
@@ -1634,11 +1658,39 @@ const CheckoutPage = () => {
 
               <div className="rounded-xl border border-slate-200 p-3 text-xs space-y-2">
                 <label htmlFor="redeem-points" className="font-bold text-slate-900">Dùng điểm tích lũy</label>
-                <p>Khả dụng: {profile?.loyaltyPoints ?? 0} điểm. 1 điểm = 100 đồng; tối đa 10% tiền hàng sau voucher.</p>
-                <input id="redeem-points" type="number" min="0" max={maximumPoints} step="1" value={redeemPoints}
-                  disabled={submissionLocked || maximumPoints === 0 || isValidatingVoucher}
-                  onChange={event => setRequestedPoints(Math.min(maximumPoints, Math.max(0, Math.trunc(Number(event.target.value) || 0))))}
-                  className="w-full rounded-lg border p-2" />
+                <p>Khả dụng: {profile?.loyaltyPoints ?? 'Đang tải'} điểm. 1 điểm = 100 đồng; tối đa 10% tiền hàng sau voucher.</p>
+                <div data-testid="loyalty-points-control" className="relative">
+                  <input id="redeem-points" type="number" inputMode="numeric" min="0" max={maximumPoints} step="1" value={redeemPoints}
+                    aria-describedby="redeem-points-limit"
+                    disabled={submissionLocked || maximumPoints === 0 || isValidatingVoucher || loyaltyRefreshing || Boolean(loyaltyError)}
+                    onChange={event => setRequestedPoints(Math.min(maximumPoints, Math.max(0, Math.trunc(Number(event.target.value) || 0))))}
+                    className="w-full min-h-12 rounded-lg border p-3 pr-14 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:bg-slate-50 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/30" />
+                  <div className="absolute inset-y-0 right-0 grid w-11 grid-rows-2 overflow-hidden rounded-r-lg border-l border-slate-200">
+                    <button type="button" aria-label="Tăng điểm sử dụng" aria-controls="redeem-points"
+                      disabled={submissionLocked || isValidatingVoucher || loyaltyRefreshing || Boolean(loyaltyError) || redeemPoints >= maximumPoints}
+                      onClick={() => setRequestedPoints(Math.min(maximumPoints, redeemPoints + 1))}
+                      className="flex items-center justify-center bg-slate-50 text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-red-500">
+                      <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button type="button" aria-label="Giảm điểm sử dụng" aria-controls="redeem-points"
+                      disabled={submissionLocked || isValidatingVoucher || loyaltyRefreshing || Boolean(loyaltyError) || redeemPoints <= 0}
+                      onClick={() => setRequestedPoints(Math.max(0, redeemPoints - 1))}
+                      className="flex items-center justify-center border-t border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-red-500">
+                      <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+                <p id="redeem-points-limit" className="text-slate-500">
+                  Giới hạn 10% đơn này: {loyaltyLimitPoints} điểm ({formatPrice(loyaltyLimitPoints * 100)}).
+                  {' '}Theo số dư hiện tại, bạn có thể dùng tối đa {maximumPoints} điểm.
+                </p>
+                {loyaltyRefreshing && <p role="status" className="text-slate-500">Đang cập nhật số dư điểm...</p>}
+                {loyaltyError && <p role="alert" className="text-red-600">{loyaltyError}{' '}
+                  <button type="button" onClick={() => setLoyaltyRefreshVersion(value => value + 1)} className="font-bold underline">Thử lại</button>
+                </p>}
+                {!loyaltyRefreshing && !loyaltyError && loyaltyLimitPoints === 0 && <p className="text-slate-500">
+                  Tiền hàng sau voucher chưa đủ để đổi điểm. Điểm không áp dụng cho phí vận chuyển.
+                </p>}
               </div>
 
               {/* Cost Breakdown */}

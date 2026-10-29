@@ -826,7 +826,7 @@ test('FIX-002 REMEDIATION TEST 12 — fetchOrder on initial load handles GET 200
   assert.equal(createPaymentLinkCalls, 1, 'Subsequent load checks must NOT loop or call createPaymentLink again');
 });
 
-test('FIX-002 REMEDIATION TEST 13 — fetchOrder on initial load with CREATING does NOT auto-POST', async () => {
+test('FIX-002 REMEDIATION TEST 13 — CREATING recovers once on the same order and key without a loop', async () => {
   sessionStorage.clear();
 
   const orderId = 1306;
@@ -838,9 +838,11 @@ test('FIX-002 REMEDIATION TEST 13 — fetchOrder on initial load with CREATING d
     getOrderPayment: async (id) => ({
       data: { id: 91306, orderId: id, status: 'CREATING', checkoutUrl: null }
     }),
-    createPaymentLink: async () => {
+    createPaymentLink: async (id, key) => {
       createPaymentLinkCalls++;
-      return { data: {} };
+      assert.equal(id, orderId);
+      assert.equal(key, getOrCreatePaymentLinkKey(orderId));
+      return { data: { id: 91306, orderId: id, status: 'CREATING', checkoutUrl: null } };
     }
   };
 
@@ -864,8 +866,12 @@ test('FIX-002 REMEDIATION TEST 13 — fetchOrder on initial load with CREATING d
 
   await fetchOrder();
 
-  assert.equal(createPaymentLinkCalls, 0, 'On initial load with CREATING, must NOT auto-POST (waits for manual retry)');
+  assert.equal(createPaymentLinkCalls, 1, 'Initial CREATING should trigger exactly one controlled recovery');
   assert.equal(paymentStateSet?.status, 'CREATING');
+  await fetchOrder();
+  await fetchOrder();
+  assert.equal(createPaymentLinkCalls, 1, 'Repeated fetches must not create an automatic recovery loop');
+  assert.equal(paymentStateSet?.status, 'CREATING', 'Repeated checks preserve the known payment state');
 });
 
 test('FIX-002 REMEDIATION TEST 14 — Polling stale response on route switch O1 -> O2 does NOT update order state', async () => {

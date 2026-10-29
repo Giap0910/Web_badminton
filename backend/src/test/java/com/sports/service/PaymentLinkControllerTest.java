@@ -98,6 +98,143 @@ class PaymentLinkControllerTest {
     }
 
     @Test
+    void ambiguousCreateThenVerifiedHostedRecoveryDoesNotResendOrCreateNewOrder() {
+        var creating = attempt(PaymentAttempt.Status.CREATING, null);
+        var pending = attempt(PaymentAttempt.Status.PENDING, "https://pay.payos.vn/web/124c33293c934a85be5b7f8761a27a07");
+        var recovered = new PayOSPaymentClient.Result(123L, BigDecimal.TEN, "124c33293c934a85be5b7f8761a27a07", pending.checkoutUrl(), null, true);
+        when(store.prepare(2L, 1L, key)).thenReturn(new PaymentAttemptStore.Prepared(creating, true),
+                new PaymentAttemptStore.Prepared(creating, false));
+        when(client.create(creating)).thenThrow(new PaymentLinkException(504, "PAYOS_UNAVAILABLE", "Timeout"));
+        when(client.query(123L)).thenReturn(recovered);
+        when(store.saveResult(2L, 1L, recovered, false)).thenReturn(pending);
+        org.junit.jupiter.api.Assertions.assertThrows(PaymentLinkException.class, () -> service.create(2L, 1L, key));
+        var outcome = service.create(2L, 1L, key);
+        org.junit.jupiter.api.Assertions.assertEquals(200, outcome.status());
+        org.junit.jupiter.api.Assertions.assertEquals(creating.orderId(), outcome.attempt().orderId());
+        org.junit.jupiter.api.Assertions.assertEquals(creating.id(), outcome.attempt().id());
+        verify(client, times(1)).create(creating);
+        verify(client, times(1)).query(123L);
+        verify(store, never()).markCreateNotSent(anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    void verifiedRecoveryBecomesPendingAndReplayPreservesOriginalResult() {
+        var attempt = storedCreating();
+        var actual = actualStore(attempt);
+        var result = new PayOSPaymentClient.Result(123L, BigDecimal.TEN, "verified-id", "https://pay.payos.vn/web/verified-id", null, true);
+        var recovered = actual.saveResult(2L, 1L, result, false);
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentAttempt.Status.PENDING, recovered.status());
+        org.junit.jupiter.api.Assertions.assertEquals(result.checkoutUrl(), recovered.checkoutUrl());
+        org.junit.jupiter.api.Assertions.assertNull(recovered.qrPayload());
+        org.junit.jupiter.api.Assertions.assertEquals(7L, recovered.id());
+        org.junit.jupiter.api.Assertions.assertEquals(key, attempt.getIdempotencyKey());
+        org.junit.jupiter.api.Assertions.assertEquals(recovered, actual.saveResult(2L, 1L, result, false));
+        org.junit.jupiter.api.Assertions.assertEquals(OrderStatus.PENDING, attempt.getOrder().getStatus());
+    }
+
+    @Test
+    void recoveryRejectsMismatchWrongOwnerAndExpiredOrChangedOrder() {
+        var attempt = storedCreating();
+        var actual = actualStore(attempt);
+        var result = new PayOSPaymentClient.Result(123L, BigDecimal.TEN, "verified-id", "https://pay.payos.vn/web/verified-id", null, true);
+        var mismatch = new PayOSPaymentClient.Result(123L, BigDecimal.ONE, "verified-id", result.checkoutUrl(), null);
+        org.junit.jupiter.api.Assertions.assertThrows(PaymentLinkException.class, () -> actual.saveResult(2L, 1L, mismatch, false));
+        org.junit.jupiter.api.Assertions.assertThrows(PaymentLinkException.class, () -> actual.saveResult(2L, 9L, result, false));
+        attempt.getOrder().setExpiresAt(LocalDateTime.now().minusSeconds(1));
+        org.junit.jupiter.api.Assertions.assertThrows(PaymentLinkException.class, () -> actual.saveResult(2L, 1L, result, false));
+        attempt.getOrder().setExpiresAt(LocalDateTime.now().plusMinutes(15));
+        attempt.getOrder().setPaymentMethod("COD");
+        org.junit.jupiter.api.Assertions.assertThrows(PaymentLinkException.class, () -> actual.saveResult(2L, 1L, result, false));
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentAttempt.Status.CREATING, attempt.getStatus());
+        org.junit.jupiter.api.Assertions.assertNull(attempt.getCheckoutUrl());
+    }
+
+    @Test
+    void recoveryNeverResetsTerminalAttemptAfterConcurrentSettlement() {
+        var attempt = storedCreating();
+        var actual = actualStore(attempt);
+        var result = new PayOSPaymentClient.Result(123L, BigDecimal.TEN, "verified-id", "https://pay.payos.vn/web/verified-id", null, true);
+        for (var status : new PaymentAttempt.Status[]{PaymentAttempt.Status.PAID, PaymentAttempt.Status.NEEDS_REVIEW,
+                PaymentAttempt.Status.CANCELLED, PaymentAttempt.Status.EXPIRED, PaymentAttempt.Status.FAILED}) {
+            attempt.setStatus(status);
+            org.junit.jupiter.api.Assertions.assertEquals(status, actual.saveResult(2L, 1L, result, false).status());
+            org.junit.jupiter.api.Assertions.assertNull(attempt.getCheckoutUrl());
+        }
+    }
+
+    @Test
+    void originalQueryResultWithoutFreshPendingProofDoesNotBecomePayable() {
+        var attempt = storedCreating();
+        var actual = actualStore(attempt);
+        var result = new PayOSPaymentClient.Result(123L, BigDecimal.TEN, "original-id", "http://localhost:5173/payment/qr/2", null);
+        var response = actual.saveResult(2L, 1L, result, false);
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentAttempt.Status.CREATING, response.status());
+        org.junit.jupiter.api.Assertions.assertNull(response.checkoutUrl());
+        org.junit.jupiter.api.Assertions.assertEquals("original-id", response.paymentLinkId());
+    }
+
+    private PaymentAttempt storedCreating() {
+        var order = Order.builder().id(2L).user(User.builder().id(1L).build()).paymentMethod("PAYOS_VIETQR")
+                .status(OrderStatus.PENDING).payosOrderCode(123L).totalAmount(BigDecimal.TEN)
+                .expiresAt(LocalDateTime.now().plusMinutes(15)).build();
+        var attempt = new PaymentAttempt();
+        attempt.setId(7L); attempt.setOrder(order); attempt.setOrderCode(123L);
+        attempt.setAmount(BigDecimal.TEN); attempt.setIdempotencyKey(key);
+        attempt.setExpiresAt(order.getExpiresAt());
+        return attempt;
+    }
+
+    @Test
+    void actualGatewayAndStoreRecoverAfterLostCreateResponseUsingOnlyOneProviderPost() {
+        var attempt = storedCreating();
+        var gateway = realTestGateway();
+        var http = (org.springframework.web.client.RestTemplate) org.springframework.test.util.ReflectionTestUtils.getField(gateway, "http");
+        var server = org.springframework.test.web.client.MockRestServiceServer.bindTo(http).build();
+        server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.method(org.springframework.http.HttpMethod.POST))
+                .andRespond(request -> { throw new java.net.SocketTimeoutException("lost response"); });
+        server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo("https://provider.test/v2/payment-requests/123"))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.method(org.springframework.http.HttpMethod.GET))
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess(
+                        signedPendingRecovery(), org.springframework.http.MediaType.APPLICATION_JSON));
+        org.junit.jupiter.api.Assertions.assertThrows(PaymentLinkException.class, () -> gateway.create(PaymentAttemptResponse.from(attempt)));
+        var actual = new PaymentLinkService(actualStore(attempt), gateway);
+        var recovered = actual.create(2L, 1L, key);
+        org.junit.jupiter.api.Assertions.assertEquals(200, recovered.status());
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentAttempt.Status.PENDING, recovered.attempt().status());
+        org.junit.jupiter.api.Assertions.assertEquals(7L, recovered.attempt().id());
+        org.junit.jupiter.api.Assertions.assertEquals("https://pay.payos.vn/web/124c33293c934a85be5b7f8761a27a07", recovered.attempt().checkoutUrl());
+        org.junit.jupiter.api.Assertions.assertNull(recovered.attempt().qrPayload());
+        org.junit.jupiter.api.Assertions.assertEquals(recovered.attempt(), actual.create(2L, 1L, key).attempt());
+        server.verify();
+    }
+
+    private PayOSPaymentClient realTestGateway() {
+        var gateway = new PayOSPaymentClient(new PayOSService(), 1000, 1000);
+        java.util.Map.of("clientId", "fake-client", "apiKey", "fake-api", "checksumKey", "fake-checksum",
+                "baseUrl", "https://provider.test", "returnUrl", "https://shop.test/order-success/{orderId}",
+                "cancelUrl", "https://shop.test/payment/qr/{orderId}?cancelled=1")
+                .forEach((field, value) -> org.springframework.test.util.ReflectionTestUtils.setField(gateway, field, value));
+        return gateway;
+    }
+
+    private String signedPendingRecovery() {
+        String data = "{\"id\":\"124c33293c934a85be5b7f8761a27a07\",\"orderCode\":123,\"amount\":10,"
+                + "\"amountPaid\":0,\"amountRemaining\":10,\"status\":\"PENDING\",\"transactions\":[]}";
+        String canonical = "amount=10&amountPaid=0&amountRemaining=10&id=124c33293c934a85be5b7f8761a27a07&orderCode=123&status=PENDING&transactions=[]";
+        return "{\"code\":\"00\",\"data\":" + data + ",\"signature\":\""
+                + new PayOSService().hmacSha256(canonical, "fake-checksum") + "\"}";
+    }
+
+    private PaymentAttemptStore actualStore(PaymentAttempt attempt) {
+        var orders = mock(com.sports.repository.OrderRepository.class);
+        var attempts = mock(com.sports.repository.PaymentAttemptRepository.class);
+        when(orders.findByIdForUpdate(2L)).thenReturn(java.util.Optional.of(attempt.getOrder()));
+        when(attempts.findByOrderCode(123L)).thenReturn(java.util.Optional.of(attempt));
+        when(attempts.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
+        return new PaymentAttemptStore(orders, attempts, mock(PaymentTransitionGuard.class));
+    }
+
+    @Test
     void securityRequiresLoginAndInvalidUuidDoesNotTouchStore() throws Exception {
         try (var context = context()) {
             var mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();

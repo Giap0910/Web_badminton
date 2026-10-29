@@ -526,6 +526,8 @@ export const runRealQRComponentTests = async (onLog) => {
       const pollFn = await waitForPollCallback(capturedPollCallbacks);
       if (pollFn) {
         await pollFn();
+        await pollFn();
+        await pollFn();
         await wait(100);
       }
 
@@ -533,17 +535,17 @@ export const runRealQRComponentTests = async (onLog) => {
       const showsCreating = text.includes('Chưa nhận được mã QR từ PayOS')
         && text.includes('Bấm Kiểm tra lại') && !text.includes('Đang chuẩn bị liên kết thanh toán...');
 
-      if (showsCreating && postLinkCount === 0) {
+      if (showsCreating && postLinkCount === 1) {
         log(
           'TEST 6 — Current Payment CREATING Updates Without Auto POST Loop',
           'PASS',
-          'CREATING state rendered waiting UI correctly; no automatic POST loop triggered'
+          'CREATING rendered honestly; initial recovery ran once and repeated polling did not POST again'
         );
       } else {
         log(
           'TEST 6 — Current Payment CREATING Updates Without Auto POST Loop',
           'FAIL',
-          `showsCreating=${showsCreating}, postLinkCount=${postLinkCount} (expected 0)`
+          `showsCreating=${showsCreating}, postLinkCount=${postLinkCount} (expected exactly 1 initial recovery)`
         );
       }
       unmount();
@@ -762,6 +764,7 @@ export const runRealQRComponentTests = async (onLog) => {
       orderApi.createPaymentLink = async (id, key) => {
         manualPostCalls++;
         capturedManualKey = key;
+        if (manualPostCalls === 1) return { data: { orderId: Number(id), status: 'CREATING' } };
         return {
           data: {
             orderId: Number(id),
@@ -773,6 +776,10 @@ export const runRealQRComponentTests = async (onLog) => {
 
       const { unmount } = mountQRPaymentComponent(testBox, { initialOrderId: '101' });
       await waitForLoaded(testBox);
+
+      const autoStart = Date.now();
+      while (manualPostCalls < 1 && Date.now() - autoStart < 2000) await wait(30);
+      const automaticRecoveryOnce = manualPostCalls === 1;
 
       // Find and click the "Kiểm tra lại" button
       let retryBtn = null;
@@ -788,7 +795,7 @@ export const runRealQRComponentTests = async (onLog) => {
         retryBtn.click();
         const clickStart = Date.now();
         while (Date.now() - clickStart < 2000) {
-          if (manualPostCalls === 1) break;
+          if (manualPostCalls === 2 && testBox.innerText.includes('Mở cổng thanh toán PayOS')) break;
           await wait(30);
         }
       }
@@ -796,11 +803,12 @@ export const runRealQRComponentTests = async (onLog) => {
       const expectedKey = getOrCreatePaymentLinkKey('101');
       const isKeyMatch = capturedManualKey === expectedKey;
 
-      if (manualPostCalls === 1 && isKeyMatch && createOrderCalls === 0) {
+      const hostedCheckout = testBox.querySelector('a[href="https://pay.payos.vn/web/manual-recovered-link"]');
+      if (retryBtn && automaticRecoveryOnce && manualPostCalls === 2 && isKeyMatch && createOrderCalls === 0 && hostedCheckout) {
         log(
           'TEST 10 — CREATING Manual Retry & Zero createOrder Invariant',
           'PASS',
-          `Manual retry executed 1 POST with persistent key ${expectedKey}; createOrder called 0 times`
+          `One automatic recovery, then manual retry with the same persistent key ${expectedKey}; hosted checkout rendered; createOrder=0`
         );
       } else {
         log(

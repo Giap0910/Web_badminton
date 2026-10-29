@@ -301,8 +301,9 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
         return;
       }
 
-      // Handle null (BUG A: 200 with null body) or 404 -> no payment attempt yet
-      if (payData == null || payData === '' || getFailed404) {
+      // Recover once on this order; polling must not repeatedly create payment links.
+      if (payData == null || payData === '' || getFailed404 || payData.status === 'CREATING') {
+        setPayment(payData);
         const isSuspendedInFetch = typeof isQRSuspended !== 'undefined' && isQRSuspended;
         const environmentVerified = typeof envStatus === 'undefined' || envStatus === 'VERIFIED';
 
@@ -341,7 +342,7 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
             }
           }
         } else {
-          setPayment(null);
+          setPayment(payData);
         }
       } else {
         setPayment(payData);
@@ -1331,6 +1332,7 @@ const QRPaymentPage = ({ isQREnabled: propQREnabled } = {}) => {
               ) : isRealMode && payment?.status === 'PENDING' && payment?.checkoutUrl ? (
                 <div className="text-center p-4 flex flex-col items-center justify-center gap-2">
                   <QrCode className="w-16 h-16 text-slate-700" />
+                  <p className="text-xs text-slate-500">Liên kết đã được khôi phục. Mở PayOS để xem mã QR của đơn này.</p>
                   <a
                     href={payment.checkoutUrl}
                     target="_self"

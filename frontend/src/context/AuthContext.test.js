@@ -11,10 +11,10 @@ const tokenFor = id => 'header.' + Buffer.from(JSON.stringify({ id, exp: fixture
 const account = id => ({ id, username: String(id), fullName: 'Tài khoản ' + id, role: 'ROLE_USER', token: tokenFor(id) });
 class TestEvent { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } }
 function createAuthHarness(savedToken = null, overrides = {}) {
-  const cells = [], effects = [], storage = new Map(), responses = [], listeners = new Map(), timers = [], getMeCalls = [], logoutCalls = [];
+  const cells = [], effects = [], storage = new Map(), responses = [], listeners = new Map(), timers = [], getMeCalls = [], logoutCalls = [], profileCalls = [];
   if (savedToken) storage.set('token', savedToken);
   let index = 0;
-  const react = { ...React, useState(initial) { const slot=index++; if (!(slot in cells)) cells[slot]=initial;
+  const react = { ...React, useCallback: fn => fn, useState(initial) { const slot=index++; if (!(slot in cells)) cells[slot]=initial;
     return [cells[slot], value => { cells[slot]=typeof value==='function' ? value(cells[slot]) : value; }]; },
     useRef(initial) { const slot=index++; if (!(slot in cells)) cells[slot]={ current:initial }; return cells[slot]; },
     useEffect(fn, deps) { const slot=index++, old=cells[slot]; if (!old || deps.some((value,i)=>value!==old.deps[i]))
@@ -25,14 +25,45 @@ function createAuthHarness(savedToken = null, overrides = {}) {
   const localStorage = { getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key) };
   const window = { addEventListener:(name,fn)=>listeners.set(name,fn), removeEventListener:name=>listeners.delete(name),
     dispatchEvent:event=>listeners.get(event.type)?.(event) };
-  const module={exports:{}}, mocks={react,'../api/authApi':{authApi:api},'../api/userApi':{userApi:{getProfile:()=>new Promise(resolve=>responses.push(resolve))}}};
+  const module={exports:{}}, mocks={react,'../api/authApi':{authApi:api},'../api/userApi':{userApi:{getProfile:config=>{
+    profileCalls.push(config); return new Promise((resolve,reject)=>{ resolve.reject=reject; responses.push(resolve); });
+  }}}};
   const code=transformSync(fs.readFileSync(new URL('./AuthContext.jsx',import.meta.url),'utf8'),{loader:'jsx',format:'cjs'}).code;
   new Function('require','module','exports','localStorage','window','atob','setTimeout','clearTimeout','CustomEvent',code)
     (name=>mocks[name],module,module.exports,localStorage,window,atob,fn=>{timers.push(fn);return timers.length;},()=>{},TestEvent);
   return { render(){index=0;const value=module.exports.AuthProvider({children:null}).props.value;effects.splice(0).forEach(fn=>fn());return value;},
-    responses,storage,api,getMeCalls,logoutCalls,timers,window,exports:module.exports,
+    responses,storage,api,getMeCalls,logoutCalls,profileCalls,timers,window,exports:module.exports,
     unmount(){cells.forEach(cell=>cell?.cleanup?.());} };
 }
+
+test('Tải lại điểm từ backend thay hồ sơ cũ, không trừ điểm khi chỉ xem checkout khác',async()=>{
+  const h=createAuthHarness();h.render();await h.render().login('1','test');h.render();
+  h.responses[0]({id:1,loyaltyPoints:0});await flush();assert.equal(h.render().profile.loyaltyPoints,0);
+  const first=h.render().refreshProfile();h.responses[1]({id:1,loyaltyPoints:1});await first;
+  assert.equal(h.render().profile.loyaltyPoints,1);
+  const second=h.render().refreshProfile();h.responses[2]({id:1,loyaltyPoints:1});await second;
+  assert.equal(h.render().profile.loyaltyPoints,1);
+  assert.equal(h.profileCalls[2].headers.Authorization,'Bearer '+tokenFor(1));
+});
+
+test('Tải hồ sơ muộn không ghi đè số dư mới hoặc tài khoản đã chuyển',async()=>{
+  const h=createAuthHarness();h.render();await h.render().login('1','test');h.render();
+  const old=h.render().refreshProfile(),latest=h.render().refreshProfile();
+  h.responses[2]({id:1,loyaltyPoints:30});await latest;
+  h.responses[1]({id:1,loyaltyPoints:1});await old;
+  h.responses[0]({id:1,loyaltyPoints:0});await flush();assert.equal(h.render().profile.loyaltyPoints,30);
+  const prior=h.render().refreshProfile();await h.render().logout();await h.render().login('2','test');h.render();
+  h.responses[3]({id:1,loyaltyPoints:999});await prior;assert.equal(h.render().profile,null);
+});
+
+test('Lỗi tải lại hồ sơ giữ số dư cũ, không giả thành 0; có thể thử lại',async()=>{
+  const h=createAuthHarness();h.render();await h.render().login('1','test');h.render();
+  h.responses[0]({id:1,loyaltyPoints:10});await flush();
+  const failed=h.render().refreshProfile();h.responses[1].reject(new Error('Mất mạng'));
+  await assert.rejects(failed);assert.equal(h.render().profile.loyaltyPoints,10);
+  const retry=h.render().refreshProfile();h.responses[2]({id:1,loyaltyPoints:12});await retry;
+  assert.equal(h.render().profile.loyaltyPoints,12);
+});
 
 test('Phản hồi hồ sơ và callback của phiên cũ không ghi đè tài khoản mới',async()=>{
   const h=createAuthHarness();let context=h.render();await context.login('1','test');const former=h.render();

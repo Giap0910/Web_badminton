@@ -28,7 +28,11 @@ public class PayOSPaymentClient implements PayOSGateway {
     @Value("${payos.cancel-url}") private String cancelUrl;
 
     public record Result(Long orderCode, BigDecimal amount, String paymentLinkId,
-            String checkoutUrl, String qrPayload) {}
+            String checkoutUrl, String qrPayload, boolean verifiedPendingRecovery) {
+        public Result(Long orderCode, BigDecimal amount, String paymentLinkId, String checkoutUrl, String qrPayload) {
+            this(orderCode, amount, paymentLinkId, checkoutUrl, qrPayload, false);
+        }
+    }
     public record Transaction(String reference, BigDecimal amount, String transactionDateTime) {}
     public record Query(Long orderCode, BigDecimal amount, String paymentLinkId, String status,
             BigDecimal amountPaid, BigDecimal amountRemaining, List<Transaction> transactions) {}
@@ -87,7 +91,21 @@ public class PayOSPaymentClient implements PayOSGateway {
     public Result query(Long orderCode) {
         JsonNode data = exchange(HttpMethod.GET, "/v2/payment-requests/" + orderCode, null, true);
         if (data == null) return null;
-        return result(data, "id", null, null);
+        var proof = paymentQuery(data);
+        if (!Objects.equals(orderCode, proof.orderCode())) throw invalid();
+        String checkout = recoveryCheckout(data, proof);
+        var result = result(data, "id", checkout, null);
+        return new Result(result.orderCode(), result.amount(), result.paymentLinkId(), checkout, null, checkout != null);
+    }
+
+    private String recoveryCheckout(JsonNode data, Query proof) {
+        if (!"PENDING".equals(proof.status()) || proof.amountPaid().signum() != 0
+                || proof.amountRemaining().compareTo(proof.amount()) != 0 || !proof.transactions().isEmpty()) return null;
+        if (!proof.paymentLinkId().matches("[0-9a-fA-F]{32}")) throw invalid();
+        String checkout = "https://pay.payos.vn/web/" + proof.paymentLinkId();
+        if (data.hasNonNull("checkoutUrl") && !checkout.equals(requiredText(data, "checkoutUrl"))) throw invalid();
+        validateCheckout(checkout);
+        return checkout;
     }
 
     public Query queryPayment(Long orderCode) {

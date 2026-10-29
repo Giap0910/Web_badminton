@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { userApi } from '../api/userApi';
 import { authApi } from '../api/authApi';
 
@@ -20,10 +20,21 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfileState] = useState(null), [loading, setLoading] = useState(true);
   const [verificationError, setVerificationError] = useState(''), [sessionNotice, setSessionNotice] = useState('');
   const currentUser = useRef(null), currentToken = useRef(null), generation = useRef(0), mounted = useRef(true);
+  const profileRequest = useRef(0);
   const setUser = data => { currentUser.current = data; setUserState(data); };
   const setSessionToken = value => { currentToken.current = value; setToken(value); };
   const current = (attempt, capturedToken) => mounted.current && generation.current === attempt
     && (capturedToken === undefined || localStorage.getItem('token') === capturedToken);
+  const refreshProfile = useCallback(async () => {
+    const capturedToken = currentToken.current, ownerId = currentUser.current?.id;
+    const attempt = generation.current, request = ++profileRequest.current;
+    if (!capturedToken || ownerId == null) return null;
+    const data = await userApi.getProfile({ headers: { Authorization: `Bearer ${capturedToken}` } });
+    if (!current(attempt, capturedToken) || request !== profileRequest.current
+        || currentUser.current?.id !== ownerId || data?.id !== ownerId) return null;
+    setProfileState(data);
+    return data;
+  }, []);
   const clearLocalSession = () => {
     generation.current++; localStorage.removeItem('token'); localStorage.removeItem('user');
     setSessionToken(null); setUser(null); setProfileState(null); setVerificationError(''); setLoading(false);
@@ -67,11 +78,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     setProfileState(null);
     if (!token || !user || verificationError) return;
-    let active = true; const ownerId = user.id, attempt = generation.current;
-    userApi.getProfile({ headers: { Authorization: `Bearer ${token}` } }).then(data => {
-      if (active && current(attempt, token) && currentUser.current?.id === ownerId && data?.id === ownerId) setProfileState(data);
-    }).catch(() => {});
-    return () => { active = false; };
+    refreshProfile().catch(() => {});
+    return () => { profileRequest.current++; };
   }, [token, user?.id, verificationError]);
   const authenticate = async (operation, payload) => {
     const attempt = ++generation.current; setLoading(true); setVerificationError(''); setSessionNotice('');
@@ -96,7 +104,7 @@ export const AuthProvider = ({ children }) => {
       if (current(attempt)) setSessionNotice('Đã đăng xuất trên thiết bị này; chưa xác nhận thu hồi các phiên trên thiết bị khác.');
     }
   };
-  const value = { user, token, profile, loading, verificationError, sessionNotice, retryVerification: verifySession,
+  const value = { user, token, profile, loading, verificationError, sessionNotice, retryVerification: verifySession, refreshProfile,
     setProfile: data => { if (currentUser.current && data?.id === currentUser.current.id) setProfileState(data); },
     isAuthenticated: Boolean(token && user && !verificationError), isAdmin: user?.role === 'ROLE_ADMIN',
     login, register, logout, clearLocalSession };

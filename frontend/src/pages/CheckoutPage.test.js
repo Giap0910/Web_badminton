@@ -31,6 +31,7 @@ function harness(overrides = {}) {
     addressDetail: 'Số 1', province: 'Hà Nội', ward: 'Phường Ba Đình', provinceCode: '01', wardCode: '00001',
     paymentMethod: 'COD', voucherCode: '', voucherSuccess: false, checkoutItems: [item],
     email: '', note: '', requestedPoints: 0, saveInfo: false, loading: false, isValidatingVoucher: false,
+    loyaltyRefreshing: false, loyaltyError: '',
     subtotal: 4350000, effectiveDiscount: 0, shippingDiscountAmount: 0, pointsDiscount: 0, shippingFee: 0, finalTotal: 4350000, redeemPoints: 0,
     ...overrides, removed: [], updated: [], navigation: null, error: '' };
   const currentCartRef = { current: state.checkoutItems };
@@ -170,6 +171,82 @@ test('Form khóa thông tin, voucher, điểm và phương thức khi đang ch�
   assert.match(source, /if \(isSubmittingRef.current \|\| pendingSubmissionRef.current\) return/);
 });
 
+function loyaltyControlFixture(overrides = {}) {
+  const jsx = source.match(/<div data-testid="loyalty-points-control"[\s\S]*?<\/div>\s*<\/div>/)[0];
+  const code = transformSync('return (' + jsx + ');', { loader: 'jsx' }).code;
+  const state = { maximumPoints: 3, redeemPoints: 0, submissionLocked: false, isValidatingVoucher: false,
+    loyaltyRefreshing: false, loyaltyError: '', ...overrides };
+  const scope = () => ({ ...state, setRequestedPoints: value => { state.redeemPoints = value; } });
+  const render = () => {
+    const values = scope();
+    const tree = new Function('React', 'ChevronUp', 'ChevronDown', ...Object.keys(values), code)
+      (React, () => null, () => null, ...Object.values(values));
+    const nodes = cartTestElements(tree);
+    return { input: nodes.find(node => node.type === 'input'),
+      up: nodes.find(node => node.props['aria-label'] === 'Tăng điểm sử dụng'),
+      down: nodes.find(node => node.props['aria-label'] === 'Giảm điểm sử dụng') };
+  };
+  return { state, render };
+}
+
+function loyaltyRefreshFixture(refreshProfile) {
+  const start=source.indexOf('  useEffect(() => {',source.indexOf('  const loyaltyCartKey ='));
+  const effect=source.slice(start,source.indexOf('  // Saved Addresses',start));
+  const state={loading:false,error:''},listeners=new Map();let cleanup;
+  const scope={user:{id:51},checkoutToken:'session-A',isResumeMode:false,loyaltyCartKey:'racket',loyaltyRefreshVersion:0,refreshProfile,
+    useEffect:fn=>{cleanup=fn();},setLoyaltyRefreshing:value=>{state.loading=value;},setLoyaltyError:value=>{state.error=value;},
+    window:{addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name)}};
+  const render=()=>new Function(...Object.keys(scope),effect)(...Object.values(scope));
+  return {state,render,focus:()=>listeners.get('focus')?.(),unmount:()=>cleanup?.(),
+    switchCart:key=>{cleanup?.();scope.loyaltyCartKey=key;render();}};
+}
+
+test('Checkout thật tải lại điểm khi mở, đổi vợt sang cước và quay lại tab; dọn listener khi rời trang',async()=>{
+  let calls=0;const h=loyaltyRefreshFixture(async()=>{calls++;return {id:51,loyaltyPoints:10};});
+  h.render();await Promise.resolve();assert.equal(calls,1);assert.equal(h.state.loading,false);
+  h.switchCart('string');await Promise.resolve();assert.equal(calls,2);
+  await h.focus();assert.equal(calls,3);h.unmount();await h.focus();assert.equal(calls,3);
+});
+
+test('Refresh điểm lỗi có thông báo; lỗi cũ hoặc unmount không ghi đè lần tải mới',async()=>{
+  let rejectOld;let calls=0;
+  const h=loyaltyRefreshFixture(()=>++calls===1?new Promise((resolve,reject)=>{rejectOld=reject;}):Promise.resolve({loyaltyPoints:5}));
+  h.render();await h.focus();assert.equal(h.state.loading,false);
+  rejectOld(new Error('Lỗi cũ'));await Promise.resolve();await Promise.resolve();assert.equal(h.state.error,'');
+  h.unmount();
+  const failed=loyaltyRefreshFixture(async()=>{throw new Error('Mất mạng');});
+  failed.render();await Promise.resolve();await Promise.resolve();assert.match(failed.state.error,/Chưa cập nhật/);
+});
+
+test('Điểm checkout: nút tăng/giảm luôn hiện, thay đổi từng điểm và khóa đúng hai biên', () => {
+  const h = loyaltyControlFixture();
+  let control = h.render();
+  assert.equal(control.down.props.disabled, true); assert.equal(control.up.props.disabled, false);
+  assert.equal(control.up.props.type, 'button'); assert.equal(control.down.props.type, 'button');
+  for (let value = 1; value <= 3; value++) {
+    control.up.props.onClick(); control = h.render(); assert.equal(control.input.props.value, value);
+  }
+  assert.equal(control.up.props.disabled, true);
+  control.down.props.onClick(); assert.equal(h.render().input.props.value, 2);
+});
+
+test('Điểm checkout: vẫn nhập tay được, không âm, không vượt giới hạn và không nhận phần lẻ', () => {
+  const h = loyaltyControlFixture();
+  for (const [input, expected] of [['2', 2], ['-1', 0], ['999', 3], ['1.5', 1], ['', 0]]) {
+    h.render().input.props.onChange({ target: { value: input } });
+    assert.equal(h.render().input.props.value, expected);
+  }
+});
+
+test('Điểm checkout: hết hạn mức, đang xác thực voucher hoặc đang gửi đơn đều khóa điều khiển', () => {
+  for (const state of [{ maximumPoints: 0 }, { submissionLocked: true }, { isValidatingVoucher: true },
+    { loyaltyRefreshing: true }, { loyaltyError: 'Mất kết nối' }]) {
+    const control = loyaltyControlFixture(state).render();
+    assert.equal(control.input.props.disabled, true);
+    assert.equal(control.up.props.disabled, true); assert.equal(control.down.props.disabled, true);
+  }
+});
+
 const voucherSource = fs.readFileSync(new URL('../components/useCheckoutVoucher.jsx', import.meta.url), 'utf8')
   .replace(/^import .*;\r?\n/gm, '').replaceAll('export default ', '').replaceAll('export ', '');
 
@@ -191,13 +268,41 @@ function voucherHarness(api) {
     timer: () => { const [id, callback] = [...timers.entries()].at(-1) || []; timers.delete(id); return callback?.(); } };
 }
 
-function actualCheckoutTotals(voucher, pendingSubmission = null, requestedPoints = 0) {
+function actualCheckoutTotals(voucher, pendingSubmission = null, requestedPoints = 0, overrides = {}) {
   const body = source.slice(source.indexOf('  const subtotal = checkoutItems.reduce('), source.indexOf('  // Live order payload'));
   const scope = { checkoutItems: [{ cartItemId: 'line-1', quantity: 1, product: { id: 7, price: 400000 } }],
     voucherCode: voucher.appliedVoucher?.code || '', useCheckoutVoucher: () => voucher,
-    profile: { loyaltyPoints: 1000 }, requestedPoints, pendingSubmission };
-  return new Function(...Object.keys(scope), body + '\nreturn { shippingFee, displayedShippingFee, maximumPoints, finalTotal, orderSummary, effectiveDiscount };')(...Object.values(scope));
+    profile: { loyaltyPoints: 1000 }, requestedPoints, pendingSubmission, ...overrides };
+  return new Function(...Object.keys(scope), body + '\nreturn { shippingFee, displayedShippingFee, maximumPoints, loyaltyLimitPoints, redeemPoints, pointsDiscount, finalTotal, orderSummary, effectiveDiscount };')(...Object.values(scope));
 }
+
+test('Điểm không bị giới hạn cố định ở 1; áp dụng cả số dư và trần 10% sau voucher',()=>{
+  const voucher={discountAmount:0,finalShippingFee:30000};
+  const available=actualCheckoutTotals(voucher,null,100,{profile:{loyaltyPoints:1000}});
+  assert.equal(available.maximumPoints,400);assert.equal(available.redeemPoints,100);assert.equal(available.pointsDiscount,10000);
+  const limited=actualCheckoutTotals(voucher,null,500,{profile:{loyaltyPoints:1000}});
+  assert.equal(limited.redeemPoints,400);assert.equal(limited.pointsDiscount,40000);
+  const balance=actualCheckoutTotals(voucher,null,100,{profile:{loyaltyPoints:1}});
+  assert.equal(balance.loyaltyLimitPoints,400);assert.equal(balance.maximumPoints,1);assert.equal(balance.redeemPoints,1);
+});
+
+test('Đổi từ vợt sang cước chỉ đổi hạn mức đơn, không mất điểm do lựa chọn nháp',()=>{
+  const profile={loyaltyPoints:10};
+  const totals=(price,discount,requested)=>actualCheckoutTotals({discountAmount:discount,finalShippingFee:30000},null,requested,
+    {profile,checkoutItems:[{cartItemId:'selected',quantity:1,product:{id:7,price}}]});
+  assert.equal(totals(2550000,1000000,5).redeemPoints,5);
+  assert.equal(totals(60000,0,5).redeemPoints,5);assert.equal(profile.loyaltyPoints,10);
+  assert.equal(totals(60000,60000,5).redeemPoints,0);assert.equal(profile.loyaltyPoints,10);
+  assert.equal(totals(60000,0,5).redeemPoints,5);
+});
+
+test('Không gửi yêu cầu dùng điểm khi số dư chưa tải xong hoặc tải thất bại',async()=>{
+  for(const state of [{loyaltyRefreshing:true},{loyaltyError:'Chưa tải được điểm'}]) {
+    sessionStorage.clear();const h=harness({redeemPoints:1,...state});let requests=0;
+    h.api.createOrder=async()=>{requests++;return {id:301};};await h.submit();
+    assert.equal(requests,0);assert.ok(h.state.error);assert.equal(h.state.removed.length,0);
+  }
+});
 
 function actualCartTotals(voucher) {
   const cartSource = fs.readFileSync(new URL('./CartPage.jsx', import.meta.url), 'utf8');

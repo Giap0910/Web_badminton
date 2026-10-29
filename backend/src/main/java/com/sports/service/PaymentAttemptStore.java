@@ -65,22 +65,34 @@ public class PaymentAttemptStore {
         transitionGuard.checkLink(order);
         PaymentAttempt attempt = attempts.findByOrderCode(order.getPayosOrderCode()).orElseThrow();
         if (attempt.getStatus() == PaymentAttempt.Status.PENDING) return PaymentAttemptResponse.from(attempt);
+        if (attempt.getStatus() != PaymentAttempt.Status.CREATING) return PaymentAttemptResponse.from(attempt);
+        validateEligible(order);
+        validateIdentity(attempt, result);
+        savePayableResult(order, attempt, result, created || result.verifiedPendingRecovery());
+        return PaymentAttemptResponse.from(attempts.saveAndFlush(attempt));
+    }
+
+    private void validateIdentity(PaymentAttempt attempt, PayOSPaymentClient.Result result) {
         if (!attempt.getOrderCode().equals(result.orderCode())
                 || attempt.getAmount().compareTo(result.amount()) != 0
+                || attempt.getAmount().compareTo(attempt.getOrder().getTotalAmount()) != 0
+                || result.verifiedPendingRecovery() && result.checkoutUrl() == null
                 || attempt.getPaymentLinkId() != null && !attempt.getPaymentLinkId().equals(result.paymentLinkId())) {
             throw new PaymentLinkException(502, "PAYMENT_IDENTITY_MISMATCH", "Thông tin thanh toán không khớp");
         }
-        if (!java.util.Objects.equals(attempt.getPaymentLinkId(), result.paymentLinkId()) || created) {
+    }
+
+    private void savePayableResult(Order order, PaymentAttempt attempt, PayOSPaymentClient.Result result, boolean payable) {
+        if (!java.util.Objects.equals(attempt.getPaymentLinkId(), result.paymentLinkId()) || payable) {
             CheckoutRevision.touch(order);
         }
         attempt.setPaymentLinkId(result.paymentLinkId());
-        if (created) {
-            validateEligible(order);
+        if (payable) {
             attempt.setCheckoutUrl(result.checkoutUrl());
             attempt.setQrPayload(result.qrPayload());
             attempt.setStatus(PaymentAttempt.Status.PENDING);
+            attempt.setReviewReason(null);
         }
-        return PaymentAttemptResponse.from(attempts.saveAndFlush(attempt));
     }
 
     @Transactional(readOnly = true)

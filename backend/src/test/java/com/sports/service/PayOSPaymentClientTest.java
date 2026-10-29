@@ -150,15 +150,73 @@ class PayOSPaymentClientTest {
     }
 
     @Test
-    void queryNeverSynthesizesCheckoutUrl() {
-        String data = "{\"id\":\"test-id\",\"orderCode\":123,\"amount\":100000,\"status\":\"PENDING\"}";
-        String canonical = "amount=100000&id=test-id&orderCode=123&status=PENDING";
+    void signedPendingZeroQueryRecoversExistingHostedCheckoutWithoutInventingBankQr() {
+        String data = recoveryData("PENDING", "0", "100000", "[]");
         server.expect(requestTo("https://provider.test/v2/payment-requests/123"))
-                .andExpect(method(HttpMethod.GET)).andRespond(withSuccess(envelope(data, canonical), MediaType.APPLICATION_JSON));
+                .andExpect(method(HttpMethod.GET)).andRespond(withSuccess(signedRecovery(data), MediaType.APPLICATION_JSON));
         var result = client.query(123L);
-        assertNull(result.checkoutUrl());
+        assertEquals("https://pay.payos.vn/web/124c33293c934a85be5b7f8761a27a07", result.checkoutUrl());
         assertNull(result.qrPayload());
-        assertEquals("test-id", result.paymentLinkId());
+        assertEquals("124c33293c934a85be5b7f8761a27a07", result.paymentLinkId());
+        assertTrue(result.verifiedPendingRecovery());
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"PAID", "CANCELLED", "EXPIRED", "PROCESSING", "UNKNOWN"})
+    void recoveryNeverOffersCheckoutForNonPendingProviderState(String status) {
+        String data = recoveryData(status, "0", "100000", "[]");
+        server.expect(anything()).andRespond(withSuccess(signedRecovery(data), MediaType.APPLICATION_JSON));
+        assertNull(client.query(123L).checkoutUrl());
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @MethodSource("unsafeRecoveryMoney")
+    void recoveryNeverOffersCheckoutForMoneyOrTransactions(String paid, String remaining, String transactions) {
+        String data = recoveryData("PENDING", paid, remaining, transactions);
+        server.expect(anything()).andRespond(withSuccess(signedRecovery(data), MediaType.APPLICATION_JSON));
+        assertNull(client.query(123L).checkoutUrl());
+        server.verify();
+    }
+
+    private static Stream<Arguments> unsafeRecoveryMoney() {
+        return Stream.of(Arguments.of("1", "99999", "[]"), Arguments.of("0", "1", "[]"),
+                Arguments.of("0", "100000", "[{\"reference\":\"TX-1\",\"amount\":1,\"transactionDateTime\":\"2026-10-29T10:00:00\"}]"));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"other-link", "../escape", "https://evil.test", ""})
+    void recoveryRejectsUnsafeProviderLinkIdentity(String id) {
+        String data = recoveryData("PENDING", "0", "100000", "[]")
+                .replace("124c33293c934a85be5b7f8761a27a07", id);
+        server.expect(anything()).andRespond(withSuccess(signedRecovery(data), MediaType.APPLICATION_JSON));
+        assertEquals(502, assertThrows(PaymentLinkException.class, () -> client.query(123L)).getStatus());
+    }
+
+    @Test
+    void recoveryRejectsWrongOrderConflictingUrlAndTamperedSignature() {
+        String pending = recoveryData("PENDING", "0", "100000", "[]");
+        for (String data : new String[]{pending.replace("\"orderCode\":123", "\"orderCode\":124"),
+                pending.replace("\"transactions\":[]", "\"transactions\":[],\"checkoutUrl\":\"https://evil.test\"")}) {
+            server.reset();
+            server.expect(anything()).andRespond(withSuccess(signedRecovery(data), MediaType.APPLICATION_JSON));
+            assertThrows(PaymentLinkException.class, () -> client.query(123L));
+        }
+        server.reset();
+        server.expect(anything()).andRespond(withSuccess(signedRecovery(pending).replace("\"amount\":100000", "\"amount\":1"), MediaType.APPLICATION_JSON));
+        assertThrows(PaymentLinkException.class, () -> client.query(123L));
+    }
+
+    private String recoveryData(String status, String paid, String remaining, String transactions) {
+        return "{\"id\":\"124c33293c934a85be5b7f8761a27a07\",\"orderCode\":123,\"amount\":100000,"
+                + "\"amountPaid\":" + paid + ",\"amountRemaining\":" + remaining
+                + ",\"status\":\"" + status + "\",\"transactions\":" + transactions + "}";
+    }
+
+    private String signedRecovery(String data) {
+        try { return envelope(data, signatures.canonicalData(new com.fasterxml.jackson.databind.ObjectMapper().readTree(data))); }
+        catch (com.fasterxml.jackson.core.JsonProcessingException ex) { throw new AssertionError(ex); }
     }
 
     @Test
