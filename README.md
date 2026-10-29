@@ -12,8 +12,8 @@ File chứa cấu trúc 18 bảng, 5 danh mục, 6 sản phẩm kèm biến th�
 
 | Vai trò | Tên đăng nhập | Mật khẩu demo |
 |---|---|---|
-| Quản trị | `demo_admin` | `DemoAdmin@2026!` |
-| Khách hàng | `demo_user` | `DemoUser@2026!` |
+| Quản trị | `admin@badminton.com` | `123456` |
+| Khách hàng | `vxg0910@gmail.com` | `123456` |
 
 Chỉ dùng các tài khoản này trên môi trường học tập local. Voucher mẫu: `DEMO10K`, giảm 10.000 đồng cho tiền hàng từ 100.000 đồng.
 
