@@ -13,7 +13,7 @@ function loadHome() {
     'react-router-dom': { Link: ({ to, children, ...props }) => React.createElement('a', { href: to, ...props }, children), useNavigate: () => () => {} },
     '../hooks/useBannerCarousel': () => ({ activeSlide: 0, dragging: false, offset: 0, handlers: {} }),
     '../api/productApi': { productApi: {} }, '../context/CartContext': { useCart: () => ({ addToCart() {} }) },
-    '../components/ProductCard': () => null, '../components/ProductFacts': {},
+    '../components/ProductCard': () => null, '../components/HomeBannerImage': () => null, '../components/ProductFacts': {},
     '../utils/formatters': { productCategory: () => '' }, 'lucide-react': Object.fromEntries(icons.map(name => [name, () => null])),
   };
   const module = { exports: {} };
@@ -31,6 +31,7 @@ test('Trang chủ render đủ danh mục, chữ banner nhỏ hơn và không c�
 });
 
 import * as formatters from '../utils/formatters.js';
+import * as productMedia from '../utils/productMedia.js';
 const defer = () => { let resolve, reject; const promise = new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject}; };
 const flush = async () => { for(let i=0;i<8;i++)await Promise.resolve(); };
 const iconMock = new Proxy({}, {get:()=>()=>null});
@@ -44,6 +45,7 @@ function hooks() {
   return{react,render(component,...args){cursor=0;const result=component(...args);effects.splice(0).forEach(fn=>fn());return result;},unmount(){cells.forEach(cell=>cell?.cleanup?.());}};
 }
 function compileFile(file,modules,globals={}) {
+  modules = { '../utils/productMedia.js': productMedia, '../components/HomeBannerImage': () => null, ...modules };
   const module={exports:{}},source=fs.readFileSync(new URL(file,import.meta.url),'utf8');
   const code=transformSync(source,{loader:'jsx',format:'cjs'}).code;
   new Function('require','module','exports',...Object.keys(globals),code)(name=>{if(!(name in modules))throw new Error('Missing module '+name);return modules[name];},module,module.exports,...Object.values(globals));

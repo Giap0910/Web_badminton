@@ -3,8 +3,9 @@ import { Heart, ZoomIn } from 'lucide-react';
 import ProductImage, { internalProductImage } from './ProductImage';
 
 export function productGallerySlots(product) {
+  const numbered = product?.imageSlots?.some(slot => slot?.position != null);
   return Array.from({ length: 4 }, (_, index) => {
-    const slot = product?.imageSlots?.[index];
+    const slot = numbered ? product.imageSlots.find(item => item?.position === index + 1) : product?.imageSlots?.[index];
     const url = slot?.status === 'READY' && internalProductImage(slot.url) ? slot.url : null;
     return { position: index + 1, url, status: url ? 'READY' : 'UPDATING' };
   });

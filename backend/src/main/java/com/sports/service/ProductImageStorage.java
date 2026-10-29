@@ -68,11 +68,23 @@ public class ProductImageStorage {
         if (!sha256.equalsIgnoreCase(approvedSha256)) {
             throw error(409, "IMAGE_RIGHTS_NOT_APPROVED", "File không khớp ảnh đã được duyệt");
         }
+        return storeBytes(productId, bytes, sha256);
+    }
+
+    private StoredImage storeBytes(long productId, byte[] bytes, String sha256) {
         var image = inspect(bytes);
         String fileName = UUID.randomUUID() + "." + image.extension();
         write(productId, fileName, bytes);
         return new StoredImage(productId + "/" + fileName, fileName, sha256,
                 image.mimeType(), image.width(), image.height(), bytes.length);
+    }
+
+    public StoredImage storeUpload(long productId, MultipartFile file) {
+        if (productId <= 0) throw error(400, "VALIDATION_ERROR", "ID sản phẩm không hợp lệ");
+        byte[] bytes = readUpload(file);
+        if (detectedFormat(bytes).equals("WEBP"))
+            throw error(415, "UNSUPPORTED_IMAGE_TYPE", "Tải ảnh mới bằng JPG hoặc PNG; ảnh WebP cũ vẫn được giữ");
+        return storeBytes(productId, bytes, hash(bytes));
     }
 
     private void requireApproval(String approvedSha256) {

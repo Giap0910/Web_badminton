@@ -8,6 +8,27 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ProductGalleryTest {
+    @Test void positionsAreStableAndArchivedImagesDoNotReappear() {
+        var three=image("/api/media/products/1/three.png",true,true);three.setDisplayOrder(3);
+        var archived=image("/api/media/products/1/old.png",true,true);archived.setDisplayOrder(99);
+        var first=image("/api/media/products/1/first.png",true,true);first.setDisplayOrder(1);
+        var slots=ProductService.positionedGallerySlots(List.of(archived,three,first));
+        assertEquals(first.getImageUrl(),slots.get(0).url());assertNull(slots.get(1).url());
+        assertEquals(three.getImageUrl(),slots.get(2).url());assertNull(slots.get(3).url());
+    }
+
+    @Test void coverIsAlwaysSlotOneEvenWhenAnotherImageWasPreviouslyPrimary() {
+        var images=mock(ProductImageRepository.class);var products=mock(ProductRepository.class);
+        var service=new ProductService(products,mock(CategoryRepository.class),mock(ReviewService.class),images);
+        var first=image("/api/media/products/1/first.png",true,true);first.setDisplayOrder(1);
+        var third=image("/api/media/products/1/third.png",true,true);third.setDisplayOrder(3);
+        when(images.findByProductIdOrderByDisplayOrderAsc(1L)).thenReturn(List.of(first,third));
+        var product=Product.builder().id(1L).brand("Yonex").stock(5).imageUrl(third.getImageUrl()).build();
+        assertEquals(first.getImageUrl(),service.toDto(product).getImageUrl());
+        when(images.findByProductIdOrderByDisplayOrderAsc(1L)).thenReturn(List.of(third));
+        assertNull(service.toDto(product).getImageUrl());
+        assertEquals(third.getImageUrl(),service.toDto(product).getImageSlots().get(2).url());
+    }
     private ProductImage image(String url,boolean rights,boolean model) {
         return ProductImage.builder().imageUrl(url).rightsApproved(rights).modelVerified(model).build();
     }

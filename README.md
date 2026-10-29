@@ -8,7 +8,7 @@ Yêu cầu: Java 17, Maven, Node.js 20.19+ (hoặc 22.12+) và MySQL/MariaDB. B�
 
 Trong terminal của MySQL/MariaDB, dùng `source C:/duong-dan/Web_badminton/database-demo.sql;` (thay đường dẫn theo máy). Hoặc nhập file qua phpMyAdmin trên môi trường học tập. File tự tạo database **web_badminton_demo**; nếu tên này đã tồn tại, dừng nhập và dùng một database mới, không chạy với tùy chọn bỏ qua lỗi. Không nhập vào database cửa hàng đang sử dụng.
 
-File chứa cấu trúc 17 bảng, 5 danh mục, 6 sản phẩm kèm biến thể, 2 tài khoản và 1 voucher giả lập. Không sao chép dữ liệu khách hàng, đơn hàng, thanh toán, địa chỉ, chat hay tệp media thật. Giá, tồn và thông số sản phẩm chỉ để thử nghiệm. Các bảng giao dịch ban đầu trống; ảnh sản phẩm dùng giao diện thay thế khi chưa có ảnh.
+File chứa cấu trúc 18 bảng, 5 danh mục, 6 sản phẩm kèm biến thể, 2 tài khoản và 1 voucher giả lập. Không sao chép dữ liệu khách hàng, đơn hàng, thanh toán, địa chỉ, chat hay tệp media thật. Giá, tồn và thông số sản phẩm chỉ để thử nghiệm. Các bảng giao dịch ban đầu trống; ảnh sản phẩm dùng giao diện thay thế khi chưa có ảnh.
 
 | Vai trò | Tên đăng nhập | Mật khẩu demo |
 |---|---|---|
@@ -53,6 +53,16 @@ npm run dev
 Mở `http://localhost:5173`, đăng nhập tài khoản demo để xem khách hàng hoặc `/admin`. Có thể thử tìm kiếm sản phẩm, giỏ hàng, đặt đơn COD và quản trị trên database demo. COD chỉ được ghi nhận đã thanh toán sau bước xác nhận thu tiền của quản trị.
 
 Không cần khóa PayOS/AI để xem catalog và thử COD. Thanh toán ngân hàng thật cần cấu hình PayOS riêng; đây không phải chức năng đã được xác minh bằng database mẫu. Khi thiếu khóa AI, backend có thể trả tư vấn theo quy tắc với `fallback=true`. Không đưa khóa dịch vụ thật lên GitHub.
+
+### Quản trị ảnh sản phẩm và banner
+
+Trong **Quản trị → Sản phẩm → Thêm/Sửa**, chọn ảnh JPG/PNG cho các vị trí 1–2–3–4; ảnh 1 là ảnh đại diện. Sản phẩm mới được giữ ẩn đến khi tải đủ 4 ảnh và công khai thành công. Nếu tải lỗi, các ảnh đã lưu và ID bản nháp được giữ để thử lại.
+
+Trong **Quản trị → Cài đặt → Banner trang chủ**, chọn và lưu riêng ảnh nền cho 4 slide hiện có. Ảnh mới chỉ tải khi bấm nút lưu, không tự gửi khi chọn file. Mỗi ảnh tối đa 5 MB và 20 megapixel; nên dùng ảnh ngang khoảng 1600 × 600 cho banner. Chỉ sử dụng ảnh có quyền phù hợp. Thay ảnh giữ file cũ, không tự xóa.
+
+Ảnh sản phẩm lưu trong `storage/products/`, banner lưu riêng trong `storage/banners/`. Nội dung chữ, liên kết và cách chạy banner được giữ nguyên; chưa có ảnh hoặc không tải được ảnh thì trang chủ giữ nền hiện tại.
+
+Database demo mới đã có bảng `banner_images` với 4 vị trí trống. Với database cũ, cần sao lưu và áp dụng `backend/src/main/resources/db/migration/banner_images_migration.sql` lên đúng database đã chọn **trước khi khởi động backend phiên bản mới**. Script chỉ thêm bảng banner và khởi tạo vị trí còn thiếu, không ghi đè ảnh đã lưu; không tự động chạy script này lên cửa hàng đang sử dụng.
 
 ### 4. Kiểm tra mã nguồn
 

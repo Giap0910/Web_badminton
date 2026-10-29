@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
+import HomeBannerImage from '../components/HomeBannerImage';
 import { ProductRating } from '../components/ProductFacts';
 import { productCategory } from '../utils/formatters';
 import { Flame, ArrowRight, ChevronRight, ArrowUpRight, Footprints, Backpack, Shirt, Trophy, Swords, X, ShoppingCart, Check, ShieldCheck, Truck, Shield, Headphones } from 'lucide-react';
@@ -65,6 +66,7 @@ const HomePage = () => {
       {/* 1. HERO BANNER SLIDER (Full-bleed sports smash energy) */}
       <section role="region" aria-label="Banner quảng cáo" tabIndex={0} {...handlers}
         style={{ touchAction: 'pan-y' }} className="relative w-full overflow-hidden bg-[#131B2E] text-white py-14 lg:py-24 select-none cursor-grab active:cursor-grabbing">
+        <HomeBannerImage position={activeSlide + 1} />
         {/* Background Image & Layered Lighting */}
         <div className="absolute inset-0 z-0 bg-gradient-to-r from-[#131B2E] via-[#131B2E]/90 to-transparent" />
         <div className="absolute -right-32 -bottom-32 w-[550px] h-[550px] rounded-full bg-secondary/15 blur-[120px] pointer-events-none" />

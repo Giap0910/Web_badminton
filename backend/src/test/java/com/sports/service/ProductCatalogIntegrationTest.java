@@ -274,11 +274,11 @@ class ProductCatalogIntegrationTest {
             var visible=products.findById(1L).orElseThrow();var hidden=products.findById(31L).orElseThrow();
             String visibleUrl="/api/media/products/1/approved-test.jpg",hiddenUrl="/api/media/products/31/approved-test.jpg";
             images.saveAndFlush(com.sports.entity.ProductImage.builder().product(visible).imageUrl(visibleUrl)
-                    .displayOrder(-1).rightsApproved(true).modelVerified(true).build());
+                    .displayOrder(1).rightsApproved(true).modelVerified(true).build());
             images.saveAndFlush(com.sports.entity.ProductImage.builder().product(visible)
                     .imageUrl("/api/media/products/1/unapproved-test.jpg").rightsApproved(false).modelVerified(true).build());
             images.saveAndFlush(com.sports.entity.ProductImage.builder().product(hidden).imageUrl(hiddenUrl)
-                    .displayOrder(-1).rightsApproved(true).modelVerified(true).build());
+                    .displayOrder(1).rightsApproved(true).modelVerified(true).build());
             reload();
             assertTrue(service.getProductImages(1L).contains(visibleUrl));
             assertFalse(service.getProductImages(1L).contains("/api/media/products/1/unapproved-test.jpg"));

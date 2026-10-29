@@ -215,12 +215,22 @@ public class ProductService {
 
     @Transactional
     public ProductDto createProduct(ProductDto dto) {
+        return createProduct(dto, true);
+    }
+
+    @Transactional
+    public ProductDto createDraft(ProductDto dto) {
+        requireAdministrator();
+        return createProduct(dto, false);
+    }
+
+    private ProductDto createProduct(ProductDto dto, boolean visible) {
         validateStockAndPrice(dto);
         Product product = Product.builder().name(dto.getName()).brand(ProductBrand.canonicalName(dto.getBrand()))
                 .sku(dto.getSku()).price(dto.getPrice()).arrivedAt(java.time.LocalDateTime.now())
                 .originalPrice(dto.getOriginalPrice() != null ? dto.getOriginalPrice() : dto.getPrice())
                 .stock(dto.getStock() != null ? dto.getStock() : 0).reservedStock(0)
-                .imageUrl(dto.getImageUrl()).description(dto.getDescription()).build();
+                .imageUrl(dto.getImageUrl()).description(dto.getDescription()).catalogVisible(visible).build();
         applyCategory(product, dto);
         applySpecifications(product, dto);
         Product saved = productRepository.save(product);
@@ -454,7 +464,8 @@ public class ProductService {
             }
             return List.of();
         }
-        return approvedImages(productImageRepository.findByProductIdOrderByDisplayOrderAsc(productId));
+        return positionedGallerySlots(productImageRepository.findByProductIdOrderByDisplayOrderAsc(productId)).stream()
+                .map(com.sports.dto.ProductGallerySlotDto::url).filter(java.util.Objects::nonNull).toList();
     }
 
     public ProductDto toDto(Product product) {
@@ -462,9 +473,9 @@ public class ProductService {
         addRacketDto(builder, product);
         addClothingDto(builder, product);
         addBagAndAccessoryDto(builder, product);
-        List<String> images = new java.util.ArrayList<>(approvedImages(productImageRepository.findByProductIdOrderByDisplayOrderAsc(product.getId())));
-        if (images.remove(product.getImageUrl())) images.add(0,product.getImageUrl());
-        return builder.imageUrl(images.isEmpty() ? null : images.get(0)).imageUrls(images).imageSlots(gallerySlots(images))
+        var slots = positionedGallerySlots(productImageRepository.findByProductIdOrderByDisplayOrderAsc(product.getId()));
+        var images = slots.stream().map(com.sports.dto.ProductGallerySlotDto::url).filter(java.util.Objects::nonNull).toList();
+        return builder.imageUrl(slots.get(0).url()).imageUrls(images).imageSlots(slots)
                 .averageRating(reviewService.getAverageRating(product.getId()))
                 .variants(ProductVariantService.describe(product)).inStock(product.getStock() != null && product.getStock() > 0)
                 .reviewCount(reviewService.getReviewCount(product.getId())).build();
@@ -480,6 +491,17 @@ public class ProductService {
     static List<com.sports.dto.ProductGallerySlotDto> gallerySlots(List<String> images) {
         return java.util.stream.IntStream.range(0,4).mapToObj(index -> new com.sports.dto.ProductGallerySlotDto(index+1,
                 index<images.size() ? images.get(index) : null,index<images.size() ? "READY" : "UPDATING")).toList();
+    }
+
+    static List<com.sports.dto.ProductGallerySlotDto> positionedGallerySlots(List<com.sports.entity.ProductImage> images) {
+        var urls = new java.util.HashMap<Integer, String>();
+        images.stream().filter(i -> Boolean.TRUE.equals(i.getRightsApproved()) && Boolean.TRUE.equals(i.getModelVerified()))
+                .filter(i -> internalImage(i.getImageUrl()) && i.getDisplayOrder() >= 1 && i.getDisplayOrder() <= 4)
+                .sorted(java.util.Comparator.comparing(i -> i.getId() == null ? 0L : i.getId()))
+                .forEach(i -> urls.put(i.getDisplayOrder(), i.getImageUrl()));
+        return java.util.stream.IntStream.rangeClosed(1, 4).mapToObj(position ->
+                new com.sports.dto.ProductGallerySlotDto(position, urls.get(position),
+                        urls.containsKey(position) ? "READY" : "UPDATING")).toList();
     }
 
     private ProductDto.ProductDtoBuilder productDetails(Product product) {

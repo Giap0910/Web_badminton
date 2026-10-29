@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { productImages, productOptions, productCategory } from '../utils/formatters';
+import { productOptions, productCategory } from '../utils/formatters';
+import { productCoverImage } from '../utils/productMedia.js';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingCart, Heart, Eye } from 'lucide-react';
@@ -16,8 +17,7 @@ const ProductCard = ({ product }) => {
   const { isFavorite, toggleFavorite, favoriteError } = useProductFavorite(user?.id, product.id);
   const [addedAnimation, setAddedAnimation] = useState(false);
   const inStock = product.inStock ?? (Number.isInteger(product.stock) && product.stock > 0);
-  // Use product.imageUrl as primary per Backend Contract Section 1 & 6
-  const imageUrl = product.imageUrl || productImages(product)[0];
+  const imageUrl = productCoverImage(product);
 
   // Format VND currency
   const formatPrice = (price) => {

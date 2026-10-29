@@ -28,6 +28,15 @@ export const adminApi = {
     return axiosClient.post('/admin/products/import/commit', body, { headers: { 'Content-Type': undefined }, timeout: 120000 });
   },
   createProduct: (data) => axiosClient.post('/products', data),
+  createProductDraft: data => axiosClient.post('/admin/products/drafts', data),
+  getProductImagePreview: (id, position, signal) => axiosClient.get(`/admin/products/${id}/images/${position}/content`,
+    { responseType: 'blob', signal }),
+  uploadProductImage: (id, position, file, approved) => {
+    const body = new FormData(); body.append('file', file); body.append('approved', String(approved));
+    return axiosClient.put(`/admin/products/${id}/images/${position}`, body,
+      { headers: { 'Content-Type': undefined }, timeout: 60000 });
+  },
+  publishProduct: id => axiosClient.post(`/admin/products/${id}/publish`),
   updateProduct: (id, data) => axiosClient.put(`/products/${id}`, data),
   updateProductVisibility: (id, catalogVisible) => axiosClient.patch(`/products/${id}/visibility`, { catalogVisible }),
   deleteProduct: (id) => axiosClient.delete(`/products/${id}`),

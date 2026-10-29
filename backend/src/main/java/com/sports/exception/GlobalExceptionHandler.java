@@ -18,11 +18,14 @@ public class GlobalExceptionHandler {
         String path = request.getRequestURI();
         String message = path.endsWith("/profile/avatar") ? "Ảnh đại diện tối đa 5MB"
                 : path.matches("/api/returns/[0-9]+/evidence") ? "Ảnh bằng chứng tối đa 5MB"
+                : path.matches("/api/admin/products/[0-9]+/images/[1-4]") ? "Ảnh sản phẩm tối đa 5 MB"
+                : path.matches("/api/admin/banners/[1-4]/image") ? "Ảnh banner tối đa 5 MB"
                 : "File vượt giới hạn tải lên; mẫu sản phẩm tối đa 1 MB";
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(Map.of("status", 413, "message", message));
     }
-    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    @ExceptionHandler({org.springframework.web.bind.MissingServletRequestParameterException.class,
+            org.springframework.web.multipart.support.MissingServletRequestPartException.class})
     public ResponseEntity<Map<String, Object>> handleMissingParameter(Exception ex) {
         return handleBadRequest(new BadRequestException("Thiếu tham số bắt buộc của yêu cầu"));
     }

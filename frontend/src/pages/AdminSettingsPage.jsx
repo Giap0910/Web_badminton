@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
+import AdminBannerImages from '../components/AdminBannerImages';
 import { adminApi } from '../api/adminApi';
-import { Settings, Store, Award, QrCode, Truck } from 'lucide-react';
+import { Settings, Store, Award, QrCode, Truck, Image } from 'lucide-react';
 
 const TABS = [ ['STORE', 'Cửa hàng & Liên hệ', Store], ['STRINGING', 'Dịch vụ căng cước', Award],
-  ['PAYMENT', 'Thanh toán PayOS VietQR', QrCode], ['SHIPPING', 'Vận chuyển & Chính sách', Truck] ];
+  ['PAYMENT', 'Thanh toán PayOS VietQR', QrCode], ['SHIPPING', 'Vận chuyển & Chính sách', Truck],
+  ['BANNERS', 'Banner trang chủ', Image] ];
 const amount = value => Number.isSafeInteger(value) && value >= 0 ? `${value.toLocaleString('vi-VN')} đ` : 'Chưa có thông tin';
 
 export function normalizeAdminSettings(data) {
@@ -42,7 +44,7 @@ const AdminSettingsPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
         <div className="flex items-center gap-3"><Settings className="w-5 h-5 text-slate-700" /><div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900">Thông tin hệ thống</h1>
-          <p className="text-xs text-slate-500 mt-1">Chính sách chỉ đọc do máy chủ cung cấp.</p></div></div>
+          <p className="text-xs text-slate-500 mt-1">Chính sách chỉ đọc; ảnh banner được quản lý tại mục riêng.</p></div></div>
         <button type="button" disabled={loading} onClick={load} className="rounded-xl border px-4 py-2 text-xs font-bold">Làm mới chính sách</button>
       </div>
       {error && <p role="alert" className="p-4 rounded-xl bg-red-50 text-red-800">{error}</p>}
@@ -50,7 +52,7 @@ const AdminSettingsPage = () => {
       <div className="flex items-center gap-2 overflow-x-auto pb-1">{TABS.map(([id, label, Icon]) =>
         <button key={id} type="button" onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap ${activeTab === id ? 'bg-[#131b2e] text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>
           <Icon className="w-4 h-4" />{label}</button>)}</div>
-      {settings && <SettingsPanel activeTab={activeTab} settings={settings} />}
+      {activeTab === 'BANNERS' ? <AdminBannerImages /> : settings && <SettingsPanel activeTab={activeTab} settings={settings} />}
     </div>
   </AdminLayout>;
 };

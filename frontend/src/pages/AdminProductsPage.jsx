@@ -4,6 +4,7 @@ import ProductImage from '../components/ProductImage';
 import AdminProductFields from '../components/AdminProductFields';
 import AdminProductImport from '../components/AdminProductImport';
 import AdminVariantInventory from '../components/AdminVariantInventory';
+import AdminProductImages, { emptyProductImageFiles, validateProductImageFile, validateProductImageSelection, saveProductWithImages } from '../components/AdminProductImages';
 import { PRODUCT_BRANDS, productToAdminForm, buildAdminProductPayload, filterAdminProducts, adminProductFacts } from '../utils/adminProductForm';
 import { adminApi } from '../api/adminApi';
 import { productApi } from '../api/productApi';
@@ -41,6 +42,27 @@ const AdminProductsPage = () => {
   const [formError, setFormError] = useState('');
   const [actionError, setActionError] = useState('');
   const operationLock = useRef(false);
+  const [imageFiles, setImageFiles] = useState(emptyProductImageFiles);
+  const [imageSlots, setImageSlots] = useState([]);
+  const [imageApproved, setImageApproved] = useState(false);
+  const [newProduct, setNewProduct] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(null);
+
+  const resetImages = (slots, isNew) => {
+    setImageFiles(emptyProductImageFiles()); setImageSlots(slots || []);
+    setImageApproved(false); setNewProduct(isNew); setUploadingImage(null);
+  };
+  const selectImage = (index, file) => {
+    try {
+      if (file) validateProductImageFile(file);
+      setImageFiles(previous => previous.map((value, slot) => slot === index ? file : value));
+      setImageApproved(false); setFormError('');
+    } catch (error) { setFormError(error.message); }
+  };
+  const rememberDraft = draft => { setEditingId(draft.id); setFormData(productToAdminForm(draft)); };
+  const rememberImage = (index, slots) => {
+    setImageSlots(slots); setImageFiles(previous => previous.map((file, slot) => slot === index ? null : file));
+  };
 
   const fetchProducts = async (signal) => {
     setLoading(true); setDataError('');
@@ -79,6 +101,7 @@ const AdminProductsPage = () => {
   const formatPrice = price => price == null ? 'Chưa có giá' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   const changeField = (key, value) => setFormData(previous => ({ ...previous, [key]: value }));
   const handleOpenAdd = () => {
+    resetImages([], true);
     setEditingId(null); setFormError(''); setNotification('');
     setFormData(productToAdminForm());
     setShowModal(true);
@@ -90,6 +113,7 @@ const AdminProductsPage = () => {
     try {
       const current = await productApi.getProductById(product.id, { catalogScope: 'all' });
       setEditingId(current.id); setFormError('');
+      resetImages(current.imageSlots, false);
       setFormData(productToAdminForm(current)); setShowModal(true);
     } catch (error) { setActionError(error.response?.data?.message || 'Không tải được chi tiết sản phẩm.'); }
     finally { operationLock.current = false; setBusyId(null); }
@@ -101,7 +125,8 @@ const AdminProductsPage = () => {
     if (!window.confirm(`${visible ? 'Hiện' : 'Ẩn'} sản phẩm “${product.name}” ${visible ? 'trên' : 'khỏi'} cửa hàng? Dữ liệu và lịch sử đơn hàng được giữ nguyên.`)) return;
     operationLock.current = true; setBusyId(product.id); setActionError(''); setNotification('');
     try {
-      await adminApi.updateProductVisibility(product.id, visible);
+      if (visible) await adminApi.publishProduct(product.id);
+      else await adminApi.updateProductVisibility(product.id, false);
       setNotification(visible ? 'Đã hiện sản phẩm trên cửa hàng.' : 'Đã ẩn sản phẩm khỏi cửa hàng.');
       await fetchProducts();
     } catch (error) { setActionError(error.response?.data?.message || 'Không lưu được trạng thái sản phẩm.'); }
@@ -115,16 +140,21 @@ const AdminProductsPage = () => {
     try {
       if (categoryError) throw new Error('Vui lòng tải lại danh mục trước khi lưu.');
       payload = buildAdminProductPayload(formData, categories, editingId != null);
+      validateProductImageSelection({ files: imageFiles, slots: imageSlots, approved: imageApproved, isNew: newProduct });
     } catch (error) { setFormError(error.message); return; }
     operationLock.current = true; setSaving(true); setFormError(''); setNotification('');
     try {
-      if (editingId != null) await adminApi.updateProduct(editingId, payload);
-      else await adminApi.createProduct(payload);
+      await saveProductWithImages({ productId: editingId, payload, files: imageFiles, slots: imageSlots,
+        approved: imageApproved, isNew: newProduct, onDraft: rememberDraft,
+        onUploaded: rememberImage, onProgress: setUploadingImage });
       setShowModal(false);
-      setNotification(editingId != null ? 'Đã lưu thông tin sản phẩm.' : 'Đã thêm sản phẩm.');
+      setNotification(newProduct ? 'Đã thêm sản phẩm cùng đủ 4 ảnh.' : 'Đã lưu thông tin và ảnh sản phẩm.');
       await fetchProducts();
-    } catch (error) { setFormError(error.response?.data?.message || 'Không lưu được sản phẩm. Vui lòng kiểm tra và thử lại.'); }
-    finally { operationLock.current = false; setSaving(false); }
+    } catch (error) {
+      setFormError((error.response?.data?.message || error.message || 'Không lưu được sản phẩm.')
+        + ' Các phần đã lưu được giữ; kiểm tra ảnh còn thiếu rồi thử lại.');
+      await fetchProducts();
+    } finally { operationLock.current = false; setSaving(false); setUploadingImage(null); }
   };
 
   const handleDelete = async product => {
@@ -385,7 +415,7 @@ const AdminProductsPage = () => {
         {/* MODAL THÊM / SỬA SẢN PHẨM */}
         {showModal && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div role="dialog" aria-modal="true" aria-labelledby="product-modal-title" className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200 max-h-[90vh] overflow-y-auto">
+            <div role="dialog" aria-modal="true" aria-labelledby="product-modal-title" className="bg-white rounded-3xl max-w-3xl w-full p-6 md:p-8 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -410,6 +440,7 @@ const AdminProductsPage = () => {
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <fieldset disabled={saving} className="contents">
                 {formError && <p role="alert" className="text-xs text-red-700 bg-red-50 p-3 rounded-xl">{formError}</p>}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
@@ -505,7 +536,8 @@ const AdminProductsPage = () => {
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl">Ảnh sản phẩm đang tạm hoãn. Thao tác lưu này giữ nguyên ảnh hiện có.</p>
+                <AdminProductImages productId={editingId} files={imageFiles} slots={imageSlots} approved={imageApproved}
+                  onApproved={setImageApproved} onSelect={selectImage} disabled={saving} uploading={uploadingImage} />
 
                 <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                   <button
@@ -524,6 +556,7 @@ const AdminProductsPage = () => {
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu sản phẩm'}
                   </button>
                 </div>
+                </fieldset>
               </form>
             </div>
           </div>

@@ -530,6 +530,7 @@ function readOnlyAdminHarness(filename, api) {
   const modules = { react: patchedReact, '../api/adminApi': { adminApi: api }, '../utils/formatters': { getOrderStatusLabel },
     '../components/AdminLayout': { default: props => React.createElement('div', null, props.children), __esModule: true },
     '../components/AdminReportControls': { default: () => null, __esModule: true },
+    '../components/AdminBannerImages': { default: () => null, __esModule: true },
     'react-router-dom': { Link: props => React.createElement('a', { href: props.to }, props.children) },
     'lucide-react': new Proxy({}, { get: () => () => null }) };
   const instance = { exports: {} }, code = transformSync(fs.readFileSync(`src/pages/${filename}.jsx`, 'utf8'), { loader: 'jsx', format: 'cjs' }).code;

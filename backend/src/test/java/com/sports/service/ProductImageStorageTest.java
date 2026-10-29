@@ -19,6 +19,20 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ProductImageStorageTest {
+    @Test void adminUploadValidatesBytesAndGeneratesItsOwnFileName() throws Exception {
+        var storage=new ProductImageStorage(directory.toString());
+        var result=storage.storeUpload(7,upload(image("png")));
+        assertEquals("image/png",result.mimeType());assertTrue(result.storageKey().startsWith("7/"));
+        assertTrue(result.fileName().matches("[0-9a-f-]{36}\\.png"));
+    }
+
+    @Test void adminUploadRejectsEmptyAndDisguisedExecutable() {
+        var storage=new ProductImageStorage(directory.toString());
+        assertEquals(400,assertThrows(ProductImageException.class,()->storage.storeUpload(7,upload(new byte[0]))).getStatus());
+        var bad=new MockMultipartFile("file","valid.png","image/png","not an image".getBytes());
+        assertEquals(415,assertThrows(ProductImageException.class,()->storage.storeUpload(7,bad)).getStatus());
+        assertFalse(Files.exists(directory.resolve("7")));
+    }
     Path directory;
     @BeforeEach void retainArtifacts() throws IOException {
         Path workspace=Path.of("").toAbsolutePath().normalize();

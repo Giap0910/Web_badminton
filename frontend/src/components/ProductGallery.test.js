@@ -8,7 +8,29 @@ const server = await createServer({ configFile: false, optimizeDeps: { noDiscove
   server: { middlewareMode: true, hmr: false }, appType: 'custom' });
 const gallery = await server.ssrLoadModule('/src/components/ProductGallery.jsx');
 const media = await server.ssrLoadModule('/src/components/ProductImage.jsx');
+const { productCoverImage } = await server.ssrLoadModule('/src/utils/productMedia.js');
 after(() => server.close());
+
+test('Ảnh 1 là đại diện; thiếu ảnh 2 không đẩy ảnh 3 sang ô 2 hoặc dùng ảnh 3 làm đại diện', () => {
+  const product = { imageUrl: '/api/media/products/1/old.png', imageSlots: [
+    { position: 3, status: 'READY', url: '/api/media/products/1/three.png' },
+    { position: 1, status: 'READY', url: '/api/media/products/1/one.png' }] };
+  assert.deepEqual(gallery.productGallerySlots(product).map(slot => slot.url),
+    ['/api/media/products/1/one.png', null, '/api/media/products/1/three.png', null]);
+  assert.equal(productCoverImage(product), '/api/media/products/1/one.png');
+  product.imageSlots = product.imageSlots.filter(slot => slot.position !== 1);
+  assert.equal(productCoverImage(product), null);
+});
+
+test('Bốn ảnh mới và WebP cũ đều hiển thị đúng từng vị trí sau khi tải lại sản phẩm', () => {
+  const product = { name: 'Sản phẩm đã tải ảnh', brand: 'Yonex', imageSlots: Array.from({ length: 4 }, (_, i) =>
+    ({ position: i + 1, status: 'READY', url: `/api/media/products/7/image${i + 1}.${i === 3 ? 'webp' : 'png'}` })) };
+  for (let index = 0; index < 4; index++) {
+    const html = renderToStaticMarkup(React.createElement(gallery.default, { product, activeIndex: index }));
+    assert.match(html, new RegExp(`Ảnh ${index + 1}/4`));
+    assert.match(html, new RegExp(`image${index + 1}\\.`));
+  }
+});
 
 test('Ảnh nội bộ được tải từ Backend thay vì cổng Vite', () => {
   assert.equal(media.productImageSource('/api/media/products/1/a.webp'), 'http://localhost:8080/api/media/products/1/a.webp');

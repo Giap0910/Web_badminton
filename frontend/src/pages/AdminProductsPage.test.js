@@ -17,6 +17,7 @@ const inventory = await server.ssrLoadModule('/src/components/AdminVariantInvent
 const { AuthProvider } = await server.ssrLoadModule('/src/context/AuthContext.jsx');
 const { productToAdminForm } = await server.ssrLoadModule('/src/utils/adminProductForm.jsx');
 const productFormTools = await server.ssrLoadModule('/src/utils/adminProductForm.jsx');
+const imageTools = await server.ssrLoadModule('/src/components/AdminProductImages.jsx');
 const searchHelpers = await server.ssrLoadModule('/src/utils/adminCustomers.jsx');
 const { adminApi } = await server.ssrLoadModule('/src/api/adminApi.js');
 const { default: axiosClient } = await server.ssrLoadModule('/src/api/axiosClient.js');
@@ -109,7 +110,8 @@ function adminRuntime(path, modules = {}, locationSearch = '') {
   const window = { location: { search: locationSearch }, addEventListener: (name, callback) => listeners.set(name, callback),
     removeEventListener: name => listeners.delete(name) };
   const document = { querySelector: () => null };
-  const dependencies = { react, 'lucide-react': new Proxy({}, { get: () => () => null }), ...modules };
+  const dependencies = { react, 'lucide-react': new Proxy({}, { get: () => () => null }),
+    '../components/AdminProductImages': { __esModule: true, ...imageTools, default: () => null }, ...modules };
   const code = transformSync(fs.readFileSync(path, 'utf8'), { loader: 'jsx', format: 'cjs' }).code;
   new Function('require', 'module', 'exports', 'window', 'document', 'setTimeout', 'clearTimeout', code)(name => dependencies[name], instance,
     instance.exports, window, document, callback => { timer = callback; return 1; }, () => { timer = null; });
