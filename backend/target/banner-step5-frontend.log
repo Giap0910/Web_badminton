@@ -1,0 +1,39 @@
+✔ Quản trị có đúng 4 vị trí và nút chọn/lưu từng banner; không mở nhập khóa hoặc nội dung chính sách (16.5623ms)
+✔ Danh sách phải đủ 4 vị trí duy nhất, không nhận URL bên ngoài hoặc ảnh thuộc slot khác (2.3919ms)
+✔ API tải ảnh dùng đúng multipart và vị trí; chỉ xác nhận khi máy chủ trả READY đúng vị trí (2.489ms)
+✔ Chọn ảnh cần xác nhận trước khi lưu; lỗi giữ ảnh đang chọn và cho thử lại (131.9933ms)
+✔ File không hợp lệ không thể tận dụng xác nhận cũ để lưu, bỏ ảnh chỉ bỏ lựa chọn local (12.6167ms)
+✔ Phản hồi lưu muộn sau khi rời tab không cập nhật giao diện đã unmount (7.8049ms)
+✔ Trang chủ lấy ảnh đúng slide 1–2–3–4, đổi slide không gọi API lại (307.1167ms)
+✔ Chưa có ảnh hoặc lỗi API giữ nền và nội dung hiện tại, không lấy ảnh slot khác lấp vào (23.3043ms)
+✔ Ảnh lỗi không phá carousel; slide tiếp theo vẫn hiện ảnh đúng (5.6177ms)
+✔ Đã rời trang thì kết quả API muộn không phục hồi ảnh (14.637ms)
+✔ Kéo trái/phải chuyển đúng banner và không bị tự chuyển khi đang kéo (348.6992ms)
+✔ Tự chuyển mỗi sáu giây, quay vòng và tiếp tục sau khi hủy kéo (13.084ms)
+✔ Kéo ngắn, cuộn dọc và chạm nút CTA không chuyển banner (10.8399ms)
+✔ Kéo không mở link; phím mũi tên hỗ trợ điều khiển và quay vòng (4.9217ms)
+✔ Trang chủ render đủ danh mục, chữ banner nhỏ hơn và không còn điều khiển cũ (367.864ms)
+✔ Home production accepts array/page, rejects malformed, Newonlyactualflag and truthfulpolicies (63.9541ms)
+✔ Home500 showsretry notfakeempty; retry200[] shows honestempty; staleGET doesnotreplacecurrent (55.704ms)
+✔ Footer actualrender keepsworkingnavigation and removesunverifiedcontacts/certification/newsletter/paymentclaims (14.6273ms)
+✔ Comparison production normalizesbadstorage, samegroup, dedupe andmax3 even rapidadds (44.1888ms)
+✔ ComparisonPage actualAPI refreshesprice/specs, Pagecatalogcompatible, missinginfo notfabricated,GET500retry (111.3286ms)
+✔ Favorite actualhookpersistsperuserIDs, guardsoldcallbacks, handlesbadstorage andfailedwrite (8.9709ms)
+✔ Share awaitsactualclipboardwrite and exposeserrors; nofalsesuccess (29.9018ms)
+✔ AI production serializessends,429 clearstate, CTAselectvariant andignoresresponseoldowner (20.5168ms)
+✔ ProductCard actualquickdetail andneedsvariant goesto detail, wishlistpersistsowner withoutfalsecart (13.1552ms)
+✔ ProductDetail share handler shows success onlyafterclipboard anderror ondeny; Review shareusesrealanchor (5.0816ms)
+✔ AI mobile actualmarkup stayswithin320/375viewport, statuslong truncates (11.033ms)
+✔ Accessory legacy pages keepfilesbutallproductimagesuseinternalvalidatedplaceholder (3.6618ms)
+✔ Comparison accepts all five categories, persists group and accessory subtype, rejects mixed selections (42.6819ms)
+✔ Comparison table renders category-specific facts from backend and filters selector by group (68.6236ms)
+✔ AI conversation renders text without product cards and keeps the next turn history (8.6415ms)
+✔ AI retains compact shopping constraints beyond six recent messages and clears them for another owner (16.1841ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5222.2203

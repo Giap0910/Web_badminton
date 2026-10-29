@@ -1,0 +1,206 @@
+WebSocket server error: Port 24678 is already in use
+✔ Bốn ô có nhãn 1–2–3–4, ảnh đại diện, định dạng và xác nhận quyền sử dụng (9.4752ms)
+✔ Chặn file rỗng, sai loại hoặc quá lớn; không khóa việc sửa sản phẩm cũ khi không đổi ảnh (2.6651ms)
+✔ API tải đúng multipart, vị trí và bỏ Content-Type JSON mặc định (1.2645ms)
+✔ Tạo một bản nháp, tải tuần tự 4 ảnh rồi mới công khai (2.7639ms)
+✔ Lỗi ảnh 3 giữ ID nháp và 2 ảnh đã lưu; thử lại không tạo sản phẩm hoặc tải lại ảnh 1–2 (1.1264ms)
+✔ Sửa ảnh 4 của sản phẩm cũ không tải lại hoặc đổi các ảnh còn lại, không tự công khai (0.4855ms)
+✔ Máy chủ chưa xác nhận vị trí ảnh thì giữ file đã chọn và không công khai (0.3618ms)
+✔ Ảnh 1 là đại diện; thiếu ảnh 2 không đẩy ảnh 3 sang ô 2 hoặc dùng ảnh 3 làm đại diện (2.5508ms)
+✔ Bốn ảnh mới và WebP cũ đều hiển thị đúng từng vị trí sau khi tải lại sản phẩm (14.1923ms)
+✔ Ảnh nội bộ được tải từ Backend thay vì cổng Vite (0.5157ms)
+✔ Cả 5 danh mục có đúng 4 ô và ảnh nhỏ nằm bên trái ảnh lớn (6.5168ms)
+✔ Nhấn ảnh nhỏ và dùng bàn phím đổi đúng ảnh đang xem (1.3351ms)
+✔ Không dùng ảnh bên ngoài, ảnh chưa duyệt hoặc lặp một ảnh thành 4 ảnh (0.2501ms)
+WebSocket server error: Port 24678 is already in use
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at AdminSearch (C:/Project/Web_badminton/frontend/src/components/AdminSearch.jsx:43:63)
+    at div
+    at header
+    at div
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at header
+    at div
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+✔ Trang quản trị thực render được, có bộ lọc ẩn/hiện và sáu thương hiệu (36.3279ms)
+✔ Form hiển thị thông số riêng từng danh mục, không dùng lực căng cho giày/quần áo/túi/phụ kiện (5.3646ms)
+✔ API ẩn/hiện chỉ gửi boolean, dùng PATCH và không gửi DELETE hoặc tồn kho (1.4106ms)
+✔ Form thực khóa lựa chọn đã có biến thể và vẫn cho sửa chất liệu/giá/mô tả (1.4726ms)
+✔ UI tồn kho thực có thêm tổ hợp, trạng thái từng dòng và khóa legacy/giữ chỗ (2.8845ms)
+✔ Mutation production gọi POST/PATCH đúng tổ hợp, optimistic stock và reload sau lưu (1.3813ms)
+✔ Tìm ID trong quản trị dẫn đến ID tương ứng; truy vấn SKU vẫn giữ liên kết cũ (85.8208ms)
+✔ Gợi ý quản trị ArrowDown chọn đúng dòng thứ hai, Enter đi đúng liên kết và Escape đóng (10.472ms)
+✔ ArrowUp vòng về kết quả cuối; đổi từ khóa không Enter kết quả cũ hoặc đang tải (7.0415ms)
+✔ Ctrl+K tập trung input và mở gợi ý; API lỗi không Enter dữ liệu cũ (11.4017ms)
+✔ Phản hồi từ khóa cũ sau khi gõ từ khóa mới không phục hồi kết quả hoặc điều hướng (4.9973ms)
+✔ Bảng quản trị hiện ID và tìm sản phẩm sau khi upload theo ID (37.4419ms)
+✔ Sửa mô tả voucher giữ nguyên giờ hết hạn; đổi hoặc xóa ngày gửi giá trị tương ứng (41.6966ms)
+✔ Trang chủ render đủ danh mục, chữ banner nhỏ hơn và không còn điều khiển cũ (157.9581ms)
+✔ Home production accepts array/page, rejects malformed, Newonlyactualflag and truthfulpolicies (24.1445ms)
+✔ Home500 showsretry notfakeempty; retry200[] shows honestempty; staleGET doesnotreplacecurrent (24.6104ms)
+✔ Footer actualrender keepsworkingnavigation and removesunverifiedcontacts/certification/newsletter/paymentclaims (4.8234ms)
+✔ Comparison production normalizesbadstorage, samegroup, dedupe andmax3 even rapidadds (18.6796ms)
+✔ ComparisonPage actualAPI refreshesprice/specs, Pagecatalogcompatible, missinginfo notfabricated,GET500retry (68.9307ms)
+✔ Favorite actualhookpersistsperuserIDs, guardsoldcallbacks, handlesbadstorage andfailedwrite (6.4926ms)
+✔ Share awaitsactualclipboardwrite and exposeserrors; nofalsesuccess (10.441ms)
+✔ AI production serializessends,429 clearstate, CTAselectvariant andignoresresponseoldowner (16.1508ms)
+✔ ProductCard actualquickdetail andneedsvariant goesto detail, wishlistpersistsowner withoutfalsecart (13.1146ms)
+✔ ProductDetail share handler shows success onlyafterclipboard anderror ondeny; Review shareusesrealanchor (5.0188ms)
+✔ AI mobile actualmarkup stayswithin320/375viewport, statuslong truncates (6.9427ms)
+✔ Accessory legacy pages keepfilesbutallproductimagesuseinternalvalidatedplaceholder (1.2255ms)
+✔ Comparison accepts all five categories, persists group and accessory subtype, rejects mixed selections (36.1195ms)
+✔ Comparison table renders category-specific facts from backend and filters selector by group (59.3643ms)
+✔ AI conversation renders text without product cards and keeps the next turn history (10.4824ms)
+✔ AI retains compact shopping constraints beyond six recent messages and clears them for another owner (13.1604ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 43
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4308.8857

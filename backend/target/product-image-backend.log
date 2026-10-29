@@ -1,0 +1,46 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-10-19T16:04:46.678+07:00  INFO 3316 --- [web-badminton-backend] [           main] com.sports.WebBadmintonApplication       : Starting WebBadmintonApplication v1.0.0 using Java 17.0.20.1 with PID 3316 (C:\Project\Web_badminton\backend\target\web_badminton_backend-1.0.0.jar started by vxg09 in C:\Project\Web_badminton)
+2026-10-19T16:04:46.692+07:00  INFO 3316 --- [web-badminton-backend] [           main] com.sports.WebBadmintonApplication       : The following 1 profile is active: "default"
+2026-10-19T16:04:48.701+07:00  INFO 3316 --- [web-badminton-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-19T16:04:48.933+07:00  INFO 3316 --- [web-badminton-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 204 ms. Found 17 JPA repository interfaces.
+2026-10-19T16:04:51.030+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-10-19T16:04:51.053+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-19T16:04:51.054+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-10-19T16:04:51.134+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-10-19T16:04:51.137+07:00  INFO 3316 --- [web-badminton-backend] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4179 ms
+2026-10-19T16:04:51.531+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-10-19T16:04:51.726+07:00  INFO 3316 --- [web-badminton-backend] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-10-19T16:04:51.841+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-19T16:04:52.494+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-19T16:04:52.576+07:00  INFO 3316 --- [web-badminton-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-19T16:04:52.944+07:00  INFO 3316 --- [web-badminton-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@1c43df76
+2026-10-19T16:04:52.949+07:00  INFO 3316 --- [web-badminton-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-19T16:04:53.024+07:00  WARN 3316 --- [web-badminton-backend] [           main] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.0 version for [org.hibernate.dialect.MariaDBDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 10.4.0. Check the community dialects project for available legacy versions.
+2026-10-19T16:04:53.039+07:00  WARN 3316 --- [web-badminton-backend] [           main] org.hibernate.orm.deprecation            : HHH90000025: MariaDBDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-10-19T16:04:56.422+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-19T16:04:56.686+07:00  INFO 3316 --- [web-badminton-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-19T16:04:57.353+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-19T16:05:02.543+07:00  WARN 3316 --- [web-badminton-backend] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-10-19T16:05:03.135+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@5d257541, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@3c23c655, org.springframework.security.web.context.SecurityContextHolderFilter@74bd7091, org.springframework.security.web.header.HeaderWriterFilter@5f97275a, org.springframework.web.filter.CorsFilter@45ce62b9, org.springframework.security.web.authentication.logout.LogoutFilter@400f0e8e, com.sports.security.JwtAuthenticationFilter@49d4a2cf, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@2f2e9b85, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@6db64b7, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@4414dd11, org.springframework.security.web.session.SessionManagementFilter@500e3338, org.springframework.security.web.access.ExceptionTranslationFilter@27f3be72, org.springframework.security.web.access.intercept.AuthorizationFilter@dc377f]
+2026-10-19T16:05:03.614+07:00  INFO 3316 --- [web-badminton-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2026-10-19T16:05:03.653+07:00  INFO 3316 --- [web-badminton-backend] [           main] com.sports.WebBadmintonApplication       : Started WebBadmintonApplication in 18.581 seconds (process running for 19.968)
+2026-10-19T16:05:27.188+07:00  INFO 3316 --- [web-badminton-backend] [0.1-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-19T16:05:27.188+07:00  INFO 3316 --- [web-badminton-backend] [0.1-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-19T16:05:27.190+07:00  INFO 3316 --- [web-badminton-backend] [0.1-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-10-19T20:58:26.770+07:00 ERROR 3316 --- [web-badminton-backend] [0.1-8080-exec-4] com.sports.security.JwtTokenProvider     : Token JWT đã hết hạn: JWT expired at 2026-10-15T09:18:29Z. Current time: 2026-10-19T13:58:26Z, a difference of 362397746 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-10-19T20:58:26.770+07:00 ERROR 3316 --- [web-badminton-backend] [0.1-8080-exec-5] com.sports.security.JwtTokenProvider     : Token JWT đã hết hạn: JWT expired at 2026-10-15T09:18:29Z. Current time: 2026-10-19T13:58:26Z, a difference of 362397746 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-10-19T20:58:26.824+07:00 ERROR 3316 --- [web-badminton-backend] [.1-8080-exec-11] com.sports.security.JwtTokenProvider     : Token JWT đã hết hạn: JWT expired at 2026-10-15T09:18:29Z. Current time: 2026-10-19T13:58:26Z, a difference of 362397824 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-10-19T20:58:28.310+07:00 ERROR 3316 --- [web-badminton-backend] [0.1-8080-exec-8] com.sports.security.JwtTokenProvider     : Token JWT đã hết hạn: JWT expired at 2026-10-15T09:18:29Z. Current time: 2026-10-19T13:58:28Z, a difference of 362399310 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-10-19T21:02:49.933+07:00  INFO 3316 --- [web-badminton-backend] [.1-8080-exec-10] com.sports.service.OrderService          : Tạo đơn ID=34, phương thức=PAYOS_VIETQR, tổng tiền=2550000.00
+2026-10-19T21:14:56.534+07:00  INFO 3316 --- [web-badminton-backend] [0.1-8080-exec-8] com.sports.service.OrderService          : Tạo đơn ID=35, phương thức=PAYOS_VIETQR, tổng tiền=0.00
+2026-10-19T21:16:46.471+07:00  INFO 3316 --- [web-badminton-backend] [0.1-8080-exec-1] com.sports.service.OrderService          : Tạo đơn ID=36, phương thức=PAYOS_VIETQR, tổng tiền=30000.00
+2026-10-19T21:18:03.657+07:00  INFO 3316 --- [web-badminton-backend] [   scheduling-1] c.sports.service.StockSchedulerService   : Đã hủy đơn hết hạn và hoàn kho ID=34
+2026-10-19T21:32:03.678+07:00  INFO 3316 --- [web-badminton-backend] [   scheduling-1] c.sports.service.StockSchedulerService   : Đã hủy đơn hết hạn và hoàn kho ID=36

@@ -1,0 +1,38 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from banner-verification-pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 23 resources from ..\src\main\resources to banner-verification-build\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 191 source files with javac [debug parameters release 17] to banner-verification-build\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 41 source files with javac [debug parameters release 17] to banner-verification-build\test-classes
+[INFO] /C:/Project/Web_badminton/backend/src/test/java/com/sports/service/AdminReportAndCashTest.java: Some input files use unchecked or unsafe operations.
+[INFO] /C:/Project/Web_badminton/backend/src/test/java/com/sports/service/AdminReportAndCashTest.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.3.0:jar (default-jar) @ web_badminton_backend ---
+[INFO] Building jar: C:\Project\Web_badminton\backend\target\banner-verification-build\banner-verification.jar
+[INFO] 
+[INFO] --- spring-boot:3.2.5:repackage (repackage) @ web_badminton_backend ---
+[INFO] Replacing main artifact C:\Project\Web_badminton\backend\target\banner-verification-build\banner-verification.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to C:\Project\Web_badminton\backend\target\banner-verification-build\banner-verification.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  01:37 min
+[INFO] Finished at: 2026-10-29T15:50:50+07:00
+[INFO] ------------------------------------------------------------------------

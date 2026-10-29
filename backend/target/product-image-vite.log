@@ -1,0 +1,17 @@
+
+  VITE v6.4.3  ready in 908 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+  ➜  press h + enter to show help
+21:27:08 [vite] (client) hmr update /src/index.css, /src/pages/CheckoutPage.jsx, /src/pages/QRPaymentPage.jsx, /src/components/MockPayOSControls.jsx, /src/pages/MyOrdersPage.jsx, /src/pages/OrderSuccessPage.jsx
+21:27:08 [vite] (client) hmr update /src/index.css, /src/pages/CheckoutPage.jsx, /src/pages/QRPaymentPage.jsx, /src/components/MockPayOSControls.jsx, /src/pages/MyOrdersPage.jsx, /src/pages/OrderSuccessPage.jsx
+21:27:08 [vite] (client) hmr update /src/pages/OrderSuccessPage.jsx, /src/index.css
+21:27:08 [vite] (client) page reload src/pages/FIX004_RoutesAndOrderSuccess.test.js
+21:27:09 [vite] (client) hmr invalidate /src/pages/CheckoutPage.jsx Could not Fast Refresh ("calculateOrderSnapshotSubtotal" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+21:27:09 [vite] (client) hmr update /src/App.jsx, /src/index.css
+21:27:09 [vite] (client) hmr invalidate /src/pages/QRPaymentPage.jsx Could not Fast Refresh ("saveRenderedQr" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+21:27:09 [vite] (client) hmr update /src/App.jsx, /src/index.css
+21:27:09 [vite] (client) hmr invalidate /src/pages/MyOrdersPage.jsx Could not Fast Refresh ("matchesUserOrderSearch" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+21:27:09 [vite] (client) hmr update /src/App.jsx, /src/index.css
+21:29:21 [vite] (client) page reload src/pages/FIX004_RoutesAndOrderSuccess.test.js
+21:34:16 [vite] (client) hmr update /src/pages/OrderSuccessPage.jsx, /src/index.css

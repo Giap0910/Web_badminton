@@ -1,0 +1,58 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-10-15T12:51:09.507+07:00  INFO 15844 --- [           main] com.sports.WebBadmintonApplication       : Starting WebBadmintonApplication using Java 17.0.20.1 with PID 15844 (C:\Project\Web_badminton\backend\target\software-security-fuzz\api-fuzz_stock_0aa67d3960ad\classes started by vxg09 in C:\Project\Web_badminton\backend\target\software-security-fuzz\api-fuzz_stock_0aa67d3960ad)
+2026-10-15T12:51:09.522+07:00  INFO 15844 --- [           main] com.sports.WebBadmintonApplication       : The following 1 profile is active: "test"
+2026-10-15T12:51:16.172+07:00  INFO 15844 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-15T12:51:16.586+07:00  INFO 15844 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 364 ms. Found 17 JPA repository interfaces.
+2026-10-15T12:51:21.608+07:00  INFO 15844 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 18080 (http)
+2026-10-15T12:51:21.703+07:00  INFO 15844 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-15T12:51:21.704+07:00  INFO 15844 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-10-15T12:51:22.134+07:00  INFO 15844 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-10-15T12:51:22.144+07:00  INFO 15844 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 12142 ms
+2026-10-15T12:51:22.922+07:00  INFO 15844 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-10-15T12:51:23.256+07:00  INFO 15844 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-10-15T12:51:23.477+07:00  INFO 15844 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-15T12:51:24.905+07:00  INFO 15844 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-15T12:51:25.048+07:00  INFO 15844 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-15T12:51:26.191+07:00  INFO 15844 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@2640893e
+2026-10-15T12:51:26.202+07:00  INFO 15844 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-15T12:51:26.637+07:00  WARN 15844 --- [           main] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.0 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-10-15T12:51:33.558+07:00  INFO 15844 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-15T12:51:36.542+07:00  INFO 15844 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-15T12:51:37.526+07:00  INFO 15844 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-15T12:51:47.524+07:00  WARN 15844 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-10-15T12:51:48.730+07:00  INFO 15844 --- [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@561d8921, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@27df2731, org.springframework.security.web.context.SecurityContextHolderFilter@18053d9c, org.springframework.security.web.header.HeaderWriterFilter@1801f3b8, org.springframework.web.filter.CorsFilter@7b6ebda, org.springframework.security.web.authentication.logout.LogoutFilter@64e482cc, com.sports.security.JwtAuthenticationFilter@1baed7c6, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@71331627, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@671aa34e, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@5f3720f9, org.springframework.security.web.session.SessionManagementFilter@3f4d8551, org.springframework.security.web.access.ExceptionTranslationFilter@3d4f0e97, org.springframework.security.web.access.intercept.AuthorizationFilter@38092754]
+2026-10-15T12:51:49.590+07:00  INFO 15844 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 18080 (http) with context path ''
+2026-10-15T12:51:49.635+07:00  INFO 15844 --- [           main] com.sports.WebBadmintonApplication       : Started WebBadmintonApplication in 46.242 seconds (process running for 50.576)
+2026-10-15T12:51:50.308+07:00  INFO 15844 --- [.1-18080-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-15T12:51:50.308+07:00  INFO 15844 --- [.1-18080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-15T12:51:50.309+07:00  INFO 15844 --- [.1-18080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-10-15T12:51:57.208+07:00  INFO 15844 --- [.1-18080-exec-2] com.sports.service.OrderService          : Tạo đơn ID=1, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:51:57.917+07:00  INFO 15844 --- [.1-18080-exec-7] com.sports.service.OrderService          : Tạo đơn ID=2, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:51:58.845+07:00  INFO 15844 --- [.1-18080-exec-1] com.sports.service.OrderService          : Tạo đơn ID=3, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:51:59.638+07:00  INFO 15844 --- [1-18080-exec-10] com.sports.service.OrderService          : Tạo đơn ID=4, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:52:00.382+07:00  INFO 15844 --- [.1-18080-exec-5] com.sports.service.OrderService          : Tạo đơn ID=5, phương thức=COD, tổng tiền=1000000.00
+2026-10-15T12:52:01.264+07:00  INFO 15844 --- [.1-18080-exec-2] com.sports.service.OrderService          : Tạo đơn ID=6, phương thức=COD, tổng tiền=1000000.00
+2026-10-15T12:52:02.549+07:00  INFO 15844 --- [.1-18080-exec-7] com.sports.service.OrderService          : Tạo đơn ID=7, phương thức=COD, tổng tiền=1000000.00
+2026-10-15T12:52:03.530+07:00  INFO 15844 --- [.1-18080-exec-1] com.sports.service.OrderService          : Tạo đơn ID=8, phương thức=COD, tổng tiền=1000000.00
+2026-10-15T12:52:08.885+07:00  INFO 15844 --- [.1-18080-exec-9] com.sports.service.OrderService          : Tạo đơn ID=9, phương thức=COD, tổng tiền=10000000.00
+2026-10-15T12:52:09.592+07:00  INFO 15844 --- [.1-18080-exec-7] com.sports.service.OrderService          : Tạo đơn ID=10, phương thức=COD, tổng tiền=9900000.00
+2026-10-15T12:52:11.162+07:00  INFO 15844 --- [.1-18080-exec-7] com.sports.service.OrderService          : Tạo đơn ID=11, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:52:11.914+07:00  INFO 15844 --- [.1-18080-exec-4] com.sports.service.OrderService          : Tạo đơn ID=12, phương thức=COD, tổng tiền=10000000.00
+2026-10-15T12:52:12.826+07:00  INFO 15844 --- [.1-18080-exec-3] com.sports.service.OrderService          : Tạo đơn ID=13, phương thức=COD, tổng tiền=10000000.00
+2026-10-15T12:52:14.888+07:00  INFO 15844 --- [.1-18080-exec-5] com.sports.service.OrderService          : Tạo đơn ID=14, phương thức=COD, tổng tiền=230000.00
+2026-10-15T12:52:15.658+07:00  INFO 15844 --- [.1-18080-exec-3] com.sports.service.OrderService          : Tạo đơn ID=15, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:52:16.761+07:00  INFO 15844 --- [.1-18080-exec-9] com.sports.service.OrderService          : Tạo đơn ID=16, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:52:17.873+07:00  INFO 15844 --- [.1-18080-exec-8] com.sports.service.OrderService          : Tạo đơn ID=17, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:52:18.655+07:00  INFO 15844 --- [.1-18080-exec-5] com.sports.service.OrderService          : Tạo đơn ID=18, phương thức=COD, tổng tiền=230000.00
+2026-10-15T12:52:19.319+07:00  INFO 15844 --- [.1-18080-exec-2] com.sports.service.OrderService          : Tạo đơn ID=19, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:52:20.808+07:00  INFO 15844 --- [.1-18080-exec-4] com.sports.service.OrderService          : Tạo đơn ID=20, phương thức=COD, tổng tiền=130000.00
+2026-10-15T12:52:22.495+07:00  INFO 15844 --- [.1-18080-exec-7] com.sports.service.OrderService          : Tạo đơn ID=21, phương thức=COD, tổng tiền=230000.00
+2026-10-15T12:52:23.191+07:00  INFO 15844 --- [.1-18080-exec-1] com.sports.service.OrderService          : Tạo đơn ID=22, phương thức=COD, tổng tiền=130000.00

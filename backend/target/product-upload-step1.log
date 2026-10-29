@@ -1,0 +1,80 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 20 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 187 source files with javac [debug parameters release 17] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 40 source files with javac [debug parameters release 17] to target\test-classes
+[INFO] /C:/Project/Web_badminton/backend/src/test/java/com/sports/service/AdminReportAndCashTest.java: Some input files use unchecked or unsafe operations.
+[INFO] /C:/Project/Web_badminton/backend/src/test/java/com/sports/service/AdminReportAndCashTest.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sports.service.ProductDeletionTest
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.401 s -- in com.sports.service.ProductDeletionTest
+[INFO] Running com.sports.service.ProductGalleryTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.079 s -- in com.sports.service.ProductGalleryTest
+[INFO] Running com.sports.service.ProductImageAdminServiceTest
+15:02:53.386 [main] INFO org.hibernate.validator.internal.util.Version -- HV000001: Hibernate Validator 8.0.1.Final
+15:02:54.208 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+15:02:54.208 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+15:02:54.212 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 3 ms
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.772 s -- in com.sports.service.ProductImageAdminServiceTest
+[INFO] Running com.sports.service.ProductImageStorageTest
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-81ee58f0-25d4-414d-9353-e319516cc070
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-3694358a-b0ca-4573-9aee-e8537f7ec9db
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-98e54806-13f9-4fae-97b2-5bc8b6504048
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-70061636-21fe-4f3d-8bf8-4709fccbe17d
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-f17d4bb8-d0f4-4b6d-b8a3-d0e3d0d257dd
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-ed277426-4c67-4d98-9b95-72ca7514a0b3
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-192f8fd9-99df-4c2d-a1d8-a5aa719cdee4
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-d8e92384-4d62-4710-a6e0-3990efef5a99
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-b0e6432c-dc74-4a5e-a2c4-d5245a3a7a97
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-af818d2a-5946-4ede-93d5-360c3c630856
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-0722088d-57d7-4499-bd0c-33c062918b38
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-7e4a4280-d965-4b4e-b16d-aead0711b56d
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-fd1c1b02-fdd8-4e90-ae51-a566b05bbe0b
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-c1279861-e97d-4654-a484-8a1f29c369ee
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-88bd4ee1-cf2c-469c-8614-70e9add985b7
+Retained product image test artifacts: C:\Project\Web_badminton\backups\project-completion-20261013\product-image-test-44f85a67-1c34-47af-8f3e-5a36170b8031
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.555 s -- in com.sports.service.ProductImageStorageTest
+[INFO] Running com.sports.service.ProductMediaServiceTest
+15:02:55.359 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+15:02:55.360 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+15:02:55.360 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+15:02:55.513 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+15:02:55.513 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+15:02:55.514 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.366 s -- in com.sports.service.ProductMediaServiceTest
+[INFO] Running com.sports.service.ProductPresentationTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.223 s -- in com.sports.service.ProductPresentationTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 50, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  30.292 s
+[INFO] Finished at: 2026-10-29T15:02:55+07:00
+[INFO] ------------------------------------------------------------------------

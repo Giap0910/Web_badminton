@@ -1,0 +1,96 @@
+
+  VITE v6.4.3  ready in 925 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+  ➜  press h + enter to show help
+16:50:11 [vite] (client) hmr update /src/components/ProductFacts.jsx, /src/index.css
+16:50:11 [vite] (client) hmr update /src/components/ProductFacts.jsx, /src/index.css
+16:50:12 [vite] (client) hmr invalidate /src/components/ProductFacts.jsx Could not Fast Refresh ("availableProductSizes" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+16:50:12 [vite] (client) hmr update /src/index.css, /src/pages/HomePage.jsx, /src/components/ProductCard.jsx, /src/pages/ProductsPage.jsx, /src/pages/ProductDetailPage.jsx
+18:16:54 [vite] (client) hmr update /src/components/AdminLayout.jsx, /src/index.css
+18:16:55 [vite] (client) hmr update /src/App.jsx, /src/index.css
+18:16:55 [vite] (client) hmr update /src/pages/AdminCustomersPage.jsx, /src/index.css
+18:20:39 [vite] (client) hmr update /src/components/AdminLayout.jsx, /src/index.css
+18:20:40 [vite] (client) hmr update /src/index.css, /src/pages/AdminProductsPage.jsx, /src/components/AdminProductFields.jsx
+18:20:40 [vite] (client) hmr update /src/App.jsx, /src/index.css
+18:20:40 [vite] (client) hmr update /src/pages/AdminCustomersPage.jsx, /src/index.css
+18:20:41 [vite] (client) hmr update /src/pages/AdminOrdersPage.jsx, /src/index.css
+18:20:41 [vite] (client) hmr update /src/pages/AdminProductsPage.jsx, /src/index.css
+18:21:20 [vite] (client) hmr update /src/pages/AdminProductsPage.jsx, /src/index.css
+18:21:20 [vite] (client) hmr update /src/pages/AdminProductsPage.jsx, /src/index.css
+18:21:21 [vite] (client) page reload src/pages/AdminFixes.test.js
+18:25:25 [vite] (client) hmr update /src/index.css, /src/pages/AdminDashboardPage.jsx, /src/pages/AdminProductsPage.jsx, /src/pages/AdminOrdersPage.jsx, /src/pages/AdminCustomersPage.jsx, /src/pages/AdminVouchersPage.jsx, /src/pages/AdminReviewsPage.jsx, /src/pages/AdminPaymentsPage.jsx
+18:25:26 [vite] (client) hmr update /src/pages/AdminProductsPage.jsx, /src/index.css
+18:29:31 [vite] (client) hmr update /src/index.css, /src/pages/HomePage.jsx, /src/components/ProductFacts.jsx, /src/components/ProductCard.jsx, /src/pages/ProductDetailPage.jsx, /src/pages/CheckoutPage.jsx, /src/pages/AdminDashboardPage.jsx, /src/pages/AdminOrdersPage.jsx, /src/pages/CartPage.jsx, /src/pages/MyOrdersPage.jsx
+18:29:31 [vite] (client) hmr invalidate /src/components/ProductFacts.jsx Could not Fast Refresh ("availableProductSizes" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+18:29:31 [vite] (client) hmr update /src/index.css, /src/pages/HomePage.jsx, /src/components/ProductCard.jsx, /src/pages/ProductsPage.jsx, /src/pages/ProductDetailPage.jsx
+18:30:20 [vite] (client) hmr update /src/index.css, /src/pages/AdminDashboardPage.jsx, /src/pages/AdminProductsPage.jsx, /src/pages/AdminOrdersPage.jsx, /src/pages/AdminCustomersPage.jsx, /src/pages/AdminVouchersPage.jsx, /src/pages/AdminReviewsPage.jsx, /src/pages/AdminPaymentsPage.jsx
+18:33:50 [vite] (client) hmr update /src/pages/AdminDashboardPage.jsx, /src/index.css
+18:34:53 [vite] (client) hmr update /src/pages/AdminDashboardPage.jsx, /src/index.css
+18:34:53 [vite] (client) hmr update /src/pages/AdminOrdersPage.jsx, /src/index.css
+18:36:38 [vite] (client) page reload src/components/AdminSearch.jsx
+18:38:40 [vite] (client) hmr update /src/index.css, /src/pages/AdminDashboardPage.jsx, /src/pages/AdminProductsPage.jsx, /src/pages/AdminOrdersPage.jsx, /src/pages/AdminCustomersPage.jsx, /src/pages/AdminVouchersPage.jsx, /src/pages/AdminReviewsPage.jsx, /src/pages/AdminPaymentsPage.jsx
+18:38:41 [vite] (client) hmr update /src/pages/AdminPaymentsPage.jsx, /src/index.css
+18:46:04 [vite] (client) page reload src/components/AdminSearch.jsx
+18:55:09 [vite] (client) hmr update /src/pages/AdminDashboardPage.jsx, /src/index.css
+18:55:09 [vite] (client) hmr update /src/pages/AdminOrdersPage.jsx, /src/index.css
+18:55:10 [vite] (client) hmr update /src/pages/AdminPaymentsPage.jsx, /src/index.css
+18:58:42 [vite] (client) page reload src/pages/STEP2_RegistrationAndDashboard.test.js
+19:09:14 [vite] (client) hmr update /src/index.css, /src/pages/HomePage.jsx, /src/components/ProductFacts.jsx, /src/components/ProductCard.jsx, /src/pages/ProductDetailPage.jsx, /src/pages/CheckoutPage.jsx, /src/pages/AdminDashboardPage.jsx, /src/pages/AdminOrdersPage.jsx, /src/pages/CartPage.jsx, /src/pages/MyOrdersPage.jsx
+19:09:14 [vite] (client) hmr invalidate /src/components/ProductFacts.jsx Could not Fast Refresh ("availableProductSizes" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+19:09:14 [vite] (client) hmr update /src/index.css, /src/pages/HomePage.jsx, /src/components/ProductCard.jsx, /src/pages/ProductsPage.jsx, /src/pages/ProductDetailPage.jsx
+19:09:14 [vite] (client) page reload src/pages/AdminFixes.test.js
+19:22:08 [vite] (client) hmr update /src/components/AdminReportControls.jsx, /src/index.css
+19:24:52 [vite] (client) hmr update /src/pages/AdminOrdersPage.jsx, /src/index.css
+19:24:52 [vite] (client) page reload src/pages/AdminFixes.test.js
+21:21:30 [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+21:29:24 [vite] (client) hmr update /src/components/ProductSearch.jsx, /src/index.css
+21:29:25 [vite] (client) hmr invalidate /src/components/ProductSearch.jsx Could not Fast Refresh ("useProductSuggestions" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+21:29:25 [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+21:30:08 [vite] (client) hmr update /src/pages/HomePage.jsx, /src/index.css
+21:33:06 [vite] (client) hmr update /src/index.css, /src/components/AiChatbotWidget.jsx
+21:33:06 [vite] (client) hmr update /src/components/AiChatbotWidget.jsx, /src/index.css
+21:44:03 [vite] (client) hmr update /src/pages/ShippingAddressPage.jsx, /src/index.css
+21:44:03 [vite] (client) hmr update /src/pages/CheckoutPage.jsx, /src/index.css
+21:44:03 [vite] (client) hmr update /src/index.css, /src/pages/CheckoutPage.jsx, /src/pages/AdminPaymentsPage.jsx
+21:46:31 [vite] (client) hmr update /src/pages/CheckoutPage.jsx, /src/index.css
+21:46:31 [vite] (client) hmr update /src/index.css, /src/context/AuthContext.jsx, /src/components/AiChatbotWidget.jsx, /src/pages/HomePage.jsx, /src/pages/ProductsPage.jsx, /src/pages/ProductDetailPage.jsx, /src/pages/AdminProductsPage.jsx, /src/components/AdminSearch.jsx, /src/pages/ComparePage.jsx, /src/components/ProductSearch.jsx, /src/pages/ReviewedProductsPage.jsx, /src/pages/CheckoutPage.jsx, /src/pages/AdminOrdersPage.jsx, /src/pages/MyOrdersPage.jsx, /src/pages/ReturnRequestPage.jsx, /src/pages/AdminVouchersPage.jsx, /src/pages/CartPage.jsx, /src/pages/ShippingAddressPage.jsx, /src/pages/AdminDashboardPage.jsx, /src/pages/AdminCustomersPage.jsx, /src/pages/AdminReviewsPage.jsx, /src/pages/AdminPaymentsPage.jsx, /src/components/AdminReportControls.jsx, /src/components/AdminProductImport.jsx, /src/components/AdminPaymentLog.jsx, /src/pages/ProfilePage.jsx
+21:46:32 [vite] (client) hmr invalidate /src/context/AuthContext.jsx Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+21:46:32 [vite] (client) hmr update /src/App.jsx, /src/index.css, /src/components/Navbar.jsx, /src/pages/LoginPage.jsx, /src/pages/ProductDetailPage.jsx, /src/pages/CheckoutPage.jsx, /src/components/AdminLayout.jsx, /src/pages/CartPage.jsx, /src/pages/ProfilePage.jsx, /src/components/UserLayout.jsx
+21:46:32 [vite] (client) hmr invalidate /src/components/ProductSearch.jsx Could not Fast Refresh ("useProductSuggestions" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+21:46:32 [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+22:13:52 [vite] (client) hmr update /src/index.css, /src/pages/ProfilePage.jsx
+22:13:52 [vite] (client) hmr update /src/context/AuthContext.jsx, /src/index.css
+22:13:52 [vite] (client) hmr update /src/components/UserLayout.jsx, /src/index.css
+22:13:52 [vite] (client) hmr update /src/pages/ProfilePage.jsx, /src/index.css
+22:13:52 [vite] (client) hmr update /src/context/AuthContext.jsx, /src/index.css
+22:13:54 [vite] (client) hmr invalidate /src/context/AuthContext.jsx Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+22:13:54 [vite] (client) hmr update /src/App.jsx, /src/index.css, /src/components/Navbar.jsx, /src/pages/LoginPage.jsx, /src/pages/ProductDetailPage.jsx, /src/pages/CheckoutPage.jsx, /src/components/AdminLayout.jsx, /src/pages/CartPage.jsx, /src/pages/ProfilePage.jsx, /src/components/UserLayout.jsx
+22:16:14 [vite] (client) hmr update /src/pages/ProfilePage.jsx, /src/index.css
+22:16:14 [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+22:28:58 [vite] (client) hmr update /src/components/UserLayout.jsx, /src/index.css
+22:28:58 [vite] (client) hmr update /src/components/UserLayout.jsx, /src/index.css
+22:28:58 [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+22:41:56 [vite] (client) hmr update /src/pages/ProfilePage.jsx, /src/index.css
+22:55:21 [vite] (client) hmr update /src/pages/ProfilePage.jsx, /src/index.css
+23:05:47 [vite] (client) hmr update /src/pages/HomePage.jsx, /src/index.css
+23:05:47 [vite] (client) hmr update /src/pages/HomePage.jsx, /src/index.css
+23:12:23 [vite] (client) hmr update /src/pages/HomePage.jsx, /src/index.css
+23:32:18 [vite] (client) hmr update /src/pages/ProfilePage.jsx, /src/index.css
+23:32:18 [vite] (client) hmr update /src/context/AuthContext.jsx, /src/index.css
+23:32:18 [vite] (client) hmr update /src/context/AuthContext.jsx, /src/index.css
+23:32:18 [vite] (client) page reload src/pages/ProfilePage.test.js
+23:32:25 [vite] (client) hmr invalidate /src/context/AuthContext.jsx Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+23:32:25 [vite] (client) hmr update /src/App.jsx, /src/index.css, /src/components/Navbar.jsx, /src/pages/LoginPage.jsx, /src/pages/ProductDetailPage.jsx, /src/pages/CheckoutPage.jsx, /src/components/AdminLayout.jsx, /src/pages/CartPage.jsx, /src/pages/ProfilePage.jsx, /src/components/UserLayout.jsx
+23:41:18 [vite] (client) hmr update /src/pages/ProfilePage.jsx, /src/index.css
+23:50:17 [vite] (client) hmr update /src/context/AuthContext.jsx, /src/index.css
+23:50:17 [vite] (client) hmr update /src/context/AuthContext.jsx, /src/index.css
+23:50:17 [vite] (client) hmr update /src/index.css, /src/components/AiChatbotWidget.jsx
+23:50:18 [vite] (client) hmr update /src/pages/ProfilePage.jsx, /src/index.css
+23:50:18 [vite] (client) hmr update /src/index.css, /src/components/AiChatbotWidget.jsx
+23:50:18 [vite] (client) hmr update /src/pages/ProfilePage.jsx, /src/index.css
+23:50:18 [vite] (client) page reload src/context/AuthContext.test.js
+23:50:20 [vite] (client) hmr invalidate /src/context/AuthContext.jsx Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+23:50:20 [vite] (client) hmr update /src/App.jsx, /src/index.css, /src/components/Navbar.jsx, /src/pages/LoginPage.jsx, /src/pages/ProductDetailPage.jsx, /src/pages/CheckoutPage.jsx, /src/components/AdminLayout.jsx, /src/pages/CartPage.jsx, /src/pages/ProfilePage.jsx, /src/components/UserLayout.jsx
+00:05:37 [vite] (client) page reload src/pages/FIX057_CheckoutResumeAndTransition.test.js
+00:05:37 [vite] (client) page reload src/pages/STEP1_DemoCOD_Verification.test.js

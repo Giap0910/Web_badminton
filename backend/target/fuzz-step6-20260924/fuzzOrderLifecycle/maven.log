@@ -1,0 +1,71 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Compiling 97 source files with javac [debug parameters release 17] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Compiling 4 source files with javac [debug parameters release 17] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sports.fuzz.PayOSWebhookFuzzTest
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+INFO: found LLVMFuzzerCustomMutator (00007FFF47F433D0). Disabling -len_control by default.
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 20260924
+INFO: Loaded 3 modules   (2048 inline 8-bit counters): 512 [000001439AEC2040, 000001439AEC2240), 512 [000001439AEC2240, 000001439AEC2440), 1024 [000001439AEC2440, 000001439AEC2840), 
+INFO: Loaded 3 PC tables (2048 PCs): 512 [00000143E13AD420,00000143E13AF420), 512 [00000143E13AB410,00000143E13AD410), 1024 [0000014399854160,0000014399858160), 
+INFO:        0 files found in \\?\C:\Project\Web_badminton\backend\target\fuzz-step6-20260924\fuzzOrderLifecycle\.cifuzz-corpus\com.sports.fuzz.PayOSWebhookFuzzTest\fuzzOrderLifecycle
+INFO:        0 files found in C:\Project\Web_badminton\backend\target\fuzz-step6-20260924\fuzzOrderLifecycle\jazzer-java-seeds5000196380191102772
+INFO: A corpus is not provided, starting from an empty corpus
+#2	INITED cov: 472 ft: 472 corp: 1/1b exec/s: 0 rss: 1146Mb
+#3	NEW    cov: 473 ft: 474 corp: 2/2b lim: 4 exec/s: 0 rss: 1146Mb L: 1/1 MS: 2 ChangeByte-Custom-
+#4	NEW    cov: 489 ft: 633 corp: 3/4b lim: 4 exec/s: 0 rss: 1146Mb L: 2/2 MS: 2 InsertByte-Custom-
+#10	NEW    cov: 489 ft: 634 corp: 4/5b lim: 4 exec/s: 0 rss: 1146Mb L: 1/2 MS: 2 ChangeByte-Custom-
+#11	NEW    cov: 489 ft: 635 corp: 5/6b lim: 4 exec/s: 0 rss: 1146Mb L: 1/2 MS: 2 ChangeBit-Custom-
+#12	NEW    cov: 517 ft: 847 corp: 6/8b lim: 4 exec/s: 0 rss: 1146Mb L: 2/2 MS: 2 CopyPart-Custom-
+#13	NEW    cov: 518 ft: 849 corp: 7/11b lim: 4 exec/s: 0 rss: 1146Mb L: 3/3 MS: 2 InsertByte-Custom-
+#15	NEW    cov: 518 ft: 850 corp: 8/13b lim: 4 exec/s: 0 rss: 1146Mb L: 2/3 MS: 4 ChangeByte-Custom-CrossOver-Custom-
+#19	NEW    cov: 521 ft: 856 corp: 9/16b lim: 4 exec/s: 0 rss: 1146Mb L: 3/3 MS: 8 ChangeBit-Custom-InsertByte-Custom-InsertByte-Custom-ChangeBit-Custom-
+#28	NEW    cov: 532 ft: 873 corp: 10/18b lim: 4 exec/s: 0 rss: 1146Mb L: 2/3 MS: 8 ChangeByte-Custom-ShuffleBytes-Custom-ChangeBit-Custom-ChangeByte-Custom-
+#48	NEW    cov: 532 ft: 874 corp: 11/20b lim: 4 exec/s: 0 rss: 1146Mb L: 2/3 MS: 10 EraseBytes-Custom-InsertByte-Custom-InsertByte-Custom-EraseBytes-Custom-ChangeBit-Custom-
+#85	REDUCE cov: 532 ft: 874 corp: 11/19b lim: 4 exec/s: 85 rss: 1146Mb L: 2/3 MS: 4 ChangeByte-Custom-EraseBytes-Custom-
+#256	pulse  cov: 532 ft: 874 corp: 11/19b lim: 4 exec/s: 128 rss: 1146Mb
+#512	pulse  cov: 532 ft: 874 corp: 11/19b lim: 8 exec/s: 170 rss: 1146Mb
+#692	REDUCE cov: 532 ft: 874 corp: 11/18b lim: 8 exec/s: 138 rss: 1146Mb L: 2/2 MS: 4 ChangeBit-Custom-EraseBytes-Custom-
+#1000	DONE   cov: 532 ft: 874 corp: 11/18b lim: 11 exec/s: 142 rss: 1146Mb
+Done 1000 runs in 7 second(s)
+stat::number_of_executed_units: 1000
+stat::average_exec_per_sec:     142
+stat::new_units_added:          12
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              1146
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 25.72 s -- in com.sports.fuzz.PayOSWebhookFuzzTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  44.608 s
+[INFO] Finished at: 2026-09-24T21:57:05+07:00
+[INFO] ------------------------------------------------------------------------

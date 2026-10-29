@@ -1,0 +1,26 @@
+jshell> jshell> jshell> jshell> jshell> jshell> jshell> jshell> jshell> jshell> jshell> jshell> $12 ==> 1
+jshell> $13 ==> 1
+jshell> jshell> jshell> jshell> jshell> jshell> jshell> thg 10 15, 2026 12:48:50 CH java.util.prefs.WindowsPreferences openKey
+WARNING: Could not open windows registry node Software\JavaSoft\Prefs\tool\/J/Shell at root 0xffffffff80000001. Windows RegOpenKey(...) returned error code 5.
+thg 10 15, 2026 12:48:50 CH java.util.prefs.WindowsPreferences openKey
+WARNING: Could not open windows registry node Software\JavaSoft\Prefs\tool\/J/Shell at root 0xffffffff80000001. Windows RegOpenKey(...) returned error code 5.
+Exception in thread "main" java.lang.SecurityException: Could not open windows registry node Software\JavaSoft\Prefs\tool\/J/Shell at root 0xffffffff80000001: Access denied
+	at java.prefs/java.util.prefs.WindowsPreferences.openKey(WindowsPreferences.java:554)
+	at java.prefs/java.util.prefs.WindowsPreferences.openKey(WindowsPreferences.java:516)
+	at java.prefs/java.util.prefs.WindowsPreferences.openKey(WindowsPreferences.java:502)
+	at java.prefs/java.util.prefs.WindowsPreferences.putSpi(WindowsPreferences.java:653)
+	at java.prefs/java.util.prefs.AbstractPreferences.put(AbstractPreferences.java:263)
+	at jdk.jshell/jdk.internal.jshell.tool.JShellToolBuilder$PreferencesStorage.put(JShellToolBuilder.java:300)
+	at jdk.jshell/jdk.internal.jshell.tool.JShellTool$ReplayableHistory.storeHistory(JShellTool.java:679)
+	at jdk.jshell/jdk.internal.jshell.tool.JShellTool.start(JShellTool.java:998)
+	at jdk.jshell/jdk.internal.jshell.tool.JShellToolBuilder.start(JShellToolBuilder.java:261)
+	at jdk.jshell/jdk.internal.jshell.tool.JShellToolProvider.main(JShellToolProvider.java:120)
+Exception in thread "Thread-1" java.lang.SecurityException: Could not open windows registry node Software\JavaSoft\Prefs\tool\/J/Shell at root 0xffffffff80000001: Access denied
+	at java.prefs/java.util.prefs.WindowsPreferences.openKey(WindowsPreferences.java:554)
+	at java.prefs/java.util.prefs.WindowsPreferences.openKey(WindowsPreferences.java:516)
+	at java.prefs/java.util.prefs.WindowsPreferences.openKey(WindowsPreferences.java:502)
+	at java.prefs/java.util.prefs.WindowsPreferences.putSpi(WindowsPreferences.java:653)
+	at java.prefs/java.util.prefs.AbstractPreferences.put(AbstractPreferences.java:263)
+	at jdk.jshell/jdk.internal.jshell.tool.JShellToolBuilder$PreferencesStorage.put(JShellToolBuilder.java:300)
+	at jdk.jshell/jdk.internal.jshell.tool.JShellTool$ReplayableHistory.storeHistory(JShellTool.java:679)
+	at jdk.jshell/jdk.internal.jshell.tool.JShellTool$2.run(JShellTool.java:977)

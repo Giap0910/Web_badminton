@@ -1,0 +1,41 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-10-12T15:03:58.622+07:00  INFO 13852 --- [web-badminton-backend] [           main] com.sports.WebBadmintonApplication       : Starting WebBadmintonApplication v1.0.0 using Java 17.0.20.1 with PID 13852 (C:\Project\Web_badminton\backend\target\product-catalog-build\web_badminton_backend-product-catalog.jar started by vxg09 in C:\Project\Web_badminton\backend)
+2026-10-12T15:03:58.630+07:00  INFO 13852 --- [web-badminton-backend] [           main] com.sports.WebBadmintonApplication       : No active profile set, falling back to 1 default profile: "default"
+2026-10-12T15:04:00.440+07:00  INFO 13852 --- [web-badminton-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-12T15:04:00.737+07:00  INFO 13852 --- [web-badminton-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 242 ms. Found 16 JPA repository interfaces.
+2026-10-12T15:04:02.320+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-10-12T15:04:02.345+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-12T15:04:02.346+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-10-12T15:04:02.432+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-10-12T15:04:02.434+07:00  INFO 13852 --- [web-badminton-backend] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3548 ms
+2026-10-12T15:04:02.716+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-10-12T15:04:02.874+07:00  INFO 13852 --- [web-badminton-backend] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-10-12T15:04:02.966+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-12T15:04:03.516+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-12T15:04:03.574+07:00  INFO 13852 --- [web-badminton-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-12T15:04:03.891+07:00  INFO 13852 --- [web-badminton-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@65d7eea4
+2026-10-12T15:04:03.894+07:00  INFO 13852 --- [web-badminton-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-12T15:04:03.958+07:00  WARN 13852 --- [web-badminton-backend] [           main] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.0 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-10-12T15:04:03.965+07:00  WARN 13852 --- [web-badminton-backend] [           main] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-10-12T15:04:06.275+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-12T15:04:06.470+07:00  INFO 13852 --- [web-badminton-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-12T15:04:07.027+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-12T15:04:09.490+07:00  WARN 13852 --- [web-badminton-backend] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-10-12T15:04:10.003+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@16974b24, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@38e2431b, org.springframework.security.web.context.SecurityContextHolderFilter@3e9feb92, org.springframework.security.web.header.HeaderWriterFilter@3f3737bd, org.springframework.web.filter.CorsFilter@492f79d1, org.springframework.security.web.authentication.logout.LogoutFilter@43c1dcb0, com.sports.security.JwtAuthenticationFilter@3aafa1c1, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@733fc5af, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@41621744, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@7c1048a9, org.springframework.security.web.session.SessionManagementFilter@58d5bdb0, org.springframework.security.web.access.ExceptionTranslationFilter@77a9ea73, org.springframework.security.web.access.intercept.AuthorizationFilter@3f52313c]
+2026-10-12T15:04:10.562+07:00  INFO 13852 --- [web-badminton-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2026-10-12T15:04:10.608+07:00  INFO 13852 --- [web-badminton-backend] [           main] com.sports.WebBadmintonApplication       : Started WebBadmintonApplication in 13.135 seconds (process running for 14.337)
+2026-10-12T15:04:17.296+07:00  INFO 13852 --- [web-badminton-backend] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-12T15:04:17.297+07:00  INFO 13852 --- [web-badminton-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-12T15:04:17.299+07:00  INFO 13852 --- [web-badminton-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-10-12T15:04:43.391+07:00 ERROR 13852 --- [web-badminton-backend] [nio-8080-exec-8] com.sports.security.JwtTokenProvider     : Token JWT ?ã h?t h?n: JWT expired at 2026-10-12T06:29:38Z. Current time: 2026-10-12T08:04:43Z, a difference of 5705386 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-10-12T15:04:43.391+07:00 ERROR 13852 --- [web-badminton-backend] [nio-8080-exec-5] com.sports.security.JwtTokenProvider     : Token JWT ?ã h?t h?n: JWT expired at 2026-10-12T06:29:38Z. Current time: 2026-10-12T08:04:43Z, a difference of 5705386 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-10-12T15:04:43.410+07:00 ERROR 13852 --- [web-badminton-backend] [io-8080-exec-10] com.sports.security.JwtTokenProvider     : Token JWT ?ã h?t h?n: JWT expired at 2026-10-12T06:29:38Z. Current time: 2026-10-12T08:04:43Z, a difference of 5705409 milliseconds.  Allowed clock skew: 0 milliseconds.
+2026-10-12T15:04:43.793+07:00 ERROR 13852 --- [web-badminton-backend] [nio-8080-exec-1] com.sports.security.JwtTokenProvider     : Token JWT ?ã h?t h?n: JWT expired at 2026-10-12T06:29:38Z. Current time: 2026-10-12T08:04:43Z, a difference of 5705793 milliseconds.  Allowed clock skew: 0 milliseconds.

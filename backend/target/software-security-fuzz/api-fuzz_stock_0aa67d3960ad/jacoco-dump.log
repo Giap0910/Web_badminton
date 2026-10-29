@@ -1,0 +1,16 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- jacoco:0.8.12:dump (default-cli) @ web_badminton_backend ---
+[INFO] Connecting to /127.0.0.1:59105
+[INFO] Dumping execution data to C:\Project\Web_badminton\backend\target\software-security-fuzz\api-fuzz_stock_0aa67d3960ad\api.exec
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.909 s
+[INFO] Finished at: 2026-10-15T12:52:31+07:00
+[INFO] ------------------------------------------------------------------------

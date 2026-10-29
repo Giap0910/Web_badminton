@@ -1,0 +1,58 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Compiling 97 source files with javac [debug parameters release 17] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Compiling 4 source files with javac [debug parameters release 17] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sports.fuzz.CartFuzzTest
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+INFO: found LLVMFuzzerCustomMutator (00007FFF3F1833D0). Disabling -len_control by default.
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 20260924
+INFO: Loaded 3 modules   (2048 inline 8-bit counters): 512 [0000023CC42BA040, 0000023CC42BA240), 512 [0000023CC42BA240, 0000023CC42BA440), 1024 [0000023CC42BA440, 0000023CC42BA840), 
+INFO: Loaded 3 PC tables (2048 PCs): 512 [0000023CC17913E0,0000023CC17933E0), 512 [0000023CC178D3C0,0000023CC178F3C0), 1024 [0000023CFF2A9090,0000023CFF2AD090), 
+fuzz: Running 1 inputs 1 time(s) each.
+Running: C:/Project/Web_badminton/backend/target/fuzz-step6-20260924/fuzzReservationArithmetic/crash-da39a3ee5e6b4b0d3255bfef95601890afd80709
+Executed C:/Project/Web_badminton/backend/target/fuzz-step6-20260924/fuzzReservationArithmetic/crash-da39a3ee5e6b4b0d3255bfef95601890afd80709 in 5 ms
+***
+*** NOTE: fuzzing was not performed, you have only
+***       executed the target code on a fixed set of inputs.
+***
+stat::number_of_executed_units: 1
+stat::average_exec_per_sec:     0
+stat::new_units_added:          0
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              1208
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 13.00 s -- in com.sports.fuzz.CartFuzzTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  27.498 s
+[INFO] Finished at: 2026-09-24T22:34:32+07:00
+[INFO] ------------------------------------------------------------------------

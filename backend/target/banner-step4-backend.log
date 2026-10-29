@@ -1,0 +1,195 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from product-upload-build-pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 23 resources from ..\src\main\resources to product-upload-build\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 191 source files with javac [debug parameters release 17] to product-upload-build\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 41 source files with javac [debug parameters release 17] to product-upload-build\test-classes
+[INFO] /C:/Project/Web_badminton/backend/src/test/java/com/sports/service/AdminReportAndCashTest.java: Some input files use unchecked or unsafe operations.
+[INFO] /C:/Project/Web_badminton/backend/src/test/java/com/sports/service/AdminReportAndCashTest.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sports.service.BannerServiceTest
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+15:40:39.100 [main] INFO org.hibernate.validator.internal.util.Version -- HV000001: Hibernate Validator 8.0.1.Final
+15:40:40.435 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+15:40:40.436 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+15:40:40.445 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 6 ms
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.816 s -- in com.sports.service.BannerServiceTest
+[INFO] Running com.sports.service.ProductImageAdminServiceTest
+15:40:42.925 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+15:40:42.925 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+15:40:42.925 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.092 s -- in com.sports.service.ProductImageAdminServiceTest
+[INFO] Running com.sports.service.ProductImageStorageTest
+[ERROR] Tests run: 16, Failures: 0, Errors: 16, Skipped: 0, Time elapsed: 0.126 s <<< FAILURE! -- in com.sports.service.ProductImageStorageTest
+[ERROR] com.sports.service.ProductImageStorageTest.shouldRejectDifferentFileWithoutCreatingStorage -- Time elapsed: 0.032 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldEnforceActualStreamLimitWhenReportedSizeIsWrong -- Time elapsed: 0.004 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldRejectMissingApprovalBeforeReadingOrCreatingStorage -- Time elapsed: 0.003 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.adminUploadRejectsEmptyAndDisguisedExecutable -- Time elapsed: 0.005 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldNotReadAFileFromAnotherProduct -- Time elapsed: 0.006 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldStoreExactApprovedPngWithServerFileName -- Time elapsed: 0.005 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldRejectHugeDimensionsBeforeDecodingPixels -- Time elapsed: 0.003 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldKeepEarlierAssetWhenSavingAnotherFile -- Time elapsed: 0.003 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldResolveDefaultProductStorageFromRepositoryRoot -- Time elapsed: 0.005 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldReadExactStoredAssetWithoutChangingIt -- Time elapsed: 0.003 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldRejectSvgEvenWithMisleadingMimeAndApprovedHash -- Time elapsed: 0.003 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.adminUploadValidatesBytesAndGeneratesItsOwnFileName -- Time elapsed: 0.003 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldRejectTraversalAndMissingMediaWithoutCreatingDirectories -- Time elapsed: 0.002 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldReturnStorageErrorWithoutOverwritingExistingFile -- Time elapsed: 0.002 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldRejectCorruptFileWithRealPngSignature -- Time elapsed: 0.003 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[ERROR] com.sports.service.ProductImageStorageTest.shouldStoreJpegWithoutRewritingApprovedBytes -- Time elapsed: 0.007 s <<< ERROR!
+java.lang.IllegalStateException: Test artifacts must remain inside the project workspace
+	at com.sports.service.ProductImageStorageTest.retainArtifacts(ProductImageStorageTest.java:41)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Errors: 
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[ERROR]   ProductImageStorageTest.retainArtifacts:41 IllegalState Test artifacts must remain inside the project workspace
+[INFO] 
+[ERROR] Tests run: 43, Failures: 0, Errors: 16, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  37.521 s
+[INFO] Finished at: 2026-10-29T15:40:43+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.1.2:test (default-test) on project web_badminton_backend: 
+[ERROR] 
+[ERROR] Please refer to C:\Project\Web_badminton\backend\target\product-upload-build\surefire-reports for the individual test results.
+[ERROR] Please refer to dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

@@ -1,0 +1,72 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 21 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.3.0:jar (default-jar) @ web_badminton_backend ---
+[INFO] Building jar: C:\Project\Web_badminton\backend\target\web_badminton_backend-1.0.0.jar
+[INFO] 
+[INFO] --- spring-boot:3.2.5:repackage (repackage) @ web_badminton_backend ---
+[INFO] Replacing main artifact C:\Project\Web_badminton\backend\target\web_badminton_backend-1.0.0.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to C:\Project\Web_badminton\backend\target\web_badminton_backend-1.0.0.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  8.933 s
+[INFO] Finished at: 2026-10-29T15:58:42+07:00
+[INFO] ------------------------------------------------------------------------
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-10-29T15:58:45.790+07:00  INFO 20672 --- [web-badminton-backend] [           main] com.sports.WebBadmintonApplication       : Starting WebBadmintonApplication v1.0.0 using Java 17.0.20.1 with PID 20672 (C:\Project\Web_badminton\backend\target\web_badminton_backend-1.0.0.jar started by vxg09 in C:\Project\Web_badminton\backend)
+2026-10-29T15:58:45.807+07:00  INFO 20672 --- [web-badminton-backend] [           main] com.sports.WebBadmintonApplication       : No active profile set, falling back to 1 default profile: "default"
+2026-10-29T15:58:48.661+07:00  INFO 20672 --- [web-badminton-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-29T15:58:49.058+07:00  INFO 20672 --- [web-badminton-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 354 ms. Found 18 JPA repository interfaces.
+2026-10-29T15:58:51.658+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-10-29T15:58:51.692+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-29T15:58:51.692+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-10-29T15:58:51.807+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-10-29T15:58:51.811+07:00  INFO 20672 --- [web-badminton-backend] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 5702 ms
+2026-10-29T15:58:52.338+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-10-29T15:58:52.549+07:00  INFO 20672 --- [web-badminton-backend] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-10-29T15:58:52.673+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-29T15:58:53.653+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-29T15:58:53.764+07:00  INFO 20672 --- [web-badminton-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-29T15:58:54.137+07:00  INFO 20672 --- [web-badminton-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@6e3b2dd3
+2026-10-29T15:58:54.142+07:00  INFO 20672 --- [web-badminton-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-29T15:58:54.210+07:00  WARN 20672 --- [web-badminton-backend] [           main] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.0 version for [org.hibernate.dialect.MariaDBDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 10.4.0. Check the community dialects project for available legacy versions.
+2026-10-29T15:58:54.225+07:00  WARN 20672 --- [web-badminton-backend] [           main] org.hibernate.orm.deprecation            : HHH90000025: MariaDBDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-10-29T15:58:57.450+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-29T15:58:57.750+07:00  INFO 20672 --- [web-badminton-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-29T15:58:58.607+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-29T15:59:05.496+07:00  WARN 20672 --- [web-badminton-backend] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-10-29T15:59:06.323+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@59174973, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@585f1a8d, org.springframework.security.web.context.SecurityContextHolderFilter@10de4ed9, org.springframework.security.web.header.HeaderWriterFilter@5642294e, org.springframework.web.filter.CorsFilter@11a7b5e9, org.springframework.security.web.authentication.logout.LogoutFilter@5880cc25, com.sports.security.JwtAuthenticationFilter@4191774f, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@44ad9053, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@1f261726, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@46095dc9, org.springframework.security.web.session.SessionManagementFilter@45ce62b9, org.springframework.security.web.access.ExceptionTranslationFilter@400f0e8e, org.springframework.security.web.access.intercept.AuthorizationFilter@1a83695d]
+2026-10-29T15:59:06.954+07:00  INFO 20672 --- [web-badminton-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2026-10-29T15:59:07.051+07:00  INFO 20672 --- [web-badminton-backend] [           main] com.sports.WebBadmintonApplication       : Started WebBadmintonApplication in 23.024 seconds (process running for 24.661)
+2026-10-29T15:59:20.156+07:00  INFO 20672 --- [web-badminton-backend] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-29T15:59:20.157+07:00  INFO 20672 --- [web-badminton-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-29T15:59:20.159+07:00  INFO 20672 --- [web-badminton-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms

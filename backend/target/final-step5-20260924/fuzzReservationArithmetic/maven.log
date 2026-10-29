@@ -1,0 +1,59 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Compiling 97 source files with javac [debug parameters release 17] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Compiling 4 source files with javac [debug parameters release 17] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sports.fuzz.CartFuzzTest
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+INFO: found LLVMFuzzerCustomMutator (00007FFF387133D0). Disabling -len_control by default.
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 20260924
+INFO: Loaded 3 modules   (2048 inline 8-bit counters): 512 [0000017E995E5040, 0000017E995E5240), 512 [0000017E995E5240, 0000017E995E5440), 1024 [0000017E995E5440, 0000017E995E5840), 
+INFO: Loaded 3 PC tables (2048 PCs): 512 [0000017E98975030,0000017E98977030), 512 [0000017E9897B060,0000017E9897D060), 1024 [0000017E99A20910,0000017E99A24910), 
+INFO:        0 files found in \\?\C:\Project\Web_badminton\backend\target\final-step5-20260924\fuzzReservationArithmetic\.cifuzz-corpus\com.sports.fuzz.CartFuzzTest\fuzzReservationArithmetic
+INFO:        0 files found in C:\Project\Web_badminton\backend\target\final-step5-20260924\fuzzReservationArithmetic\jazzer-java-seeds17834157559996279227
+INFO: A corpus is not provided, starting from an empty corpus
+#2	INITED cov: 308 ft: 308 corp: 1/1b exec/s: 0 rss: 1143Mb
+#6	NEW    cov: 318 ft: 322 corp: 2/3b lim: 4 exec/s: 0 rss: 1143Mb L: 2/2 MS: 8 ChangeByte-Custom-InsertByte-Custom-ChangeByte-Custom-CrossOver-Custom-
+#476	REDUCE cov: 318 ft: 322 corp: 2/2b lim: 8 exec/s: 0 rss: 1143Mb L: 1/1 MS: 10 EraseBytes-Custom-ChangeASCIIInt-Custom-CopyPart-Custom-ChangeByte-Custom-EraseBytes-Custom-
+#1000	DONE   cov: 318 ft: 322 corp: 2/2b lim: 11 exec/s: 1000 rss: 1143Mb
+Done 1000 runs in 1 second(s)
+stat::number_of_executed_units: 1000
+stat::average_exec_per_sec:     1000
+stat::new_units_added:          2
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              1143
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 14.86 s -- in com.sports.fuzz.CartFuzzTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  29.900 s
+[INFO] Finished at: 2026-09-24T22:41:59+07:00
+[INFO] ------------------------------------------------------------------------

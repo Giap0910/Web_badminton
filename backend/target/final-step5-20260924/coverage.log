@@ -1,0 +1,16 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- jacoco:0.8.12:report (default-cli) @ web_badminton_backend ---
+[INFO] Loading execution data file C:\Project\Web_badminton\backend\target\jacoco-fuzz.exec
+[INFO] Analyzed bundle '?? ph? hai l?p fuzz test — ch? ?? h?i quy' with 3 classes
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  1.357 s
+[INFO] Finished at: 2026-09-24T22:38:38+07:00
+[INFO] ------------------------------------------------------------------------

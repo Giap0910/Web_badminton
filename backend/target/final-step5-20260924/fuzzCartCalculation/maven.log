@@ -1,0 +1,61 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Compiling 97 source files with javac [debug parameters release 17] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Compiling 4 source files with javac [debug parameters release 17] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sports.fuzz.CartFuzzTest
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+INFO: found LLVMFuzzerCustomMutator (00007FFF386A33D0). Disabling -len_control by default.
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 20260924
+INFO: Loaded 3 modules   (2048 inline 8-bit counters): 512 [0000019C7FB74040, 0000019C7FB74240), 512 [0000019C7FB74240, 0000019C7FB74440), 1024 [0000019C7FB74440, 0000019C7FB74840), 
+INFO: Loaded 3 PC tables (2048 PCs): 512 [0000019C55C4D920,0000019C55C4F920), 512 [0000019C55C458E0,0000019C55C478E0), 1024 [0000019C56DD7150,0000019C56DDB150), 
+INFO:        0 files found in \\?\C:\Project\Web_badminton\backend\target\final-step5-20260924\fuzzCartCalculation\.cifuzz-corpus\com.sports.fuzz.CartFuzzTest\fuzzCartCalculation
+INFO:        0 files found in C:\Project\Web_badminton\backend\target\final-step5-20260924\fuzzCartCalculation\jazzer-java-seeds18144858691693710380
+INFO: A corpus is not provided, starting from an empty corpus
+#2	INITED cov: 96 ft: 96 corp: 1/1b exec/s: 0 rss: 1267Mb
+#3	NEW    cov: 357 ft: 367 corp: 2/2b lim: 4 exec/s: 0 rss: 1267Mb L: 1/1 MS: 2 ChangeByte-Custom-
+#5	NEW    cov: 363 ft: 375 corp: 3/4b lim: 4 exec/s: 0 rss: 1267Mb L: 2/2 MS: 4 InsertByte-Custom-ChangeByte-Custom-
+#9	NEW    cov: 365 ft: 378 corp: 4/6b lim: 4 exec/s: 0 rss: 1267Mb L: 2/2 MS: 8 CopyPart-Custom-ChangeByte-Custom-ChangeBit-Custom-ChangeByte-Custom-
+#19	NEW    cov: 368 ft: 381 corp: 5/10b lim: 4 exec/s: 0 rss: 1267Mb L: 4/4 MS: 10 InsertByte-Custom-ShuffleBytes-Custom-ShuffleBytes-Custom-InsertByte-Custom-InsertByte-Custom-
+#1000	DONE   cov: 368 ft: 381 corp: 5/10b lim: 11 exec/s: 1000 rss: 1267Mb
+Done 1000 runs in 1 second(s)
+stat::number_of_executed_units: 1000
+stat::average_exec_per_sec:     1000
+stat::new_units_added:          4
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              1267
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 14.93 s -- in com.sports.fuzz.CartFuzzTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  28.993 s
+[INFO] Finished at: 2026-09-24T22:39:50+07:00
+[INFO] ------------------------------------------------------------------------

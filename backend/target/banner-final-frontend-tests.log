@@ -1,0 +1,1367 @@
+✔ adminApi.getAllPayments sends GET /admin/payments with query params (2.8553ms)
+✔ adminApi.reconcilePayment sends POST /admin/payments/{id}/reconcile with reason only and Idempotency-Key header (1.8186ms)
+✔ adminApi.reconcilePayment handles 202 response (0.7776ms)
+✔ adminApi.reconcilePayment handles 409 conflict (3.1398ms)
+✔ adminApi.reconcilePayment handles 502/503/504 gateway failures and timeout (2.5296ms)
+✔ orderApi.createOrder attaches Idempotency-Key header when provided (9.9002ms)
+✔ orderApi.createPaymentLink sends POST /orders/{id}/payment-link with Idempotency-Key and empty body (3.4741ms)
+✔ orderApi.getOrderPayment sends GET /orders/{id}/payment (0.8793ms)
+✔ Đặt đơn và tạo QR giữ Authorization đã chụp cùng mã chống trùng (1.3705ms)
+✔ Quản trị có đúng 4 vị trí và nút chọn/lưu từng banner; không mở nhập khóa hoặc nội dung chính sách (26.5429ms)
+✔ Danh sách phải đủ 4 vị trí duy nhất, không nhận URL bên ngoài hoặc ảnh thuộc slot khác (5.4785ms)
+✔ API tải ảnh dùng đúng multipart và vị trí; chỉ xác nhận khi máy chủ trả READY đúng vị trí (7.83ms)
+✔ Chọn ảnh cần xác nhận trước khi lưu; lỗi giữ ảnh đang chọn và cho thử lại (203.6195ms)
+✔ File không hợp lệ không thể tận dụng xác nhận cũ để lưu, bỏ ảnh chỉ bỏ lựa chọn local (24.4597ms)
+✔ Phản hồi lưu muộn sau khi rời tab không cập nhật giao diện đã unmount (15.2371ms)
+✔ Bốn ô có nhãn 1–2–3–4, ảnh đại diện, định dạng và xác nhận quyền sử dụng (44.1931ms)
+✔ Chặn file rỗng, sai loại hoặc quá lớn; không khóa việc sửa sản phẩm cũ khi không đổi ảnh (3.4423ms)
+✔ API tải đúng multipart, vị trí và bỏ Content-Type JSON mặc định (3.8867ms)
+✔ Tạo một bản nháp, tải tuần tự 4 ảnh rồi mới công khai (5.1609ms)
+✔ Lỗi ảnh 3 giữ ID nháp và 2 ảnh đã lưu; thử lại không tạo sản phẩm hoặc tải lại ảnh 1–2 (3.6895ms)
+✔ Sửa ảnh 4 của sản phẩm cũ không tải lại hoặc đổi các ảnh còn lại, không tự công khai (1.1154ms)
+✔ Máy chủ chưa xác nhận vị trí ảnh thì giữ file đã chọn và không công khai (0.749ms)
+✔ Trang chủ lấy ảnh đúng slide 1–2–3–4, đổi slide không gọi API lại (564.6216ms)
+✔ Chưa có ảnh hoặc lỗi API giữ nền và nội dung hiện tại, không lấy ảnh slot khác lấp vào (50.8175ms)
+✔ Ảnh lỗi không phá carousel; slide tiếp theo vẫn hiện ảnh đúng (17.5118ms)
+✔ Đã rời trang thì kết quả API muộn không phục hồi ảnh (23.875ms)
+✔ Mô tả không chèn bảng thông số (16.5326ms)
+✔ Giày dùng thông số giày và ưu tiên danh mục API trước từ khóa trong tên (12.635ms)
+✔ Mỗi danh mục có trường riêng, dữ liệu thiếu không tạo thông số (3.8879ms)
+✔ Chỉ cho chọn kích cỡ API, giữ kích cỡ thập phân và không giả hết cỡ 44 (3.7303ms)
+✔ Giỏ hàng không nhận màu, quy cách, dịch vụ hay phụ phí tự tạo (1.0228ms)
+✔ Chưa có đánh giá không điền 4.9, số người mua hay sao vàng (11.1971ms)
+✔ Phân bố sao tính từ đánh giá đã tải, bỏ điểm không hợp lệ (3.156ms)
+✔ Danh sách nhận xét hiển thị dữ liệu thật và tách lỗi tải khỏi danh sách trống (6.1556ms)
+✔ Giảm giá được tính từ giá API, không tự tạo mức giảm (2.5035ms)
+✔ Biến thể hết cỡ bị khóa chọn, không lộ số lượng tồn hoặc tự tạo màu (8.3291ms)
+✔ Review thật chỉ có badgeverified khi đúng cờ; reply/timestamp thật, loading/error không giảempty (12.1905ms)
+✔ Review payload giữorderItemId nguồn đãmua; không thưởng điểm hoặc bịa ngày/rating/verification (5.8218ms)
+✔ GETreview production500 khácempty; retry200rỗng; oldroute/no-mount không ghiđè dữliệu mới (617.4621ms)
+✔ ReviewedProducts gọieligible thật, POSTline/rating/comment thật và phản hồi verified/reply, không+50điểm (118.8506ms)
+✔ Chờ đánh giá lọc đúng tên không dấu, SKU, hãng và mã đơn trong cả Tất cả lẫn Chờ đánh giá (216.3196ms)
+✔ Đã đánh giá lọc chung tên, SKU, hãng, nội dung và mã đơn; xóa từ khóa khôi phục danh sách (620.0787ms)
+✔ Ảnh 1 là đại diện; thiếu ảnh 2 không đẩy ảnh 3 sang ô 2 hoặc dùng ảnh 3 làm đại diện (6.1088ms)
+✔ Bốn ảnh mới và WebP cũ đều hiển thị đúng từng vị trí sau khi tải lại sản phẩm (65.8083ms)
+✔ Ảnh nội bộ được tải từ Backend thay vì cổng Vite (2.2456ms)
+✔ Cả 5 danh mục có đúng 4 ô và ảnh nhỏ nằm bên trái ảnh lớn (19.2895ms)
+✔ Nhấn ảnh nhỏ và dùng bàn phím đổi đúng ảnh đang xem (6.9505ms)
+✔ Không dùng ảnh bên ngoài, ảnh chưa duyệt hoặc lặp một ảnh thành 4 ảnh (0.7519ms)
+✔ Voucher từ giỏ hàng được tự xác thực và áp dụng mà không cần bấm lại (1302.6449ms)
+✔ Thay đổi giỏ tự kiểm tra lại; phản hồi voucher cũ không ghi đè giỏ mới (41.4126ms)
+✔ Voucher gửi ID và số lượng thật; đổi mặt hàng cùng tổng tiền vẫn xác thực lại (32.2722ms)
+✔ Voucher theo danh mục bị từ chối giữ nguyên tiền hàng và báo lỗi từ máy chủ (57.8183ms)
+✔ API voucher giữ payload cũ và bổ sung danh sách mặt hàng khi có (12.2421ms)
+✔ Từ khóa ngắn không gọi API; hai ký tự gợi ý sáu sản phẩm công khai (8.5404ms)
+✔ Phản hồi cũ không ghi đè từ khóa mới; lỗi API được hiển thị rõ (12.4616ms)
+✔ Tải lại điểm từ backend thay hồ sơ cũ, không trừ điểm khi chỉ xem checkout khác (821.6875ms)
+✔ Tải hồ sơ muộn không ghi đè số dư mới hoặc tài khoản đã chuyển (163.3879ms)
+✔ Lỗi tải lại hồ sơ giữ số dư cũ, không giả thành 0; có thể thử lại (1335.4289ms)
+✔ Phản hồi hồ sơ và callback của phiên cũ không ghi đè tài khoản mới (385.7339ms)
+✔ GET me mạng/500/403 giữ JWT, khóa phiên và retry xác minh đúng tài khoản (390.6642ms)
+✔ GET me401 xóa JWT; kết quả GET cũ sau loginB không đổi tài khoảnB (42.6511ms)
+✔ LoginA trả muộn sau logout/loginB bị loại; không commit sau unmount (110.5297ms)
+✔ Logout chụp JWT trước clear; lỗi logoutA và expiryA không xóa hoặc báo sai phiênB (8.3694ms)
+✔ Logout API lỗi vẫn xóa local và báo chưa thu hồi các phiên khác (495.1675ms)
+✔ Redirect chỉ nội bộ, chặn network path/backslash/C0/DEL và giữ state mua ngay (27.9559ms)
+✔ Axios giữ Authorization explicit cả lowercase/AxiosHeaders;401 cũ không xóaJWT mới (27.7694ms)
+✔ AuthApi logout/getMe dùng Authorization token đã chụp (13.0014ms)
+✔ Guard production giữ redirect/state, khóa lỗi xác minh và remount theo userid (40.7891ms)
+✔ Login/Register production handlers đều giữ destination/state và chốngnhấpđúp (1085.3403ms)
+✔ Thay tài khoản ởtabkhác khóaowner cũ và xácminhJWT mới; expirycũ không xóaJWT mới (102.3741ms)
+✔ Kéo trái/phải chuyển đúng banner và không bị tự chuyển khi đang kéo (857.0822ms)
+✔ Tự chuyển mỗi sáu giây, quay vòng và tiếp tục sau khi hủy kéo (53.5118ms)
+✔ Kéo ngắn, cuộn dọc và chạm nút CTA không chuyển banner (596.6337ms)
+✔ Kéo không mở link; phím mũi tên hỗ trợ điều khiển và quay vòng (470.5936ms)
+✔ Khách hàng từ API không có điểm vẫn render bảng, số đơn và trạng thái (272.8954ms)
+✔ Dữ liệu khách hàng cũ/thiếu thống kê không tự tạo điểm hoặc hạng VIP (57.8091ms)
+✔ Tên tiếng Việt không dấu, đ/Đ và khoảng trắng tìm đúng dữ liệu (0.4341ms)
+✔ Tìm đơn bằng mã nội bộ hoặc mã PayOS cũ luôn mở đúng mã đơn HG-ID (565.129ms)
+✔ Tìm kiếm giữ mã sản phẩm/khách hàng và không bịa mã PayOS cho COD (9.8059ms)
+✔ COD chỉ ghi đã thanh toán và mở hoàn tất sau xác nhận tiền thực tế (2.6855ms)
+✔ Báo cáo chặn ngày thiếu, nhận ngày nhập và gửi đúng khoảng khi xuất (96.1399ms)
+✔ Admin đơn thiếu dữ liệu không bịa ngày, người nhận, ảnh, mã tham chiếu hoặc đã thu COD (290.5931ms)
+✔ Admin ánh xạ đúng sản phẩm, biến thể và tham chiếu thật trong đơn (335.0328ms)
+✔ Xuất phiếu đơn hàng CSV thật có từng dòng biến thể và chống công thức Excel (17.8603ms)
+✔ Nút xuất trên trang admin thực hiện tải CSV, không báo đã in giả (209.0301ms)
+✔ Admin voucher bật/tắt gọi API thật, tải trạng thái mới và giữ lượt không giới hạn (52.1881ms)
+✔ Sửa mã đang tắt không tự bật lại; gửi null để bỏ cap, giới hạn lượt và ngày hết hạn (110.4006ms)
+✔ Lượt tối đa bằng 0 được lưu nguyên, không tự thay thành 100 (125.3151ms)
+✔ Lỗi lưu và lỗi bật/tắt hiển thị lỗi API, không báo thành công và giữ form để sửa (64.4101ms)
+✔ Khóa đang gửi chặn nhấn lưu và bật/tắt trùng, mở lại sau API hoàn tất (81.3879ms)
+✔ Form voucher kiểm tra số tiền, phần trăm, dữ liệu mã và hỗ trợ hạn mức để trống (23.0514ms)
+✔ Admin đánh giá đọc trạng thái, sao, phản hồi và snapshot thật; record cũ không giả đã mua (208.0774ms)
+✔ Ẩn và hiển thị đánh giá gọi đúng API, tải lại và chỉ cập nhật kết quả đúng ID (748.3449ms)
+✔ Phản hồi dùng API thật, giữ form sau lỗi và hỗ trợ xóa bằng null (138.8754ms)
+✔ Lỗi tải đánh giá không hiển thị danh sách rỗng giả; retry đọc dữ liệu và lỗi refresh không báo thành công (94.6041ms)
+✔ Gửi trùng đánh giá chỉ gọi API một lần và unmount không nhận kết quả muộn (173.8149ms)
+✔ Điểm khách hàng lấy loyaltyPoints thật và số đơn bằng 0 không bị mất (220.2704ms)
+✔ Khóa khách hàng chờ xác nhận máy chủ, chặn nhấn trùng và cập nhật modal từ dữ liệu mới (76.8906ms)
+✔ Khách hàng lỗi API không báo khóa thành công, lỗi danh sách có nút làm mới và không giả rỗng (323.6822ms)
+✔ Trang quản trị dùng tài khoản thật, hồ sơ có liên kết và gỡ icon trạng thái giả (44.2589ms)
+✔ API quản trị ẩn/hiện và phản hồi dùng đúng endpoint và JSON (66.0696ms)
+✔ Cài đặt chỉ đọc lấy chính sách máy chủ, giữ 4 tab và không có ô nhập khóa hoặc lưu giả (72.4676ms)
+✔ Cài đặt lỗi GET và dữ liệu sai không hiện cấu hình mẫu; retry và unmount an toàn (297.8086ms)
+✔ Dashboard xếp hạng từ API giữ SKU, số lượng, sản phẩm đã ngừng bán và giá trị tiền hàng có chú thích (60.3813ms)
+✔ Dashboard 0 là số thật; thiếu hoặc sai thông số báo lỗi và không dựng số 0 (34.4677ms)
+✔ Dashboard phản hồi cũ và sau unmount không ghi đè báo cáo mới, lỗi API có thể làm mới (66.8051ms)
+✔ API cài đặt chỉ gọi endpoint GET quản trị và không gửi thông tin bí mật (26.6566ms)
+✔ Admin RMA giữ snapshot đúng sản phẩm/biến thể đã xóa và không dựng serial, điện thoại, ngày hoặc lab (28.8483ms)
+✔ Bộ chọn hàng đổi ưu tiên cùng sản phẩm, loại sai hãng/danh mục/hết hàng/ẩn/legacy (107.8205ms)
+✔ PENDING duyệt bằng API chuẩn, terminal không có nút thay đổi và phản hồi không đúng không báo thành công (714.8472ms)
+✔ Hoàn tất chọn hàng đổi thật, yêu cầu ghi chú khi đổi mẫu khác và giữ form sau lỗi tồn kho (169.4327ms)
+✔ Đổi size hoặc màu khác trong cùng sản phẩm cũng cần ghi nhận đồng ý của khách (61.3527ms)
+✔ RMA khóa gửi trùng và không tự hoàn tất nếu API hoặc refresh danh sách thất bại (26.1252ms)
+✔ Hoàn tất đổi cùng sản phẩm dùng variant đã chọn, đọc lại trạng thái thật và đóng form (137.6502ms)
+✔ Từ chối yêu cầu cần ghi lý do và không mất dữ liệu khi API trả lỗi (31.0982ms)
+✔ Đóng modal hoặc unmount không nhận bộ chọn hàng đổi trả về muộn (77.3829ms)
+✔ Lỗi tải reviews không ngăn RMA và refresh thất bại không báo cập nhật hoàn tất giả (70.8154ms)
+✔ Mount lại không để lần tải RMA cũ ghi đè trạng thái mới (71.848ms)
+✔ Phản hồi khác phiếu hoặc khác hàng đổi không được ghi là hoàn tất thành công (91.0907ms)
+✔ Phiếu RMA CSV chứa dữ liệu thực, trạng thái và hàng đổi; chặn công thức Excel (181.882ms)
+✔ Minh chứng chỉ tải Blob từ endpoint riêng và không tải URL ảnh ngoài; lỗi không tạo file (2104.8119ms)
+✔ Admin API giữ status/ghi chú/variant params và tải minh chứng bằng Blob (11.7256ms)
+✔ Xem trước Excel hiện số sản phẩm gộp, từng màu/size/quy cách và tồn 0 đúng dữ liệu API (14.2354ms)
+✔ Nhập Excel thành công gắn ID với đúng SKU/tên và liên kết quản trị, giữ trạng thái ẩn (18.6685ms)
+✔ Kết quả nhiều sản phẩm Excel gắn đúng ID/tên và giữ trạng thái hiển thị từng sản phẩm (12.2469ms)
+✔ Excel lỗi xem trước hoặc file không hợp lệ không mở nút nhập và không báo thành công (6.2207ms)
+✔ Hộp Excel bắt Tab hai chiều, Esc đóng, trả focus và không đóng/gửi trùng khi API đang chạy (10.5994ms)
+✔ Hàm sao chép chi tiết đơn bắt lỗi clipboard, chờ kết quả thật và dùng thông báo riêng (24.4881ms)
+✔ MyOrdersPage: chỉ báo đã sao chép sau khi clipboard hoàn tất, lỗi và API thiếu đều báo đỏ (33.9335ms)
+✔ OrderSuccessPage: chỉ báo đã sao chép sau khi clipboard hoàn tất, lỗi và API thiếu đều báo đỏ (40.9815ms)
+✔ AdminOrdersPage: chỉ báo đã sao chép sau khi clipboard hoàn tất, lỗi và API thiếu đều báo đỏ (22.6795ms)
+✔ AdminVouchersPage: chỉ báo đã sao chép sau khi clipboard hoàn tất, lỗi và API thiếu đều báo đỏ (23.1192ms)
+✔ AdminPaymentsPage: chỉ báo đã sao chép sau khi clipboard hoàn tất, lỗi và API thiếu đều báo đỏ (40.6518ms)
+✔ Admin đơn: lỗi cập nhật trạng thái và thu COD dùng alert đỏ, API thành công dùng status xanh (61.0028ms)
+✔ Sổ địa chỉ: lỗi tạo/sửa/xóa/đặt mặc định báo đỏ; thành công báo xanh và không làm mất form lỗi (24.7385ms)
+✔ Excel chặn Ctrl+K/Cmd+K, giữ hộp thoại và không để phím truyền ra tìm kiếm nền (9.0625ms)
+✔ Ctrl+K quản trị chỉ focus tìm kiếm khi không có modal; Enter ở input nền không điều hướng khi modal mở (9.0603ms)
+✔ Đơn đã hủy với CREATING hiển thị đúng mà không tự đổi trạng thái thanh toán (168.7029ms)
+✔ Bộ lọc bỏ đơn đã hủy khỏi chờ thanh toán và vẫn giữ khoản cần đối soát (0.5669ms)
+✔ Đơn đã hủy không che bằng chứng PAID hoặc NEEDS_REVIEW (1.7699ms)
+✔ fetchPayments thật giữ riêng trạng thái đơn và trạng thái attempt từ Backend (1.1781ms)
+✔ CSV đối soát xuất hai trạng thái riêng và không phát sinh xác nhận thanh toán (2.5188ms)
+✔ SECTION 8 & 42 — No fake identifiers (TXN-, QR-, COD-DIRECT) in AdminPaymentsPage source (1.0964ms)
+✔ SECTION 11 & 42 — formatReviewReason maps deterministic reasons with safety fallback (1.0561ms)
+✔ SECTION 10 & 42 — getPaymentStatusBadge renders distinct badge metadata for all statuses (1.0608ms)
+✔ SECTION 42 & 7 — Real backend ledger mapping preserves real reference, paidAt, and reviewReason (57.1544ms)
+✔ SECTION 43 — Reconcile 200 with returned status PAID updates row to PAID (2.7772ms)
+✔ SECTION 44 — Reconcile 200 with returned status NEEDS_REVIEW MUST NOT render PAID (1.5335ms)
+✔ SECTION 45 — Reconcile 202 Pending retains key and current state, does NOT set PAID (0.5755ms)
+✔ SECTION 46 — Reconcile 409 conflict and 502/503/504 errors retain reason and key without fake success (0.434ms)
+✔ SECTION 48 — Stale async request guard prevents late response from overwriting newer query (60.0354ms)
+✔ BUG FE-1 — Synchronous in-flight authority blocks rapid second dispatch before React state update (31.6181ms)
+✔ BUG FE-2 — Explicit null reference in reconcile response replaces previous reference, renders — (2.6333ms)
+✔ BUG FE-2 — Property-existence check distinguishes absent field from explicit null (0.7754ms)
+✔ BUG FE-3 — Reconcile 202 body updates payment row with new reviewReason and status, retains retry key (0.6002ms)
+✔ BUG FE-5 — Reference column and cells use safe wrapping classes to prevent layout blowout (0.4201ms)
+✔ Mã đơn trong giao dịch, liên kết và mã PayOS giữ hai định danh riêng (3.7739ms)
+✔ Giao dịch thiếu orderId hoặc ngày tạo không suy thông tin từ mã PayOS/ngày nhận tiền (2.2553ms)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at NavLinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10831:21)
+    at nav
+    at div
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at aside
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at AdminSearch (C:/Project/Web_badminton/frontend/src/components/AdminSearch.jsx:43:63)
+    at div
+    at header
+    at div
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at header
+    at div
+    at div
+    at AdminLayout (C:/Project/Web_badminton/frontend/src/components/AdminLayout.jsx:23:24)
+    at AdminProductsPage (C:/Project/Web_badminton/frontend/src/pages/AdminProductsPage.jsx:26:71)
+    at AuthProvider (C:/Project/Web_badminton/frontend/src/context/AuthContext.jsx:26:25)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+✔ Trang quản trị thực render được, có bộ lọc ẩn/hiện và sáu thương hiệu (63.8525ms)
+✔ Form hiển thị thông số riêng từng danh mục, không dùng lực căng cho giày/quần áo/túi/phụ kiện (10.1111ms)
+✔ API ẩn/hiện chỉ gửi boolean, dùng PATCH và không gửi DELETE hoặc tồn kho (2.2685ms)
+✔ Form thực khóa lựa chọn đã có biến thể và vẫn cho sửa chất liệu/giá/mô tả (5.0383ms)
+✔ UI tồn kho thực có thêm tổ hợp, trạng thái từng dòng và khóa legacy/giữ chỗ (5.9777ms)
+✔ Mutation production gọi POST/PATCH đúng tổ hợp, optimistic stock và reload sau lưu (1.7293ms)
+✔ Tìm ID trong quản trị dẫn đến ID tương ứng; truy vấn SKU vẫn giữ liên kết cũ (146.5196ms)
+✔ Gợi ý quản trị ArrowDown chọn đúng dòng thứ hai, Enter đi đúng liên kết và Escape đóng (13.2794ms)
+✔ ArrowUp vòng về kết quả cuối; đổi từ khóa không Enter kết quả cũ hoặc đang tải (6.2471ms)
+✔ Ctrl+K tập trung input và mở gợi ý; API lỗi không Enter dữ liệu cũ (13.1109ms)
+✔ Phản hồi từ khóa cũ sau khi gõ từ khóa mới không phục hồi kết quả hoặc điều hướng (8.6347ms)
+✔ Bảng quản trị hiện ID và tìm sản phẩm sau khi upload theo ID (50.1659ms)
+✔ Sửa mô tả voucher giữ nguyên giờ hết hạn; đổi hoặc xóa ngày gửi giá trị tương ứng (50.7211ms)
+✔ Đơn đã tạo hoặc replay: chấp nhận đúng ID (false) (46.8472ms)
+✔ Đơn đã tạo hoặc replay: chấp nhận đúng ID (true) (1.7224ms)
+✔ Nhấp liên tiếp chỉ gửi một yêu cầu trong khi đang chờ (3.0641ms)
+✔ UI đổi trong khi chờ vẫn nhận đơn đã tạo và không tạo đơn thứ hai (2.8548ms)
+✔ Kết quả chưa rõ undefined: reload dùng cùng payload/key (4.1323ms)
+✔ Kết quả chưa rõ 401: reload dùng cùng payload/key (6.5428ms)
+✔ Kết quả chưa rõ 409: reload dùng cùng payload/key (2.6502ms)
+✔ Kết quả chưa rõ 500: reload dùng cùng payload/key (2.6628ms)
+✔ Kết quả chưa rõ 503: reload dùng cùng payload/key (4.0082ms)
+✔ Máy chủ từ chối dứt điểm 400: giữ giỏ và mở sửa thông tin (1.5766ms)
+✔ Máy chủ từ chối dứt điểm 403: giữ giỏ và mở sửa thông tin (0.7547ms)
+✔ Máy chủ từ chối dứt điểm 404: giữ giỏ và mở sửa thông tin (0.6897ms)
+✔ Máy chủ từ chối dứt điểm 422: giữ giỏ và mở sửa thông tin (0.8425ms)
+✔ Snapshot hỏng không tự bỏ key hoặc tạo đơn mới (0.8307ms)
+✔ Snapshot gắn tài khoản không được replay bởi tài khoản khác (1.4381ms)
+✔ Hết thời gian lưu key không làm xoay key của snapshot chưa rõ kết quả (3.0093ms)
+✔ Lỗi tạo liên kết QR không tạo lại đơn và vẫn mở trang QR với lỗi thật (1.7365ms)
+✔ Đơn replay đã hủy mở chi tiết, không tạo QR (1.2231ms)
+✔ Giỏ thay đổi trong khi chờ chỉ trừ số lượng đã đặt (1.3791ms)
+✔ Không lưu được snapshot thì không gửi yêu cầu (1.0712ms)
+✔ Không có Web Crypto thì không gửi đơn (0.8499ms)
+✔ Form khóa thông tin, voucher, điểm và phương thức khi đang chờ (0.9626ms)
+✔ Checkout thật tải lại điểm khi mở, đổi vợt sang cước và quay lại tab; dọn listener khi rời trang (2.9368ms)
+✔ Refresh điểm lỗi có thông báo; lỗi cũ hoặc unmount không ghi đè lần tải mới (1.2407ms)
+✔ Điểm checkout: nút tăng/giảm luôn hiện, thay đổi từng điểm và khóa đúng hai biên (471.0503ms)
+✔ Điểm checkout: vẫn nhập tay được, không âm, không vượt giới hạn và không nhận phần lẻ (11.1106ms)
+✔ Điểm checkout: hết hạn mức, đang xác thực voucher hoặc đang gửi đơn đều khóa điều khiển (249.8747ms)
+✔ Điểm không bị giới hạn cố định ở 1; áp dụng cả số dư và trần 10% sau voucher (3.3719ms)
+✔ Đổi từ vợt sang cước chỉ đổi hạn mức đơn, không mất điểm do lựa chọn nháp (2.5086ms)
+✔ Không gửi yêu cầu dùng điểm khi số dư chưa tải xong hoặc tải thất bại (2.331ms)
+✔ SHIPPING production: Cart và Checkout cùng giảm ship, không trừ tiền hàng hoặc sai mức đổi điểm (223.0423ms)
+✔ FIXED/legacy production: chỉ giảm hàng, không miễn phí ship và Cart/Checkout khớp tổng (8.5875ms)
+✔ Hook thật loại response chậm khi giỏ/code đổi, xóa discount cũ ngay từ render (3.8022ms)
+✔ Hook thật cùng key: yêu cầu cũ trả sau không ghi đè xác thực mới, unmount không nhận response (4.2588ms)
+✔ Hook lỗi voucher miễn ship đơn vốn miễn ship: giữ tổng, báo đúng lỗi, không giữ mã cũ (7.317ms)
+✔ Snapshot chưa rõ kết quả giữ cả giảm ship/tổng dù giá, giỏ hoặc voucher hiện tại đổi (14.6503ms)
+✔ Lưu địa chỉ khi đơn đã tạo: dữ liệu lấy từ yêu cầu đã chụp (1.669ms)
+✔ Địa chỉ đã lưu thì không tạo lại (3.339ms)
+✔ Lỗi lưu địa chỉ không làm mất đơn đã tạo hoặc tạo đơn thứ hai (4.6357ms)
+✔ Không tích lưu thông tin thì không gọi API địa chỉ (2.9231ms)
+✔ Đổi tài khoản lúc đang tạo đơn không sửa giỏ hoặc điều hướng tài khoản mới (1.3753ms)
+✔ Rời checkout khi đang tải sổ địa chỉ không tạo địa chỉ hoặc điều hướng (196.2132ms)
+✔ Đổi token khi tải địa chỉ giữ token cũ và không gửi POST dưới phiên mới (2.1168ms)
+✔ Giỏ hàng thực: xóa một trong hai dòng đã chọn vẫn đồng bộ hai nút chọn tất cả (93.665ms)
+✔ Giỏ hàng thực: thay đổi dòng ngoài trang không giữ ID cũ hoặc tự chọn dòng mới (37.0477ms)
+▶ DEMO-FINAL-01: Product Variant Color in Order Details Remediation
+  ▶ 1. Order #141 Fixture & Options Extraction Matrix
+    ✔ Critical Test: Order #141 equivalent fixture extracts BOTH weightGrip (4U-G5) and selectedColor (Blue) (9.4866ms)
+    ✔ Case 1: Product with weight only (7.073ms)
+    ✔ Case 2: Product with color only (0.7726ms)
+    ✔ Case 3: Product with weight + color + size + stringingService (0.7339ms)
+    ✔ Case 4: Product without options returns empty array and fallback (0.8193ms)
+    ✔ Case 5: Multi-item order with diverse options does not cross-pollinate (2.2285ms)
+    ✔ Case 6: Safeguard against [object Object], undefined, null string rendering (3.8144ms)
+  ✔ 1. Order #141 Fixture & Options Extraction Matrix (35.0087ms)
+  ▶ 2. OrderItemOptions Component HTML Rendering
+    ✔ Renders both 4U-G5 and Blue as distinct HTML badges for Order #141 fixture (20.9887ms)
+    ✔ Returns null / empty HTML when item has no options (1.4423ms)
+  ✔ 2. OrderItemOptions Component HTML Rendering (23.8049ms)
+  ▶ 3. Integration in MyOrdersPage, AdminOrdersPage and OrderDetailPage
+    ✔ MyOrdersPage imports and renders OrderItemOptions in modal and summary (1.5701ms)
+    ✔ AdminOrdersPage imports and renders OrderItemOptions in modal and summary (2.1596ms)
+    ✔ OrderDetailPage imports and renders OrderItemOptions for items table (2.6615ms)
+  ✔ 3. Integration in MyOrdersPage, AdminOrdersPage and OrderDetailPage (6.9876ms)
+✔ DEMO-FINAL-01: Product Variant Color in Order Details Remediation (67.6797ms)
+▶ ACADEMIC DEMO READINESS — 4 CRITICAL P1 DEFECTS VERIFICATION
+  ▶ DEMO-P1-01: SweatbandDetailPage Award Icon Verification
+    ✔ Award icon is properly imported from lucide-react (4.0984ms)
+    ✔ Award icon usage in JSX has matching import declaration (0.8485ms)
+  ✔ DEMO-P1-01: SweatbandDetailPage Award Icon Verification (8.7263ms)
+  ▶ DEMO-P1-02: Add to Cart False Success Elimination
+    ✔ ProductDetailPage verifies addToCart return value before setting addedToast (1.861ms)
+    ✔ Accessory detail pages verify addToCart return value before toast (2.1236ms)
+  ✔ DEMO-P1-02: Add to Cart False Success Elimination (4.8659ms)
+  ▶ DEMO-P1-03: Review API 401 and Fake Reviews Elimination
+    ✔ Eliminated fallback fabricated review in catch block (1.2974ms)
+    ✔ Review submission checks isAuthenticated and sets error on 401 (0.792ms)
+    ✔ Eliminated hardcoded sample reviews (Nguyễn Quốc Tuấn, etc.) when backend reviews is empty (151.166ms)
+  ✔ DEMO-P1-03: Review API 401 and Fake Reviews Elimination (154.5867ms)
+  ▶ DEMO-P1-04: Admin Order Detail Full Items & Gifts Remediation
+    ✔ AdminOrdersPage maps and preserves full items array in order list (19.597ms)
+    ✔ AdminOrdersPage modal renders full items list instead of single item (63.6501ms)
+    ✔ MyOrdersPage modal renders full items list and removes hardcoded giftDetail (27.5599ms)
+    ✔ OrderDetailPage removes hardcoded gift line (0.721ms)
+  ✔ DEMO-P1-04: Admin Order Detail Full Items & Gifts Remediation (112.1308ms)
+✔ ACADEMIC DEMO READINESS — 4 CRITICAL P1 DEFECTS VERIFICATION (283.8169ms)
+✔ Mã đơn lịch sử luôn dùng ID nội bộ, mã PayOS là định danh riêng trong bảng và CSV (32.9171ms)
+✔ Lịch sử QR pending có lối tiếp tục cùng đơn ở bảng và modal, không tạo đơn hoặc link thanh toán mới (25.1226ms)
+✖ Lịch sử COD, đã thanh toán, đang giao và đã hủy không có CTA QR tiếp tục (22.2976ms)
+✔ Tìm đơn theo mặt hàng thứ hai, SKU, hãng và tên tiếng Việt không dấu (75.2618ms)
+✔ Tìm đơn bằng mã nội bộ, PayOS và phương thức; không tìm theo giá hoặc số lượng (84.0831ms)
+✔ Tìm đơn giữ bộ lọc trạng thái và hỗ trợ dữ liệu sản phẩm cũ lồng trong item (38.1995ms)
+▶ FIX-004 — Frontend Implementation & Verification
+  ✔ 1. App.jsx: Canonical routes /payment/qr/:orderId and /order-success/:orderId exist (6.1795ms)
+  ✔ 2. App.jsx: Route guard prevents /orders/cancel from matching /orders/:id with id="cancel" (0.5043ms)
+  ✔ 3. OrderSuccessPage: Identifies orderId from route param and never trusts fake browser query (0.5985ms)
+  ✔ 4. OrderSuccessPage: Authoritative data fetch calls getOrderById and getOrderPayment (0.2971ms)
+  ✔ 5. OrderSuccessPage: Handles return before webhook (PENDING) without showing false success (0.3753ms)
+  ✔ 6. OrderSuccessPage: Handles distinct NEEDS_REVIEW state (0.391ms)
+  ✔ 7. OrderSuccessPage: Handles distinct FAILED, EXPIRED, and CANCELLED states (0.3419ms)
+  ✔ 8. OrderSuccessPage: Link to order list uses canonical /my-orders instead of /user/orders (0.2438ms)
+  ✔ 9. OrderSuccessPage: Stale request guard on orderId change (0.2441ms)
+  ✔ 10. OrderSuccessPage: Duplicate click guard on manual check (0.4705ms)
+  ✔ 11. QRPaymentPage: Cancelled query ?cancelled=1 provides context only and does NOT call cancelOrder (0.4282ms)
+  ✔ 12. QRPaymentPage: Distinct statuses (CREATING, PENDING, PAID, NEEDS_REVIEW, FAILED, EXPIRED, CANCELLED) (0.4815ms)
+  ✔ 13. QRPaymentPage: Legacy img src branch removed; qrPayload is never used as img.src (0.1961ms)
+  ✔ 14. QRPaymentPage: Preserves backend checkoutUrl link to PayOS (0.1688ms)
+  ✔ 15. Security: STATIC_QR_REACHABLE is NO (no hardcoded bank accounts or fake QR images) (0.1878ms)
+  ✔ 16. Security: Customer pages do NOT call payos-webhook or admin reconcile (0.2047ms)
+  ✔ 17. Production QR: QRPaymentPage imports QRCodeSVG and binds value={payment.qrPayload} (0.2247ms)
+  ✔ 18. Production QR: Value prop is exact qrPayload without mutation, prefix, or object wrapping (0.2278ms)
+  ✔ 19. Runtime QR Renderer: Actual installed qrcode.react renders real SVG from payment payload fixture (114.9575ms)
+  ✔ PayOS return triggers backend verification; COD never triggers it (370.6477ms)
+  ✔ 20. Real Component Runtime: Actual OrderSuccessPage instantiates without missing hook ReferenceError (Fault Proof verified) (31.8605ms)
+  ✔ 21. Fake Query Runtime: /order-success/501?status=PAID&code=00&success=true with backend PENDING renders confirming state, NOT PAID (11.627ms)
+  ✔ 22. Return After Webhook Runtime: Backend PAID renders confirmed success state without needing query params (19.2764ms)
+  ✔ 23. Direct Load Runtime: /order-success/501 without location.state fetches by route orderId, no crash (15.7536ms)
+  ✔ 24. Reload Equivalent Runtime: Reconstructs state from route URL only, no transient state required (24.0457ms)
+  ✔ 25. Stale Response Guard: currentOrderIdRef prevents late response from overwriting active order state (1.1195ms)
+  ✔ 26. Precedence: Order=PENDING / Payment=FAILED strictly renders "Thanh toán thất bại", NOT "Đang xác nhận thanh toán" (20.3038ms)
+  ✔ 27. Precedence: Order=PENDING / Payment=EXPIRED strictly renders "Đã hết hạn", "Mã thanh toán đã hết hạn" (48.0535ms)
+  ✔ 28. Precedence: Order=PENDING / Payment=CANCELLED strictly renders "Đã hủy", "Giao dịch thanh toán đã bị hủy" (17.4021ms)
+  ✔ 29. Precedence: Order=PENDING / Payment=CREATING renders "Đang khởi tạo", "Đang chuẩn bị liên kết thanh toán" (18.8922ms)
+  ✔ 30. Precedence: Fake Query with Payment=FAILED strictly renders FAILED, never PAID or PENDING (17.6904ms)
+  ✔ 31. Precedence: Order=CANCELLED / Payment=NEEDS_REVIEW preserves review-needed notice (27.5719ms)
+  ✔ 32. Precedence: Order=PENDING / Payment=NEEDS_REVIEW renders "Cần đối soát", NOT PENDING (30.979ms)
+  ✔ 33. Real Lifecycle Runtime (Sec 17): Order=PENDING / Payment=FAILED resolves and renders FAILED, NOT PENDING (200.0032ms)
+  ✔ 34. Real Lifecycle Runtime (Sec 18): Order=PENDING / Payment=EXPIRED resolves and renders EXPIRED, NOT PENDING (221.8242ms)
+  ✔ 35. Real Lifecycle Runtime (Sec 19): Order=PENDING / Payment=CANCELLED renders CANCELLED, Order stays PENDING, 0 POSTs (219.4305ms)
+  ✔ 36. Real Lifecycle Runtime (Sec 20): Order=PENDING / Payment=NEEDS_REVIEW resolves and renders NEEDS_REVIEW, NOT PENDING (184.5476ms)
+  ✔ 37. Real Lifecycle Runtime (Sec 21): Order=PENDING / Payment=PENDING resolves and renders confirming UI (213.5951ms)
+  ✔ 38. Real Lifecycle Runtime (Sec 22): Order=PENDING / Payment=CREATING resolves and renders preparing UI (130.036ms)
+  ✔ 39. Real Lifecycle Runtime (Sec 23): Order=PENDING / Payment=PAID resolves and renders confirmed success UI (176.2282ms)
+  ✔ 40. Real Lifecycle Runtime (Sec 24): Fake query ?status=PAID&code=00 with Payment=FAILED renders FAILED, never PAID or PENDING (319.3377ms)
+  ✔ 41. Real Lifecycle Runtime (Sec 28): Stale Response Guard prevents delayed 501 from overwriting 502 (387.8049ms)
+  ✔ 42. Exclusive Authority (DEFECT REPRO): Order=PAID / Payment=NEEDS_REVIEW renders "Cần đối soát", NOT success (175.8907ms)
+  ✔ 43. Exclusive Authority: Order=PAID / Payment=FAILED renders "Thanh toán thất bại", NOT success (260.5741ms)
+  ✔ 44. Exclusive Authority: Order=PAID / Payment=EXPIRED renders "Đã hết hạn", NOT success (184.6857ms)
+  ✔ 45. Exclusive Authority: Order=PAID / Payment=CANCELLED renders "Đã hủy" payment UI, NOT success (150.986ms)
+  ✔ 46. Cancelled Order: Order=CANCELLED / Payment=NEEDS_REVIEW renders "Cần đối soát", order remains CANCELLED (107.9184ms)
+  ✔ 47. Cancelled Order: Order=CANCELLED / Payment=FAILED renders "Thanh toán thất bại", order remains CANCELLED (106.2059ms)
+  ✔ 48. Cancelled Order: Order=CANCELLED / Payment=CANCELLED renders payment cancelled UI distinctly (107.7932ms)
+  ✔ 49. Fake Query Authority (Sec 14): Order=PAID + Payment=NEEDS_REVIEW with fake query renders NEEDS_REVIEW, NOT PAID (106.6114ms)
+  ✔ 50. COD Fallback (Sec 16): payment=null, paymentMethod=COD renders "Chờ xử lý COD", does not break (105.2986ms)
+  ✔ COD đã thu tiền dùng xác nhận tiền mặt khi PayOS cũ đã kết thúc hoặc không có (490.0473ms)
+  ✔ COD không suy đã trả từ COMPLETED; giao dịch PayOS PAID/NEEDS_REVIEW còn cần đối soát (1205.2358ms)
+  ✔ COD đã thu vẫn chặn thành công khi xác minh giao dịch lỗi hoặc đơn đã hủy (584.2701ms)
+  ✔ 51. Round 4 DEFECT REPRODUCTION: Order=CANCELLED / Payment=PENDING renders payment PENDING and separate order CANCELLED notice (171.1579ms)
+  ✔ 52. Round 4 Separation: Order=CANCELLED / Payment=CREATING renders payment CREATING and separate order CANCELLED notice (101.6917ms)
+  ✔ 53. Round 4 Separation: Order=CANCELLED / Payment=PAID renders payment PAID and preserves order CANCELLED status (124.1765ms)
+  ✔ 54. Round 4 Fake Query: Order=CANCELLED / Payment=PENDING + ?status=PAID query preserves PENDING and CANCELLED (106.9534ms)
+  ✔ 55. Round 4 Fallback: PayOS Order=PENDING with payment=null renders waiting fallback, NOT PAID (105.5744ms)
+  ✔ 56. Round 4 Fallback: PayOS Order=CANCELLED with payment=null renders cancelled fallback (109.5093ms)
+  ✔ 57. Full 35 Combination Matrix (5 Order statuses x 7 Payment statuses) (3615.0972ms)
+  ✔ 58. Round 5 DEFECT REPRODUCTION: Order=PAID with Payment GET 503 renders verification error, NOT false success (108.5593ms)
+  ✔ 59. Round 5 HTTP 500: Order=PAID with Payment GET 500 renders verification error, NOT false success (95.6156ms)
+  ✔ 60. Round 5 Timeout: Order=PAID with Payment GET timeout renders verification error, NOT false success (93.7862ms)
+  ✔ 61. Round 5 Order=PENDING with Payment GET 503 renders verification error, NOT absent fallback (93.8451ms)
+  ✔ 62. Round 5 Order=CANCELLED with Payment GET 503 renders verification error + separate CANCELLED notice (95.0967ms)
+  ✔ 63. Round 5 Retry Recovery: 503 -> NEEDS_REVIEW recovers to verified review state (201.3362ms)
+  ✔ 64. Round 5 Retry Recovery: 503 -> PAID recovers to verified success state (184.4849ms)
+  ✔ 65. Round 5 Retry Still Fails: 503 -> 503 remains in verification error (185.5778ms)
+  ✔ 66. Round 5 Stale Error Guard: Delayed 501 503 error does not overwrite active 502 state (121.7088ms)
+  ✔ 67. Round 5 Duplicate Retry Guard: Concurrent clicks do not launch uncontrolled GETs (0.5523ms)
+  ✔ 68. Round 5 Status Semantics: 401, 403, 404 on getOrderPayment (310.9777ms)
+  ✔ 69. Round 5 Invariant: Distinguish GET 200 + null (absent) from GET error (503) (200.8124ms)
+  ✔ 70. Kết quả đơn hiển thị điểm đã lưu ở cả COD, QR chờ xác nhận và QR đã trả tiền (312.7609ms)
+  ✔ 71. Kết quả đơn không tính lại tổng 0, không tự suy ra điểm và thống nhất mã HG nội bộ (233.8529ms)
+  ✔ 72. Đơn hủy giữ trạng thái giao dịch nhưng không hướng dẫn đợi hoặc thanh toán lại (440.205ms)
+  ✔ 73. Cả hai bảng kết quả giữ tạm tính 0 và chỉ hiển thị trường điểm đã được lưu (431.8439ms)
+✔ FIX-004 — Frontend Implementation & Verification (13884.3274ms)
+▶ FIX-057 — Resume Unpaid Checkout & Safe Payment Transition
+  ✔ 1. QR "Đổi phương thức thanh toán" navigates to /checkout?orderId=<internalId> (6.6542ms)
+  ✔ 2. Gateway orderCode is NOT used for resume navigation (0.5179ms)
+  ✔ 3. Direct resume URL extracts orderId from searchParams and enables resume mode (0.6254ms)
+  ✔ 4. Reload loads context from URL parameter without requiring transient state (1.6677ms)
+  ✔ 5. Back/forward preserves identity via searchParams without falling back to cart (0.3962ms)
+  ✔ 6. Empty Cart still shows Order items from backend snapshot (0.4223ms)
+  ✔ 7. Order items come from backend context, not from CartContext items (0.4424ms)
+  ✔ 8. No add-to-cart restoration during checkout resume (0.8463ms)
+  ✔ 9. Other Cart item C remains untouched during resume (1.024ms)
+  ✔ 10. Resume does not call createOrder (1.1208ms)
+  ✔ 11. Snapshot price from orderItem is used (0.8435ms)
+  ✔ 12. Current Product catalog price ignored for historical Order (0.5635ms)
+  ✔ 13. Shipping snapshot displayed as read-only (0.4324ms)
+  ✔ 14. Current payment method displayed clearly (0.3568ms)
+  ✔ 15. Eligible PayOS→COD option shown when backend permits (1.4047ms)
+  ✔ 16. Ineligible switch hidden or disabled with clear explanation (0.5586ms)
+  ✔ 17. PAID Order cannot switch payment method (0.5284ms)
+  ✔ 18. CANCELLED Order cannot switch payment method (0.5498ms)
+  ✔ 19. NEEDS_REVIEW cannot normal switch to COD (0.482ms)
+  ✔ 20. CREATING cannot blindly switch to COD (0.4214ms)
+  ✔ 21. Payment/context GET failure shows error state with retry (0.4936ms)
+  ✔ 22. GET failure does NOT fall back to NEW_CHECKOUT (0.2842ms)
+  ✔ 23. GET 403 does not show protected Order information (0.2325ms)
+  ✔ 24. GET 404 handled with specific not-found message (0.2112ms)
+  ✔ 25. Mutation sends internal Order.id in URL (0.1657ms)
+  ✔ 26. Mutation sends the selected targetPaymentMethod (0.1666ms)
+  ✔ 27. Mutation sends expectedStateVersion from authoritative context (0.3071ms)
+  ✔ 28. Mutation sends Idempotency-Key header UUID (0.3399ms)
+  ✔ 29. Double click protection guards rapid duplicate mutation calls (0.3415ms)
+  ✔ 30. 200 APPLIED updates UI and navigates to order-success (0.3523ms)
+  ✔ 31. 202 VERIFYING is NOT shown as success and retains intent (0.3781ms)
+  ✔ 32. 409 STALE_ORDER_STATE triggers context refresh (0.452ms)
+  ✔ 33. 409 PAYMENT_ALREADY_SETTLED reflects settled truth (0.3411ms)
+  ✔ 34. 503 mutation keeps idempotency intent for safe retry (0.364ms)
+  ✔ 35. 504 mutation keeps idempotency intent for safe retry (0.4387ms)
+  ✔ 36. Timeout keeps same recovery key and does NOT create new Order (1.2997ms)
+  ✔ 37. Late payment / NEEDS_REVIEW displayed with distinct alert (0.3095ms)
+  ✔ 38. No browser direct PayOS cancellation call (0.2748ms)
+  ✔ 39. Fake query parameters (?status=PAID) ignored for resume truth (0.3974ms)
+  ✔ 40. Stale response guard prevents 501 context from overwriting 502 (0.3746ms)
+  ✔ 41. No order recreation after resume failure (0.4385ms)
+  ✔ 42. Responsive 360px layout supported (0.3358ms)
+  ✔ 43. Responsive 768px layout supported (0.2504ms)
+  ✔ 44. Responsive 1440px desktop layout supported (0.2594ms)
+  ✔ Flow A: Cart A+B+C -> Order 501 contains A+B -> Resume shows A+B, C remains in cart (0.4372ms)
+  ✔ Flow B: PayOS Order 501 transitions to COD with 200 APPLIED -> same Order.id=501 (1.7006ms)
+  ✔ Flow C: Transition returns 202 VERIFYING -> retains intent, no success yet (0.5286ms)
+  ✔ Flow D: Transition request timeout -> preserves intent and same key for safe retry (481.3141ms)
+  ✔ Flow E: Transition races with payment -> backend returns 409 PAYMENT_REQUIRES_REVIEW (2.9584ms)
+  ✔ Flow F: Order already PAID -> eligibility blocks transition POST (1.6754ms)
+  ✔ Flow G: Order CANCELLED -> eligibility blocks transition and resurrection (1.7079ms)
+  ✔ Flow H: Non-owner User A attempts access -> backend returns 403 NOT_ORDER_OWNER (355.7282ms)
+  ✔ FE057-R1-01: Real CheckoutPage renders authoritative shippingAddress snapshot without split fields (92.3397ms)
+  ✔ FE057-R1-01 Preservation: NEW_CHECKOUT mode maintains editable address form inputs (125.4669ms)
+  ✔ FE057-R1-02: Transition PayOS->COD with historical CANCELLED attempt renders COD UI, not "Đã hủy" (98.0185ms)
+  ✔ FE057-R1-02 Historical Matrix: Current COD + PayOS EXPIRED renders current COD UI (98.9668ms)
+  ✔ FE057-R1-02 Historical Matrix: Current COD + PayOS FAILED renders current COD UI (76.2264ms)
+  ✔ FE057-R1-02 Conflict Priority: Current COD + PayOS NEEDS_REVIEW renders review notice, NOT clean COD (77.6478ms)
+  ✔ FE057-R1-02 Late Payment Safety: Current COD + PayOS PAID renders review/conflict alert, NOT normal COD (78.6878ms)
+  ✔ FE057-R1-02 Unresolved Safety: Current COD + PayOS CREATING renders preparing state, NOT clean COD (73.8186ms)
+  ✔ FE057-R1-02 Unresolved Safety: Current COD + PayOS PENDING renders confirming state, NOT clean COD (76.746ms)
+  ✔ FE057-R1-02 FIX-004 Control Case: Current PAYOS_VIETQR + CANCELLED still renders PayOS cancelled UI (76.5652ms)
+  ✔ FE057-R1-02 Native COD Preservation: Native COD Order without payment attempt renders clean COD UI (78.4802ms)
+  ✔ FE057-R1-02 GET Error Safety: Payment GET error on COD order displays verification error, no false success (168.7006ms)
+  ✔ FE057-R1-02 Direct & Reload Reconstructability: /order-success/:id reconstructs state purely from route param and backend (202.4925ms)
+  ✔ FE057-R1-03 Canonical: Reopen with stateVersion=8 & eligible=false recovers VERIFYING op with original K1 and version=7 (346.8953ms)
+  ✔ FE057-R1-03 Backend-Only Authority: Recovery succeeds without pre-existing sessionStorage (161.6734ms)
+  ✔ FE057-R1-03 Storage Mismatch: Authoritative backend durable operation overrides stale sessionStorage (147.677ms)
+  ✔ FE057-R1-03 Retry Delay Safety: retryAfterSeconds > 0 disables recovery action (175.7028ms)
+  ✔ FE057-R1-03 Terminal Operation Cleanup: Terminal operation clears session intent and hides recovery UI (106.9074ms)
+  ✔ FE057-R1-03 Recovery Response Matrix: 200 APPLIED navigates to order-success and clears storage (104.0277ms)
+  ✔ FE057-R1-03 Recovery Double Click Guard: Rapid duplicate recovery clicks trigger only one POST (108.2303ms)
+  ✔ FE057-R1-03 Recovery Response Matrix: 202 again retains intent and respects updated retryAfterSeconds (173.6241ms)
+  ✔ FE057-R1-03 Recovery Response Matrix: 503/504/timeout safely retains intent for subsequent retry (106.0729ms)
+  ✔ FE057-R2-01: Lost Response Recovery (Section 15): Retry triggers GET first, no blind POST, recovers K1 and version 7 (311.2356ms)
+  ✔ FE057-R2-02: APPLIED After Lost Response (Section 16): GET returns APPLIED -> NO second POST, navigates to success (216.233ms)
+  ✔ FE057-R2-03: Recovery GET Failure (Section 17): 503 on context recovery preserves intent and triggers NO transition POST (331.1664ms)
+  ✔ FE057-R2-04: Ambiguous Failure Matrix: 502 Bad Gateway triggers GET-before-retry recovery flow (668.8268ms)
+  ✔ FE057-R2-05: Ambiguous Failure Matrix: 503 Service Unavailable triggers GET-before-retry recovery flow (344.1715ms)
+  ✔ FE057-R2-06: Ambiguous Failure Matrix: 504 Gateway Timeout triggers GET-before-retry recovery flow (316.2758ms)
+  ✔ FE057-R2-07: Ambiguous Failure Matrix: Network timeout / connection drop triggers GET-before-retry recovery flow (219.0339ms)
+  ✔ FE057-R3-01: Recovery GET 403 (Section 21) clears protected snapshot, controls, and triggers NO POST (368.1805ms)
+  ✔ FE057-R3-02: Recovery GET 401 (Section 22) clears protected snapshot, controls, and shows auth message (386.9754ms)
+  ✔ FE057-R3-03: Recovery GET 404 (Section 23) clears protected snapshot, controls, and shows not-found message (432.8987ms)
+  ✔ FE057-R3-04: Cart Preservation (Section 24): Recovery 403 clears Order A+B but preserves Cart item C (367.8637ms)
+  ✔ FE057-R3-05: Stale Security Response (Section 25): Delayed 501 403 does NOT clear Order 502 context (369.1523ms)
+  ✔ FE057-R3-06: Transient Failure Control (Section 26): Recovery 503 retains safe recovery state, does not clear snapshot (352.2576ms)
+  ✔ FE057-R3-07: Initial GET Security Matrix (Section 34): 401, 403, 404 on initial load clear snapshot and show distinct errors (467.6095ms)
+  ✔ FE057-R8-01 CRITICAL REPRODUCTION: Order #120 resumed checkout displays subtotal 1.210.000, voucher -1.000, total 1.209.000 (NOT subtotal 1.209.000) (78.1116ms)
+  ✔ FE057-R8-02 Price Matrix Cases 1-6: Various voucher, shipping, quantity, and multi-item snapshot calculations (261.3836ms)
+  ✔ FE057-R8-03 Price Matrix Cases 7-11: Explicit order.subtotal contract, missing snapshot safe fallback, no reprice (229.4013ms)
+  ✔ FE057-R8-04 Price Matrix Cases 12-14: PayOS MOCK badge preservation, transition to COD, reload consistency (144.0016ms)
+  ✔ FE057-R9-01 CRITICAL REPRODUCTION: Incomplete snapshot (Item A 600k valid, Item B missing price/subtotal) renders "—", NO partial sum 600.000đ (88.6607ms)
+  ✔ FE057-R9-02 Adversarial Matrix Cases 3-8: Position of missing price (first, middle, all, empty, null) always renders "—" (340.5262ms)
+  ✔ FE057-R9-03 Adversarial Matrix Cases 10-13: Authoritative order.subtotal and valid zero semantics (262.8963ms)
+  ✔ FE057-R9-04 Adversarial Matrix Cases 14-23: Numeric validation (negative, NaN, invalid quantity, strings) (504.0654ms)
+  ✔ FE057-R9-05 Adversarial Matrix Cases 27-32: Catalog price immunity & No mutation on incomplete snapshot (135.9505ms)
+  ✔ Resume hiển thị điểm đã lưu và mã đơn nội bộ, không lấy điểm từ giỏ hoặc hồ sơ hiện tại (166.3997ms)
+  ✔ Resume giữ số điểm 0 thực tế và biểu diễn trường lịch sử thiếu là chưa biết (230.2035ms)
+  ✔ FIX059: radio COD/PayOS giống checkout, giữ snapshot chỉ đọc; chọn radio chưa gọi backend (171.408ms)
+  ✔ FIX059: xác nhận COD→PayOS gửi đúng đích/version và đi trang QR cùng Order.id (114.256ms)
+  ✔ FIX059: COD→PayOS double click chỉ gửi một mutation (143.1798ms)
+  ✔ FIX059: mất response đổi sang PayOS phải GET recovery, không gửi POST thứ hai khi APPLIED (156.7794ms)
+  ✔ FIX059: backend khóa đổi phương thức thì radio PayOS bị khóa; không tự giả thành công (93.1671ms)
+  ✔ FIX059: APPLIED thiếu snapshot không được dùng Order giả để báo thành công (100.5705ms)
+✔ FIX-057 — Resume Unpaid Checkout & Safe Payment Transition (12028.8452ms)
+▶ FIX-058 — Development Mock PayOS and Full Checkout Payment Testing
+  ▶ 1. Environment Detection & Authority
+    ✔ 1.1. orderApi provides getPaymentEnvironment wrapper calling /payment/environment (7.5832ms)
+    ✔ 1.2. orderApi provides triggerMockAction wrapper calling /dev/mock-payos/orders/:id/actions with Idempotency-Key (5.9706ms)
+    ✔ 1.3. QRPaymentPage fetches environment from backend without localStorage/query overrides (1.4495ms)
+    ✔ 1.4. Fail-closed fallback: environment error sets UNKNOWN state and does NOT fallback to REAL mode (1.5364ms)
+    ✔ 1.5. resolvedPaymentMode and isMockMode are derived strictly from verified facts with fail-closed checks (0.9792ms)
+  ✔ 1. Environment Detection & Authority (26.5077ms)
+  ▶ 2. Safe Mock Payment Page & No Real QR
+    ✔ 2.1. Displays clear safety banner: CHẾ ĐỘ THANH TOÁN MÔ PHỎNG — KHÔNG CHUYỂN TIỀN THẬT (1.068ms)
+    ✔ 2.2. In MOCK mode, does NOT render payable QRCodeSVG containing live VietQR payload (0.6891ms)
+    ✔ 2.3. Does NOT link to external PayOS checkoutUrl unless strictly verified in REAL mode (0.6333ms)
+    ✔ 2.4. In MOCK mode, replaces bank logos with safe sandbox notice (0.6197ms)
+    ✔ 2.5. Displays mockProviderStatus badge when present from backend facts (1.5406ms)
+  ✔ 2. Safe Mock Payment Page & No Real QR (5.8142ms)
+  ▶ 3. Admin Simulation Controls & Idempotency
+    ✔ 3.1. MockPayOSControls is guarded by simulationControlsAllowed prop/flag (1.4602ms)
+    ✔ 3.2. Customer with simulationControlsAllowed=false cannot see simulation panel (2.5081ms)
+    ✔ 3.3. Scenarios allowlist contains exact approved scenarios from API_CHANGES.md (1.2698ms)
+    ✔ 3.4. Simulation action request sends only scenario in body without client amount or fake status (4.2694ms)
+    ✔ 3.5. Idempotency: getOrCreateMockActionKey generates UUID and reuses for same orderId + scenario (2.6053ms)
+    ✔ 3.6. clearStoredMockActionIntent safely clears key for order (2.0917ms)
+    ✔ 3.7. In-flight guard prevents double-click on simulation buttons (1.5404ms)
+    ✔ 3.8. Does NOT perform client-side fake PAID: waits for backend response and calls onActionApplied (4.2776ms)
+  ✔ 3. Admin Simulation Controls & Idempotency (22.6721ms)
+  ▶ 4. Checkout Resume & Navigation Preservation
+    ✔ 4.1. Navigation from QR page to Checkout preserves internal orderId: /checkout?orderId={id} (0.5975ms)
+    ✔ 4.2. Return to checkout link on QR page navigates to /checkout?orderId={id} with clear label and without calling cancel API (0.3878ms)
+    ✔ 4.3. Checkout resume mode detects orderId from query parameter (0.4654ms)
+    ✔ 4.4. Checkout resume loads authoritative snapshot from /orders/{id}/checkout-context (0.2921ms)
+    ✔ 4.5. Snapshot displays order items and prices as read-only from Order snapshot (0.6421ms)
+    ✔ 4.6. Resume does NOT create duplicate order and does NOT restore items to cart (0.3633ms)
+    ✔ 4.7. PayOS MOCK -> COD transition uses same Order.id and FIX-057 transition endpoint (0.3379ms)
+  ✔ 4. Checkout Resume & Navigation Preservation (3.7301ms)
+  ▶ 5. OrderSuccess, OrderDetail & AdminPayments Metadata
+    ✔ 5.1. OrderSuccessPage displays "Thanh toán thành công mô phỏng" when isPaid && isMockMode (0.9883ms)
+    ✔ 5.2. OrderSuccessPage displays mock badge in non-paid status when isMockMode (0.3858ms)
+    ✔ 5.3. OrderDetailPage renders MOCK badge and mockProviderStatus in Payment Details column (0.4456ms)
+    ✔ 5.4. AdminPaymentsPage maps paymentMode and mockProviderStatus from backend response (0.6121ms)
+    ✔ 5.5. AdminPaymentsPage renders MOCK badge in transaction row (0.4947ms)
+  ✔ 5. OrderSuccess, OrderDetail & AdminPayments Metadata (3.4799ms)
+  ▶ 6. Security & Error Handling
+    ✔ 6.1. 401 Unauthorized clears protected snapshot and prompts login (0.5075ms)
+    ✔ 6.2. 403 Forbidden clears protected snapshot and shows access denied message (0.326ms)
+    ✔ 6.3. 404 Not Found clears protected snapshot and shows not found message (0.3401ms)
+    ✔ 6.4. Mock controls handle 409, 502, 503, 504 and network errors gracefully (0.495ms)
+  ✔ 6. Security & Error Handling (2.2846ms)
+  ▶ 7. Responsive Design & Layout Preservation
+    ✔ 7.1. QRPaymentPage maintains max-w-[540px] centered card with responsive paddings (p-6 sm:p-8) (0.5423ms)
+    ✔ 7.2. MockPayOSControls fits within max-w-[540px] and uses grid-cols-1 sm:grid-cols-2 (0.6454ms)
+    ✔ 7.3. No changes to global theme, typography, navbar, or footer styles (0.4751ms)
+  ✔ 7. Responsive Design & Layout Preservation (2.0276ms)
+  ▶ 8. Full Checkout Flow & Runtime Execution
+    ✔ 8.1. Flow: Cart (A, B, C) -> Order 501 (A, B) -> MOCK PayOS -> Resume -> COD (1.3653ms)
+    ✔ 8.2. Admin simulation action idempotency and replay fresh snapshot (2.0092ms)
+    ✔ 8.3. 5-click rapid duplicate simulation trigger is throttled by in-flight guard (60.1934ms)
+    ✔ 8.4. Clear faults scenario is available in allowlist (2.6574ms)
+  ✔ 8. Full Checkout Flow & Runtime Execution (76.6602ms)
+  ▶ 9. FIX-058 R1 Fail-Closed Environment Remediation & Runtime Scenarios
+    ✔ 9.0. CRITICAL REPRODUCTION TEST: Environment 503 -> UNKNOWN, No QR, No PayOS link, No simulation controls, Visible error, Retry works, Order preserved (10.075ms)
+    ✔ 9.1. Environment chưa load (LOADING) -> isUnknownMode is true, blocks QR and link (0.4245ms)
+    ✔ 9.2. Environment 503 -> UNKNOWN, sets explicit error message without fallback to REAL (1.6914ms)
+    ✔ 9.3. Environment timeout -> UNKNOWN state handled by catch block (1.5522ms)
+    ✔ 9.4. Environment unreachable (Network failure) -> UNKNOWN state (0.3955ms)
+    ✔ 9.5. Environment 401/403 -> UNKNOWN state, no fallback to REAL (0.3687ms)
+    ✔ 9.6. Response missing paymentMode (null / empty) -> UNKNOWN state (0.5401ms)
+    ✔ 9.7. Response paymentMode invalid enum (e.g. SANDBOX, TEST) -> UNKNOWN state (1.7265ms)
+    ✔ 9.8. Response metadata conflict (env MOCK vs payment REAL) -> UNKNOWN state (0.7654ms)
+    ✔ 9.9. Order/Payment metadata conflict (env REAL vs order MOCK) -> fail-closed to UNKNOWN (1.1457ms)
+    ✔ 9.10. Environment MOCK valid -> isMockMode true, renders mock QR placeholder (4.8259ms)
+    ✔ 9.11. Environment REAL valid -> isRealMode true, allows REAL payment UI (4.9598ms)
+    ✔ 9.12. MOCK mode never renders QRCodeSVG or external checkoutUrl (1.0389ms)
+    ✔ 9.13. UNKNOWN mode never renders external PayOS URL even if checkoutUrl is in payment fixture (0.4673ms)
+    ✔ 9.14. UNKNOWN mode does not render ADMIN simulation controls (0.7429ms)
+    ✔ 9.15. Customer with simulationControlsAllowed=false cannot see simulation controls (0.4842ms)
+    ✔ 9.16. UNKNOWN mode displays clear fail-closed alert message: Chưa thể xác minh môi trường thanh toán... (0.5503ms)
+    ✔ 9.17. Retry button triggers environment re-verification calling orderApi.getPaymentEnvironment (1.2245ms)
+    ✔ 9.18. Retry failure keeps UNKNOWN state intact (8.7872ms)
+    ✔ 9.19. Retry success to MOCK switches mode to MOCK and displays safe placeholder (0.6246ms)
+    ✔ 9.20. Retry success to REAL switches mode to REAL and displays payable link (0.4611ms)
+    ✔ 9.21. handleCheckPayment when UNKNOWN triggers environment re-verification (0.4659ms)
+    ✔ 9.22. Late response from Order 501 does not overwrite Order 502 (currentOrderIdRef & generation guard) (0.4856ms)
+    ✔ 9.23. Late response after component unmount is safely ignored (isMountedRef guard) (0.3523ms)
+    ✔ 9.24. Transient 502/503/504 error preserves order snapshot and does not mutate cart or orderId (2.8231ms)
+    ✔ 9.25. 401/403/404 order authorization errors clear protected state without leaking data (0.419ms)
+    ✔ 9.26. No duplicate order or payment mutations are created during retry (0.3056ms)
+    ✔ 9.27. No request loop or timer leak on UNKNOWN state (0.2968ms)
+  ✔ 9. FIX-058 R1 Fail-Closed Environment Remediation & Runtime Scenarios (52.3407ms)
+  ▶ 10. R2-FE-001 Protected Order/Payment State Leak & Authorization Rendering
+    ✔ 10.0. CRITICAL R2 REPRODUCTION: Route 501 -> 502 with 403 Forbidden clears Order 501 state, orderCode #880501, 1.251.501 VND, links & 0 mutation (462.4681ms)
+    ✔ 10.1. Route switch 501 -> 502 with 401 Unauthorized clears Order 501 state and prompts login (139.2582ms)
+    ✔ 10.2. Route switch 501 -> 502 with 404 Not Found clears Order 501 state and renders not found (153.4837ms)
+    ✔ 10.3. Route switch 501 -> 502 with 200 OK renders authoritative Order 502 data without bleed (167.0555ms)
+    ✔ 10.4. Same Order Payment 401/403 clears payment state and displays error (107.3578ms)
+    ✔ 10.5. Same Order Payment 404 triggers safe recovery POST with same orderId and idempotent key (76.9481ms)
+    ✔ FIX-059: empty HTTP 200 payment body creates one link for the same Order (188.541ms)
+    ✔ 10.6. Late response from Order 501 arriving after switch to 502 is discarded by generation guard (312.0543ms)
+    ✔ 10.7. Late 403 error from Order 501 arriving after switch to 502 does NOT overwrite 502 (351.843ms)
+    ✔ 10.8. Component unmount during in-flight fetch safely aborts with zero errors (isMountedRef guard) (80.4297ms)
+    ✔ 10.9. Dual Protection: Environment UNKNOWN combined with Order 403 blocks both PayOS links and QR (113.0403ms)
+    ✔ 10.10. Environment MOCK combined with Order 403 does not render simulation panel or placeholder (60.5278ms)
+    ✔ 10.11. Same-order transient 503 preserves order snapshot and does not clear recovery context (154.5255ms)
+    ✔ 10.12. Initial location.state from foreign orderId is discarded at initialization (113.2634ms)
+  ✔ 10. R2-FE-001 Protected Order/Payment State Leak & Authorization Rendering (2489.0268ms)
+  ▶ 11. R3-FE-001 Polling Authorization Failure & State Lifecycle
+    ✔ 11.0. CRITICAL R3 REPRODUCTION: Polling receives HTTP 403 -> clears Order 501, Payment 501 (#880501, 1.251.501 VND, QR, PayOS links), stops timer, displays role="alert", 0 mutation (180.6479ms)
+    ✔ 11.1. Polling receives HTTP 401 Unauthorized -> clears protected state, stops timer, prompts login (141.8318ms)
+    ✔ 11.2. Polling receives HTTP 404 Not Found -> clears protected state, stops timer, shows not found (170.8442ms)
+    ✔ 11.3. Polling payment endpoint receives 401/403 -> clears payment state, stops timer, displays error (166.9813ms)
+    ✔ 11.4. Polling payment endpoint receives 404 -> clears payment state (145.6991ms)
+    ✔ 11.5. Polling transient 503 on same order preserves order snapshot and does NOT stop polling (161.7867ms)
+    ✔ 11.6. Polling transient timeout/network error on same order preserves snapshot (233.4719ms)
+    ✔ 11.7. Polling receives legitimate timeRemainingSeconds countdown update (278.4362ms)
+    ✔ 11.8. Polling receives PAID status -> navigates to /order-success/:id and cancels timer (94.5912ms)
+    ✔ 11.9. In-flight delayed 200 arriving AFTER polling 403 failure is REJECTED by generation epoch guard (232.6785ms)
+    ✔ 11.10. Delayed 403 error from old route does NOT clear active new order (198.8236ms)
+    ✔ 11.11. Component unmount during polling clears interval and leaves zero dangling timers (106.046ms)
+    ✔ 11.12. Foreign orderId returned in polling response is rejected and clears state (406.6541ms)
+  ✔ 11. R3-FE-001 Polling Authorization Failure & State Lifecycle (2523.5717ms)
+  ▶ 12. R4-FE-001 Cross-Request Authorization Invalidation & Race Matrix (Cases A–J)
+    ✔ 12.0. CRITICAL R4 REPRODUCTION (Case A): Manual check pending -> Polling 403 revokes auth -> Delayed manual PAID discarded -> NO success navigation, NO resurrection, NO mutation (589.4428ms)
+    ✔ 12.1. Case B: Polling in-flight -> Manual returns 403 -> Polling delayed returns PAID -> No state resurrection, no navigation (311.3945ms)
+    ✔ 12.2. Case C: Initial fetch in-flight -> Poll gets 403 -> Initial fetch delayed returns 200 -> Discarded (214.5853ms)
+    ✔ 12.3. Case D: Order 501 delayed response arriving after route switch to 502 does NOT affect Order 502 (217.5408ms)
+    ✔ 12.4. Case E: Payment endpoint 403 revokes authorization even if Order fetch was pending (158.9683ms)
+    ✔ 12.5. Case F: Component unmounts while request is in-flight -> 0 navigation, 0 side-effects (1087.2477ms)
+    ✔ 12.6. Case G: Explicit retry after 403: retry 403 remains blocked, fresh retry 200 restores authorized data (353.0887ms)
+    ✔ 12.7. Case H: Concurrent manual check and polling both return PAID -> Navigates exactly once (213.618ms)
+    ✔ 12.8. Case I: Environment success does NOT override lost Order authorization (184.7635ms)
+    ✔ 12.9. Case J: Rapid double-click on check payment is throttled by in-flight guard (335.7417ms)
+  ✔ 12. R4-FE-001 Cross-Request Authorization Invalidation & Race Matrix (Cases A–J) (3670.8561ms)
+  ▶ 13. R5-FE-001 Polling Reauthorization Recovery & Lifecycle (Cases A–O)
+    ✔ 13.0. CRITICAL R5 REPRODUCTION (Case A): Polling receives 403 -> Explicit retry succeeds (200/PENDING) -> Polling automatically resumes -> Next tick discovers PAID -> Navigates to /order-success/501 (0 duplicate timer, 0 mutation) (738.1645ms)
+    ✔ 13.1. Case B: Polling 403 -> Retry 403 -> No polling restart, alert remains (289.87ms)
+    ✔ 13.2. Case C: Polling 403 -> Retry 503 -> No unauthorized restore, no polling restart (266.5656ms)
+    ✔ 13.3. Case D: Polling 403 -> Retry 200/PAID -> Direct success navigation, no unnecessary polling (177.6355ms)
+    ✔ 13.4. Case E & F: Old epoch 403 arriving after new reauthorized session does NOT invalidate new session (290.1449ms)
+    ✔ 13.5. Case G & H: Reauthorized 501 -> Route change to 502 cleans up 501 polling cleanly with 0 timer leak (464.0645ms)
+    ✔ 13.6. Case I: Rapid repeated double-click on retry -> Exactly ONE active polling interval (751.6799ms)
+    ✔ 13.7. Case K & O: Polling discovers terminal PAID status -> interval stops immediately with zero leaks (570.8451ms)
+  ✔ 13. R5-FE-001 Polling Reauthorization Recovery & Lifecycle (Cases A–O) (3591.642ms)
+  ▶ 14. R6-FE-001 Polling Terminal State Lifecycle & Interval Cleanup (Cases 14.0–14.7)
+    ✔ 14.0. CRITICAL R6 REPRODUCTION: Initial Polling -> Order CANCELLED stops timer immediately, 0 active intervals, callback count does not increment on subsequent ticks, 0 extra GET requests (246.5741ms)
+    ✔ 14.1. Recovered Polling -> CANCELLED: Polling 403 -> Retry 200/PENDING -> New polling active -> Poll receives CANCELLED -> Timer stopped immediately, 0 active interval (289.9975ms)
+    ✔ 14.2. Initial Polling -> Order FAILED stops polling timer immediately with 0 dangling timers (211.6376ms)
+    ✔ 14.3. Initial Polling -> Order EXPIRED stops polling timer immediately with 0 dangling timers (153.5722ms)
+    ✔ 14.4. Initial Polling -> Payment CANCELLED / EXPIRED / FAILED stops polling timer immediately (151.119ms)
+    ✔ 14.5. Initial Polling -> Payment method changed to non-VietQR (e.g. COD) stops VietQR polling timer immediately (183.5196ms)
+    ✔ 14.6. Valid PENDING order continues polling across multiple cycles without premature termination (91.301ms)
+    ✔ 14.7. Component unmount during terminal status clean up all resources with zero dangling timers (91.4023ms)
+  ✔ 14. R6-FE-001 Polling Terminal State Lifecycle & Interval Cleanup (Cases 14.0–14.7) (1421.5355ms)
+  ▶ 15. R7-FE-001 Polling Session Ownership & Stale Cleanup Race Matrix (Cases 15.0–15.7)
+    ✔ 15.0. CRITICAL R7 REPRODUCTION: In-flight Polling A completes after Session B started -> B remains valid, issues fresh GETs across 2+ cycles, and navigates on PAID (260.7973ms)
+    ✔ 15.1. Case B: Polling A late 200 response arriving after Session B starts is safely discarded (232.3321ms)
+    ✔ 15.2. Case C: Polling A late 503 error arriving after Session B starts does NOT display error on Session B (241.5509ms)
+    ✔ 15.3. Case D: Polling A cleanup does NOT clear Session B timer or increment Session B generation (154.5693ms)
+    ✔ 15.4. Case E: Polling A late 403 error arriving after Session B starts does NOT revoke Session B authorization (187.0277ms)
+    ✔ 15.5. Case F: Rapid concurrent manual checks create exactly ONE active polling session (152.2326ms)
+    ✔ 15.6. Case G: Session sequence A -> B -> C with delayed responses from A and B does NOT disrupt Session C (307.9628ms)
+    ✔ 15.7. Case J: Rapid route change 501 -> 502 -> 501 cleans up previous session timers with zero leaks (218.0657ms)
+  ✔ 15. R7-FE-001 Polling Session Ownership & Stale Cleanup Race Matrix (Cases 15.0–15.7) (1756.3664ms)
+  ▶ 16. R10-FE-001 Navigation vs Cancellation Verification & UI Semantics Matrix
+    ✔ 16.0. CRITICAL R10 REPRODUCTION: Navigation action renders "Quay lại checkout" with non-cancellation helper note, NOT misleading "Hủy giao dịch" (150.8635ms)
+    ✔ 16.1. Helper explanation note is appropriately contextualized to PENDING state and not rendered on terminal status (108.3417ms)
+    ✔ 16.2. Navigation preservation: Canonical orderId parameter intact on rapid view switches (92.263ms)
+  ✔ 16. R10-FE-001 Navigation vs Cancellation Verification & UI Semantics Matrix (352.5563ms)
+✔ FIX-058 — Development Mock PayOS and Full Checkout Payment Testing (16007.1785ms)
+✔ Trang chủ render đủ danh mục, chữ banner nhỏ hơn và không còn điều khiển cũ (366.6471ms)
+✔ Home production accepts array/page, rejects malformed, Newonlyactualflag and truthfulpolicies (46.6666ms)
+✔ Home500 showsretry notfakeempty; retry200[] shows honestempty; staleGET doesnotreplacecurrent (68.6091ms)
+✔ Footer actualrender keepsworkingnavigation and removesunverifiedcontacts/certification/newsletter/paymentclaims (12.9285ms)
+✔ Comparison production normalizesbadstorage, samegroup, dedupe andmax3 even rapidadds (42.9048ms)
+✔ ComparisonPage actualAPI refreshesprice/specs, Pagecatalogcompatible, missinginfo notfabricated,GET500retry (156.0313ms)
+✔ Favorite actualhookpersistsperuserIDs, guardsoldcallbacks, handlesbadstorage andfailedwrite (13.7814ms)
+✔ Share awaitsactualclipboardwrite and exposeserrors; nofalsesuccess (18.8356ms)
+✔ AI production serializessends,429 clearstate, CTAselectvariant andignoresresponseoldowner (34.2702ms)
+✔ ProductCard actualquickdetail andneedsvariant goesto detail, wishlistpersistsowner withoutfalsecart (23.5567ms)
+✔ ProductDetail share handler shows success onlyafterclipboard anderror ondeny; Review shareusesrealanchor (9.4566ms)
+✔ AI mobile actualmarkup stayswithin320/375viewport, statuslong truncates (11.201ms)
+✔ Accessory legacy pages keepfilesbutallproductimagesuseinternalvalidatedplaceholder (2.6927ms)
+✔ Comparison accepts all five categories, persists group and accessory subtype, rejects mixed selections (47.9613ms)
+✔ Comparison table renders category-specific facts from backend and filters selector by group (75.2698ms)
+✔ AI conversation renders text without product cards and keeps the next turn history (21.1718ms)
+✔ AI retains compact shopping constraints beyond six recent messages and clears them for another owner (14.0303ms)
+✔ Đơn hàng thật: phản hồi route A chậm không ghi đè route B (46.2773ms)
+✔ Đơn hàng thật: response cũ cùng ID không ghi đè trạng thái mới (4.2338ms)
+✔ Đơn hàng thật: lỗi mạng không giả thành404, retry cùng ID tải lại được (59.4728ms)
+✔ Đơn hàng thật:403 xóa snapshot được bảo vệ và không đọc payment (3.26ms)
+✔ Payment thật: GET cũ trả muộn không ghi đè xác nhận mới (2.1259ms)
+✔ Đơn hàng thật: unmount loại bỏ phản hồi đang chờ (1.2914ms)
+✔ Lịch sử thật: dùng snapshot giày đúng, tổng số lượng theo quantity, không ảnh/tên demo (5.6346ms)
+✔ Phiếu đơn CSV thật: tiếng Việt, BOM, đầy đủ snapshot và chống công thức Excel (5.027ms)
+✔ SECTION 30 & 47 — CANCELLED order with NEEDS_REVIEW payment: distinct states, no false completion (6.0201ms)
+✔ SECTION 31 & 47 — SHIPPING order with PAID payment: both displayed distinctly (3.2513ms)
+✔ SECTION 29 & 47 — Null payment with COD order: displays safe COD message, not an error (1.4764ms)
+✔ SECTION 29 & 47 — Null payment with VietQR order: displays safe no-payment message (0.3551ms)
+✔ SECTION 34 & 47 — No frontend status mutation: backend response remains single source of truth (0.2569ms)
+✔ BUG FE-4 — Distinct states: Loading, Success/Empty (200 + null), and Request Error (500) (0.4781ms)
+✔ BUG FE-4 — Retry clears paymentError and recovers payment data or empty state (0.6497ms)
+✔ BUG FE-5 — OrderDetailPage source includes safe wrapping classes for reference (1.5417ms)
+✔ FE-REMEDIATION-2 — Cancelled late-payment warning wraps long reference with break-all and overflow-wrap:anywhere (2.2534ms)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at article
+    at WarrantyRequestCard (C:/Project/Web_badminton/frontend/src/pages/ReturnRequestPage.jsx:173:32)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at article
+    at WarrantyRequestCard (C:/Project/Web_badminton/frontend/src/pages/ReturnRequestPage.jsx:173:32)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at article
+    at WarrantyRequestCard (C:/Project/Web_badminton/frontend/src/pages/ReturnRequestPage.jsx:173:32)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at article
+    at WarrantyRequestCard (C:/Project/Web_badminton/frontend/src/pages/ReturnRequestPage.jsx:173:32)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at div
+    at div
+    at div
+    at default (file:///C:/Project/Web_badminton/frontend/src/pages/OrderDetailPage.test.js:341:116)
+    at OrderDetailPage
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+✔ CTA QR production dùng ID nội bộ và chặn loading, lỗi dữ liệu, đã trả tiền hoặc cần đối soát (4230.8458ms)
+✔ CTA QR production không khôi phục đơn đã hủy, COD hoặc trạng thái đã xử lý (1287.8497ms)
+✔ RMA thực: chọn đúng line/qty/serial; loại phụ kiện, hết hạn, active và dòng không đủ điều kiện (3.6323ms)
+✔ RMA form SSR thực chỉ có eligibleline, đúng size/màu/deadline/maxqty và khóa snapshot (9.756ms)
+✔ RMA card SSR thực dùng snapshot và bốn trạng thái, không ảnh/timeline/số liệu demo hoặc hoàn tiền giả (10.9514ms)
+✔ RMA upload lỗi: giữ mã phiếu thật; retry chỉ gửi ảnh, không POST phiếu lần nữa (15.8545ms)
+✔ RMA mất phản hồi: retry giữ đúng payload line/qty/reason/serial dù UI đổi, nhận replay cùngID (5.5275ms)
+✔ RMA pending: nhấp liên tiếp chỉ tạo một phiếu; lỗi dứt điểm mở sửa form (5.8576ms)
+✔ RMA mới tạo không bị GET danh sách cũ trả muộn xóa khỏi màn hình (2.0313ms)
+✔ RMA evidence production kiểm JPG/PNG≤5MiB, multipart theoID và GET authenticatedblob (2.026ms)
+✔ CTA bảo hành production chỉ choCOMPLETED với eligibleline; đủremaining nhưng ineligible/active vẫn chặn (0.5317ms)
+✔ Eligibility GET production chặn stale route, lọc cờ eligible và giữ lý do server (16.6023ms)
+✔ Chi tiết đơn hiển thị điểm và tiền giảm đã lưu, giữ nguyên tổng thanh toán máy chủ (28.1671ms)
+✔ Chi tiết đơn không tự suy ra điểm hoặc tiền giảm từ các trường còn thiếu (152.7865ms)
+✔ FIX-002 TEST 1 (Section 33) — 201: Payment link created after orderId exists, separate UUID, no amount sent (33.5564ms)
+✔ FIX-002 TEST 2 (Section 34) — 200: Existing payment link reused, same order, no new order (2.125ms)
+✔ FIX-002 TEST 3 (Section 35) — 202: CREATING with null checkoutUrl, same order, same key, no new order (5.5892ms)
+✔ FIX-002 TEST 4 (Section 36) — Timeout on payment-link: order & payment key retained, retry uses same order and key, NO new order (7.0716ms)
+✔ FIX-002 TEST 5 (Section 37) — Reload after unresolved payment: recover same order & key, GET payment, NO createOrder (1.0912ms)
+✔ FIX-002 TEST 6 (Section 38) — Error handling (409, 502, 503, 504): no new order, controlled error message, same order retained (1.143ms)
+✔ FIX-002 TEST 7 (Section 39) — COD Regression: COD must not call payment-link, navigates directly to order-success (10.5178ms)
+✔ QR restoration: manual check waits for verified environment (LOADING) (2.1472ms)
+✔ QR restoration: manual check waits for verified environment (ERROR) (2.033ms)
+✔ QR restoration: manual check never creates link for COD/PENDING (12.7605ms)
+✔ QR restoration: manual check never creates link for PAYOS_VIETQR/CANCELLED (1.6574ms)
+✔ Checkout thật: PAYOS_VIETQR tạo đúng một đơn và dùng đúng luồng thanh toán (18.0826ms)
+✔ Checkout thật: COD tạo đúng một đơn và dùng đúng luồng thanh toán (19.1612ms)
+✔ FIX-002 REMEDIATION TEST 8 (BUG A) — handleCheckPayment on GET 200 + null calls createPaymentLink with same orderId and same key (2.6483ms)
+✔ FIX-002 REMEDIATION TEST 9 (BUG B) — handleCheckPayment on GET CREATING calls createPaymentLink to trigger gateway query/recovery (3.0245ms)
+✔ FIX-002 REMEDIATION TEST 10 — handleCheckPayment on GET PENDING does NOT call createPaymentLink (3.1944ms)
+✔ FIX-002 REMEDIATION TEST 11 — handleCheckPayment double-click guard prevents duplicate POST calls (161.2751ms)
+✔ FIX-002 REMEDIATION TEST 12 — fetchOrder on initial load handles GET 200 + null with single controlled call and NO loop (1.9895ms)
+✔ FIX-002 REMEDIATION TEST 13 — CREATING recovers once on the same order and key without a loop (2.6065ms)
+✔ FIX-002 REMEDIATION TEST 14 — Polling stale response on route switch O1 -> O2 does NOT update order state (2.0951ms)
+✔ FIX-002 REMEDIATION TEST 15 — Polling stale PAID response after route switch O1 -> O2 MUST NOT navigate to /order-success/O1 (101.2603ms)
+✔ FIX-002 REMEDIATION TEST 16 — Polling stale payment response MUST NOT update payment or leak checkoutUrl to O2 (0.7002ms)
+✔ FIX-002 REMEDIATION TEST 17 — Polling legitimate response for CURRENT order O1 updates state and navigates on PAID (0.741ms)
+✔ FIX-002 REMEDIATION TEST 18 — Polling delayed response arriving after UNMOUNT is safely discarded with 0 side-effects (0.5135ms)
+✔ FIX-002 REMEDIATION TEST 19 (LIFECYCLE FIX) — Polling: setOrder(latest) does NOT invalidate effect, subsequent payment PENDING response updates payment state and checkoutUrl (1.9504ms)
+✔ FIX-002 REMEDIATION TEST 20 (LIFECYCLE FIX) — Polling: setOrder(latest) does NOT invalidate effect, subsequent payment PAID response navigates to /order-success/O1 (2.0907ms)
+✔ DEMO COD REMEDIATION TEST 1 — handleCheckPayment on GET 200 + null calls createPaymentLink ZERO times in demo mode (2.4385ms)
+✔ DEMO COD REMEDIATION TEST 2 — handleCheckPayment on GET CREATING calls createPaymentLink ZERO times in demo mode (1.8556ms)
+✔ DEMO COD REMEDIATION TEST 3 — fetchOrder on initial load with GET 200 + null calls createPaymentLink ZERO times in demo mode (1.5582ms)
+✔ Tải mã QR đang hiển thị ra SVG, giữ nguyên dữ liệu và giải phóng blob URL (7.3709ms)
+✔ Ngày sinh gửi trong payload và giữ nguyên sau khi form được dựng lại (1230.7843ms)
+✔ Đang tải thì khóa ngày sinh và nút lưu; xóa ngày gửi null rõ ràng (53.6752ms)
+✔ Tải hồ sơ lỗi thì không được gửi form làm mất ngày sinh cũ (52.6072ms)
+✔ Giới tính nullable giữ nguyên sau reload, thay đổi đúng canonical và xóa explicitnull (48.087ms)
+✔ Đổi mật khẩu thành công clearlocal và chuyểnlogin với thông báo thu hồi phiên (616.3514ms)
+✔ Profile không hứa xác thực điện thoại, bảng xếp hạng hoặc lịch sử mật khẩu khi Backend chưa có (49.7286ms)
+✔ Địa chỉ thật gửi note/tag canonical hoặc null, không thêm quận huyện (3.6611ms)
+✔ Password response sauunmount không logoutaccountmới; request giữAuthorizationđãchụp (235.1704ms)
+▶ STEP 1 — COD Demo Verification Suite
+  ✔ FIX-019 TEST 1: COD Unpaid with null payment renders complete snapshot (customer, phone, address, note, items, options, costs) (551.8592ms)
+  ✔ FIX-019 TEST 2: COD with historical PayOS CANCELLED attempt renders COD UI & complete snapshot, NOT PayOS cancelled (174.0312ms)
+  ✔ FIX-019 TEST 3: Order GET 401/403/404 does NOT leak snapshot from navigation state (241.2627ms)
+  ✔ Checkout mặc định COD và cho phép chọn QR động PayOS (640.2497ms)
+  ✔ Checkout chỉ nhận COD hoặc PayOS, không chặn QR bằng quy tắc demo cũ (0.9141ms)
+  ✔ FIX-048 TEST 3: Mount QRPaymentPage (PENDING + payment null) triggers exactly 0 POST payment-link calls (160.7919ms)
+  ✔ FIX-048 TEST 4: QRPaymentPage on CREATING payment + manual check/retry calls ZERO POST payment-link (254.1569ms)
+  ✔ FIX-048 TEST 5: QRPaymentPage with checkoutUrl/qrPayload has NO payable QR and NO external PayOS link (110.5396ms)
+  ✔ FIX-048 TEST 6: QRPaymentPage return checkout link preserves internal orderId (303.6609ms)
+  ✔ FIX-048 TEST 7: QRPaymentPage on 401/403/404 does NOT expose order snapshot or payment links (153.8782ms)
+  ✔ QR đã bật: hiển thị QR và link PayOS sau khi Backend xác minh môi trường REAL (174.0895ms)
+  ✔ Terminal PayOS attempts never render stale checkout links or payable QR (2176.6385ms)
+  ✔ PayOS cancel return blocks stale QR and routes same order to backend verification (2052.8303ms)
+  ✔ FIX-010 TEST 1: RacketGripDetailPage combo button is disabled and does NOT contain fake product 99901 (1.5478ms)
+✔ STEP 1 — COD Demo Verification Suite (7196.1248ms)
+▶ STEP 2 — FIX-026 & FIX-036 Verification Suite
+  ✔ FIX-026: No fake email generation string exists in codebase (2.2604ms)
+  ✔ FIX-026: RegisterPage blocks pure phone numbers, invalid emails, empty emails, password mismatch (200.8311ms)
+  ✔ FIX-026: LoginPage register tab requires valid email and blocks phone numbers (280.2082ms)
+  ✔ FIX-026: Production loginDestination preserves Buy Now state and rejects external redirects (4.5953ms)
+  ✔ FIX-036: AdminDashboardPage displays exact metric labels matching API data semantics (410.039ms)
+  ✔ FIX-036: AdminDashboardPage properly formats zero values without displaying loading state (30.1114ms)
+  ✔ FIX-036: AdminDashboardPage displays server error without masking it with fake data (150.1999ms)
+✔ STEP 2 — FIX-026 & FIX-036 Verification Suite (2195.127ms)
+✔ Form danh mục 1 gửi đủ thông số và không chạm ảnh/trạng thái (10.2838ms)
+✔ Form danh mục 2 gửi đủ thông số và không chạm ảnh/trạng thái (1.3377ms)
+✔ Form danh mục 3 gửi đủ thông số và không chạm ảnh/trạng thái (0.5745ms)
+✔ Form danh mục 4 gửi đủ thông số và không chạm ảnh/trạng thái (0.853ms)
+✔ Form danh mục 5 gửi đủ thông số và không chạm ảnh/trạng thái (0.5363ms)
+✔ Không tự tạo SKU, giá, tồn kho hoặc ảnh cho sản phẩm mới (5.3676ms)
+✔ Đổi tồn kho gửi snapshot, giữ tồn kho không ghi đè từ danh sách cũ (1.2916ms)
+✔ Kiểm tra giá nguyên, giới hạn tồn kho, danh mục và sáu hãng trước lưu (4.2158ms)
+✔ Cỡ thập phân và cỡ quần áo được giữ, cỡ legacy chưa sửa không bị ghi lại (1.3437ms)
+✔ Thông số không liên quan danh mục không bị gửi, chuỗi rỗng xóa được trường tùy chọn (1.1931ms)
+✔ Trạng thái hiển thị không suy từ tồn kho và hãng ngoài phạm vi vẫn nằm trong quản trị (9.2178ms)
+✔ Sản phẩm có biến thể: PUT giữ thông số chung, không gửi lại tổ hợp hoặc tổng kho (2.5863ms)
+✔ Thêm tổ hợp giày/vợt/quần áo đúng lựa chọn, không tự sinh tổ hợp khác hoặc SKU (1.9199ms)
+✔ Sửa kho biến thể gửi expectedStock, chặn legacy và tắt tổ hợp đang giữ chỗ (1.3692ms)
+✔ Tìm ID sản phẩm nhập Excel giữ tương thích tên, SKU, hãng và các bộ lọc (1.0411ms)
+✔ 1.1 crypto.randomUUID available -> generates valid RFC4122 v4 UUID (4.9385ms)
+✔ 1.2 randomUUID missing, getRandomValues available -> fallback generates valid RFC4122 v4 UUID (1.8362ms)
+✔ 1.3 Calling generateUUID with getRandomValues multiple times produces distinct keys (22.0882ms)
+✔ 1.4 Web Crypto completely missing -> throws controlled error and strictly does not use Math.random (1.5992ms)
+✔ 1.5 Source file scan: Math.random does not exist in idempotency.js (1.3875ms)
+✔ 2. canonicalStringify is deterministic across different object key orders (0.9427ms)
+✔ 3. buildOrderPayload creates uniform payload structure matching createOrder API (1.3402ms)
+✔ TEST A — Stale 201: response for payload X when UI changed to Y does not clear cart or navigate (3.0098ms)
+✔ TEST B — Stale 200 Replay: replay response for payload X does not overwrite state of intent Y (1.2031ms)
+✔ TEST C — Non-stale Success (201/200): payload unchanged -> normal success flow (1.1829ms)
+✔ TEST D — Network timeout: preserves cart, form, and idempotency key for retry (1.3098ms)
+✔ TEST E — 409 IDEMPOTENCY_CONFLICT: preserves cart, invalidates stored key for next submission (1.3881ms)
+✔ TEST F — Synchronous double-click guard prevents duplicate intents (0.8938ms)
+✔ FIX-002: getOrCreatePaymentLinkKey produces RFC4122 v4 UUID and reuses same key for same orderId (1.2148ms)
+✔ FIX-002: Payment intent storage is completely separated from checkout idempotency storage (1.5888ms)
+✔ FIX-003: getOrCreateReconciliationKey produces valid RFC4122 v4 UUID and reuses same key for same paymentAttemptId + same reason (38.2973ms)
+✔ FIX-003: getOrCreateReconciliationKey generates new UUID when reason changes (0.6513ms)
+✔ FIX-003: Payment A key != Payment B key (2.6495ms)
+✔ FIX-003: Reconciliation key != payment-link key != order creation key (1.0872ms)
+✔ FIX-003: Synchronous double-click guard allows exactly one reconciliation dispatch (1.5148ms)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at nav
+    at div
+    at div
+    at div
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at nav
+    at div
+    at div
+    at div
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at nav
+    at div
+    at div
+    at div
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at nav
+    at div
+    at div
+    at div
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at nav
+    at div
+    at div
+    at div
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at nav
+    at div
+    at div
+    at div
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at nav
+    at div
+    at div
+    at div
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at LinkWithRef (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:10754:5)
+    at nav
+    at div
+    at div
+    at div
+    at ProductsPage (C:/Project/Web_badminton/frontend/src/pages/ProductsPage.jsx:106:84)
+    at Router (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7284:13)
+    at MemoryRouter (C:/Project/Web_badminton/frontend/node_modules/react-router/dist/development/chunk-OB3PAWPO.mjs:7194:3)
+✔ Bỏ chọn hãng từ URL viết thường hoặc viết hoa thực sự gỡ bộ lọc và đặt lại trang (156.5517ms)
+✔ Menu phụ kiện di động dẫn đến danh sách đúng loại thay vì mã mẫu cố định (6.4231ms)
+✔ Navbar đo chiều cao ban đầu, ResizeObserver và mở/đóng menu cập nhật chiều cao thực (8.8891ms)
+✔ Không có ResizeObserver vẫn đo được resize/menu; cleanup không xóa giá trị của header khác (12.6134ms)
+✔ Thanh danh mục dùng chiều cao Navbar đã đo cho vị trí sticky, giữ màu và lớp xếp chồng (15.554ms)
+✔ Chuyển trang cuộn đầu danh sách dưới đáy hai thanh điều hướng ở desktop và mobile (30.03ms)
+✔ Lọc cỡ gửi tới server trước phân trang và URL dùng trang bắt đầu từ 1 (0.1998ms)
+✔ Đổi bộ lọc hoặc sort về trang đầu, giữ các lựa chọn còn lại (0.2246ms)
+✔ Đổi danh mục bỏ bộ lọc riêng của danh mục cũ và giữ keyword/hãng (0.252ms)
+✔ Đọc liên kết danh mục cũ, không nhận nhầm bao vợt thành vợt (0.6639ms)
+✔ Tải lại URL khôi phục giá, giới tính, phụ kiện, sức chứa và khuyến mãi (0.3099ms)
+✔ Gỡ bộ lọc không để lại tham số cũ, page không hợp lệ trở về 1 (0.2083ms)
+✔ Tổng số và số trang phải lấy từ PageResponse, không lấy độ dài trang làm tổng (0.2369ms)
+✔ Kết quả rỗng giữ 0 trang, hiển thị 0–0 và trang cuối hiển thị đúng khoảng (0.2066ms)
+✔ Trang danh sách thực render được khi mở liên kết có bộ lọc (27.7592ms)
+✔ Các điều kiện lọc từ URL hiện thành chip và không nhân đôi kích cỡ (0.3484ms)
+✔ Bộ lọc thực hiển thị giày35–42 có39.5 và quần áoXS–XXL, gửi đúng size tới API (11.8071ms)
+✔ Cả5banner danh mục SSR giữdesigngradient vàkhông hotlinkảnhngoài/chứngnhậnchưaxácminh (15.6146ms)
+ℹ tests 722
+ℹ suites 28
+ℹ pass 721
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 224009.8873
+
+✖ failing tests:
+
+test at src\pages\DEMO_P1_Issues.test.js:226:1
+✖ Lịch sử COD, đã thanh toán, đang giao và đã hủy không có CTA QR tiếp tục (22.2976ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /href="\/checkout\?orderId=/. Input:
+  
+  '<div><div class="flex flex-col gap-6"><div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col"><div class="p-6 md:p-8 bg-white flex flex-col gap-5 border-b border-slate-100"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div class="flex items-center gap-3"><h2 class="text-xl font-black text-slate-900">Lịch sử đơn hàng</h2><span class="text-xs bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold">1 đơn hàng</span></div><button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-colors self-start sm:self-auto"><span>Xuất phiếu đơn hàng (CSV)</span></button></div><div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-1"><div class="relative flex-1 max-w-md"><input type="text" placeholder="Tên sản phẩm, SKU, hãng, mã đơn hoặc PayOS..." class="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner" value=""/></div><div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none"><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-[#131b2e] text-white shadow-sm">Tất cả (1)</button><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-slate-100 hover:bg-slate-200 text-slate-600">Đang xử lý (1)</button><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-slate-100 hover:bg-slate-200 text-slate-600">Đang giao (0)</button><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-slate-100 hover:bg-slate-200 text-slate-600">Đã giao (0)</button><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-slate-100 hover:bg-slate-200 text-slate-600">Đã hủy (0)</button></div></div></div><div class="w-full overflow-x-auto"><table class="w-full text-left border-collapse min-w-[800px]"><thead><tr class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider border-b border-slate-100"><th class="py-3.5 px-6 font-bold">Mã đơn &amp; Thời gian</th><th class="py-3.5 px-4 font-bold">Sản phẩm &amp; Chi tiết căng cước</th><th class="py-3.5 px-4 font-bold">Tổng thanh toán</th><th class="py-3.5 px-4 font-bold">Trạng thái</th><th class="py-3.5 px-6 text-right font-bold">Thao tác</th></tr></thead><tbody class="divide-y divide-slate-100 text-xs text-slate-700"><tr class="hover:bg-slate-50/70 transition-colors"><td class="py-4 px-6 align-top"><div class="flex flex-col gap-1"><div class="flex items-center gap-1.5"><span class="font-black text-slate-900 text-sm">#HG-17</span><button type="button" aria-label="Sao chép mã đơn #HG-17" class="text-slate-400 hover:text-slate-700 transition-colors" title="Sao chép mã đơn"></button></div><span class="text-[11px] text-slate-500 flex items-center gap-1">—</span><span class="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded w-fit mt-1 font-bold">Thanh toán khi nhận hàng (COD)</span></div></td><td class="py-4 px-4 align-top"><div class="flex items-start gap-3"><div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center p-1 shrink-0 overflow-hidden border border-slate-200"><span class="flex flex-col items-center justify-center bg-slate-100 text-slate-400 text-[9px] leading-snug w-full h-full rounded-lg"><strong>HG</strong><span>Đang cập nhật</span></span></div><div class="flex flex-col min-w-0"><span class="font-bold text-slate-900 text-xs line-clamp-1">Vợt Yonex kiểm thử</span><span class="text-[11px] text-slate-600 font-medium mt-0.5">4U-G5 • Vàng</span><span class="text-[10px] text-secondary font-bold mt-0.5"></span><span class="text-[10px] text-slate-400 mt-0.5">Số lượng: 5 sản phẩm</span></div></div></td><td class="py-4 px-4 align-top"><div class="flex flex-col"><span class="font-black text-secondary text-sm">500.000 ₫</span><span class="text-[10px] text-slate-400">Miễn phí vận chuyển</span></div></td><td class="py-4 px-4 align-top"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 font-bold text-[11px] shadow-sm"><span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>Chờ xử lý COD</span><span class="block text-[11px] text-slate-500 mt-1 leading-tight">Chờ xử lý COD</span></td><td class="py-4 px-6 align-top text-right"><div class="flex flex-col items-end gap-1.5"><button type="button" class="px-3 py-1.5 rounded-xl bg-[#131b2e] text-white hover:bg-slate-800 text-xs font-bold transition-all shadow-sm active:scale-95">Xem chi tiết</button><a href="/checkout?orderId=17">Tiếp tục thanh toán</a><button type="button" class="text-[11px] text-slate-400 hover:text-secondary transition-colors underline">Hủy đơn hàng</button></div></td></tr></tbody></table></div></div><div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"><div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200"><div class="flex items-center justify-between pb-3 border-b border-slate-100"><div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-lg bg-red-50 text-secondary flex items-center justify-center"></div><div><h3 class="text-base font-black text-slate-900">Chi tiết đơn hàng #HG-17</h3><p class="text-xs text-slate-400">—</p></div></div><button type="button" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-800"></button></div><div class="flex flex-col gap-4 text-xs"><div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-1.5"><span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Địa chỉ giao hàng</span><p class="font-bold text-slate-900"> - </p><p class="text-slate-600 leading-relaxed"></p></div><div class="border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3"><span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-slate-100">Sản phẩm trong đơn (5 sản phẩm)</span><div class="space-y-2.5 max-h-56 overflow-y-auto pr-1"><div class="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100"><div class="flex items-center gap-3 min-w-0"><span class="flex flex-col items-center justify-center bg-slate-100 text-slate-400 text-[9px] leading-snug w-12 h-12 rounded-lg bg-white border border-slate-100 shrink-0 p-1"><strong>HG</strong><span>Đang cập nhật</span></span><div class="min-w-0"><p class="font-bold text-slate-900 truncate">Vợt Yonex kiểm thử</p><div class="flex flex-wrap items-center gap-1.5 pt-0.5 "><span class="inline-block text-[11px] px-2 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">4U-G5</span><span class="inline-block text-[11px] px-2 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">Vàng</span></div><p class="text-[11px] text-slate-500 font-semibold mt-0.5">Số lượng: x2</p></div></div><div class="text-right shrink-0"><span class="font-bold text-slate-900">200.000 ₫</span><span class="block text-[10px] text-slate-400">100.000 ₫ / cái</span></div></div><div class="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100"><div class="flex items-center gap-3 min-w-0"><span class="flex flex-col items-center justify-center bg-slate-100 text-slate-400 text-[9px] leading-snug w-12 h-12 rounded-lg bg-white border border-slate-100 shrink-0 p-1"><strong>HG</strong><span>Đang cập nhật</span></span><div class="min-w-0"><p class="font-bold text-slate-900 truncate">Áo Victor kiểm thử</p><div class="flex flex-wrap items-center gap-1.5 pt-0.5 "><span class="inline-block text-[11px] px-2 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">Đen</span><span class="inline-block text-[11px] px-2 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">Size: M</span></div><p class="text-[11px] text-slate-500 font-semibold mt-0.5">Số lượng: x3</p></div></div><div class="text-right shrink-0"><span class="font-bold text-slate-900">300.000 ₫</span><span class="block text-[10px] text-slate-400">100.000 ₫ / cái</span></div></div></div><div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs"><span class="text-slate-500">Thanh toán khi nhận hàng (COD)</span><span class="font-black text-secondary text-base">500.000 ₫</span></div></div></div><div class="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-100"><button type="button" class="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">Đóng</button><a href="/orders/17">Mở trang đơn hàng</a><a href="/checkout?orderId=17">Tiếp tục thanh toán</a></div></div></div></div></div>'
+  
+      at TestContext.<anonymous> (file:///C:/Project/Web_badminton/frontend/src/pages/DEMO_P1_Issues.test.js:232:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '<div><div class="flex flex-col gap-6"><div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col"><div class="p-6 md:p-8 bg-white flex flex-col gap-5 border-b border-slate-100"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div class="flex items-center gap-3"><h2 class="text-xl font-black text-slate-900">Lịch sử đơn hàng</h2><span class="text-xs bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold">1 đơn hàng</span></div><button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-colors self-start sm:self-auto"><span>Xuất phiếu đơn hàng (CSV)</span></button></div><div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-1"><div class="relative flex-1 max-w-md"><input type="text" placeholder="Tên sản phẩm, SKU, hãng, mã đơn hoặc PayOS..." class="w-full bg-slate-50 focus:bg-white text-slate-900 text-xs pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-slate-400 outline-none transition-all shadow-inner" value=""/></div><div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none"><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-[#131b2e] text-white shadow-sm">Tất cả (1)</button><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-slate-100 hover:bg-slate-200 text-slate-600">Đang xử lý (1)</button><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-slate-100 hover:bg-slate-200 text-slate-600">Đang giao (0)</button><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-slate-100 hover:bg-slate-200 text-slate-600">Đã giao (0)</button><button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap transition-all bg-slate-100 hover:bg-slate-200 text-slate-600">Đã hủy (0)</button></div></div></div><div class="w-full overflow-x-auto"><table class="w-full text-left border-collapse min-w-[800px]"><thead><tr class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider border-b border-slate-100"><th class="py-3.5 px-6 font-bold">Mã đơn &amp; Thời gian</th><th class="py-3.5 px-4 font-bold">Sản phẩm &amp; Chi tiết căng cước</th><th class="py-3.5 px-4 font-bold">Tổng thanh toán</th><th class="py-3.5 px-4 font-bold">Trạng thái</th><th class="py-3.5 px-6 text-right font-bold">Thao tác</th></tr></thead><tbody class="divide-y divide-slate-100 text-xs text-slate-700"><tr class="hover:bg-slate-50/70 transition-colors"><td class="py-4 px-6 align-top"><div class="flex flex-col gap-1"><div class="flex items-center gap-1.5"><span class="font-black text-slate-900 text-sm">#HG-17</span><button type="button" aria-label="Sao chép mã đơn #HG-17" class="text-slate-400 hover:text-slate-700 transition-colors" title="Sao chép mã đơn"></button></div><span class="text-[11px] text-slate-500 flex items-center gap-1">—</span><span class="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded w-fit mt-1 font-bold">Thanh toán khi nhận hàng (COD)</span></div></td><td class="py-4 px-4 align-top"><div class="flex items-start gap-3"><div class="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center p-1 shrink-0 overflow-hidden border border-slate-200"><span class="flex flex-col items-center justify-center bg-slate-100 text-slate-400 text-[9px] leading-snug w-full h-full rounded-lg"><strong>HG</strong><span>Đang cập nhật</span></span></div><div class="flex flex-col min-w-0"><span class="font-bold text-slate-900 text-xs line-clamp-1">Vợt Yonex kiểm thử</span><span class="text-[11px] text-slate-600 font-medium mt-0.5">4U-G5 • Vàng</span><span class="text-[10px] text-secondary font-bold mt-0.5"></span><span class="text-[10px] text-slate-400 mt-0.5">Số lượng: 5 sản phẩm</span></div></div></td><td class="py-4 px-4 align-top"><div class="flex flex-col"><span class="font-black text-secondary text-sm">500.000 ₫</span><span class="text-[10px] text-slate-400">Miễn phí vận chuyển</span></div></td><td class="py-4 px-4 align-top"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 font-bold text-[11px] shadow-sm"><span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>Chờ xử lý COD</span><span class="block text-[11px] text-slate-500 mt-1 leading-tight">Chờ xử lý COD</span></td><td class="py-4 px-6 align-top text-right"><div class="flex flex-col items-end gap-1.5"><button type="button" class="px-3 py-1.5 rounded-xl bg-[#131b2e] text-white hover:bg-slate-800 text-xs font-bold transition-all shadow-sm active:scale-95">Xem chi tiết</button><a href="/checkout?orderId=17">Tiếp tục thanh toán</a><button type="button" class="text-[11px] text-slate-400 hover:text-secondary transition-colors underline">Hủy đơn hàng</button></div></td></tr></tbody></table></div></div><div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"><div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in duration-200"><div class="flex items-center justify-between pb-3 border-b border-slate-100"><div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-lg bg-red-50 text-secondary flex items-center justify-center"></div><div><h3 class="text-base font-black text-slate-900">Chi tiết đơn hàng #HG-17</h3><p class="text-xs text-slate-400">—</p></div></div><button type="button" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-800"></button></div><div class="flex flex-col gap-4 text-xs"><div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-1.5"><span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Địa chỉ giao hàng</span><p class="font-bold text-slate-900"> - </p><p class="text-slate-600 leading-relaxed"></p></div><div class="border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3"><span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-slate-100">Sản phẩm trong đơn (5 sản phẩm)</span><div class="space-y-2.5 max-h-56 overflow-y-auto pr-1"><div class="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100"><div class="flex items-center gap-3 min-w-0"><span class="flex flex-col items-center justify-center bg-slate-100 text-slate-400 text-[9px] leading-snug w-12 h-12 rounded-lg bg-white border border-slate-100 shrink-0 p-1"><strong>HG</strong><span>Đang cập nhật</span></span><div class="min-w-0"><p class="font-bold text-slate-900 truncate">Vợt Yonex kiểm thử</p><div class="flex flex-wrap items-center gap-1.5 pt-0.5 "><span class="inline-block text-[11px] px-2 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">4U-G5</span><span class="inline-block text-[11px] px-2 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">Vàng</span></div><p class="text-[11px] text-slate-500 font-semibold mt-0.5">Số lượng: x2</p></div></div><div class="text-right shrink-0"><span class="font-bold text-slate-900">200.000 ₫</span><span class="block text-[10px] text-slate-400">100.000 ₫ / cái</span></div></div><div class="flex items-center justify-between gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100"><div class="flex items-center gap-3 min-w-0"><span class="flex flex-col items-center justify-center bg-slate-100 text-slate-400 text-[9px] leading-snug w-12 h-12 rounded-lg bg-white border border-slate-100 shrink-0 p-1"><strong>HG</strong><span>Đang cập nhật</span></span><div class="min-w-0"><p class="font-bold text-slate-900 truncate">Áo Victor kiểm thử</p><div class="flex flex-wrap items-center gap-1.5 pt-0.5 "><span class="inline-block text-[11px] px-2 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">Đen</span><span class="inline-block text-[11px] px-2 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">Size: M</span></div><p class="text-[11px] text-slate-500 font-semibold mt-0.5">Số lượng: x3</p></div></div><div class="text-right shrink-0"><span class="font-bold text-slate-900">300.000 ₫</span><span class="block text-[10px] text-slate-400">100.000 ₫ / cái</span></div></div></div><div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs"><span class="text-slate-500">Thanh toán khi nhận hàng (COD)</span><span class="font-black text-secondary text-base">500.000 ₫</span></div></div></div><div class="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-100"><button type="button" class="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">Đóng</button><a href="/orders/17">Mở trang đơn hàng</a><a href="/checkout?orderId=17">Tiếp tục thanh toán</a></div></div></div></div></div>',
+    expected: /href="\/checkout\?orderId=/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }

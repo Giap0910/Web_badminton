@@ -1,0 +1,63 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 20 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sports.service.ReturnServiceTest
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+03:52:33.051 [main] INFO org.springframework.security.web.DefaultSecurityFilterChain -- Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@4aeaff64, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@403f7aa2, org.springframework.security.web.context.SecurityContextHolderFilter@29aa4bc9, org.springframework.security.web.header.HeaderWriterFilter@14201a90, org.springframework.web.filter.CorsFilter@545604a9, org.springframework.security.web.authentication.logout.LogoutFilter@121cf6f4, com.sports.security.JwtAuthenticationFilter@1029cf9, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@6c519e47, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@3ce7490a, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@1c0e4262, org.springframework.security.web.session.SessionManagementFilter@3a4f8e8a, org.springframework.security.web.access.ExceptionTranslationFilter@20a9f5fb, org.springframework.security.web.access.intercept.AuthorizationFilter@26c59348]
+03:52:33.605 [main] INFO org.hibernate.validator.internal.util.Version -- HV000001: Hibernate Validator 8.0.1.Final
+03:52:34.728 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+03:52:34.731 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+03:52:34.735 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 3 ms
+03:52:36.138 [main] INFO org.springframework.security.web.DefaultSecurityFilterChain -- Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@5bb3dee7, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@284f25e6, org.springframework.security.web.context.SecurityContextHolderFilter@2c731a16, org.springframework.security.web.header.HeaderWriterFilter@467cd4b9, org.springframework.web.filter.CorsFilter@285b491f, org.springframework.security.web.authentication.logout.LogoutFilter@4a773f08, com.sports.security.JwtAuthenticationFilter@346330b6, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@2a341e3d, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@a4dcede, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@71e2843b, org.springframework.security.web.session.SessionManagementFilter@69a3bf40, org.springframework.security.web.access.ExceptionTranslationFilter@3186f8f5, org.springframework.security.web.access.intercept.AuthorizationFilter@24e7087a]
+03:52:36.216 [main] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+03:52:36.217 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+03:52:36.218 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+[INFO] Running com.sports.service.ReturnServiceTest$MysqlWorkflow
+03:52:37.381 [main] INFO org.springframework.data.repository.config.RepositoryConfigurationDelegate -- Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+03:52:38.053 [main] INFO org.springframework.data.repository.config.RepositoryConfigurationDelegate -- Finished Spring Data repository scanning in 626 ms. Found 17 JPA repository interfaces.
+03:52:38.515 [main] INFO org.hibernate.jpa.internal.util.LogHelper -- HHH000204: Processing PersistenceUnitInfo [name: default]
+03:52:38.679 [main] INFO org.hibernate.Version -- HHH000412: Hibernate ORM core version 6.4.4.Final
+03:52:38.755 [main] INFO org.hibernate.cache.internal.RegionFactoryInitiator -- HHH000026: Second-level cache disabled
+03:52:39.601 [main] INFO org.springframework.orm.jpa.persistenceunit.SpringPersistenceUnitInfo -- No LoadTimeWeaver setup: ignoring JPA class transformer
+03:52:40.944 [main] WARN org.hibernate.dialect.Dialect -- HHH000511: The 5.5.0 version for [org.hibernate.dialect.MariaDBDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 10.4.0. Check the community dialects project for available legacy versions.
+03:52:40.957 [main] WARN org.hibernate.orm.deprecation -- HHH90000025: MariaDBDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+03:52:46.006 [main] INFO org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator -- HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+03:52:46.373 [main] INFO org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean -- Initialized JPA EntityManagerFactory for persistence unit 'default'
+03:52:47.480 [main] INFO org.springframework.data.jpa.repository.query.QueryEnhancerFactory -- Hibernate is in classpath; If applicable, HQL parser will be used.
+03:52:56.633 [main] INFO org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean -- Closing JPA EntityManagerFactory for persistence unit 'default'
+[WARNING] Tests run: 27, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 19.49 s -- in com.sports.service.ReturnServiceTest$MysqlWorkflow
+[INFO] Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 35.13 s -- in com.sports.service.ReturnServiceTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[WARNING] Tests run: 27, Failures: 0, Errors: 0, Skipped: 2
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  44.655 s
+[INFO] Finished at: 2026-10-19T03:52:56+07:00
+[INFO] ------------------------------------------------------------------------

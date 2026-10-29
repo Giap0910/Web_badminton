@@ -1,0 +1,70 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------< com.sports:web_badminton_backend >------------------
+[INFO] Building web_badminton_backend 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ web_badminton_backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ web_badminton_backend ---
+[INFO] Compiling 97 source files with javac [debug parameters release 17] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ web_badminton_backend ---
+[INFO] skip non existing resourceDirectory C:\Project\Web_badminton\backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ web_badminton_backend ---
+[INFO] Compiling 4 source files with javac [debug parameters release 17] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ web_badminton_backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.sports.fuzz.CartFuzzTest
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+INFO: found LLVMFuzzerCustomMutator (00007FFF45A733D0). Disabling -len_control by default.
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 20260924
+INFO: Loaded 3 modules   (2048 inline 8-bit counters): 512 [000001EDFEBBB040, 000001EDFEBBB240), 512 [000001EDFEBBB240, 000001EDFEBBB440), 1024 [000001EDFEBBB440, 000001EDFEBBB840), 
+INFO: Loaded 3 PC tables (2048 PCs): 512 [000001EDFD314610,000001EDFD316610), 512 [000001EDFD31A640,000001EDFD31C640), 1024 [000001EDC2956960,000001EDC295A960), 
+INFO:        0 files found in \\?\C:\Project\Web_badminton\backend\target\fuzz-step6-20260924\fuzzRepeatedProductLines\.cifuzz-corpus\com.sports.fuzz.CartFuzzTest\fuzzRepeatedProductLines
+INFO:        0 files found in C:\Project\Web_badminton\backend\target\fuzz-step6-20260924\fuzzRepeatedProductLines\jazzer-java-seeds3994372562744921355
+INFO: A corpus is not provided, starting from an empty corpus
+#2	INITED cov: 323 ft: 323 corp: 1/1b exec/s: 0 rss: 956Mb
+#3	NEW    cov: 323 ft: 430 corp: 2/2b lim: 4 exec/s: 0 rss: 956Mb L: 1/1 MS: 2 ChangeByte-Custom-
+#7	NEW    cov: 333 ft: 452 corp: 3/6b lim: 4 exec/s: 0 rss: 956Mb L: 4/4 MS: 8 InsertByte-Custom-ChangeByte-Custom-CrossOver-Custom-CopyPart-Custom-
+#9	NEW    cov: 333 ft: 453 corp: 4/7b lim: 4 exec/s: 0 rss: 956Mb L: 1/4 MS: 4 CopyPart-Custom-ChangeBit-Custom-
+#11	NEW    cov: 333 ft: 556 corp: 5/8b lim: 4 exec/s: 0 rss: 956Mb L: 1/4 MS: 4 ShuffleBytes-Custom-ChangeBinInt-Custom-
+#13	NEW    cov: 333 ft: 560 corp: 6/12b lim: 4 exec/s: 0 rss: 956Mb L: 4/4 MS: 4 ChangeBinInt-Custom-ChangeBinInt-Custom-
+#18	NEW    cov: 333 ft: 661 corp: 7/13b lim: 4 exec/s: 0 rss: 956Mb L: 1/4 MS: 10 ShuffleBytes-Custom-CopyPart-Custom-CrossOver-Custom-ShuffleBytes-Custom-ChangeBit-Custom-
+#20	NEW    cov: 333 ft: 664 corp: 8/14b lim: 4 exec/s: 0 rss: 956Mb L: 1/4 MS: 4 ShuffleBytes-Custom-ChangeBit-Custom-
+#26	NEW    cov: 333 ft: 765 corp: 9/15b lim: 4 exec/s: 0 rss: 956Mb L: 1/4 MS: 2 ChangeByte-Custom-
+#31	NEW    cov: 333 ft: 870 corp: 10/17b lim: 4 exec/s: 0 rss: 956Mb L: 2/4 MS: 10 ShuffleBytes-Custom-ChangeBit-Custom-ChangeBinInt-Custom-ShuffleBytes-Custom-InsertByte-Custom-
+#79	REDUCE cov: 333 ft: 870 corp: 10/16b lim: 4 exec/s: 0 rss: 956Mb L: 3/4 MS: 6 CrossOver-Custom-CopyPart-Custom-EraseBytes-Custom-
+#265	REDUCE cov: 333 ft: 870 corp: 10/15b lim: 4 exec/s: 132 rss: 956Mb L: 1/4 MS: 2 EraseBytes-Custom-
+#290	REDUCE cov: 333 ft: 870 corp: 10/14b lim: 4 exec/s: 145 rss: 956Mb L: 3/3 MS: 10 ChangeBit-Custom-ChangeByte-Custom-ChangeBit-Custom-CopyPart-Custom-EraseBytes-Custom-
+#512	pulse  cov: 333 ft: 870 corp: 10/14b lim: 6 exec/s: 256 rss: 956Mb
+#1000	DONE   cov: 333 ft: 870 corp: 10/14b lim: 8 exec/s: 333 rss: 956Mb
+Done 1000 runs in 3 second(s)
+stat::number_of_executed_units: 1000
+stat::average_exec_per_sec:     333
+stat::new_units_added:          12
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              956
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 22.01 s -- in com.sports.fuzz.CartFuzzTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  40.628 s
+[INFO] Finished at: 2026-09-24T21:53:14+07:00
+[INFO] ------------------------------------------------------------------------
